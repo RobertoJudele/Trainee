@@ -5,7 +5,8 @@ import { AuthResponse, RegisterRequest } from "../types/user";
 import { generateToken } from "../utils/jwt";
 import { sendError, sendSuccess } from "../utils/response";
 import { where } from "sequelize";
-import { AuthenticatedRequest } from "src/types/common";
+import { AuthenticatedRequest } from "../types/common";
+import { emailService } from "../services/emailService";
 
 export const register = async (
   req: Request<{}, {}, RegisterRequest>,
@@ -33,6 +34,19 @@ export const register = async (
       role: user.role,
       email: user.email,
     });
+
+    const verificationToken = user.generateEmailVerificationToken();
+    await user.save();
+
+    try {
+      await emailService.sendVerificationEmail(
+        email,
+        `${firstName} ${lastName}`,
+        verificationToken
+      );
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+    }
 
     const authResponse: AuthResponse = { user: user.toJSON(), token };
 
@@ -101,7 +115,3 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
     sendError(res, 500, "Couldnt retrieve profile");
   }
 };
-
-User.addScope("withPassword", {
-  attributes: { include: ["password"] },
-});

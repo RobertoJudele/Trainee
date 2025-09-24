@@ -15,6 +15,7 @@ export interface UserAttributes {
   lastLoginAt?: Date;
   createdAt: Date;
   updatedAt: Date;
+  emailVerifiedAt: Date;
 }
 
 export interface UserCreationAttributes {

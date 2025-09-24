@@ -4,6 +4,7 @@ import "reflect-metadata"; // Add this for Sequelize
 import sequelize from "./db"; // Import your Sequelize instance
 import { User } from "./models/user";
 import mainRouter from "./routes/index";
+import { verifyEmailConnection } from "./config/email";
 
 const app = express();
 
@@ -45,4 +46,5 @@ initializeApp().then(() => {
   app.listen(8000, () => {
     console.log("Server listening on port 8000");
   });
+  verifyEmailConnection();
 });

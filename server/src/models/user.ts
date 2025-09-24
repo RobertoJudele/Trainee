@@ -10,12 +10,18 @@ import {
   Validate,
   CreatedAt,
   UpdatedAt,
+  Scopes,
 } from "sequelize-typescript";
 import bcrypt from "bcryptjs";
 import { UserAttributes, UserCreationAttributes } from "../types/user";
 import { UserRole } from "../types/common";
 import crypto from "crypto";
 
+@Scopes(() => ({
+  withPassword: {
+    attributes: { include: ["password"] },
+  },
+}))
 @Table({
   tableName: "users",
   timestamps: true,
@@ -144,9 +150,9 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
 
   @Column({
     type: DataType.DATE,
-    field: "emailVerifidAt",
+    field: "emailVerifiedAt",
   })
-  emailVerifidAt?: Date;
+  emailVerifiedAt?: Date;
 
   @CreatedAt
   @Column({
@@ -178,14 +184,14 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
       return false;
     }
 
-    if (this.emailVerificationExpires > new Date()) {
+    if (this.emailVerificationExpires < new Date()) {
       return false;
     }
 
     this.isVerified = true;
     this.emailVerificationToken = null;
     this.emailVerificationExpires = null;
-    this.emailVerifidAt = new Date();
+    this.emailVerifiedAt = new Date();
 
     return true;
   }
