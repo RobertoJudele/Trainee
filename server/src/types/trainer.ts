@@ -31,4 +31,5 @@ export interface TrainerProfileCreationAttributes {
   locationCountry?: string;
   latitude?: number;
   longitude?: number;
+  specializationIds?: number[];
 }

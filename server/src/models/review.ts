@@ -47,7 +47,6 @@ export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
   @Column(DataType.BOOLEAN)
   isVerified!: boolean;
 
-  @Table({ tableName: "reviews", timestamps: true })
   @Column(DataType.BOOLEAN)
   isReported!: boolean;
 
