@@ -5,7 +5,6 @@ import { Trainer } from "../models/trainer";
 import { Review } from "../models/review";
 import { User } from "../models/user";
 
-
 export const createReview = async (
   req: Request<{ trainerId: string }, {}, ReviewRequest>,
   res: Response
@@ -76,3 +75,44 @@ export const createReview = async (
   }
 };
 
+export const deleteReview = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const reviewId = parseInt(req.params.reviewId);
+    if (!userId) {
+      sendError(res, 400, "No user found ");
+      return;
+    }
+
+    const user = await User.findByPk(userId);
+    if (!user) {
+      sendError(res, 400, "No user found ");
+      return;
+    }
+    const review = await Review.findByPk(reviewId);
+    if (!review) {
+      sendError(res, 400, "Review not found");
+      return;
+    }
+    if (review.clientId !== userId) {
+      sendError(res, 403, "This review doesnt belong to you!");
+      return;
+    }
+
+    review.destroy();
+    sendSuccess(res, 200, "Review deleted succesfully");
+  } catch (error: any) {
+    console.error("Error while deleting review: ", error);
+    if (error.name === "SequelizeValidationError") {
+      const errors = error.errors.map((err: any) => ({
+        fields: err.path,
+        message: err.message,
+      }));
+      sendError(res, 400, errors);
+      return;
+    }
+    sendError(res, 500, "Unknown error while deleting review");
+  }
+};
+
+export const updateReview = async (req: Request, res: Response) => {};

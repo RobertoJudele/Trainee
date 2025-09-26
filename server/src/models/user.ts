@@ -11,11 +11,13 @@ import {
   CreatedAt,
   UpdatedAt,
   Scopes,
+  HasMany,
 } from "sequelize-typescript";
 import bcrypt from "bcryptjs";
 import { UserAttributes, UserCreationAttributes } from "../types/user";
 import { UserRole } from "../types/common";
 import crypto from "crypto";
+import { Review } from "./review";
 
 @Scopes(() => ({
   withPassword: {
@@ -166,6 +168,11 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   })
   updatedAt!: Date;
 
+  @HasMany(() => Review, {
+    foreignKey: "clientId",
+    onDelete: "CASCADE",
+    hooks: true,
+  })
   generateEmailVerificationToken(): string {
     const token = crypto.randomBytes(32).toString("hex");
 

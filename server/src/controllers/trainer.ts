@@ -74,10 +74,58 @@ export const createTrainer = async (
   }
 };
 
-export const getTrainer = async (req: Request, res: Response) => {
-  const { trainerId } = req.body;
+export const getTrainer = async (
+  req: Request<{ trainerId: string }, {}, {}>,
+  res: Response
+) => {
+  const trainerId = parseInt(req.params.trainerId);
+
   if (!trainerId) {
     sendError(res, 400, "The trainer id is invalid");
     return;
+  }
+  const trainer = await Trainer.findByPk(trainerId);
+  if (!trainer) {
+    sendError(res, 404, "Trainer not found ");
+    return;
+  }
+
+  res.json(trainer);
+};
+
+export const deleteTrainer = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const trainer = await Trainer.findOne({ where: { userId: userId } });
+
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      sendError(res, 404, "User nmot found");
+      return;
+    }
+
+    if (!trainer) {
+      sendError(res, 404, "No trainer found");
+      return;
+    }
+
+    await trainer.destroy();
+
+    user.role = UserRole.CLIENT;
+    await user.save();
+
+    sendSuccess(res, 200, "Trainer deleted succesfully");
+  } catch (error: any) {
+    console.error("Error at deleting trainer", error);
+    if (error.name === "SequelizeValidationError") {
+      const errors = error.errors.map((err: any) => ({
+        path: err.fields,
+        message: err.message,
+      }));
+      sendError(res, 400, "Validation error: ", errors);
+      return;
+    }
+    sendError(res, 500, "Unknown errot at deleting trainer");
   }
 };

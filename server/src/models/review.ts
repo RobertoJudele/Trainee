@@ -62,8 +62,9 @@ export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
   @BelongsTo(() => Trainer)
   trainer!: Trainer;
 
-  @BelongsTo(() => User, { as: "client" }) // Add alias to match your controller
+  @BelongsTo(() => User, { as: "client" })
   client!: User;
+
   @AfterCreate
   static async updateTrainerRatingAfterCreate(instance: Review) {
     await Review.updateTrainerRating(instance.trainerId);

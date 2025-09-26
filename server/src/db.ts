@@ -1,6 +1,12 @@
 import { Sequelize } from "sequelize-typescript";
 import dotenv from "dotenv";
 import { User } from "./models/user";
+import { Review } from "./models/review";
+import path from "path";
+import { Trainer } from "./models/trainer";
+import { TrainerImage } from "./models/trainerImage";
+import { TrainerSpecialization } from "./models/trainerSpecialization";
+import { Specialization } from "./models/specialization";
 
 dotenv.config();
 
@@ -11,8 +17,15 @@ const sequelize = new Sequelize({
   host: process.env.DB_HOST || "localhost",
   port: parseInt(process.env.DB_PORT || "5432"),
   dialect: "postgres",
-  models: [User],
-  logging: true, // Enable logging to see SQL queries
+  models: [
+    User,
+    Review,
+    Trainer,
+    TrainerImage,
+    TrainerSpecialization,
+    Specialization,
+  ],
+  logging: false, // Enable logging to see SQL queries
   pool: {
     max: 5,
     min: 0,

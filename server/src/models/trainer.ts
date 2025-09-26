@@ -107,7 +107,8 @@ export class Trainer extends Model<
   @BelongsToMany(() => Specialization, () => TrainerSpecialization)
   specializations!: Specialization[];
 
-  @HasMany(() => Review) reviews!: Review[];
+  @HasMany(() => Review, { onDelete: "CASCADE", hooks: true })
+  reviews!: Review[];
 
   async incrementViews(): Promise<void> {
     this.profileViews += 1;

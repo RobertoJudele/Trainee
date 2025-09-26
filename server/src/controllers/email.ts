@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { User } from "../models";
+import { User } from "../models/user";
 import { sendError, sendSuccess } from "../utils/response";
 import { emailService } from "../services/emailService";
 import { AuthenticatedRequest } from "src/types/common";
