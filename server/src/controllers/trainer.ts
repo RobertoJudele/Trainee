@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { TrainerProfileCreationAttributes } from "../types/trainer";
-import { sendError, sendSuccess } from "src/utils/response";
-import { Trainer } from "src/models/trainer";
-import { Specialization } from "src/models/specialization";
+import { sendError, sendSuccess } from "../utils/response";
+import { Trainer } from "../models/trainer";
+import { Specialization } from "../models/specialization";
 import { Op } from "sequelize";
+import { User } from "../models/user";
+import { UserRole } from "../types/common";
 
 export const createTrainer = async (
   req: Request<{}, {}, TrainerProfileCreationAttributes>,
@@ -32,6 +34,15 @@ export const createTrainer = async (
         return;
       }
     }
+    const user = await User.findByPk(userId);
+    if (!user) {
+      sendError(res, 404, "User not found");
+      return;
+    }
+
+    user.role = UserRole.TRAINER;
+    await user.save();
+
     const trainer = await Trainer.create({
       userId: userId,
       bio: profileData.bio,
@@ -60,5 +71,13 @@ export const createTrainer = async (
       return;
     }
     sendError(res, 500, "Unexpected error while creating trainer happened");
+  }
+};
+
+export const getTrainer = async (req: Request, res: Response) => {
+  const { trainerId } = req.body;
+  if (!trainerId) {
+    sendError(res, 400, "The trainer id is invalid");
+    return;
   }
 };

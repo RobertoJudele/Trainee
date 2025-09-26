@@ -10,7 +10,6 @@ export interface TrainerProfileAttributes {
   locationCountry?: string;
   latitude?: number;
   longitude?: number;
-  isActive: boolean;
   isFeatured: boolean;
   isAvailable: boolean;
   profileViews: number;

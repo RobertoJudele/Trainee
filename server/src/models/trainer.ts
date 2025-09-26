@@ -36,96 +36,73 @@ export class Trainer extends Model<
 
   @ForeignKey(() => User)
   @AllowNull(false)
-  @Column({ type: DataType.INTEGER })
+  @Column({ type: DataType.INTEGER, field: "user_id" })
   userId!: number;
 
-  @Column(DataType.STRING) bio?: string;
-  @Validate({
-    min: 0,
-    max: 50,
-  })
-  @Column(DataType.INTEGER)
+  @Column(DataType.STRING)
+  bio?: string;
+
+  @Validate({ min: 0, max: 50 })
+  @Column({ type: DataType.INTEGER, field: "experience_years" })
   experienceYears?: number;
 
-  @Validate({
-    min: 0,
-    max: 999.99,
-  })
-  @Column(DataType.DECIMAL(5, 2))
+  @Validate({ min: 0, max: 999.99 })
+  @Column({ type: DataType.DECIMAL(5, 2), field: "hourly_rate" })
   hourlyRate?: number;
 
-  @Validate({
-    min: 0,
-    max: 999.99,
-  })
-  @Column(DataType.DECIMAL(5, 2))
+  @Validate({ min: 0, max: 999.99 })
+  @Column({ type: DataType.DECIMAL(5, 2), field: "session_rate" })
   sessionRate?: number;
 
-  @Validate({
-    len: [2, 100],
-  })
-  @Column(DataType.STRING(100))
+  @Validate({ len: [2, 100] })
+  @Column({ type: DataType.STRING(100), field: "location_city" })
   locationCity?: string;
 
-  @Validate({
-    len: [2, 50],
-  })
-  @Column(DataType.STRING(50))
+  @Validate({ len: [2, 50] })
+  @Column({ type: DataType.STRING(50), field: "location_state" })
   locationState?: string;
 
-  @Validate({
-    len: [2, 50],
-  })
-  @Column(DataType.STRING(50))
+  @Validate({ len: [2, 50] })
+  @Column({ type: DataType.STRING(50), field: "location_country" })
   locationCountry?: string;
 
-  @Validate({
-    min: -90,
-    max: 90,
-  })
-  @Column(DataType.DECIMAL(10, 8))
+  @Column({ type: DataType.DECIMAL(10, 8) })
   latitude?: number;
 
-  @Validate({
-    min: -180,
-    max: 180,
-  })
-  @Column(DataType.DECIMAL(11, 8))
+  @Column({ type: DataType.DECIMAL(11, 8) })
   longitude?: number;
 
-  @Default(true)
-  @Column(DataType.BOOLEAN)
-  isActive!: boolean;
-
   @Default(false)
-  @Column(DataType.BOOLEAN)
+  @Column({ type: DataType.BOOLEAN, field: "is_featured" })
   isFeatured!: boolean;
 
   @Default(true)
-  @Column(DataType.BOOLEAN)
+  @Column({ type: DataType.BOOLEAN, field: "is_available" })
   isAvailable!: boolean;
 
   @Default(0)
-  @Column(DataType.INTEGER)
+  @Column({ type: DataType.INTEGER, field: "profile_views" })
   profileViews!: number;
 
   @Default(0.0)
-  @Column(DataType.DECIMAL(3, 2))
+  @Column({ type: DataType.DECIMAL(3, 2), field: "total_rating" })
   totalRating!: number;
 
   @Default(0)
-  @Column(DataType.INTEGER)
+  @Column({ type: DataType.INTEGER, field: "review_count" })
   reviewCount!: number;
 
   @CreatedAt
+  @Column({ field: "created_at" })
   createdAt!: Date;
 
   @UpdatedAt
+  @Column({ field: "updated_at" })
   updatedAt!: Date;
 
   @BelongsTo(() => User) user!: User;
 
-  @HasMany(() => TrainerImage) image!: TrainerImage[];
+  @HasMany(() => TrainerImage) images!: TrainerImage[];
 
   @BelongsToMany(() => Specialization, () => TrainerSpecialization)
   specializations!: Specialization[];

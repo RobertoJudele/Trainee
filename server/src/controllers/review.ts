@@ -4,16 +4,21 @@ import { sendError, sendSuccess } from "../utils/response";
 import { Trainer } from "../models/trainer";
 import { Review } from "../models/review";
 import { User } from "../models/user";
+
+
 export const createReview = async (
   req: Request<{ trainerId: string }, {}, ReviewRequest>,
   res: Response
 ) => {
   try {
-    const { rating, review_text } = req.body;
+    const { rating, reviewText } = req.body;
     const trainerId = parseInt(req.params.trainerId);
-    const user = req.user!.id;
+    const user = req.user!;
+
+    console.log("Trainer and user ", user.id, trainerId);
 
     if (isNaN(trainerId)) {
+      console.log(trainerId);
       sendError(res, 400, "Trainer doesnt exist");
       return;
     }
@@ -31,18 +36,19 @@ export const createReview = async (
     }
 
     const reviewExists = await Review.findOne({
-      where: { client_id: user.id },
+      where: { clientId: user.id, trainerId: trainerId },
     });
+
     if (reviewExists) {
       sendError(res, 400, "You already left a review for this trainer");
       return;
     }
 
     const review = await Review.create({
-      client_id: user.id,
-      trainer_id: trainerId,
+      clientId: user.id,
+      trainerId: trainerId,
       rating: rating,
-      review_text: review_text,
+      reviewText: reviewText,
     });
 
     const completeReview = await Review.findByPk(review.id, {
@@ -64,7 +70,9 @@ export const createReview = async (
         message: err.message,
       }));
       sendError(res, 400, "Validation failed");
+      return;
     }
     sendError(res, 500, "Error while creating revirw");
   }
 };
+
