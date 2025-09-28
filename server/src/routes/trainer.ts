@@ -3,13 +3,17 @@ import {
   createTrainer,
   deleteTrainer,
   getTrainer,
+  updateTrainer,
 } from "../controllers/trainer";
 import { authenticate } from "../middleware/auth";
 
 const router = express.Router();
 
-router.post("/create", authenticate, createTrainer);
-router.get("/:trainerId", authenticate, getTrainer);
-router.delete("/", authenticate, deleteTrainer);
+router.use(authenticate);
+
+router.post("/create", createTrainer);
+router.get("/:trainerId", getTrainer);
+router.delete("/", deleteTrainer);
+router.put("/", updateTrainer);
 
 export default router;

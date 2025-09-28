@@ -115,4 +115,54 @@ export const deleteReview = async (req: Request, res: Response) => {
   }
 };
 
-export const updateReview = async (req: Request, res: Response) => {};
+export const updateReview = async (req: Request, res: Response) => {
+  try {
+    const reviewId = req.params.reviewId;
+    const { rating, reviewText } = req.body;
+    const userId = req.user.id;
+    if (!userId) {
+      sendError(res, 400, "User id not found ");
+      return;
+    }
+    const user = User.findByPk(userId);
+
+    if (!user) {
+      sendError(res, 404, "User not found");
+      return;
+    }
+
+    if (!reviewId) {
+      sendError(res, 404, "Review id not found");
+      return;
+    }
+
+    const review = await Review.findByPk(reviewId);
+    if (!review) {
+      sendError(res, 404, "Review not found ");
+      return;
+    }
+
+    if (review.clientId != userId) {
+      sendError(res, 400, "This review isnt yours");
+      return;
+    }
+
+    await review.update({
+      rating: rating || review.rating,
+      reviewText: reviewText || review.reviewText,
+    });
+
+    sendSuccess(res, 200, "Review updated succesfully");
+  } catch (error: any) {
+    console.error("Error while updating review: ", error);
+    if (error.name === "SequelizeValidationError") {
+      const errors = error.errors.map((err: any) => ({
+        fields: err.path,
+        message: err.message,
+      }));
+      sendError(res, 400, errors);
+      return;
+    }
+    sendError(res, 500, "Unknown error while updating review");
+  }
+};

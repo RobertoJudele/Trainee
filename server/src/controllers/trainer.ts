@@ -129,3 +129,56 @@ export const deleteTrainer = async (req: Request, res: Response) => {
     sendError(res, 500, "Unknown errot at deleting trainer");
   }
 };
+
+export const updateTrainer = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const {
+      bio,
+      experienceYears,
+      hourlyRate,
+      sessionRate,
+      locationCity,
+      latitude,
+      longitude,
+    } = req.body;
+    if (!userId) {
+      sendError(res, 404, "User id not found");
+      return;
+    }
+
+    const user = User.findByPk(userId);
+    if (!user) {
+      sendError(res, 404, "User not found");
+      return;
+    }
+
+    const trainer = await Trainer.findOne({ where: { userId: userId } });
+    if (!trainer) {
+      sendError(res, 404, "The user doesnt have a trainer profile");
+      return;
+    }
+
+    await trainer.update({
+      bio: bio || trainer.bio,
+      experienceYears: experienceYears || trainer.experienceYears,
+      hourlyRate: hourlyRate || trainer.hourlyRate,
+      sessionRate: sessionRate || trainer.sessionRate,
+      locationCity: locationCity || trainer.locationCity,
+      latitude: latitude || trainer.latitude,
+      longitude: longitude || trainer.longitude,
+    });
+    sendSuccess(res, 200, "Trainer updated succesfully");
+  } catch (error: any) {
+    console.error("Error at updating trainer", error);
+    if (error.name === "SequelizeValidationError") {
+      const errors = error.errors.map((err: any) => ({
+        path: err.fields,
+        message: err.message,
+      }));
+      sendError(res, 400, "Validation error: ", errors);
+      return;
+    }
+    sendError(res, 500, "Unknown errot at updating trainer");
+  }
+};
