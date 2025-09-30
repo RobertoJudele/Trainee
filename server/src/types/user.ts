@@ -9,7 +9,7 @@ export interface UserAttributes {
   lastName: string;
   phone?: string;
   role: UserRole;
-  profileImageUrl?: string;
+  profileImageUrl?: string | null;
   isVerified: boolean;
   isActive: boolean;
   lastLoginAt?: Date;

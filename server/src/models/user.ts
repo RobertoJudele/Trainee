@@ -111,6 +111,13 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
     field: "profile_image_url", // Map to actual database column
     validate: {
       isUrl: true,
+      notEmptyString(value: string | null) {
+        if (value === "") {
+          throw new Error(
+            "Profile image URL cannot be empty string, use null instead"
+          );
+        }
+      },
     },
   })
   profileImageUrl?: string;

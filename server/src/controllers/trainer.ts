@@ -6,6 +6,17 @@ import { Specialization } from "../models/specialization";
 import { Op } from "sequelize";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
+import { deleteTrainerProfilePicture } from "./trainerImages";
+import { S3ImageService } from "../services/s3ImageService";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+} from "@aws-sdk/client-s3";
+import { s3, S3_CONFIG } from "../config/s3";
 
 export const createTrainer = async (
   req: Request<{}, {}, TrainerProfileCreationAttributes>,
@@ -108,6 +119,44 @@ export const deleteTrainer = async (req: Request, res: Response) => {
     if (!trainer) {
       sendError(res, 404, "No trainer found");
       return;
+    }
+    const profilePictureUrl = user.profileImageUrl;
+    if (profilePictureUrl) {
+      const folderPrefix = `profilePicture/${userId}/`;
+
+      const listCommand = new ListObjectsV2Command({
+        Bucket: S3_CONFIG.bucket,
+        Prefix: folderPrefix,
+      });
+      const listResponse = await s3.send(listCommand);
+
+      if (!listResponse.Contents || listResponse.Contents.length === 0) {
+        console.log(`No files found for user ${userId}`);
+        return;
+      }
+
+      // Prepare objects for batch deletion
+      const objectsToDelete = listResponse.Contents.map((obj) => ({
+        Key: obj.Key!,
+      }));
+
+      // Delete all objects in batch (more efficient)
+      const deleteCommand = new DeleteObjectsCommand({
+        Bucket: S3_CONFIG.bucket,
+        Delete: {
+          Objects: objectsToDelete,
+        },
+      });
+
+      const deleteResponse = await s3.send(deleteCommand);
+
+      console.log(
+        `✅ Deleted ${objectsToDelete.length} files for user ${userId}`
+      );
+
+      if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
+        console.warn("Some files failed to delete:", deleteResponse.Errors);
+      }
     }
 
     await trainer.destroy();

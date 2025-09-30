@@ -18,6 +18,41 @@ interface S3File extends Express.Multer.File {
   etag: string;
 }
 
+export const deleteTrainerProfilePicture = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user!.id;
+    const user = await User.findByPk(userId);
+
+    if (!user) {
+      sendError(res, 404, "User not found");
+      return;
+    }
+    const imageUrl = user.profileImageUrl;
+    if (!imageUrl) {
+      sendError(res, 400, "No image uploaded first");
+      return;
+    }
+
+    const s3Key = S3ImageService.extractKeyFromUrl(imageUrl);
+    if (!s3Key) {
+      sendError(res, 400, "Couldnt extract the key");
+
+      return;
+    }
+    const result = await S3ImageService.deleteImage(s3Key);
+
+    await user.update({ profileImageUrl: null });
+
+    sendSuccess(res, 204, "Profile picture deleted succesfully");
+  } catch (error: any) {
+    console.error("Delete profile picture error: ", error);
+    sendError(res, 500, "Failed to delete profile picture");
+  }
+};
+
 export const uploadTrainerProfilePicture = [
   upload.single("profileImage"),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {

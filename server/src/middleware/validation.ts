@@ -45,7 +45,7 @@ export const updateProfileValidation = [
     .trim()
     .isLength({ min: 2, max: 50 })
     .withMessage("First name must be between 2 and 50 characters."),
-  body("lasstName")
+  body("lastName")
     .optional()
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -57,9 +57,18 @@ export const updateProfileValidation = [
     .withMessage("Invalid phone number"),
   body("profileImageUrl")
     .optional()
-    .trim()
-    .isURL()
-    .withMessage("Profile image must be a valid URL"),
+    .custom((value) => {
+      // Allow empty string or null (for deletion)
+      if (value === "" || value === null || value === undefined) {
+        return true;
+      }
+      // If not empty, must be valid URL
+      const urlRegex = /^https?:\/\/.+/;
+      if (!urlRegex.test(value)) {
+        throw new Error("Profile image must be a valid URL");
+      }
+      return true;
+    }),
 ];
 
 export const handleValidationErrors = (
