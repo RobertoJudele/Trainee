@@ -9,6 +9,7 @@
   "author": "fsniraj",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/lib-storage": "^3.896.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/nodemailer": "^7.0.1",
     "aws-sdk": "^2.1692.0",

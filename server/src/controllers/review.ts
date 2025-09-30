@@ -152,7 +152,7 @@ export const updateReview = async (req: Request, res: Response) => {
       reviewText: reviewText || review.reviewText,
     });
 
-    sendSuccess(res, 200, "Review updated succesfully");
+    sendSuccess(res, 200, "Review updateds succesfully");
   } catch (error: any) {
     console.error("Error while updating review: ", error);
     if (error.name === "SequelizeValidationError") {

@@ -5,13 +5,42 @@ import { v4 as uuidv4 } from "uuid";
 import multerS3 from "multer-s3";
 import { S3Client } from "@aws-sdk/client-s3";
 
-const s3Config = new S3Client({
-  region: "us-west-1",
-  credentials: {
-    accessKeyId: "",
-    secretAccessKey: "",
+const requiredEnvVars = {
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  region: process.env.AWS_REGION,
+  bucket: process.env.AWS_S3_BUCKET,
+};
+
+// Check if all required variables are present
+for (const [key, value] of Object.entries(requiredEnvVars)) {
+  if (!value) {
+    throw new Error(
+      `Missing required environment variable: AWS_${key.toUpperCase()}`
+    );
+  }
+}
+export const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only image files are allowed!"));
+    }
+  },
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
   },
 });
+export const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
+  },
+});
+
 export const S3_CONFIG = {
   bucket: process.env.AWS_S3_BUCKET,
   region: process.env.AWS_REGION,
@@ -32,7 +61,7 @@ const fileFilter = (
   }
 };
 
-const generateS3key = (
+export const generateS3key = (
   req: Request,
   file: Express.Multer.File,
   folder: string
@@ -47,7 +76,7 @@ const generateS3key = (
 
 export const uploadProfilePicture = multer({
   storage: multerS3({
-    s3: s3Config,
+    s3: s3,
     bucket: process.env.AWS_S3_BUCKET as string,
     acl: "public-read",
     contentType: multerS3.AUTO_CONTENT_TYPE,
@@ -71,8 +100,8 @@ export const uploadProfilePicture = multer({
 
 export const uploadTrainerImages = multer({
   storage: multerS3({
-    s3: s3Config,
-    bucket: process.env.AWS_S3_CONFIG as string,
+    s3: s3,
+    bucket: S3_CONFIG.bucket as string,
     acl: "public-read",
     contentType: multerS3.AUTO_CONTENT_TYPE,
     key: (req: Request, file: Express.Multer.File, cb) => {
@@ -95,5 +124,3 @@ export const uploadTrainerImages = multer({
     files: 5, // Max 5 images per request
   },
 });
-
-export { S3Client };
