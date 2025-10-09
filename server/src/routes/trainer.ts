@@ -2,6 +2,7 @@ import express from "express";
 import {
   createTrainer,
   deleteTrainer,
+  getSelfTrainer,
   getTrainer,
   updateTrainer,
 } from "../controllers/trainer";
@@ -13,6 +14,7 @@ router.use(authenticate);
 
 router.post("/create", createTrainer);
 router.get("/:trainerId", getTrainer);
+router.get("/", getSelfTrainer);
 router.delete("/", deleteTrainer);
 router.put("/", updateTrainer);
 

@@ -66,11 +66,11 @@ export const createTrainer = async (
       latitude: profileData.latitude,
       longitude: profileData.longitude,
     });
-
+    const { userId: trainerUserId, id, ...trainerData } = trainer.toJSON();
     if (!trainer) {
       sendError(res, 400, "Creating trainer profile has failed");
     }
-    sendSuccess(res, 200, "Trainer profile created succesfully");
+    sendSuccess(res, 200, "Trainer profile created succesfully", trainerData);
   } catch (error: any) {
     console.error("Error at creating trainer profile", error);
     if (error.name === "SequelizeValidationError") {
@@ -229,5 +229,37 @@ export const updateTrainer = async (req: Request, res: Response) => {
       return;
     }
     sendError(res, 500, "Unknown errot at updating trainer");
+  }
+};
+
+export const getSelfTrainer = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      sendError(res, 404, "User not found!");
+      return;
+    }
+
+    const trainer = await Trainer.findOne({
+      where: { userId: userId },
+      attributes: { exclude: ["id", "userId"] },
+    });
+    if (!trainer) {
+      sendError(res, 404, "Trainer for this profile doesnt exist!");
+      return;
+    }
+
+    sendSuccess(res, 200, "Trainer profile retrieved successfully", trainer);
+  } catch (error: any) {
+    console.error("Error at  getting self trainer", error);
+    if (error.name === "SequelizeValidationError") {
+      const errors = error.errors.map((err: any) => ({
+        path: err.fields,
+        message: err.message,
+      }));
+      sendError(res, 400, "Validation error: ", errors);
+      return;
+    }
+    sendError(res, 500, "Unknown errot at getting self trainer");
   }
 };

@@ -18,14 +18,35 @@ interface User {
   updatedAt: string;
 }
 
+export interface TrainerProfileAttributes {
+  bio?: string;
+  experienceYears?: number;
+  hourlyRate?: number;
+  sessionRate?: number;
+  locationCity?: string;
+  locationState?: string;
+  locationCountry?: string;
+  latitude?: number;
+  longitude?: number;
+  isFeatured: boolean;
+  isAvailable: boolean;
+  profileViews: number;
+  totalRating: number;
+  reviewCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 interface AuthState {
   user: User | null;
   token: string | null;
+  trainer: TrainerProfileAttributes | null;
 }
 
 const initialState: AuthState = {
   user: null,
   token: null,
+  trainer: null,
 };
 
 interface Authenticated {
@@ -37,9 +58,13 @@ const authSlice = createSlice({
   initialState: initialState,
   reducers: {
     setCredentials: (state, action) => {
-      const { user, accesToken } = action.payload;
+      const { user, token } = action.payload;
       state.user = user;
-      state.token = accesToken;
+      state.token = token;
+    },
+    setTrainerProfile: (state, action) => {
+      const { trainer } = action.payload;
+      state.trainer = trainer;
     },
     logOut: (state) => {
       state.user = null;
@@ -48,9 +73,11 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, logOut } = authSlice.actions;
+export const { setCredentials, logOut, setTrainerProfile } = authSlice.actions;
 
 export default authSlice.reducer;
 
 export const selectCurrentUser = (state: Authenticated) => state.auth.user;
 export const selectCurrentToken = (state: Authenticated) => state.auth.token;
+export const selectCurrentTrainer = (state: Authenticated) =>
+  state.auth.trainer;

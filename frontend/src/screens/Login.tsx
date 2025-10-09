@@ -49,7 +49,7 @@ export default function Login() {
       console.log(result);
       const { token, user } = result.data;
       dispatch(setCredentials({ user: user, token: token }));
-      router.push("/");
+      router.push("/(auth)/Welcome");
     } catch (error: any) {
       if (!error.originalStatus) {
         setErrMsg("No server response");

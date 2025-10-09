@@ -12,7 +12,7 @@ import { useRef, useState, useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { router } from "expo-router";
 import { setCredentials } from "../../features/auth/authSlice";
-import { useLoginMutation } from "../../features/auth/authApiSlice";
+import { UserRole, useSignupMutation } from "../../features/auth/authApiSlice";
 
 export default function SignUp() {
   const userRef = useRef<TextInput>(null);
@@ -24,7 +24,7 @@ export default function SignUp() {
   const [phone, setPhone] = useState("");
   const [errMsg, setErrMsg] = useState("");
 
-  const [login, { isLoading }] = useLoginMutation();
+  const [signup, { isLoading }] = useSignupMutation();
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -38,10 +38,18 @@ export default function SignUp() {
   const handleSubmit = async () => {
     if (!firstName || !lastName || !email || !password) {
       setErrMsg("Please fill all the required fields");
+      return;
     }
 
     try {
-      const result = await login({ email, password }).unwrap();
+      const result = await signup({
+        email,
+        password,
+        phone,
+        firstName,
+        lastName,
+        role: UserRole.CLIENT, // Default role
+      }).unwrap();
       console.log(result);
 
       // dispatch(setCredentials({ user: result.user, token: result.token }));
