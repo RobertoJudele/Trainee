@@ -1,16 +1,16 @@
-import { useNavigation } from "@react-navigation/native";
-import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Button } from "react-native";
-import { RootStackParamList } from "../types/navigation";
-
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
-
+import { Button, Pressable, View, Text } from "react-native";
+import { Link } from "expo-router";
 export default function Home() {
-  const navigation = useNavigation<NavigationProp>();
   return (
-    <Button
-      title="Test signup screen"
-      onPress={() => navigation.navigate("SignUp")}
-    />
+    <View>
+      <Link href="/signup" asChild>
+        <Button title="Test signup screen" />
+      </Link>
+      <Link href="/login">
+        <Pressable>
+          <Text>Login</Text>
+        </Pressable>
+      </Link>
+    </View>
   );
 }
