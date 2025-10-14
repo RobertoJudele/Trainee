@@ -17,7 +17,12 @@ import {
 } from "../types/specialization";
 import { TrainerSpecialization } from "./trainerSpecialization";
 
-@Table({ tableName: "specializations", timestamps: true })
+@Table({
+  tableName: "specializations",
+  timestamps: true,
+  underscored: true,
+  updatedAt: false,
+})
 export class Specialization extends Model<
   SpecializationAttributes,
   SpecializationCreationAttributes

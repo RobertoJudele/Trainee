@@ -17,6 +17,8 @@ import {
   DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { s3, S3_CONFIG } from "../config/s3";
+import { TrainerImage } from "../models/trainerImage";
+import { TrainerSpecialization } from "../models/trainerSpecialization";
 
 export const createTrainer = async (
   req: Request<{}, {}, TrainerProfileCreationAttributes>,
@@ -129,9 +131,18 @@ export const deleteTrainer = async (req: Request, res: Response) => {
         Prefix: folderPrefix,
       });
       const listResponse = await s3.send(listCommand);
+      console.log("📋 S3 list response:", listResponse);
 
       if (!listResponse.Contents || listResponse.Contents.length === 0) {
         console.log(`No files found for user ${userId}`);
+
+        console.log("Destroying trainer with no files");
+        await trainer.destroy();
+
+        user.role = UserRole.CLIENT;
+        await user.save();
+
+        sendSuccess(res, 200, "Trainer deleted succesfully");
         return;
       }
 
@@ -158,7 +169,7 @@ export const deleteTrainer = async (req: Request, res: Response) => {
         console.warn("Some files failed to delete:", deleteResponse.Errors);
       }
     }
-
+    console.log("Destroying trainer");
     await trainer.destroy();
 
     user.role = UserRole.CLIENT;
@@ -262,4 +273,26 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
     }
     sendError(res, 500, "Unknown errot at getting self trainer");
   }
+};
+
+export const searchTrainers = async (req: Request, res: Response) => {
+  try {
+    const search = await Trainer.findAll({
+      where: { isAvailable: true },
+      limit: 20,
+      include: [
+        {
+          model: User,
+          attributes: ["id", "firstName", "lastName", "profileImageUrl"],
+        },
+        {
+          model: TrainerImage,
+          attributes: ["imageUrl", "isPrimary"],
+          required: false,
+          separate: true,
+        },
+      ],
+    });
+    sendSuccess(res, 200, "Search result succesful ", search);
+  } catch (error) {}
 };

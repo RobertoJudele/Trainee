@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { TrainerProfileAttributes } from "../../src/types/trainer";
 
 interface User {
   id: number;
@@ -16,25 +17,6 @@ interface User {
   emailVerifiedAt: string;
   createdAt: string;
   updatedAt: string;
-}
-
-export interface TrainerProfileAttributes {
-  bio?: string;
-  experienceYears?: number;
-  hourlyRate?: number;
-  sessionRate?: number;
-  locationCity?: string;
-  locationState?: string;
-  locationCountry?: string;
-  latitude?: number;
-  longitude?: number;
-  isFeatured: boolean;
-  isAvailable: boolean;
-  profileViews: number;
-  totalRating: number;
-  reviewCount: number;
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 interface AuthState {
@@ -63,12 +45,13 @@ const authSlice = createSlice({
       state.token = token;
     },
     setTrainerProfile: (state, action) => {
-      const { trainer } = action.payload;
+      const trainer = action.payload;
       state.trainer = trainer;
     },
     logOut: (state) => {
       state.user = null;
       state.token = null;
+      state.trainer = null;
     },
   },
 });

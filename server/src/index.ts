@@ -11,8 +11,12 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use(cors({ origin: "http://192.168.1.4:8081", credentials: true }));
-
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+  })
+);
 // Initialize database connection
 const initializeApp = async () => {
   try {
@@ -49,4 +53,13 @@ initializeApp().then(() => {
     console.log("Server listening on port 8000");
   });
   verifyEmailConnection();
+});
+process.on("uncaughtException", (error) => {
+  console.error("UNCAUGHT EXCEPTION! 💥", error);
+  process.exit(1); // Exit the process
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("UNHANDLED REJECTION! 💥", reason);
+  // You might not want to exit on every unhandled rejection
 });

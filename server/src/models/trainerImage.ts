@@ -19,6 +19,8 @@ import {
 @Table({
   tableName: "trainer_images",
   timestamps: true,
+  updatedAt: false,
+  underscored: true,
 })
 export class TrainerImage extends Model<
   TrainerImageAttributes,

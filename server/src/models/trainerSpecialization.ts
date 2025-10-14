@@ -18,6 +18,7 @@ import {
   tableName: "trainer_specializations",
   timestamps: true,
   updatedAt: false,
+  underscored: true,
 })
 export class TrainerSpecialization extends Model<
   TrainerSpecializationAttributes,

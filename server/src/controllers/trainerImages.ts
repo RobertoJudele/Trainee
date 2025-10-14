@@ -5,6 +5,8 @@ import { sendError, sendSuccess } from "../utils/response";
 import { Response } from "express";
 import { User } from "../models/user";
 import { S3ImageService } from "../services/s3ImageService";
+import { TrainerImage } from "../models/trainerImage";
+import { Trainer } from "../models/trainer";
 
 interface S3File extends Express.Multer.File {
   key: string;
@@ -94,6 +96,21 @@ export const uploadTrainerProfilePicture = [
       //image variants for better performance soon to be implemented
 
       await user.update({ profileImageUrl: uploadResult.url });
+
+      const trainer = await Trainer.findOne({ where: { userId: user.id } });
+
+      if (!trainer) {
+        sendError(res, 404, "No trainer found for this user");
+        return;
+      }
+
+      const profilePicture = await TrainerImage.create({
+        trainerId: trainer?.id,
+        imageUrl: uploadResult.url,
+        altText: "Profile picture",
+        isPrimary: true,
+        displayOrder: 0,
+      });
 
       sendSuccess(res, 200, "Profile picture uploaded succesfully", {
         user: user?.toJSON(),

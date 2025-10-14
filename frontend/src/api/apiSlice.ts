@@ -14,8 +14,7 @@ interface RefreshResponse {
 }
 
 const baseQuery = fetchBaseQuery({
-  baseUrl: "http://192.168.1.4:8000",
-  credentials: "include",
+  baseUrl: "http://192.168.0.104:8000",
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token;
     if (token) {

@@ -31,7 +31,34 @@ export const usersApiSlice = apiSlice.injectEndpoints({
         return response;
       },
     }),
+    deleteProfile: builder.mutation({
+      query: () => {
+        console.log("Mutation deleting user");
+        return { url: "/users", method: "DELETE" };
+      },
+      transformErrorResponse: (response: any) => {
+        console.log("🔴 Deleting error response:", JSON.stringify(response)); // ✅ Add error logging
+        if (response?.data?.errors) {
+          console.log(
+            "🔴 Detailed errors:",
+            JSON.stringify(response.data.errors, null, 2)
+          );
+          // Log each error individually
+          response.data.errors.forEach((error: any, index: number) => {
+            console.log(
+              `🔴 Error ${index + 1}:`,
+              JSON.stringify(error, null, 2)
+            );
+          });
+        }
+        return response;
+      },
+    }),
   }),
 });
 
-export const { useGetProfileQuery, useCreateTrainerMutation } = usersApiSlice;
+export const {
+  useGetProfileQuery,
+  useCreateTrainerMutation,
+  useDeleteProfileMutation,
+} = usersApiSlice;

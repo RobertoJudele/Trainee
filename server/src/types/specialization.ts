@@ -12,4 +12,5 @@ export interface SpecializationCreationAttributes {
   name: string;
   description?: string;
   iconUrl?: string;
+  isActive: boolean;
 }

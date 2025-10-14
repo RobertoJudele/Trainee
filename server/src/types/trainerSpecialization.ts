@@ -8,7 +8,6 @@ export interface TrainerSpecializationAttributes {
 }
 
 export interface TrainerSpecializationCreationAttributes {
-  trainerId: number;
   specializationId: number;
   experienceLevel: "beginner" | "intermediate" | "expert";
   certification?: string;
