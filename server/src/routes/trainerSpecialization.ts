@@ -7,3 +7,5 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post("/", createTrainerSpecialization);
+
+export default router;

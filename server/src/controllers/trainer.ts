@@ -289,7 +289,11 @@ export const searchTrainers = async (req: Request, res: Response) => {
           model: TrainerImage,
           attributes: ["imageUrl", "isPrimary"],
           required: false,
-          separate: true,
+        },
+        {
+          model: TrainerSpecialization,
+          required: false,
+          through: { attributes: [] },
         },
       ],
     });

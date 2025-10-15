@@ -6,7 +6,7 @@ import reviewRouter from "./review";
 import trainerRouter from "./trainer";
 import trainerImagesRouter from "./trainerImages";
 import specializationRouter from "./specialization";
-import trainerSpecializationRouter from "./specialization";
+import trainerSpecializationRouter from "./trainerSpecialization";
 
 const router = express.Router();
 

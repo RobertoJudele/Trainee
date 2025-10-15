@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { Op, where } from "sequelize";
 import { Trainer } from "../models/trainer";
-import { AuthenticatedRequest } from "src/types/common";
-import { TrainerSpecializationCreationAttributes } from "src/types/trainerSpecialization";
-import { sendError, sendSuccess } from "src/utils/response";
-import { Specialization } from "src/models/specialization";
-import { TrainerSpecialization } from "src/models/trainerSpecialization";
+import { AuthenticatedRequest } from "../types/common";
+import { TrainerSpecializationCreationAttributes } from "../types/trainerSpecialization";
+import { sendError, sendSuccess } from "../utils/response";
+import { Specialization } from "../models/specialization";
+import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { link } from "fs";
 
 interface AddSpecializationRequest {

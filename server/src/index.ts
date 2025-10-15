@@ -2,11 +2,17 @@ import express from "express";
 import "dotenv/config";
 import "reflect-metadata"; // Add this for Sequelize
 import sequelize from "./db"; // Import your Sequelize instance
-import { User } from "./models/user";
 import mainRouter from "./routes/index";
 import { verifyEmailConnection } from "./config/email";
 import cors from "cors";
 const app = express();
+
+import { User } from "./models/user";
+import { Trainer } from "./models/trainer";
+import { Specialization } from "./models/specialization";
+import { TrainerSpecialization } from "./models/trainerSpecialization";
+import { TrainerImage } from "./models/trainerImage";
+import { Review } from "./models/review";
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));

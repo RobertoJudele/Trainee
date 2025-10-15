@@ -25,7 +25,8 @@ const sequelize = new Sequelize({
     TrainerSpecialization,
     Specialization,
   ],
-  logging: false, // Enable logging to see SQL queries
+  // --- ADDING LOGGING TO THE CONNECTION POOL ---
+  logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`), // This will log all database operations, including connection events
   pool: {
     max: 5,
     min: 0,
