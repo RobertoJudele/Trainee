@@ -20,6 +20,83 @@ import { s3, S3_CONFIG } from "../config/s3";
 import { TrainerImage } from "../models/trainerImage";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 
+interface SearchQuery {
+  // Text search
+  q?: string; // General search query
+
+  // Location filters
+  city?: string;
+  state?: string;
+  country?: string;
+  lat?: string;
+  lng?: string;
+  radius?: string; // in km
+
+  // Rate filters
+  minRate?: string;
+  maxRate?: string;
+  rateType?: "hourly" | "session"; // Which rate to filter by
+
+  // Experience filters
+  minExperience?: string;
+  maxExperience?: string;
+
+  // Rating filters
+  minRating?: string;
+
+  // Specialization filters
+  specializations?: string; // Comma-separated IDs
+
+  // Availability
+  isAvailable?: string; // 'true' or 'false'
+  isFeatured?: string;
+
+  // Sorting
+  sortBy?: "totalRating" | "experience" | "rate" | "reviews" | "recent";
+  sortOrder?: "asc" | "desc";
+
+  // Pagination
+  page?: string;
+  limit?: string;
+}
+
+const getSpecializationsForTrainers = async (trainerIds: number[]) => {
+  if (trainerIds.length === 0) return new Map();
+
+  const trainerSpecializations = await TrainerSpecialization.findAll({
+    where: { trainerId: trainerIds },
+    include: [
+      {
+        model: Specialization,
+        attributes: ["id", "name", "description", "iconUrl"],
+      },
+    ],
+    raw: false, // Important: get full model instances
+  });
+
+  // Group by trainerId
+  const map = new Map<number, any[]>();
+
+  trainerSpecializations.forEach((ts) => {
+    if (!map.has(ts.trainerId)) {
+      map.set(ts.trainerId, []);
+    }
+
+    // Create a combined object with specialization + through data
+    const specWithThrough = {
+      ...ts.specialization.toJSON(),
+      TrainerSpecialization: {
+        experienceLevel: ts.experienceLevel,
+        certification: ts.certification,
+      },
+    };
+
+    map.get(ts.trainerId)!.push(specWithThrough);
+  });
+
+  return map;
+};
+
 export const createTrainer = async (
   req: Request<{}, {}, TrainerProfileCreationAttributes>,
   res: Response
@@ -275,15 +352,131 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
   }
 };
 
-export const searchTrainers = async (req: Request, res: Response) => {
+export const searchTrainers = async (
+  req: Request<{}, {}, {}, SearchQuery>,
+  res: Response
+) => {
   try {
-    const search = await Trainer.findAll({
-      where: { isAvailable: true },
-      limit: 20,
+    const {
+      q,
+      city,
+      state,
+      country,
+      lat,
+      lng,
+      radius,
+      minRate,
+      maxRate,
+      rateType = "session",
+      minExperience,
+      maxExperience,
+      minRating,
+      specializations,
+      isAvailable,
+      isFeatured,
+      sortBy = "totalRating",
+      sortOrder = "desc",
+      page = "1",
+      limit = "20",
+    } = req.query;
+
+    const where: any = {};
+
+    if (isAvailable === "true") {
+      where.isAvailable = true;
+    }
+
+    if (isFeatured === "true") {
+      where.isFeatured = true;
+    }
+
+    // Location filters
+    if (city) {
+      where.locationCity = { [Op.iLike]: `%${city}%` };
+    }
+    if (state) {
+      where.locationState = { [Op.iLike]: `%${state}%` };
+    }
+    if (country) {
+      where.locationCountry = { [Op.iLike]: `%${country}%` };
+    }
+
+    // if (specializations) {
+    //   where.specializations = { [Op.iLike]: `%${specializations}%` };
+    // }
+
+    // Filtrare dupa exp si rating nu merge
+
+    // Rate filters
+    if (minRate || maxRate) {
+      const rateField = rateType === "hourly" ? "hourlyRate" : "sessionRate";
+      where[rateField] = {};
+      if (minRate) where[rateField][Op.gte] = parseFloat(minRate);
+      if (maxRate) where[rateField][Op.lte] = parseFloat(maxRate);
+      console.log("!!!This is the rate: ", rateField);
+      console.log(where[rateField]);
+    }
+
+    // Experience filters
+    if (minExperience || maxExperience) {
+      where.experienceYears = {};
+      if (minExperience)
+        where.experienceYears[Op.gte] = parseInt(minExperience);
+      if (maxExperience)
+        where.experienceYears[Op.lte] = parseInt(maxExperience);
+    }
+
+    // Rating filter
+    if (minRating) {
+      where.totalRating = { [Op.gte]: parseFloat(minRating) };
+    }
+
+    const userWhere: any = {};
+
+    if (q) {
+      userWhere[Op.or] = [
+        {
+          firstName: { [Op.iLike]: `%${q}%` },
+        },
+        {
+          lastName: { [Op.iLike]: `%${q}%` },
+        },
+      ];
+      where.bio = { [Op.iLike]: `%${q}%` };
+    }
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+
+    // ✅ First get trainers WITH IDs to extract them
+    const { count, rows } = await Trainer.findAndCountAll({
+      where: where,
+      limit: parseInt(limit),
+      offset: offset,
+      // ✅ Don't exclude ID yet - we need it for specializations
+      attributes: [
+        "id",
+        "bio",
+        "experienceYears",
+        "hourlyRate",
+        "sessionRate",
+        "locationCity",
+        "locationState",
+        "locationCountry",
+        "latitude",
+        "longitude",
+        "isAvailable",
+        "isFeatured",
+        "profileViews",
+        "totalRating",
+        "reviewCount",
+        "createdAt",
+        "updatedAt",
+      ],
       include: [
         {
           model: User,
-          attributes: ["id", "firstName", "lastName", "profileImageUrl"],
+          attributes: ["firstName", "lastName", "profileImageUrl"],
+          required: false,
         },
         {
           model: TrainerImage,
@@ -291,12 +484,49 @@ export const searchTrainers = async (req: Request, res: Response) => {
           required: false,
         },
         {
+          // Trebuie rezolvat filtrarea dupa specializari
           model: TrainerSpecialization,
+          where: { specialization_id: 1 },
           required: false,
-          through: { attributes: [] },
         },
       ],
+      order: [[sortBy, sortOrder]],
     });
-    sendSuccess(res, 200, "Search result succesful ", search);
-  } catch (error) {}
+
+    // ✅ Extract IDs while we still have them
+    const trainerIds = rows.map((t) => t.id).filter(Boolean);
+    console.log("Trainer ids: ", trainerIds);
+
+    // ✅ Get specializations using the IDs
+    // const specializationsMap = await getSpecializationsForTrainers(trainerIds);
+
+    // ✅ Create final response WITHOUT internal IDs
+    const trainersWithSpecializations = rows.map((trainer) => {
+      const trainerJson = trainer.toJSON();
+
+      // ✅ Remove internal IDs from the response
+      const { id, userId, ...safeTrainerData } = trainerJson;
+
+      return {
+        ...safeTrainerData,
+        // specializations: specializationsMap.get(trainer.id) || [],
+      };
+    });
+    const totalPages = Math.ceil(count / parseInt(limit));
+
+    sendSuccess(res, 200, "Search result successful", {
+      searchResult: trainersWithSpecializations,
+      pagination: {
+        total: count,
+        page: page,
+        limit: limit,
+        totalPages: totalPages,
+        hasNextPage: totalPages > parseInt(page),
+        hasPreviousPage: parseInt(page) > 1,
+      },
+    });
+  } catch (error: any) {
+    console.error("Search trainers error:", error);
+    sendError(res, 500, "Search failed");
+  }
 };

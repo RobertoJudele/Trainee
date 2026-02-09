@@ -18,4 +18,5 @@ router.use("/trainer", trainerRouter);
 router.use("/trainer-images", trainerImagesRouter);
 router.use("/specialization", specializationRouter);
 router.use("/trainer-specializations", trainerSpecializationRouter);
+
 export default router;

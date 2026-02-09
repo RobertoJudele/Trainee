@@ -7,6 +7,7 @@ import { sendError, sendSuccess } from "../utils/response";
 import { Specialization } from "../models/specialization";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { link } from "fs";
+import { User } from "../models/user";
 
 interface AddSpecializationRequest {
   specializations: Array<TrainerSpecializationCreationAttributes>;
@@ -93,5 +94,63 @@ export const createTrainerSpecialization = async (
       return sendError(res, 400, "Validation failed", errors);
     }
     sendError(res, 500, "Failed to add specializations.");
+  }
+};
+
+export const getAllTrainerSpecializations = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    // ✅ Get data separately to avoid association issues
+    const trainerSpecializations = await TrainerSpecialization.findAll({
+      attributes: [
+        "id",
+        "trainerId",
+        "specializationId",
+        "experienceLevel",
+        "certification",
+        "createdAt",
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    // ✅ Get trainer and specialization data separately
+    const enrichedData = await Promise.all(
+      trainerSpecializations.map(async (ts) => {
+        const trainer = await Trainer.findByPk(ts.trainerId, {
+          attributes: ["id", "bio", "experienceYears", "hourlyRate"],
+          include: [
+            {
+              model: User,
+              attributes: ["firstName", "lastName", "profileImageUrl"],
+            },
+          ],
+        });
+
+        const specialization = await Specialization.findByPk(
+          ts.specializationId,
+          {
+            attributes: ["id", "name", "description", "iconUrl", "isActive"],
+          }
+        );
+
+        return {
+          ...ts.toJSON(),
+          Trainer: trainer?.toJSON() || null,
+          Specialization: specialization?.toJSON() || null,
+        };
+      })
+    );
+
+    sendSuccess(
+      res,
+      200,
+      "Trainer specializations retrieved successfully",
+      enrichedData
+    );
+  } catch (error: any) {
+    console.error("Error getting trainer specializations:", error);
+    sendError(res, 500, "Failed to get trainer specializations");
   }
 };

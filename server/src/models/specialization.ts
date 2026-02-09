@@ -56,6 +56,16 @@ export class Specialization extends Model<
   updatedAt!: Date;
 
   // Associations
-  @BelongsToMany(() => Trainer, () => TrainerSpecialization)
-  trainers!: Trainer[];
+  @BelongsToMany(
+    () => {
+      const { Trainer } = require("./trainer");
+      return Trainer;
+    },
+    () => {
+      const { TrainerSpecialization } = require("./trainerSpecialization");
+      return TrainerSpecialization;
+    },
+    "specialization_id"
+  ) // Explicitly specify foreign key
+  trainers!: any[];
 }

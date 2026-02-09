@@ -104,11 +104,24 @@ export class Trainer extends Model<
 
   @HasMany(() => TrainerImage) images!: TrainerImage[];
 
-  @BelongsToMany(() => Specialization, () => TrainerSpecialization)
-  specializations!: Specialization[];
+  @BelongsToMany(
+    () => {
+      const { Specialization } = require("./specialization");
+      return Specialization;
+    },
+    () => {
+      const { TrainerSpecialization } = require("./trainerSpecialization");
+      return TrainerSpecialization;
+    },
+    "trainer_id"
+  ) // Explicitly specify foreign key
+  specializations!: any[];
 
   @HasMany(() => Review, { onDelete: "CASCADE", hooks: true })
   reviews!: Review[];
+
+  @HasMany(() => TrainerSpecialization)
+  trainerSpecializations!: TrainerSpecialization[];
 
   async incrementViews(): Promise<void> {
     this.profileViews += 1;

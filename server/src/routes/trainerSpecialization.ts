@@ -1,5 +1,8 @@
 import express from "express";
-import { createTrainerSpecialization } from "../controllers/trainerSpecialization";
+import {
+  createTrainerSpecialization,
+  getAllTrainerSpecializations,
+} from "../controllers/trainerSpecialization";
 import { authenticate } from "../middleware/auth";
 
 const router = express.Router();
@@ -7,5 +10,6 @@ const router = express.Router();
 router.use(authenticate);
 
 router.post("/", createTrainerSpecialization);
+router.get("/", getAllTrainerSpecializations);
 
 export default router;
