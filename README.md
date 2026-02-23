@@ -143,7 +143,7 @@ PORT=3000
 # Database
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=trainer_marketplace
+DB_NAME=trainee
 DB_USER=postgres
 DB_PASSWORD=your_password
 

@@ -10,6 +10,14 @@ import { Specialization } from "./models/specialization";
 
 dotenv.config();
 
+// DEBUG: Log environment variables
+console.log('[DEBUG] DB Connection Variables:');
+console.log('DB_NAME:', process.env.DB_NAME);
+console.log('DB_USER:', process.env.DB_USER);
+console.log('DB_HOST:', process.env.DB_HOST);
+console.log('DB_PORT:', process.env.DB_PORT);
+console.log('DB_PASS:', process.env.DB_PASS ? '***' : 'NOT SET');
+
 const sequelize = new Sequelize({
   database: process.env.DB_NAME || "trainee",
   username: process.env.DB_USER || "admin",
@@ -25,8 +33,7 @@ const sequelize = new Sequelize({
     TrainerSpecialization,
     Specialization,
   ],
-  // --- ADDING LOGGING TO THE CONNECTION POOL ---
-  logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`), // This will log all database operations, including connection events
+  logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {
     max: 5,
     min: 0,

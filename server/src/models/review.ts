@@ -36,7 +36,7 @@ export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
 
   @AllowNull(false)
   @Validate({ min: 1, max: 5, isInt: true })
-  @Column(DataType.NUMBER) // Changed from NUMBER to INTEGER
+  @Column(DataType.INTEGER) // Changed from NUMBER to INTEGER
   rating!: number;
 
   @Validate({ len: [10, 100] })

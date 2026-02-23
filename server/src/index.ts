@@ -69,3 +69,17 @@ process.on("unhandledRejection", (reason, promise) => {
   console.error("UNHANDLED REJECTION! 💥", reason);
   // You might not want to exit on every unhandled rejection
 });
+
+const PORT = process.env.PORT || 8000;
+
+// Sync database before starting server
+sequelize.sync({ alter: true }).then(() => {
+  console.log('✅ Database synchronized');
+  
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
+}).catch(err => {
+  console.error('❌ Database sync failed:', err);
+  process.exit(1);
+});
