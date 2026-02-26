@@ -1,7 +1,7 @@
 export interface ReviewAttributes {
-  id: number;
-  trainerId: number;
-  clientId: number;
+  id: string;
+  trainerId: string;
+  clientId: string;
   rating: number;
   reviewText?: string;
   is_verified: boolean;
@@ -11,8 +11,8 @@ export interface ReviewAttributes {
 }
 
 export interface ReviewCreationAttributes {
-  trainerId: number;
-  clientId: number;
+  trainerId: string;
+  clientId: string;
   rating: number;
   reviewText?: string;
 }

@@ -27,16 +27,16 @@ export class TrainerImage extends Model<
   TrainerImageCreationAttributes
 > {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Trainer)
   @AllowNull(false)
-  @Column(DataType.INTEGER)
-  trainerId!: number;
+  @Column(DataType.UUID)
+  trainerId!: string;
 
   @AllowNull(false)
   @Column(DataType.STRING(500))

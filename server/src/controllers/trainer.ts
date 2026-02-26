@@ -75,7 +75,7 @@ const getSpecializationsForTrainers = async (trainerIds: number[]) => {
   });
 
   // Group by trainerId
-  const map = new Map<number, any[]>();
+  const map = new Map<string, any[]>();
 
   trainerSpecializations.forEach((ts) => {
     if (!map.has(ts.trainerId)) {
@@ -168,9 +168,12 @@ export const getTrainer = async (
   req: Request<{ trainerId: string }, {}, {}>,
   res: Response
 ) => {
-  const trainerId = parseInt(req.params.trainerId);
+  const trainerId = req.params.trainerId;
 
-  if (!trainerId) {
+  const UUID_REGEX =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (!trainerId || !UUID_REGEX.test(trainerId)) {
     sendError(res, 400, "The trainer id is invalid");
     return;
   }
@@ -494,7 +497,7 @@ export const searchTrainers = async (
     });
 
     // ✅ Extract IDs while we still have them
-    const trainerIds = rows.map((t) => t.id).filter(Boolean);
+    const trainerIds = rows.map((t) => t.id).filter((id): id is string => !!id);
     console.log("Trainer ids: ", trainerIds);
 
     // ✅ Get specializations using the IDs

@@ -1,5 +1,5 @@
 export interface SpecializationAttributes {
-  id: number;
+  id: string;
   name: string;
   description?: string;
   iconUrl?: string;

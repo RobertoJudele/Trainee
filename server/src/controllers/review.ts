@@ -11,12 +11,15 @@ export const createReview = async (
 ) => {
   try {
     const { rating, reviewText } = req.body;
-    const trainerId = parseInt(req.params.trainerId);
+    const trainerId = req.params.trainerId;
     const user = req.user!;
 
     console.log("Trainer and user ", user.id, trainerId);
 
-    if (isNaN(trainerId)) {
+    const UUID_REGEX =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+    if (!trainerId || !UUID_REGEX.test(trainerId)) {
       console.log(trainerId);
       sendError(res, 400, "Trainer doesnt exist");
       return;
@@ -78,7 +81,7 @@ export const createReview = async (
 export const deleteReview = async (req: Request, res: Response) => {
   try {
     const userId = req.user.id;
-    const reviewId = parseInt(req.params.reviewId);
+    const reviewId = req.params.reviewId;
     if (!userId) {
       sendError(res, 400, "No user found ");
       return;

@@ -31,13 +31,13 @@ export class Trainer extends Model<
   TrainerProfileAttributes,
   TrainerProfileCreationAttributes
 > {
-  @Column({ type: DataType.INTEGER, primaryKey: true, autoIncrement: true })
-  id!: number;
+  @Column({ type: DataType.UUID, primaryKey: true, defaultValue: DataType.UUIDV4 })
+  id!: string;
 
   @ForeignKey(() => User)
   @AllowNull(false)
-  @Column({ type: DataType.INTEGER, field: "user_id" })
-  userId!: number;
+  @Column({ type: DataType.UUID, field: "user_id" })
+  userId!: string;
 
   @Column(DataType.STRING)
   bio?: string;

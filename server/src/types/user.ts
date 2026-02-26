@@ -2,7 +2,7 @@
 import { UserRole } from "./common";
 
 export interface UserAttributes {
-  id: number;
+  id: string;
   email: string;
   password?: string;
   firstName: string;
