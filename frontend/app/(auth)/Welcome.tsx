@@ -1,138 +1,137 @@
-import { useDispatch, useSelector } from "react-redux";
-import {
-  logOut,
-  selectCurrentToken,
-  selectCurrentTrainer,
-  selectCurrentUser,
-  setCredentials,
-  setTrainerProfile,
-} from "../../features/auth/authSlice";
-import { Pressable, Text, View, StyleSheet } from "react-native";
-import { Link, router } from "expo-router";
-import { UserRole } from "../../features/auth/authApiSlice";
-import {
-  useDeleteTrainerProfileMutation,
-  useGetTrainerProfileQuery,
-} from "../../features/trainer/trainerApiSlice";
-import { useCallback, useEffect } from "react";
-import TrainerProfile from "../../features/trainer/TrainerProfile";
-import { useDeleteProfileMutation } from "../../features/users/usersApiSlicet";
+import React from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { theme, typography } from '../../src/lib/theme';
 
-const Welcome = () => {
-  const user = useSelector(selectCurrentUser);
-  const token = useSelector(selectCurrentToken);
-  const welcome = user ? `Welcome ${user.firstName}` : "Welcom";
-  const tokenAbbr = `${token?.slice(0, 9)}...`;
-  const trainerProfile = useSelector(selectCurrentTrainer);
-  const [deleteProfile, { isLoading: isDeleting }] = useDeleteProfileMutation();
-  const dispatch = useDispatch();
+const { width, height } = Dimensions.get('window');
 
-  const {
-    data: trainerData,
-    isLoading,
-    isSuccess,
-    isError,
-  } = useGetTrainerProfileQuery(undefined, {
-    skip: user?.role !== "trainer" || !!trainerProfile, // Skip dacă nu e trainer sau deja avem profile
-  });
+export default function Welcome() {
+  const router = useRouter();
 
-  console.log("Succes: ", isSuccess);
+  return (
+    <LinearGradient
+      colors={[theme.colors.primary, theme.colors.tertiary]}
+      style={styles.container}
+    >
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <Text style={styles.emoji}>💪</Text>
+          <Text style={styles.title}>Trainee</Text>
+          <Text style={styles.subtitle}>
+            Find your perfect fitness trainer and achieve your goals
+          </Text>
+        </View>
 
-  useEffect(() => {
-    if (isSuccess && trainerData?.data) {
-      console.log("Setting trainer profile:", trainerData);
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={[styles.button, styles.primaryButton]}
+            onPress={() => router.push('/(auth)/signup')}
+          >
+            <Text style={styles.primaryButtonText}>Get Started</Text>
+          </TouchableOpacity>
 
-      // Only update role if it's not already set
-      if (user?.role !== "trainer") {
-        const updatedTrainer = { ...user, role: "trainer" as UserRole };
-        dispatch(setCredentials({ user: updatedTrainer }));
-      }
+          <TouchableOpacity
+            style={[styles.button, styles.secondaryButton]}
+            onPress={() => router.push('/(auth)/login')}
+          >
+            <Text style={styles.secondaryButtonText}>Sign In</Text>
+          </TouchableOpacity>
 
-      dispatch(setTrainerProfile(trainerData.data));
-    }
-  }, [
-    isSuccess,
-    trainerData?.data,
-    trainerProfile,
-    user?.role,
-    token,
-    dispatch,
-  ]); // ✅ Fixed dependencies
+          <View style={styles.features}>
+            <FeatureItem icon="✓" text="Certified Trainers" />
+            <FeatureItem icon="✓" text="Personalized Programs" />
+            <FeatureItem icon="✓" text="Track Your Progress" />
+          </View>
+        </View>
+      </View>
+    </LinearGradient>
+  );
+}
 
-  console.log("!!!Trainer data: ", trainerProfile);
-
-  const handleDeleteProfile = useCallback(async () => {
-    await deleteProfile({});
-    dispatch(logOut());
-    router.push("/");
-  }, []);
-
-  const handleLogout = () => {
-    dispatch(logOut());
-    router.push("/");
-  };
-
-  const handleCreateTrainer = () => {
-    router.push("/create-trainer");
-  };
-  const content = (
-    <View>
-      <Text>{welcome}</Text>
-      <Text>{tokenAbbr}</Text>
-      {user?.role === UserRole.TRAINER ? (
-        <Pressable
-          onPress={() => {
-            router.push("/TrainerProfile");
-          }}
-        >
-          <Text>See your trainer proile</Text>
-        </Pressable>
-      ) : (
-        <Pressable onPress={handleCreateTrainer}>
-          <Text>Create trainer profile</Text>
-        </Pressable>
-      )}
-      <Pressable onPress={handleLogout}>
-        <Text>Logout</Text>
-      </Pressable>
-      <Pressable
-        style={[styles.button, isLoading && styles.buttonDisabled]}
-        onPress={handleDeleteProfile}
-        disabled={isDeleting}
-      >
-        <Text>{isLoading ? "Deleting profile..." : "Delete profile"} </Text>
-      </Pressable>
+function FeatureItem({ icon, text }: { icon: string; text: string }) {
+  return (
+    <View style={styles.featureItem}>
+      <Text style={styles.featureIcon}>{icon}</Text>
+      <Text style={styles.featureText}>{text}</Text>
     </View>
   );
-  return content;
-};
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingVertical: 200,
-    justifyContent: "space-between",
   },
-  label: { marginTop: 30 },
-  input: {
-    borderColor: "#c81515ff",
-    backgroundColor: "#c4bdbdff",
-    borderWidth: 1,
+  content: {
+    flex: 1,
+    justifyContent: 'space-between',
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: height * 0.1,
+    paddingBottom: theme.spacing.xl,
+  },
+  header: {
+    alignItems: 'center',
+  },
+  emoji: {
+    fontSize: 80,
+    marginBottom: theme.spacing.md,
+  },
+  title: {
+    ...typography.h1,
+    fontSize: 48,
+    color: '#FFFFFF',
+    marginBottom: theme.spacing.sm,
+    fontWeight: '800',
+  },
+  subtitle: {
+    ...typography.body1,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    maxWidth: width * 0.8,
+    lineHeight: 24,
+  },
+  buttonContainer: {
+    gap: theme.spacing.md,
   },
   button: {
-    backgroundColor: "#007AFF",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 20,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.lg,
+    borderRadius: theme.roundness,
+    alignItems: 'center',
   },
-  buttonDisabled: {
-    backgroundColor: "#ccc",
+  primaryButton: {
+    backgroundColor: '#FFFFFF',
   },
-  buttonText: {
-    color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+  secondaryButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
+  },
+  primaryButtonText: {
+    ...typography.h3,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    ...typography.h3,
+    color: '#FFFFFF',
+    fontWeight: '600',
+  },
+  features: {
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing.sm,
+  },
+  featureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+  },
+  featureIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  featureText: {
+    ...typography.body1,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
 });
-
-export default Welcome;

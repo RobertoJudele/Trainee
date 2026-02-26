@@ -1,4 +1,4 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  ActivityIndicator, // Add this import
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -15,7 +16,7 @@ import {
   setCredentials,
   selectCurrentToken,
 } from "../auth/authSlice";
-import { useDeleteTrainerProfileMutation } from "./trainerApiSlice";
+import { useDeleteTrainerProfileMutation, useGetTrainerProfileQuery } from "./trainerApiSlice";
 import { router } from "expo-router";
 
 function TrainerProfile() {
@@ -24,64 +25,79 @@ function TrainerProfile() {
   const token = useSelector(selectCurrentToken);
   const dispatch = useDispatch();
 
-  const [deleteTrainerProfile, { isLoading }] =
+  const {
+    data: trainerResponse,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useGetTrainerProfileQuery(undefined, {
+    // Skip query if we already have trainer data in Redux
+    skip: !!trainer,
+  });
+
+  const [deleteTrainerProfile, { isLoading: isDeleting }] =
     useDeleteTrainerProfileMutation();
 
-  const handleDelete = useCallback(async () => {
-    try {
-      Alert.alert(
-        "Delete Trainer Profile",
-        "Are you sure you want to delete your trainer profile? This action cannot be undone.",
-        [
-          {
-            text: "Cancel",
-            style: "cancel",
-          },
-          {
-            text: "Delete",
-            style: "destructive",
-            onPress: async () => {
-              console.log("🗑️ Deleting trainer profile...");
-
-              const result = await deleteTrainerProfile().unwrap();
-              console.log("✅ Delete result:", result);
-
-              // Clear trainer profile from Redux
-              dispatch(setTrainerProfile(null));
-
-              // Update user role back to client
-              if (user) {
-                const updatedUser = { ...user, role: "client" };
-                dispatch(
-                  setCredentials({
-                    user: updatedUser,
-                    token: token || "",
-                  })
-                );
-              }
-
-              router.push("/(auth)/welcome");
-            },
-          },
-        ]
-      );
-    } catch (error: any) {
-      console.error("❌ Delete error:", error);
-      Alert.alert("Error", "Failed to delete trainer profile");
+  useEffect(() => {
+    if (trainerResponse?.data && !trainer) {
+      console.log("📥 Fetched trainer profile from API:", trainerResponse.data);
+      dispatch(setTrainerProfile(trainerResponse.data));
     }
-  }, [deleteTrainerProfile, dispatch, user]);
+  }, [trainerResponse, trainer, dispatch]);
+
+  const handleDelete = useCallback(async () => {
+    console.log("Attempting to delete trainer profile...");
+    Alert.alert(
+      "Delete Trainer Profile",
+      "Are you sure you want to delete your trainer profile? This action cannot be undone.",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => performDelete(), // separate function
+        },
+      ]
+    );
+  }, [deleteTrainerProfile, dispatch, user, token]);
+
+  // Separate the async logic
+  const performDelete = useCallback(async () => {
+    try {
+      const result = await deleteTrainerProfile().unwrap();
+      console.log("✅ Delete API success:", result);
+
+      dispatch(setTrainerProfile(null));
+
+      if (user) {
+        const updatedUser = { ...user, role: "client" };
+        dispatch(setCredentials({ user: updatedUser, token: token || "" }));
+      }
+
+      router.push("/(auth)/Welcome");
+    } catch (deleteError) {
+      Alert.alert("Error", "Failed to delete trainer profile");
+      console.error("❌ Delete failed:", deleteError);
+    }
+  }, [deleteTrainerProfile, dispatch, user, token]);
 
   // Handle case when no trainer profile
   if (!trainer) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>No trainer profile found</Text>
+        <Pressable style={styles.button} onPress={() => router.push("/login")}><Text style={styles.buttonText}>Login</Text></Pressable>
         <Pressable
           style={styles.button}
-          onPress={() => router.push("/(auth)/welcome")}
+          onPress={() => router.push("/")}
         >
           <Text style={styles.buttonText}>Go Back</Text>
         </Pressable>
+
       </View>
     );
   }
@@ -249,12 +265,12 @@ function TrainerProfile() {
         </Pressable>
 
         <Pressable
-          style={[styles.deleteButton, isLoading && styles.buttonDisabled]}
+          style={[styles.deleteButton, isDeleting && styles.buttonDisabled]}
           onPress={handleDelete}
-          disabled={isLoading}
+          disabled={isDeleting} // Change from isLoading to isDeleting
         >
           <Text style={styles.buttonText}>
-            {isLoading ? "🔄 Deleting..." : "🗑️ Delete Profile"}
+            {isDeleting ? "🔄 Deleting..." : "🗑️ Delete Profile"}
           </Text>
         </Pressable>
 
