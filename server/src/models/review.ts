@@ -23,16 +23,16 @@ import { Op } from "sequelize";
 
 @Table({ tableName: "reviews", timestamps: true })
 export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
-  @Column({ type: DataType.INTEGER, primaryKey: true, autoIncrement: true })
-  id!: number;
+  @Column({ type: DataType.UUID, primaryKey: true, defaultValue: DataType.UUIDV4 })
+  id!: string;
 
   @ForeignKey(() => Trainer)
-  @Column({ type: DataType.INTEGER, field: "trainer_id" }) // Map to snake_case DB column
-  trainerId!: number;
+  @Column({ type: DataType.UUID, field: "trainer_id" }) // Map to snake_case DB column
+  trainerId!: string;
 
   @ForeignKey(() => User)
-  @Column({ type: DataType.INTEGER, field: "client_id" }) // Map to snake_case DB column
-  clientId!: number;
+  @Column({ type: DataType.UUID, field: "client_id" }) // Map to snake_case DB column
+  clientId!: string;
 
   @AllowNull(false)
   @Validate({ min: 1, max: 5, isInt: true })
@@ -80,7 +80,7 @@ export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
     await Review.updateTrainerRating(instance.trainerId);
   }
 
-  static async updateTrainerRating(trainerId: number) {
+  static async updateTrainerRating(trainerId: string) {
     try {
       const trainer = await Trainer.findByPk(trainerId);
       const rating = await Review.findAll({

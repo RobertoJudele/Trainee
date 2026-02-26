@@ -1,6 +1,6 @@
 export interface TrainerImageAttributes {
-  id: number;
-  trainerId: number;
+  id: string;
+  trainerId: string;
   imageUrl: string;
   altText?: string;
   isPrimary: boolean;
@@ -10,7 +10,7 @@ export interface TrainerImageAttributes {
 }
 
 export interface TrainerImageCreationAttributes {
-  trainerId: number;
+  trainerId: string;
   imageUrl: string;
   altText?: string;
   isPrimary?: boolean;

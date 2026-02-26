@@ -35,7 +35,7 @@ export interface PaginationResult<T> {
 }
 
 export interface JWTPayload {
-  userId: number;
+  userId: string;
   email: string;
   role: UserRole;
   iat?: number;

@@ -44,11 +44,11 @@ import { Review } from "./review";
 })
 export class User extends Model<UserAttributes, UserCreationAttributes> {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @Column({
     type: DataType.STRING,

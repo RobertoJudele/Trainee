@@ -1,6 +1,6 @@
 export interface TrainerProfileAttributes {
-  id: number;
-  userId: number;
+  id: string;
+  userId: string;
   bio?: string;
   experienceYears?: number;
   hourlyRate?: number;
@@ -30,5 +30,5 @@ export interface TrainerProfileCreationAttributes {
   locationCountry?: string;
   latitude?: number;
   longitude?: number;
-  specializationIds?: number[];
+  specializationIds?: string[];
 }

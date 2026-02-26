@@ -1,14 +1,14 @@
 export interface TrainerSpecializationAttributes {
-  id: number;
-  trainerId: number;
-  specializationId: number;
+  id: string;
+  trainerId: string;
+  specializationId: string;
   experienceLevel: "beginner" | "intermediate" | "expert";
   certification?: string;
   createdAt: Date;
 }
 
 export interface TrainerSpecializationCreationAttributes {
-  specializationId: number;
+  specializationId: string;
   experienceLevel: "beginner" | "intermediate" | "expert";
   certification?: string;
 }

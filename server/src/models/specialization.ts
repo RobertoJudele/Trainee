@@ -28,11 +28,11 @@ export class Specialization extends Model<
   SpecializationCreationAttributes
 > {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @Unique
   @AllowNull(false)

@@ -25,19 +25,19 @@ export class TrainerSpecialization extends Model<
   TrainerSpecializationCreationAttributes
 > {
   @Column({
-    type: DataType.INTEGER,
+    type: DataType.UUID,
     primaryKey: true,
-    autoIncrement: true,
+    defaultValue: DataType.UUIDV4,
   })
-  id!: number;
+  id!: string;
 
   @ForeignKey(() => Trainer)
-  @Column(DataType.INTEGER)
-  trainerId!: number;
+  @Column(DataType.UUID)
+  trainerId!: string;
 
   @ForeignKey(() => Specialization)
-  @Column(DataType.INTEGER)
-  specializationId!: number;
+  @Column(DataType.UUID)
+  specializationId!: string;
 
   @Column(DataType.ENUM("beginner", "intermediate", "expert"))
   experienceLevel!: "beginner" | "intermediate" | "expert";
