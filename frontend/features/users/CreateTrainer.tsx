@@ -10,6 +10,10 @@ import {
   TextInput,
   StyleSheet,
   Pressable,
+  ScrollView,
+  Platform,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 
 export default function CreateTrainer() {
@@ -24,46 +28,58 @@ export default function CreateTrainer() {
   const [longitude, setLongitude] = useState("0");
 
   const errRef = useRef<Text>(null);
-
   const [errMsg, setErrMsg] = useState("");
 
   const [creatingTrainer, { isLoading }] = useCreateTrainerMutation();
   const dispatch = useDispatch();
 
-  const handleSubmit = useCallback(async () => {
-    console.log("Create button pressed!");
+  const validateForm = () => {
     if (!bio.trim()) {
       setErrMsg("Bio is required");
-      return;
+      return false;
     }
-
     if (!exp.trim()) {
       setErrMsg("Experience is required");
-      return;
+      return false;
     }
-
     if (!hourlyRate.trim()) {
       setErrMsg("Hourly rate is required");
-      return;
+      return false;
     }
-
     if (!sessionRate.trim()) {
       setErrMsg("Session rate is required");
-      return;
+      return false;
     }
-
     if (!city.trim()) {
       setErrMsg("City is required");
-      return;
+      return false;
     }
-
     if (!county.trim()) {
       setErrMsg("County is required");
-      return;
+      return false;
     }
-
     if (!country.trim()) {
       setErrMsg("Country is required");
+      return false;
+    }
+
+    // Validate rates are numbers
+    if (isNaN(parseFloat(hourlyRate)) || parseFloat(hourlyRate) <= 0) {
+      setErrMsg("Please enter a valid hourly rate");
+      return false;
+    }
+    if (isNaN(parseFloat(sessionRate)) || parseFloat(sessionRate) <= 0) {
+      setErrMsg("Please enter a valid session rate");
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSubmit = useCallback(async () => {
+    console.log("Create button pressed!");
+    
+    if (!validateForm()) {
       return;
     }
 
@@ -90,127 +106,314 @@ export default function CreateTrainer() {
 
       dispatch(setTrainerProfile({ trainer: data }));
 
-      //Nu s sigur ca ramane asa
-      router.push("/(auth)/Welcome");
+      Alert.alert(
+        "Success! 🎉",
+        "Your trainer profile has been created successfully!",
+        [
+          {
+            text: "Continue",
+            onPress: () => router.push("/"),
+          },
+        ]
+      );
     } catch (error: any) {
       if (!error.originalStatus) {
-        setErrMsg("No server response");
-      } else if (error.response.status === 400) {
-        setErrMsg("Missing username or password");
-      } else if (error.response.status === 401) {
-        setErrMsg("Unauthorized");
+        setErrMsg("No server response. Please check your connection.");
+      } else if (error.response?.status === 400) {
+        setErrMsg("Invalid data provided. Please check your inputs.");
+      } else if (error.response?.status === 401) {
+        setErrMsg("Unauthorized. Please log in again.");
       } else {
-        setErrMsg("Login failed");
+        setErrMsg("Failed to create profile. Please try again.");
       }
       errRef.current;
     }
-  }, [
-    bio,
-    hourlyRate,
-    sessionRate,
-    latitude,
-    longitude,
-    city,
-    country,
-    county,
-    exp,
-  ]);
-  return (
-    <>
-      <View>
-        <KeyboardAvoidingView>
-          <Text>Bio</Text>
-          <TextInput
-            style={styles.input}
-            value={bio}
-            placeholder="Tell us about yourself"
-            onChangeText={setBio}
-          ></TextInput>
-          <Text>Experience</Text>
-          <TextInput
-            style={styles.input}
-            value={exp}
-            placeholder="Tell us about yourself"
-            onChangeText={setExp}
-          ></TextInput>
-          <Text>Hourly rate</Text>
-          <TextInput
-            style={styles.input}
-            value={hourlyRate}
-            placeholder="Tell us about yourself"
-            onChangeText={setHourlyRate}
-          ></TextInput>
-          <Text>Session rate</Text>
-          <TextInput
-            style={styles.input}
-            value={sessionRate}
-            placeholder="Tell us about yourself"
-            onChangeText={setSessionRate}
-          ></TextInput>
-          <Text>City</Text>
-          <TextInput
-            style={styles.input}
-            value={city}
-            placeholder="Tell us about yourself"
-            onChangeText={setCity}
-          ></TextInput>
-          <Text>County</Text>
-          <TextInput
-            style={styles.input}
-            value={county}
-            placeholder="Tell us about yourself"
-            onChangeText={setCounty}
-          ></TextInput>
-          <Text>Country</Text>
-          <TextInput
-            style={styles.input}
-            value={country}
-            placeholder="Tell us about yourself"
-            onChangeText={setCountry}
-          ></TextInput>
+  }, [bio, hourlyRate, sessionRate, latitude, longitude, city, country, county, exp]);
 
-          <Pressable
-            onPress={handleSubmit}
-            disabled={isLoading}
-            style={[styles.button, isLoading && styles.buttonDisabled]}
-          >
-            <Text style={styles.buttonText}>
-              {isLoading
-                ? "Creating profile..."
-                : "Create trainer profile"}{" "}
+  return (
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>✨ Create Your Trainer Profile</Text>
+          <Text style={styles.subtitle}>
+            Tell us about yourself and start connecting with clients
+          </Text>
+        </View>
+
+        <View style={styles.form}>
+          {/* Error Message */}
+          {errMsg ? (
+            <View style={styles.errorContainer}>
+              <Text ref={errRef} style={styles.errorText}>
+                ⚠️ {errMsg}
+              </Text>
+            </View>
+          ) : null}
+
+          {/* Bio Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📝 About You</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Bio *</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={bio}
+                placeholder="Tell clients about yourself, your passion for fitness, and what makes you unique..."
+                onChangeText={setBio}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Experience *</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={exp}
+                placeholder="Describe your certifications, years of experience, specializations..."
+                onChangeText={setExp}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+
+          {/* Pricing Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>💰 Pricing</Text>
+            
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Hourly Rate * ($)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={hourlyRate}
+                  placeholder="50"
+                  onChangeText={setHourlyRate}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Session Rate * ($)</Text>
+                <TextInput
+                  style={styles.input}
+                  value={sessionRate}
+                  placeholder="75"
+                  onChangeText={setSessionRate}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Location Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>📍 Location</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>City *</Text>
+              <TextInput
+                style={styles.input}
+                value={city}
+                placeholder="Enter your city"
+                onChangeText={setCity}
+              />
+            </View>
+
+            <View style={styles.row}>
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>County *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={county}
+                  placeholder="County/State"
+                  onChangeText={setCounty}
+                />
+              </View>
+
+              <View style={[styles.inputGroup, styles.halfWidth]}>
+                <Text style={styles.label}>Country *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={country}
+                  placeholder="Country"
+                  onChangeText={setCountry}
+                />
+              </View>
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <View style={styles.buttonContainer}>
+            <Pressable
+              onPress={handleSubmit}
+              disabled={isLoading}
+              style={[
+                styles.button,
+                isLoading && styles.buttonDisabled
+              ]}
+            >
+              {isLoading ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator color="white" size="small" />
+                  <Text style={styles.buttonText}>Creating Profile...</Text>
+                </View>
+              ) : (
+                <Text style={styles.buttonText}>🚀 Create Trainer Profile</Text>
+              )}
+            </Pressable>
+
+            <Text style={styles.footerText}>
+              * Required fields
             </Text>
-          </Pressable>
-        </KeyboardAvoidingView>
-      </View>
-    </>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingVertical: 200,
-    justifyContent: "space-between",
+    backgroundColor: "#F8F9FA",
   },
-  label: { marginTop: 30 },
+  scrollView: {
+    flex: 1,
+  },
+  header: {
+    paddingTop: 60,
+    paddingHorizontal: 24,
+    paddingBottom: 30,
+    backgroundColor: "white",
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#1A1A1A",
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6B7280",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  form: {
+    padding: 24,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: "#1A1A1A",
+    marginBottom: 16,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#374151",
+    marginBottom: 8,
+  },
   input: {
-    borderColor: "#c81515ff",
-    backgroundColor: "#c4bdbdff",
+    borderWidth: 2,
+    borderColor: "#E5E7EB",
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: "#1A1A1A",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: "top",
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  errorContainer: {
+    backgroundColor: "#FEF2F2",
     borderWidth: 1,
+    borderColor: "#FCA5A5",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  buttonContainer: {
+    marginTop: 20,
+    marginBottom: 40,
   },
   button: {
-    backgroundColor: "#007AFF",
-    padding: 16,
-    borderRadius: 8,
+    backgroundColor: "#3B82F6",
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: "center",
-    marginTop: 20,
+    justifyContent: "center",
+    shadowColor: "#3B82F6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
   buttonDisabled: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#9CA3AF",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonText: {
     color: "white",
-    fontSize: 16,
-    fontWeight: "bold",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  footerText: {
+    textAlign: "center",
+    marginTop: 16,
+    fontSize: 14,
+    color: "#6B7280",
+    fontStyle: "italic",
   },
 });

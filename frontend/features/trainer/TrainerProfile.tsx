@@ -47,41 +47,50 @@ function TrainerProfile() {
   }, [trainerResponse, trainer, dispatch]);
 
   const handleDelete = useCallback(async () => {
-    console.log("Attempting to delete trainer profile...");
-    Alert.alert(
-      "Delete Trainer Profile",
-      "Are you sure you want to delete your trainer profile? This action cannot be undone.",
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => performDelete(), // separate function
-        },
-      ]
-    );
-  }, [deleteTrainerProfile, dispatch, user, token]);
-
-  // Separate the async logic
-  const performDelete = useCallback(async () => {
+    console.log("🗑️ Delete button pressed");
     try {
-      const result = await deleteTrainerProfile().unwrap();
-      console.log("✅ Delete API success:", result);
+      console.log("🔍 Confirming delete action with user...");
+      Alert.alert(
+        "Delete Trainer Profile",
+        "Are you sure you want to delete your trainer profile? This action cannot be undone.",
+        [
+          {
+            text: "Cancel",
+            style: "cancel",
+            onPress: () => console.log("❌ User cancelled delete"),
+          },
+          {
+            text: "Delete",
+            style: "destructive",
+            onPress: async () => {
+              console.log("🗑️ User confirmed - starting deletion...");
+              console.log("📡 Making API call to delete trainer profile...");
 
-      dispatch(setTrainerProfile(null));
+              try {
+                const result = await deleteTrainerProfile().unwrap();
+                console.log("✅ Delete API success:", result);
 
-      if (user) {
-        const updatedUser = { ...user, role: "client" };
-        dispatch(setCredentials({ user: updatedUser, token: token || "" }));
-      }
+                dispatch(setTrainerProfile(null));
+                console.log("🗑️ Cleared trainer from Redux");
 
-      router.push("/(auth)/Welcome");
-    } catch (deleteError) {
-      Alert.alert("Error", "Failed to delete trainer profile");
-      console.error("❌ Delete failed:", deleteError);
+                if (user) {
+                  const updatedUser = { ...user, role: "client" };
+                  dispatch(setCredentials({ user: updatedUser, token: token || "" }));
+                  console.log("👤 Updated user role to client");
+                }
+
+                console.log("🔀 Navigating to Welcome...");
+                router.push("/");
+              } catch (deleteError) { // ← Remove ": any" if it's here
+                console.error("❌ Delete API failed:", deleteError);
+                Alert.alert("Error", "Failed to delete trainer profile: " + (deleteError as any).message);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error("❌ Alert error:", error);
     }
   }, [deleteTrainerProfile, dispatch, user, token]);
 

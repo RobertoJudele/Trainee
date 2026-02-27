@@ -13,10 +13,11 @@ const router = express.Router();
 
 router.use(authenticate);
 
-router.post("/search", searchTrainers);
+// server/src/routes/trainer.ts
+router.get("/search", searchTrainers); // GET not POST - search params go in query string
 router.post("/create", createTrainer);
+router.get("/", getSelfTrainer);       // ⚠️ keep this AFTER /search or it won't match
 router.get("/:trainerId", getTrainer);
-router.get("/", getSelfTrainer);
 router.delete("/", deleteTrainer);
 router.put("/", updateTrainer);
 

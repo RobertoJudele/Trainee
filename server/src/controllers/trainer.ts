@@ -8,6 +8,7 @@ import { User } from "../models/user";
 import { UserRole } from "../types/common";
 import { deleteTrainerProfilePicture } from "./trainerImages";
 import { S3ImageService } from "../services/s3ImageService";
+import { Sequelize } from "sequelize";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -362,9 +363,6 @@ export const searchTrainers = async (
       city,
       state,
       country,
-      lat,
-      lng,
-      radius,
       minRate,
       maxRate,
       rateType = "session",
@@ -380,79 +378,152 @@ export const searchTrainers = async (
       limit = "20",
     } = req.query;
 
-    const where: any = {};
+    const trainerWhere: any = {};
+    const userWhere: any = {};
 
-    if (isAvailable === "true") {
-      where.isAvailable = true;
-    }
-
-    if (isFeatured === "true") {
-      where.isFeatured = true;
-    }
+    if (isAvailable === "true") trainerWhere.isAvailable = true;
+    if (isFeatured === "true") trainerWhere.isFeatured = true;
 
     // Location filters
-    if (city) {
-      where.locationCity = { [Op.iLike]: `%${city}%` };
-    }
-    if (state) {
-      where.locationState = { [Op.iLike]: `%${state}%` };
-    }
-    if (country) {
-      where.locationCountry = { [Op.iLike]: `%${country}%` };
-    }
-
-    // if (specializations) {
-    //   where.specializations = { [Op.iLike]: `%${specializations}%` };
-    // }
-
-    // Filtrare dupa exp si rating nu merge
+    if (city) trainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
+    if (state) trainerWhere.locationState = { [Op.iLike]: `%${state}%` };
+    if (country) trainerWhere.locationCountry = { [Op.iLike]: `%${country}%` };
 
     // Rate filters
     if (minRate || maxRate) {
       const rateField = rateType === "hourly" ? "hourlyRate" : "sessionRate";
-      where[rateField] = {};
-      if (minRate) where[rateField][Op.gte] = parseFloat(minRate);
-      if (maxRate) where[rateField][Op.lte] = parseFloat(maxRate);
-      console.log("!!!This is the rate: ", rateField);
-      console.log(where[rateField]);
+      trainerWhere[rateField] = {};
+      if (minRate) trainerWhere[rateField][Op.gte] = parseFloat(minRate);
+      if (maxRate) trainerWhere[rateField][Op.lte] = parseFloat(maxRate);
     }
 
     // Experience filters
     if (minExperience || maxExperience) {
-      where.experienceYears = {};
-      if (minExperience)
-        where.experienceYears[Op.gte] = parseInt(minExperience);
-      if (maxExperience)
-        where.experienceYears[Op.lte] = parseInt(maxExperience);
+      trainerWhere.experienceYears = {};
+      if (minExperience) trainerWhere.experienceYears[Op.gte] = parseInt(minExperience);
+      if (maxExperience) trainerWhere.experienceYears[Op.lte] = parseInt(maxExperience);
     }
 
     // Rating filter
     if (minRating) {
-      where.totalRating = { [Op.gte]: parseFloat(minRating) };
+      trainerWhere.totalRating = { [Op.gte]: parseFloat(minRating) };
     }
 
-    const userWhere: any = {};
-
+    // Text search — bio on trainer, name on user
     if (q) {
+      trainerWhere[Op.or] = [{ bio: { [Op.iLike]: `%${q}%` } }];
       userWhere[Op.or] = [
-        {
-          firstName: { [Op.iLike]: `%${q}%` },
-        },
-        {
-          lastName: { [Op.iLike]: `%${q}%` },
-        },
+        { firstName: { [Op.iLike]: `%${q}%` } },
+        { lastName: { [Op.iLike]: `%${q}%` } },
       ];
-      where.bio = { [Op.iLike]: `%${q}%` };
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    // ✅ First get trainers WITH IDs to extract them
+    const validSortFields = [
+      "totalRating",
+      "experienceYears",
+      "hourlyRate",
+      "sessionRate",
+      "reviewCount",
+      "createdAt",
+    ];
+    const safeSortBy = validSortFields.includes(sortBy) ? sortBy : "totalRating";
+    const safeSortOrder = sortOrder === "asc" ? "ASC" : "DESC";
+
+    // Specialization filter — find trainer IDs that have ALL requested specializations
+    let specializationTrainerIds: number[] | null = null;
+    if (specializations) {
+      const specIds = specializations
+        .split(",")
+        .map((id) => parseInt(id.trim()))
+        .filter((id) => !isNaN(id));
+
+      if (specIds.length > 0) {
+        const matches = await TrainerSpecialization.findAll({
+          where: { specializationId: { [Op.in]: specIds } },
+          attributes: ["trainerId"],
+          group: ["trainerId"],
+          having: Sequelize.literal(`COUNT(DISTINCT "specialization_id") = ${specIds.length}`),
+        });
+        specializationTrainerIds = matches.map((m) => m.trainerId);
+
+        // If no trainers match, return empty immediately
+        if (specializationTrainerIds.length === 0) {
+          return sendSuccess(res, 200, "Search result successful", {
+            trainers: [],
+            pagination: {
+              total: 0,
+              page: parseInt(page),
+              limit: parseInt(limit),
+              totalPages: 0,
+              hasNextPage: false,
+              hasPreviousPage: false,
+            },
+          });
+        }
+
+        trainerWhere.id = { [Op.in]: specializationTrainerIds };
+      }
+    }
+
+    // When text searching by name, we need to OR across trainer bio + user name.
+    // Strategy: if q is set, run two queries and merge IDs.
+    let finalTrainerWhere = { ...trainerWhere };
+
+    if (q) {
+      // Find trainer IDs matching by user name
+      const userMatches = await User.findAll({
+        where: userWhere,
+        attributes: ["id"],
+      });
+      const userIds = userMatches.map((u: any) => u.id);
+
+      const trainersByName = await Trainer.findAll({
+        where: { userId: { [Op.in]: userIds } },
+        attributes: ["id"],
+      });
+      const trainerIdsByName = trainersByName.map((t) => t.id);
+
+      // Combine: trainers matching bio OR name
+      const { [Op.or]: bioOr, ...restWhere } = trainerWhere;
+      const bioTrainerWhere = { ...restWhere, [Op.or]: bioOr };
+
+      const trainersByBio = await Trainer.findAll({
+        where: bioTrainerWhere,
+        attributes: ["id"],
+      });
+      const trainerIdsByBio = trainersByBio.map((t) => t.id);
+
+      const combinedIds = [...new Set([...trainerIdsByName, ...trainerIdsByBio])];
+
+      // Merge with specialization filter if active
+      if (specializationTrainerIds !== null) {
+        const specSet = new Set(specializationTrainerIds);
+        finalTrainerWhere = { id: { [Op.in]: combinedIds.filter((id) => specSet.has(id)) } };
+      } else {
+        finalTrainerWhere = { id: { [Op.in]: combinedIds } };
+      }
+
+      // Re-apply non-text filters
+      if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
+      if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
+      if (city) finalTrainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
+      if (state) finalTrainerWhere.locationState = { [Op.iLike]: `%${state}%` };
+      if (country) finalTrainerWhere.locationCountry = { [Op.iLike]: `%${country}%` };
+      if (minRate || maxRate) {
+        const rateField = rateType === "hourly" ? "hourlyRate" : "sessionRate";
+        finalTrainerWhere[rateField] = {};
+        if (minRate) finalTrainerWhere[rateField][Op.gte] = parseFloat(minRate);
+        if (maxRate) finalTrainerWhere[rateField][Op.lte] = parseFloat(maxRate);
+      }
+      if (minRating) finalTrainerWhere.totalRating = { [Op.gte]: parseFloat(minRating) };
+    }
+
     const { count, rows } = await Trainer.findAndCountAll({
-      where: where,
+      where: finalTrainerWhere,
       limit: parseInt(limit),
-      offset: offset,
-      // ✅ Don't exclude ID yet - we need it for specializations
+      offset,
       attributes: [
         "id",
         "bio",
@@ -476,51 +547,56 @@ export const searchTrainers = async (
         {
           model: User,
           attributes: ["firstName", "lastName", "profileImageUrl"],
-          required: false,
+          required: true,
         },
         {
           model: TrainerImage,
           attributes: ["imageUrl", "isPrimary"],
           required: false,
         },
-        {
-          // Trebuie rezolvat filtrarea dupa specializari
-          model: TrainerSpecialization,
-          where: { specialization_id: 1 },
-          required: false,
-        },
       ],
-      order: [[sortBy, sortOrder]],
+      order: [[safeSortBy, safeSortOrder]],
+      distinct: true,
     });
 
-    // ✅ Extract IDs while we still have them
-    const trainerIds = rows.map((t) => t.id).filter(Boolean);
-    console.log("Trainer ids: ", trainerIds);
+    // Fetch specializations separately for the returned trainers
+    const trainerIds = rows.map((t) => t.id);
+    const specializationsMap = await getSpecializationsForTrainers(trainerIds);
 
-    // ✅ Get specializations using the IDs
-    // const specializationsMap = await getSpecializationsForTrainers(trainerIds);
-
-    // ✅ Create final response WITHOUT internal IDs
-    const trainersWithSpecializations = rows.map((trainer) => {
-      const trainerJson = trainer.toJSON();
-
-      // ✅ Remove internal IDs from the response
-      const { id, userId, ...safeTrainerData } = trainerJson;
-
+    const trainersData = rows.map((trainer) => {
+      const json = trainer.toJSON() as any;
       return {
-        ...safeTrainerData,
-        // specializations: specializationsMap.get(trainer.id) || [],
+        bio: json.bio,
+        experienceYears: json.experienceYears,
+        hourlyRate: json.hourlyRate,
+        sessionRate: json.sessionRate,
+        locationCity: json.locationCity,
+        locationState: json.locationState,
+        locationCountry: json.locationCountry,
+        latitude: json.latitude,
+        longitude: json.longitude,
+        isAvailable: json.isAvailable,
+        isFeatured: json.isFeatured,
+        profileViews: json.profileViews,
+        totalRating: json.totalRating,
+        reviewCount: json.reviewCount,
+        createdAt: json.createdAt,
+        updatedAt: json.updatedAt,
+        user: json.user,
+        images: json.images ?? [],
+        specializations: specializationsMap.get(trainer.id) ?? [],
       };
     });
+
     const totalPages = Math.ceil(count / parseInt(limit));
 
     sendSuccess(res, 200, "Search result successful", {
-      searchResult: trainersWithSpecializations,
+      trainers: trainersData,
       pagination: {
         total: count,
-        page: page,
-        limit: limit,
-        totalPages: totalPages,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
         hasNextPage: totalPages > parseInt(page),
         hasPreviousPage: parseInt(page) > 1,
       },

@@ -55,9 +55,6 @@ app.get("/hello", (request, response) => {
 
 // Initialize database and start server
 initializeApp().then(() => {
-  app.listen(8000, () => {
-    console.log("Server listening on port 8000");
-  });
   verifyEmailConnection();
 });
 process.on("uncaughtException", (error) => {
