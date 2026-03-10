@@ -87,8 +87,8 @@ export default function Home() {
             {item.hourlyRate
               ? `$${item.hourlyRate}/hr`
               : item.sessionRate
-              ? `$${item.sessionRate}/ses`
-              : ""}
+                ? `$${item.sessionRate}/ses`
+                : ""}
           </Text>
         </View>
       </View>
@@ -153,6 +153,15 @@ export default function Home() {
             <Text style={styles.actionIcon}>👤</Text>
             <Text style={styles.actionTitle}>My Profile</Text>
             <Text style={styles.actionDesc}>View trainer profile</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.actionCard}
+            onPress={() => router.push("/map")}
+          >
+            <Text style={styles.actionIcon}>🗺️</Text>
+            <Text style={styles.actionTitle}>Gym Map</Text>
+            <Text style={styles.actionDesc}>Find gyms near you</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -10,6 +10,8 @@ export default function RootLayout() {
         <Stack.Screen name="login" options={{ title: "Login" }} />
         <Stack.Screen name="signup" options={{ title: "Sign Up" }} />
         <Stack.Screen name="search" options={{ title: "Find Trainers" }} />
+        <Stack.Screen name="map" options={{ title: "Map" }} />
+        <Stack.Screen name="my-gyms" options={{ title: "My Gyms" }} />
       </Stack>
     </Provider>
   );

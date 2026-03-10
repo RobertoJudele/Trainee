@@ -7,7 +7,8 @@ import { Trainer } from "./models/trainer";
 import { TrainerImage } from "./models/trainerImage";
 import { TrainerSpecialization } from "./models/trainerSpecialization";
 import { Specialization } from "./models/specialization";
-
+import { Gym } from "./models/gym";
+import { TrainerGym } from "./models/trainerGym";
 dotenv.config();
 
 // DEBUG: Log environment variables
@@ -32,6 +33,8 @@ const sequelize = new Sequelize({
     TrainerImage,
     TrainerSpecialization,
     Specialization,
+    Gym,
+    TrainerGym,
   ],
   logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {

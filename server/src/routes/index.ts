@@ -7,9 +7,10 @@ import trainerRouter from "./trainer";
 import trainerImagesRouter from "./trainerImages";
 import specializationRouter from "./specialization";
 import trainerSpecializationRouter from "./trainerSpecialization";
+import gymRouter from "./gym";
 
 const router = express.Router();
-
+router.use("/gyms", gymRouter);
 router.use("/auth", authRouter);
 router.use("/reviews", reviewRouter);
 router.use("/users", usersRouter);
