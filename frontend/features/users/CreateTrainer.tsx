@@ -1,8 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import { useCreateTrainerMutation } from "./usersApiSlicet";
-import { useDispatch } from "react-redux";
-import { setTrainerProfile } from "../../features/auth/authSlice";
+import { useDispatch, useSelector } from "react-redux";
+import { selectCurrentUser, setTrainerProfile } from "../../features/auth/authSlice";
 import { router } from "expo-router";
+import { useGetProfileQuery } from "./usersApiSlicet";
 import {
   KeyboardAvoidingView,
   View,
@@ -26,7 +27,7 @@ export default function CreateTrainer() {
   const [country, setCountry] = useState("");
   const [latitude, setLatitude] = useState("0");
   const [longitude, setLongitude] = useState("0");
-
+  const user = useSelector(selectCurrentUser);
   const errRef = useRef<Text>(null);
   const [errMsg, setErrMsg] = useState("");
 
@@ -78,7 +79,7 @@ export default function CreateTrainer() {
 
   const handleSubmit = useCallback(async () => {
     console.log("Create button pressed!");
-    
+
     if (!validateForm()) {
       return;
     }
@@ -130,158 +131,181 @@ export default function CreateTrainer() {
     }
   }, [bio, hourlyRate, sessionRate, latitude, longitude, city, country, county, exp]);
 
-  return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.header}>
-          <Text style={styles.title}>✨ Create Your Trainer Profile</Text>
-          <Text style={styles.subtitle}>
-            Tell us about yourself and start connecting with clients
+  console.log(user);
+
+  if (!user) {
+    return (
+      <View style={styles.buttonContainer}>
+        <Text style={styles.row}>
+          You must be logged in to create a trainer profile.
+        </Text>
+        <Pressable style={styles.button} onPress={() => router.push("/(auth)/login")}>
+          <Text>
+            Log in or sign up to get started!
           </Text>
-        </View>
-
-        <View style={styles.form}>
-          {/* Error Message */}
-          {errMsg ? (
-            <View style={styles.errorContainer}>
-              <Text ref={errRef} style={styles.errorText}>
-                ⚠️ {errMsg}
-              </Text>
-            </View>
-          ) : null}
-
-          {/* Bio Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📝 About You</Text>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Bio *</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={bio}
-                placeholder="Tell clients about yourself, your passion for fitness, and what makes you unique..."
-                onChangeText={setBio}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Experience *</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={exp}
-                placeholder="Describe your certifications, years of experience, specializations..."
-                onChangeText={setExp}
-                multiline
-                numberOfLines={3}
-                textAlignVertical="top"
-              />
-            </View>
-          </View>
-
-          {/* Pricing Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>💰 Pricing</Text>
-            
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>Hourly Rate * ($)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={hourlyRate}
-                  placeholder="50"
-                  onChangeText={setHourlyRate}
-                  keyboardType="numeric"
-                />
-              </View>
-
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>Session Rate * ($)</Text>
-                <TextInput
-                  style={styles.input}
-                  value={sessionRate}
-                  placeholder="75"
-                  onChangeText={setSessionRate}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Location Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>📍 Location</Text>
-            
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>City *</Text>
-              <TextInput
-                style={styles.input}
-                value={city}
-                placeholder="Enter your city"
-                onChangeText={setCity}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>County *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={county}
-                  placeholder="County/State"
-                  onChangeText={setCounty}
-                />
-              </View>
-
-              <View style={[styles.inputGroup, styles.halfWidth]}>
-                <Text style={styles.label}>Country *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={country}
-                  placeholder="Country"
-                  onChangeText={setCountry}
-                />
-              </View>
-            </View>
-          </View>
-
-          {/* Submit Button */}
-          <View style={styles.buttonContainer}>
-            <Pressable
-              onPress={handleSubmit}
-              disabled={isLoading}
-              style={[
-                styles.button,
-                isLoading && styles.buttonDisabled
-              ]}
-            >
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator color="white" size="small" />
-                  <Text style={styles.buttonText}>Creating Profile...</Text>
-                </View>
-              ) : (
-                <Text style={styles.buttonText}>🚀 Create Trainer Profile</Text>
-              )}
-            </Pressable>
-
-            <Text style={styles.footerText}>
-              * Required fields
+        </Pressable>
+        <Pressable style={styles.button} onPress={() => router.back()}>
+          <Text>
+            Back
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+  else {
+    return (
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Text style={styles.title}>✨ Create Your Trainer Profile</Text>
+            <Text style={styles.subtitle}>
+              Tell us about yourself and start connecting with clients
             </Text>
           </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+
+          <View style={styles.form}>
+            {/* Error Message */}
+            {errMsg ? (
+              <View style={styles.errorContainer}>
+                <Text ref={errRef} style={styles.errorText}>
+                  ⚠️ {errMsg}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Bio Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>📝 About You</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Bio *</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={bio}
+                  placeholder="Tell clients about yourself, your passion for fitness, and what makes you unique..."
+                  onChangeText={setBio}
+                  multiline
+                  numberOfLines={4}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Experience *</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={exp}
+                  placeholder="Describe your certifications, years of experience, specializations..."
+                  onChangeText={setExp}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+
+            {/* Pricing Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>💰 Pricing</Text>
+
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Hourly Rate * ($)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={hourlyRate}
+                    placeholder="50"
+                    onChangeText={setHourlyRate}
+                    keyboardType="numeric"
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Session Rate * ($)</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={sessionRate}
+                    placeholder="75"
+                    onChangeText={setSessionRate}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Location Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>📍 Location</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>City *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={city}
+                  placeholder="Enter your city"
+                  onChangeText={setCity}
+                />
+              </View>
+
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>County *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={county}
+                    placeholder="County/State"
+                    onChangeText={setCounty}
+                  />
+                </View>
+
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Country *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={country}
+                    placeholder="Country"
+                    onChangeText={setCountry}
+                  />
+                </View>
+              </View>
+            </View>
+
+            {/* Submit Button */}
+            <View style={styles.buttonContainer}>
+              <Pressable
+                onPress={handleSubmit}
+                disabled={isLoading}
+                style={[
+                  styles.button,
+                  isLoading && styles.buttonDisabled
+                ]}
+              >
+                {isLoading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator color="white" size="small" />
+                    <Text style={styles.buttonText}>Creating Profile...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.buttonText}>🚀 Create Trainer Profile</Text>
+                )}
+              </Pressable>
+
+              <Text style={styles.footerText}>
+                * Required fields
+              </Text>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    );
+  }
 }
 
 const styles = StyleSheet.create({

@@ -96,7 +96,8 @@ export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
         return false;
       }
       trainer.reviewCount = reviews.length;
-      trainer.totalRating = rating.length;
+      trainer.totalRating = rating.length > 0 ? rating.reduce((sum, review) => sum + review.rating, 0) / rating.length : 0;
+      console.log("Updated Trainer rating:", trainer.totalRating, "based on", rating.length, "reviews");
       await trainer.save();
 
       console.log("Updated Trainer after reviews");

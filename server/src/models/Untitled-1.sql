@@ -1,0 +1,1 @@
+SELECT * from reviews where trainer_id = 1;
