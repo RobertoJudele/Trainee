@@ -11,7 +11,10 @@ export default function RootLayout() {
         <Stack.Screen name="signup" options={{ title: "Sign Up" }} />
         <Stack.Screen name="search" options={{ title: "Find Trainers" }} />
         <Stack.Screen name="map" options={{ title: "Map" }} />
+        <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details" }} />
         <Stack.Screen name="my-gyms" options={{ title: "My Gyms" }} />
+        <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
+        <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />
       </Stack>
     </Provider>
   );

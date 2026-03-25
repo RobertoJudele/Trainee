@@ -13,6 +13,7 @@ import {
   Image,
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
+import { useRouter } from "expo-router";
 import {
   useGetAllGymsQuery,
   useGetGymByIdQuery,
@@ -37,6 +38,7 @@ const DEFAULT_REGION: Region = {
 };
 
 export default function MapScreen() {
+  const router = useRouter();
   const mapRef      = useRef<MapView>(null);
   const [selectedGymId, setSelectedGymId] = useState<number | null>(null);
   const sheetAnim   = useRef(new Animated.Value(SNAP_CLOSED)).current;
@@ -130,7 +132,29 @@ export default function MapScreen() {
     ));
 
   const renderTrainerRow = (trainer: GymTrainer, idx: number) => (
-    <View key={idx} style={styles.trainerRow}>
+    <TouchableOpacity
+      key={idx}
+      style={styles.trainerRow}
+      activeOpacity={0.85}
+      onPress={() =>
+        router.push({
+          pathname: "/trainers/[id]",
+          params: {
+            id: String(trainer.id),
+            firstName: trainer.user?.firstName ?? "",
+            lastName: trainer.user?.lastName ?? "",
+            profileImageUrl: trainer.user?.profileImageUrl ?? "",
+            bio: trainer.bio ?? "",
+            totalRating: String(Number(trainer.totalRating ?? 0)),
+            reviewCount: String(trainer.reviewCount ?? 0),
+            experienceYears: String(trainer.experienceYears ?? 0),
+            hourlyRate: String(trainer.hourlyRate ?? 0),
+            sessionRate: String(trainer.sessionRate ?? 0),
+            isAvailableAtGym: trainer.isAvailableAtGym ? "1" : "0",
+          },
+        })
+      }
+    >
       {trainer.user?.profileImageUrl ? (
         <Image
           source={{ uri: trainer.user.profileImageUrl }}
@@ -173,9 +197,10 @@ export default function MapScreen() {
           {trainer.hourlyRate ? (
             <Text style={styles.trainerStatPrice}> · ${trainer.hourlyRate}/hr</Text>
           ) : null}
+          <Text style={styles.trainerViewLink}> · View details</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   // ── Render ────────────────────────────────────────────────
@@ -593,6 +618,11 @@ const styles = StyleSheet.create({
   },
   trainerStat: { ...typography.caption, color: theme.colors.textSecondary },
   trainerStatPrice: {
+    ...typography.caption,
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+  trainerViewLink: {
     ...typography.caption,
     color: theme.colors.primary,
     fontWeight: "700",

@@ -1,12 +1,23 @@
 import { Request, Response } from "express";
-import { send } from "process";
 import { User } from "../models/user";
 import { AuthResponse, RegisterRequest } from "../types/user";
-import { generateToken } from "../utils/jwt";
+import {
+  generatePasswordResetToken,
+  generateToken,
+  verifyPasswordResetToken,
+} from "../utils/jwt";
 import { sendError, sendSuccess } from "../utils/response";
-import { where } from "sequelize";
 import { AuthenticatedRequest } from "../types/common";
 import { emailService } from "../services/emailService";
+
+interface ForgotPasswordRequest {
+  email: string;
+}
+
+interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
 
 export const register = async (
   req: Request<{}, {}, RegisterRequest>,
@@ -113,5 +124,103 @@ export const getProfile = async (req: AuthenticatedRequest, res: Response) => {
   } catch (error) {
     console.error("Get profile error", error);
     sendError(res, 500, "Couldnt retrieve profile");
+  }
+};
+
+export const forgotPassword = async (
+  req: Request<{}, {}, ForgotPasswordRequest>,
+  res: Response
+) => {
+  try {
+    const { email } = req.body;
+    const normalizedEmail = email?.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      sendError(res, 400, "Email is required");
+      return;
+    }
+
+    const user = await User.findOne({ where: { email: normalizedEmail, isActive: true } });
+
+    if (user) {
+      const token = generatePasswordResetToken({
+        userId: user.id,
+        email: user.email,
+        purpose: "password_reset",
+      });
+
+      try {
+        await emailService.sendPasswordResetEmail(
+          user.email,
+          `${user.firstName} ${user.lastName}`,
+          token
+        );
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+      }
+    }
+
+    // Always return the same message to prevent email enumeration.
+    sendSuccess(
+      res,
+      200,
+      "If an account with that email exists, we have sent a password reset link."
+    );
+  } catch (error) {
+    console.error("Forgot password error:", error);
+    sendError(res, 500, "Could not process forgot password request");
+  }
+};
+
+export const resetPassword = async (
+  req: Request<{}, {}, ResetPasswordRequest>,
+  res: Response
+) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      sendError(res, 400, "Token and new password are required");
+      return;
+    }
+
+    let payload;
+    try {
+      payload = verifyPasswordResetToken(token);
+    } catch {
+      sendError(res, 400, "Invalid or expired reset token");
+      return;
+    }
+
+    if (payload.purpose !== "password_reset") {
+      sendError(res, 400, "Invalid reset token");
+      return;
+    }
+
+    const user = await User.scope("withPassword").findOne({
+      where: { id: payload.userId, email: payload.email, isActive: true },
+    });
+
+    if (!user) {
+      sendError(res, 404, "User not found");
+      return;
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    try {
+      await emailService.sendPasswordResetSuccessEmail(
+        user.email,
+        `${user.firstName} ${user.lastName}`
+      );
+    } catch (emailError) {
+      console.error("Failed to send password reset success email:", emailError);
+    }
+
+    sendSuccess(res, 200, "Password reset successful");
+  } catch (error) {
+    console.error("Reset password error:", error);
+    sendError(res, 500, "Could not reset password");
   }
 };

@@ -48,6 +48,20 @@ interface LoginResponse {
   succes: boolean;
 }
 
+interface GenericMessageResponse {
+  success: boolean;
+  message: string;
+}
+
+interface ForgotPasswordRequest {
+  email: string;
+}
+
+interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}
+
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
@@ -87,7 +101,26 @@ export const authApiSlice = apiSlice.injectEndpoints({
         return response;
       },
     }),
+    forgotPassword: builder.mutation<GenericMessageResponse, ForgotPasswordRequest>({
+      query: (body) => ({
+        url: "/auth/forgot-password",
+        method: "POST",
+        body,
+      }),
+    }),
+    resetPassword: builder.mutation<GenericMessageResponse, ResetPasswordRequest>({
+      query: (body) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
-export const { useLoginMutation, useSignupMutation } = authApiSlice;
+export const {
+  useLoginMutation,
+  useSignupMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+} = authApiSlice;

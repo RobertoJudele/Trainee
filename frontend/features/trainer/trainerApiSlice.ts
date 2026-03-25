@@ -12,15 +12,74 @@ interface TrainerDeleteResponse {
   message: string;
 }
 
-interface TrainerProfileResponse {
-  success: boolean;
-  message: string;
-  data: TrainerProfileAttributes;
+interface TrainerUpdateRequest {
+  bio?: string;
+  experienceYears?: number;
+  hourlyRate?: number;
+  sessionRate?: number;
+  locationCity?: string;
+  locationState?: string;
+  locationCountry?: string;
+  latitude?: number;
+  longitude?: number;
+  specializationIds?: number[];
 }
 
-interface TrainerDeleteResponse {
+export interface SpecializationItem {
+  id: number;
+  name: string;
+  description?: string;
+  iconUrl?: string;
+  isActive: boolean;
+}
+
+interface SpecializationListResponse {
   success: boolean;
   message: string;
+  data: SpecializationItem[];
+}
+
+export interface PublicTrainerGym {
+  id: number;
+  name: string;
+  address: string;
+  city: string;
+  state?: string;
+  country?: string;
+  latitude: number;
+  longitude: number;
+  rating?: number;
+  reviewCount?: number;
+  imageUrl?: string;
+}
+
+export interface PublicTrainerUser {
+  firstName: string;
+  lastName: string;
+  profileImageUrl?: string | null;
+}
+
+export interface PublicTrainerProfile {
+  id: number;
+  userId: number;
+  bio?: string;
+  experienceYears?: number;
+  hourlyRate?: number;
+  sessionRate?: number;
+  locationCity?: string;
+  locationState?: string;
+  locationCountry?: string;
+  latitude?: number;
+  longitude?: number;
+  isFeatured: boolean;
+  isAvailable: boolean;
+  profileViews: number;
+  totalRating: number;
+  reviewCount: number;
+  createdAt: string;
+  updatedAt: string;
+  user?: PublicTrainerUser;
+  availableGyms?: PublicTrainerGym[];
 }
 
 export interface SearchParams {
@@ -44,6 +103,7 @@ export interface SearchParams {
 }
 
 export interface TrainerSearchItem {
+  id: number;
   bio?: string;
   experienceYears?: number;
   hourlyRate?: number;
@@ -99,6 +159,30 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       },
     }),
 
+    getTrainerById: builder.query<PublicTrainerProfile, number>({
+      query: (trainerId) => `/trainer/${trainerId}`,
+      transformResponse: (response: any) => {
+        console.log("🎯 Public trainer response:", response);
+        return response?.data ?? response;
+      },
+      transformErrorResponse: (response: any) => {
+        console.log("🔴 Public trainer error:", response);
+        return response;
+      },
+    }),
+
+    getSpecializations: builder.query<SpecializationListResponse, void>({
+      query: () => "/specialization",
+      transformResponse: (response: any) => {
+        console.log("🎯 Specializations response:", response);
+        return response;
+      },
+      transformErrorResponse: (response: any) => {
+        console.log("🔴 Specializations error:", response);
+        return response;
+      },
+    }),
+
     deleteTrainerProfile: builder.mutation<TrainerDeleteResponse, void>({
       query: () => ({
         url: "/trainer",
@@ -106,6 +190,21 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       }),
       transformErrorResponse: (response: any) => {
         console.log("🔴 Delete trainer error:", JSON.stringify(response));
+        return response;
+      },
+    }),
+
+    updateTrainerProfile: builder.mutation<
+      TrainerProfileResponse,
+      TrainerUpdateRequest
+    >({
+      query: (body) => ({
+        url: "/trainer",
+        method: "PUT",
+        body,
+      }),
+      transformErrorResponse: (response: any) => {
+        console.log("🔴 Update trainer error:", JSON.stringify(response));
         return response;
       },
     }),
@@ -136,6 +235,9 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
 
 export const {
   useGetTrainerProfileQuery,
+  useGetTrainerByIdQuery,
+  useGetSpecializationsQuery,
   useDeleteTrainerProfileMutation,
+  useUpdateTrainerProfileMutation,
   useSearchTrainersQuery,
 } = trainerApiSlice;

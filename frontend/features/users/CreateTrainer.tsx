@@ -5,6 +5,10 @@ import { selectCurrentUser, setTrainerProfile } from "../../features/auth/authSl
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
 import {
+  useGetSpecializationsQuery,
+  SpecializationItem,
+} from "../trainer/trainerApiSlice";
+import {
   KeyboardAvoidingView,
   View,
   Text,
@@ -27,12 +31,22 @@ export default function CreateTrainer() {
   const [country, setCountry] = useState("");
   const [latitude, setLatitude] = useState("0");
   const [longitude, setLongitude] = useState("0");
+  const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
   const user = useSelector(selectCurrentUser);
   const errRef = useRef<Text>(null);
   const [errMsg, setErrMsg] = useState("");
 
   const [creatingTrainer, { isLoading }] = useCreateTrainerMutation();
+  const { data: specializationResponse, isLoading: specializationsLoading } =
+    useGetSpecializationsQuery();
+  const specializationOptions = specializationResponse?.data ?? [];
   const dispatch = useDispatch();
+
+  const toggleSpecialization = useCallback((id: number) => {
+    setSelectedSpecializationIds((prev) =>
+      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
+    );
+  }, []);
 
   const validateForm = () => {
     if (!bio.trim()) {
@@ -63,6 +77,10 @@ export default function CreateTrainer() {
       setErrMsg("Country is required");
       return false;
     }
+    if (selectedSpecializationIds.length === 0) {
+      setErrMsg("Please select at least one specialization");
+      return false;
+    }
 
     // Validate rates are numbers
     if (isNaN(parseFloat(hourlyRate)) || parseFloat(hourlyRate) <= 0) {
@@ -89,23 +107,23 @@ export default function CreateTrainer() {
     try {
       const trainerData = {
         bio: bio.trim(),
-        experience: exp.trim(),
+        experienceYears: parseInt(exp, 10),
         hourlyRate: parseFloat(hourlyRate),
         sessionRate: parseFloat(sessionRate),
-        city: city.trim(),
-        county: county.trim(),
-        country: country.trim(),
-        latitude: parseFloat(latitude),
-        longitude: parseFloat(longitude),
+        locationCity: city.trim(),
+        locationState: county.trim(),
+        locationCountry: country.trim(),
+        specializationIds: selectedSpecializationIds,
       };
       console.log("Trainer data: ", trainerData);
 
       const result = await creatingTrainer(trainerData);
       console.log(result);
 
-      const { data } = result;
-
-      dispatch(setTrainerProfile({ trainer: data }));
+      const responseData = (result as any)?.data?.data;
+      if (responseData) {
+        dispatch(setTrainerProfile(responseData));
+      }
 
       Alert.alert(
         "Success! 🎉",
@@ -129,7 +147,18 @@ export default function CreateTrainer() {
       }
       errRef.current;
     }
-  }, [bio, hourlyRate, sessionRate, latitude, longitude, city, country, county, exp]);
+  }, [
+    bio,
+    hourlyRate,
+    sessionRate,
+    city,
+    country,
+    county,
+    exp,
+    selectedSpecializationIds,
+    creatingTrainer,
+    dispatch,
+  ]);
 
   console.log(user);
 
@@ -200,15 +229,41 @@ export default function CreateTrainer() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Experience *</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={styles.input}
                   value={exp}
-                  placeholder="Describe your certifications, years of experience, specializations..."
+                  placeholder="Years of experience (e.g. 5)"
                   onChangeText={setExp}
-                  multiline
-                  numberOfLines={3}
-                  textAlignVertical="top"
+                  keyboardType="number-pad"
                 />
               </View>
+            </View>
+
+            {/* Specializations Section */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>🏷️ Specializations *</Text>
+              {specializationsLoading ? (
+                <View style={styles.specLoadingRow}>
+                  <ActivityIndicator size="small" color="#3B82F6" />
+                  <Text style={styles.specLoadingText}>Loading specializations...</Text>
+                </View>
+              ) : (
+                <View style={styles.specGrid}>
+                  {specializationOptions.map((spec: SpecializationItem) => {
+                    const active = selectedSpecializationIds.includes(spec.id);
+                    return (
+                      <Pressable
+                        key={spec.id}
+                        style={[styles.specChip, active && styles.specChipActive]}
+                        onPress={() => toggleSpecialization(spec.id)}
+                      >
+                        <Text style={[styles.specChipText, active && styles.specChipTextActive]}>
+                          {spec.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
             </View>
 
             {/* Pricing Section */}
@@ -439,5 +494,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#6B7280",
     fontStyle: "italic",
+  },
+  specLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  specLoadingText: {
+    color: "#6B7280",
+    fontSize: 14,
+  },
+  specGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  specChip: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+  },
+  specChipActive: {
+    backgroundColor: "#3B82F6",
+    borderColor: "#3B82F6",
+  },
+  specChipText: {
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  specChipTextActive: {
+    color: "#fff",
   },
 });

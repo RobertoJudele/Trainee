@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { TrainerProfileCreationAttributes } from "../types/trainer";
+import { TrainerProfileCreationAttributes, subStatus } from "../types/trainer";
 import { sendError, sendSuccess } from "../utils/response";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
@@ -20,6 +20,8 @@ import {
 import { s3, S3_CONFIG } from "../config/s3";
 import { TrainerImage } from "../models/trainerImage";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
+import { TrainerGym } from "../models/trainerGym";
+import { Gym } from "../models/gym";
 
 interface SearchQuery {
   // Text search
@@ -133,6 +135,15 @@ export const createTrainer = async (
 
     user.role = UserRole.TRAINER;
     await user.save();
+    const currentDate= new Date()
+    const trialEndsAt = currentDate.addDays(60)
+
+    //to add the actual logic for the stripe customer id and subscription id
+    const stripeCustomerid="dummy"
+    const stripeSubscriptionId="dummy"
+    const subscriptionStatus=subStatus.TRIAL
+    const currentPeriodEndsAt=null
+    console.log(trialEndsAt)
 
     const trainer = await Trainer.create({
       userId: userId,
@@ -145,12 +156,45 @@ export const createTrainer = async (
       locationCountry: profileData.locationCountry,
       latitude: profileData.latitude,
       longitude: profileData.longitude,
+      trialEndsAt,
+      stripeCustomerid,
+      stripeSubscriptionId,
+      subscriptionStatus,
+      currentPeriodEndsAt
     });
+
+    if (specializationIds && specializationIds.length > 0) {
+      const uniqueSpecializationIds = [...new Set(specializationIds)];
+      await TrainerSpecialization.bulkCreate(
+        uniqueSpecializationIds.map((specializationId) => ({
+          trainerId: trainer.id,
+          specializationId,
+          experienceLevel: "beginner",
+        }))
+      );
+    }
+
+    const trainerWithSpecializations = await Trainer.findByPk(trainer.id, {
+      attributes: { exclude: ["id", "userId"] },
+      include: [
+        {
+          model: Specialization,
+          attributes: ["id", "name", "description", "iconUrl"],
+          through: { attributes: [] },
+        },
+      ],
+    });
+
     const { userId: trainerUserId, id, ...trainerData } = trainer.toJSON();
     if (!trainer) {
       sendError(res, 400, "Creating trainer profile has failed");
     }
-    sendSuccess(res, 200, "Trainer profile created succesfully", trainerData);
+    sendSuccess(
+      res,
+      200,
+      "Trainer profile created succesfully",
+      (trainerWithSpecializations?.toJSON() as any) || trainerData
+    );
   } catch (error: any) {
     console.error("Error at creating trainer profile", error);
     if (error.name === "SequelizeValidationError") {
@@ -169,19 +213,84 @@ export const getTrainer = async (
   req: Request<{ trainerId: string }, {}, {}>,
   res: Response
 ) => {
-  const trainerId = parseInt(req.params.trainerId);
+  try {
+    const trainerId = parseInt(req.params.trainerId);
 
-  if (!trainerId) {
-    sendError(res, 400, "The trainer id is invalid");
-    return;
-  }
-  const trainer = await Trainer.findByPk(trainerId);
-  if (!trainer) {
-    sendError(res, 404, "Trainer not found ");
-    return;
-  }
+    if (isNaN(trainerId) || trainerId <= 0) {
+      sendError(res, 400, "The trainer id is invalid");
+      return;
+    }
 
-  res.json(trainer);
+    const trainer = await Trainer.findByPk(trainerId, {
+      attributes: [
+        "id",
+        "userId",
+        "bio",
+        "experienceYears",
+        "hourlyRate",
+        "sessionRate",
+        "locationCity",
+        "locationState",
+        "locationCountry",
+        "latitude",
+        "longitude",
+        "isFeatured",
+        "isAvailable",
+        "profileViews",
+        "totalRating",
+        "reviewCount",
+        "createdAt",
+        "updatedAt",
+      ],
+      include: [
+        {
+          model: User,
+          attributes: ["firstName", "lastName", "profileImageUrl"],
+        },
+      ],
+    });
+
+    if (!trainer) {
+      sendError(res, 404, "Trainer not found ");
+      return;
+    }
+
+    const trainerGyms = await TrainerGym.findAll({
+      where: { trainerId, isAvailable: true },
+      include: [
+        {
+          model: Gym,
+          attributes: [
+            "id",
+            "name",
+            "address",
+            "city",
+            "state",
+            "country",
+            "latitude",
+            "longitude",
+            "rating",
+            "reviewCount",
+            "imageUrl",
+          ],
+        },
+      ],
+    });
+
+    const availableGyms = trainerGyms
+      .map((entry) => (entry.gym as any)?.toJSON?.())
+      .filter(Boolean);
+
+    const payload = {
+      ...(trainer.toJSON() as any),
+      availableGyms,
+    };
+
+    res.json(payload);
+  } catch (error: any) {
+    console.error("Error while fetching public trainer details", error);
+    sendError(res, 500, "Failed to retrieve trainer details");
+  }
 };
 
 export const deleteTrainer = async (req: Request, res: Response) => {
@@ -277,15 +386,18 @@ export const updateTrainer = async (req: Request, res: Response) => {
       hourlyRate,
       sessionRate,
       locationCity,
+      locationState,
+      locationCountry,
       latitude,
       longitude,
+      specializationIds,
     } = req.body;
     if (!userId) {
       sendError(res, 404, "User id not found");
       return;
     }
 
-    const user = User.findByPk(userId);
+    const user = await User.findByPk(userId);
     if (!user) {
       sendError(res, 404, "User not found");
       return;
@@ -298,15 +410,62 @@ export const updateTrainer = async (req: Request, res: Response) => {
     }
 
     await trainer.update({
-      bio: bio || trainer.bio,
-      experienceYears: experienceYears || trainer.experienceYears,
-      hourlyRate: hourlyRate || trainer.hourlyRate,
-      sessionRate: sessionRate || trainer.sessionRate,
-      locationCity: locationCity || trainer.locationCity,
-      latitude: latitude || trainer.latitude,
-      longitude: longitude || trainer.longitude,
+      bio: bio ?? trainer.bio,
+      experienceYears: experienceYears ?? trainer.experienceYears,
+      hourlyRate: hourlyRate ?? trainer.hourlyRate,
+      sessionRate: sessionRate ?? trainer.sessionRate,
+      locationCity: locationCity ?? trainer.locationCity,
+      locationState: locationState ?? trainer.locationState,
+      locationCountry: locationCountry ?? trainer.locationCountry,
+      latitude: latitude ?? trainer.latitude,
+      longitude: longitude ?? trainer.longitude,
     });
-    sendSuccess(res, 200, "Trainer updated succesfully");
+
+    if (Array.isArray(specializationIds)) {
+      const uniqueSpecializationIds = [...new Set(specializationIds)].filter(
+        (id) => Number.isInteger(id) && id > 0
+      );
+
+      const validSpecializations = await Specialization.findAll({
+        where: { id: { [Op.in]: uniqueSpecializationIds }, isActive: true },
+        attributes: ["id"],
+      });
+
+      if (uniqueSpecializationIds.length !== validSpecializations.length) {
+        sendError(res, 400, "One or more specializations are invalid");
+        return;
+      }
+
+      await TrainerSpecialization.destroy({ where: { trainerId: trainer.id } });
+
+      if (uniqueSpecializationIds.length > 0) {
+        await TrainerSpecialization.bulkCreate(
+          uniqueSpecializationIds.map((specializationId) => ({
+            trainerId: trainer.id,
+            specializationId,
+            experienceLevel: "beginner",
+          }))
+        );
+      }
+    }
+
+    const updatedTrainer = await Trainer.findByPk(trainer.id, {
+      attributes: { exclude: ["id", "userId"] },
+      include: [
+        {
+          model: Specialization,
+          attributes: ["id", "name", "description", "iconUrl"],
+          through: { attributes: [] },
+        },
+      ],
+    });
+
+    sendSuccess(
+      res,
+      200,
+      "Trainer updated succesfully",
+      updatedTrainer?.toJSON() as any
+    );
   } catch (error: any) {
     console.error("Error at updating trainer", error);
     if (error.name === "SequelizeValidationError") {
@@ -332,6 +491,13 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
     const trainer = await Trainer.findOne({
       where: { userId: userId },
       attributes: { exclude: ["id", "userId"] },
+      include: [
+        {
+          model: Specialization,
+          attributes: ["id", "name", "description", "iconUrl"],
+          through: { attributes: [] },
+        },
+      ],
     });
     if (!trainer) {
       sendError(res, 404, "Trainer for this profile doesnt exist!");
@@ -566,6 +732,7 @@ export const searchTrainers = async (
     const trainersData = rows.map((trainer) => {
       const json = trainer.toJSON() as any;
       return {
+        id: trainer.id,
         bio: json.bio,
         experienceYears: json.experienceYears,
         hourlyRate: json.hourlyRate,

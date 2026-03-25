@@ -92,6 +92,22 @@ export class Trainer extends Model<
   @Column({ type: DataType.INTEGER, field: "review_count" })
   reviewCount!: number;
 
+  @Column({type: DataType.DATE, field:"trial_Ends_At"})
+  trialEndsAt!: Date
+
+  @Default('trial')
+  @Column({type: DataType.ENUM('trial', 'active', 'past_due', 'canceled'), field:"subscription_status"})
+  subscriptionStatus!: string
+
+  @Column({type: DataType.STRING(100),field:"stripe_customer_id"})
+  stripeCustomerId!: string
+
+  @Column({type: DataType.STRING(100),field:"stripe_subscription_id"})
+  stripeSubscriptionId!: string
+
+  @Column({type: DataType.DATE, field: "current_period_ends_at"})
+  currentPeriodEndsAt?: Date
+
   @CreatedAt
   @Column({ field: "created_at" })
   createdAt!: Date;

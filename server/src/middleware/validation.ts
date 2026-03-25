@@ -39,6 +39,24 @@ export const loginValidation = [
   body("password").notEmpty().withMessage("Password is required!"),
 ];
 
+export const forgotPasswordValidation = [
+  body("email")
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Provide a valid email."),
+];
+
+export const resetPasswordValidation = [
+  body("token").notEmpty().withMessage("Reset token is required."),
+  body("newPassword")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters long.")
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage(
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
+    ),
+];
+
 export const updateProfileValidation = [
   body("firstName")
     .optional()
@@ -69,6 +87,57 @@ export const updateProfileValidation = [
       }
       return true;
     }),
+];
+
+export const updateTrainerValidation = [
+  body("bio")
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("Bio must be at most 1000 characters."),
+  body("experienceYears")
+    .optional()
+    .isInt({ min: 0, max: 50 })
+    .withMessage("Experience years must be between 0 and 50."),
+  body("hourlyRate")
+    .optional()
+    .isFloat({ min: 0, max: 999.99 })
+    .withMessage("Hourly rate must be between 0 and 999.99."),
+  body("sessionRate")
+    .optional()
+    .isFloat({ min: 0, max: 999.99 })
+    .withMessage("Session rate must be between 0 and 999.99."),
+  body("locationCity")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 100 })
+    .withMessage("City must be between 2 and 100 characters."),
+  body("locationState")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("State must be between 2 and 50 characters."),
+  body("locationCountry")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("Country must be between 2 and 50 characters."),
+  body("latitude")
+    .optional()
+    .isFloat({ min: -90, max: 90 })
+    .withMessage("Latitude must be between -90 and 90."),
+  body("longitude")
+    .optional()
+    .isFloat({ min: -180, max: 180 })
+    .withMessage("Longitude must be between -180 and 180."),
+  body("specializationIds")
+    .optional()
+    .isArray()
+    .withMessage("specializationIds must be an array."),
+  body("specializationIds.*")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Each specialization id must be a positive integer."),
 ];
 
 export const handleValidationErrors = (

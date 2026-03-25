@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -19,6 +20,8 @@ import {
 import {
   useDeleteTrainerProfileMutation,
   useGetTrainerProfileQuery,
+  useGetSpecializationsQuery,
+  useUpdateTrainerProfileMutation,
 } from "./trainerApiSlice";
 import { router } from "expo-router";
 
@@ -33,18 +36,76 @@ function TrainerProfile() {
     isLoading,
     isError,
     refetch,
-  } = useGetTrainerProfileQuery(undefined, {
-    skip: !!trainer,
-  });
+  } = useGetTrainerProfileQuery();
+  const {
+    data: specializationsResponse,
+    isLoading: isSpecializationsLoading,
+    refetch: refetchSpecializations,
+  } = useGetSpecializationsQuery();
+  const specializationOptions = useMemo(() => {
+    const fetched = specializationsResponse?.data ?? [];
+    if (fetched.length > 0) {
+      return fetched;
+    }
+
+    const trainerSpecs = trainer?.specializations ?? [];
+    return trainerSpecs.map((spec) => ({
+      id: spec.id,
+      name: spec.name,
+      description: spec.description,
+      iconUrl: spec.iconUrl,
+      isActive: true,
+    }));
+  }, [specializationsResponse, trainer]);
 
   const [deleteTrainerProfile, { isLoading: isDeleting }] =
     useDeleteTrainerProfileMutation();
+  const [updateTrainerProfile, { isLoading: isUpdating }] =
+    useUpdateTrainerProfileMutation();
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [bio, setBio] = useState("");
+  const [experienceYears, setExperienceYears] = useState("");
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [sessionRate, setSessionRate] = useState("");
+  const [locationCity, setLocationCity] = useState("");
+  const [locationState, setLocationState] = useState("");
+  const [locationCountry, setLocationCountry] = useState("");
+  const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
 
   useEffect(() => {
-    if (trainerResponse?.data && !trainer) {
+    if (trainerResponse?.data) {
       dispatch(setTrainerProfile(trainerResponse.data));
     }
-  }, [trainerResponse, trainer, dispatch]);
+  }, [trainerResponse, dispatch]);
+
+  useEffect(() => {
+    if (!trainer) return;
+    setBio(trainer.bio ?? "");
+    setExperienceYears(
+      trainer.experienceYears !== undefined ? String(trainer.experienceYears) : ""
+    );
+    setHourlyRate(
+      trainer.hourlyRate !== undefined ? String(trainer.hourlyRate) : ""
+    );
+    setSessionRate(
+      trainer.sessionRate !== undefined ? String(trainer.sessionRate) : ""
+    );
+    setLocationCity(trainer.locationCity ?? "");
+    setLocationState(trainer.locationState ?? "");
+    setLocationCountry(trainer.locationCountry ?? "");
+    setSelectedSpecializationIds(
+      Array.isArray(trainer.specializations)
+        ? trainer.specializations.map((spec) => spec.id)
+        : []
+    );
+  }, [trainer]);
+
+  const toggleSpecialization = useCallback((id: number) => {
+    setSelectedSpecializationIds((prev) =>
+      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
+    );
+  }, []);
 
   const handleDelete = useCallback(async () => {
     Alert.alert(
@@ -69,6 +130,76 @@ function TrainerProfile() {
       Alert.alert("Error", "Failed to delete trainer profile");
     }
   }, [deleteTrainerProfile, dispatch, user, token]);
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!trainer) return;
+
+    const parsedExperience =
+      experienceYears.trim() === "" ? undefined : Number(experienceYears);
+    const parsedHourly = hourlyRate.trim() === "" ? undefined : Number(hourlyRate);
+    const parsedSession =
+      sessionRate.trim() === "" ? undefined : Number(sessionRate);
+
+    if (
+      parsedExperience !== undefined &&
+      (!Number.isFinite(parsedExperience) || parsedExperience < 0)
+    ) {
+      Alert.alert("Invalid input", "Experience years must be 0 or greater.");
+      return;
+    }
+
+    if (parsedHourly !== undefined && (!Number.isFinite(parsedHourly) || parsedHourly < 0)) {
+      Alert.alert("Invalid input", "Hourly rate must be 0 or greater.");
+      return;
+    }
+
+    if (
+      parsedSession !== undefined &&
+      (!Number.isFinite(parsedSession) || parsedSession < 0)
+    ) {
+      Alert.alert("Invalid input", "Session rate must be 0 or greater.");
+      return;
+    }
+
+    if (selectedSpecializationIds.length === 0) {
+      Alert.alert("Invalid input", "Select at least one specialization.");
+      return;
+    }
+
+    try {
+      const response = await updateTrainerProfile({
+        bio: bio.trim() || undefined,
+        experienceYears: parsedExperience,
+        hourlyRate: parsedHourly,
+        sessionRate: parsedSession,
+        locationCity: locationCity.trim() || undefined,
+        locationState: locationState.trim() || undefined,
+        locationCountry: locationCountry.trim() || undefined,
+        specializationIds: selectedSpecializationIds,
+      }).unwrap();
+
+      if (response?.data) {
+        dispatch(setTrainerProfile(response.data));
+      }
+      setIsEditing(false);
+      Alert.alert("Success", "Trainer profile updated.");
+    } catch (error: any) {
+      const message = error?.data?.message || "Failed to update profile";
+      Alert.alert("Error", message);
+    }
+  }, [
+    trainer,
+    experienceYears,
+    hourlyRate,
+    sessionRate,
+    updateTrainerProfile,
+    bio,
+    locationCity,
+    locationState,
+    locationCountry,
+    selectedSpecializationIds,
+    dispatch,
+  ]);
 
   if (isLoading) {
     return (
@@ -127,39 +258,154 @@ function TrainerProfile() {
       {/* ── Bio ── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>About Me</Text>
-        <Text style={styles.bioText}>{trainer.bio || "No bio available"}</Text>
+        {isEditing ? (
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            multiline
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Tell clients about your coaching style"
+          />
+        ) : (
+          <Text style={styles.bioText}>{trainer.bio || "No bio available"}</Text>
+        )}
       </View>
 
       {/* ── Experience & Rates ── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Experience & Rates</Text>
-        <View style={styles.infoGrid}>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Experience</Text>
-            <Text style={styles.infoValue}>{trainer.experienceYears || 0} years</Text>
+        {isEditing ? (
+          <View style={styles.editGrid}>
+            <TextInput
+              style={styles.input}
+              keyboardType="number-pad"
+              value={experienceYears}
+              onChangeText={setExperienceYears}
+              placeholder="Experience years"
+            />
+            <TextInput
+              style={styles.input}
+              keyboardType="decimal-pad"
+              value={hourlyRate}
+              onChangeText={setHourlyRate}
+              placeholder="Hourly rate"
+            />
+            <TextInput
+              style={styles.input}
+              keyboardType="decimal-pad"
+              value={sessionRate}
+              onChangeText={setSessionRate}
+              placeholder="Session rate"
+            />
           </View>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Hourly Rate</Text>
-            <Text style={styles.infoValue}>${trainer.hourlyRate || 0}/hr</Text>
+        ) : (
+          <View style={styles.infoGrid}>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoLabel}>Experience</Text>
+              <Text style={styles.infoValue}>{trainer.experienceYears || 0} years</Text>
+            </View>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoLabel}>Hourly Rate</Text>
+              <Text style={styles.infoValue}>${trainer.hourlyRate || 0}/hr</Text>
+            </View>
+            <View style={styles.infoCard}>
+              <Text style={styles.infoLabel}>Session Rate</Text>
+              <Text style={styles.infoValue}>${trainer.sessionRate || 0}/session</Text>
+            </View>
           </View>
-          <View style={styles.infoCard}>
-            <Text style={styles.infoLabel}>Session Rate</Text>
-            <Text style={styles.infoValue}>${trainer.sessionRate || 0}/session</Text>
-          </View>
-        </View>
+        )}
       </View>
 
       {/* ── Location ── */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📍 Location</Text>
-        <Text style={styles.locationText}>
-          {trainer.locationCity && trainer.locationState
-            ? `${trainer.locationCity}, ${trainer.locationState}`
-            : "Location not specified"}
-        </Text>
-        <Text style={styles.locationSubtext}>
-          {trainer.locationCountry || "Country not specified"}
-        </Text>
+        {isEditing ? (
+          <View style={styles.editGrid}>
+            <TextInput
+              style={styles.input}
+              value={locationCity}
+              onChangeText={setLocationCity}
+              placeholder="City"
+            />
+            <TextInput
+              style={styles.input}
+              value={locationState}
+              onChangeText={setLocationState}
+              placeholder="State"
+            />
+            <TextInput
+              style={styles.input}
+              value={locationCountry}
+              onChangeText={setLocationCountry}
+              placeholder="Country"
+            />
+          </View>
+        ) : (
+          <>
+            <Text style={styles.locationText}>
+              {trainer.locationCity && trainer.locationState
+                ? `${trainer.locationCity}, ${trainer.locationState}`
+                : "Location not specified"}
+            </Text>
+            <Text style={styles.locationSubtext}>
+              {trainer.locationCountry || "Country not specified"}
+            </Text>
+          </>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🏷️ Specializations</Text>
+        {isEditing ? (
+          isSpecializationsLoading ? (
+            <View style={styles.specLoadingRow}>
+              <ActivityIndicator size="small" color="#6366F1" />
+              <Text style={styles.specLoadingText}>Loading specializations...</Text>
+            </View>
+          ) : specializationOptions.length > 0 ? (
+            <View style={styles.specGrid}>
+              {specializationOptions.map((spec) => {
+                const active = selectedSpecializationIds.includes(spec.id);
+                return (
+                  <Pressable
+                    key={spec.id}
+                    style={[styles.specChip, active && styles.specChipActive]}
+                    onPress={() => toggleSpecialization(spec.id)}
+                  >
+                    <Text style={[styles.specChipText, active && styles.specChipTextActive]}>
+                      {spec.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.specFallbackBox}>
+              <Text style={styles.specFallbackText}>
+                No specialization options loaded.
+              </Text>
+              <Pressable
+                style={styles.specRetryButton}
+                onPress={() => {
+                  void refetchSpecializations();
+                  void refetch();
+                }}
+              >
+                <Text style={styles.specRetryText}>Retry</Text>
+              </Pressable>
+            </View>
+          )
+        ) : trainer.specializations && trainer.specializations.length > 0 ? (
+          <View style={styles.specGrid}>
+            {trainer.specializations.map((spec) => (
+              <View key={spec.id} style={styles.specChipReadOnly}>
+                <Text style={styles.specChipReadOnlyText}>{spec.name}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={styles.locationSubtext}>No specialization selected</Text>
+        )}
       </View>
 
       {/* ── Stats ── */}
@@ -215,10 +461,58 @@ function TrainerProfile() {
 
         <Pressable
           style={styles.editButton}
-          onPress={() => Alert.alert("Coming Soon", "Edit functionality will be available soon!")}
+          onPress={() => {
+            if (isEditing) {
+              void handleSaveProfile();
+              return;
+            }
+            setIsEditing(true);
+          }}
+          disabled={isUpdating}
         >
-          <Text style={styles.buttonText}>✏️ Edit Profile</Text>
+          <Text style={styles.buttonText}>
+            {isUpdating
+              ? "🔄 Saving..."
+              : isEditing
+              ? "💾 Save Profile"
+              : "✏️ Edit Profile"}
+          </Text>
         </Pressable>
+
+        {isEditing && (
+          <Pressable
+            style={styles.cancelButton}
+            onPress={() => {
+              if (trainer) {
+                setBio(trainer.bio ?? "");
+                setExperienceYears(
+                  trainer.experienceYears !== undefined
+                    ? String(trainer.experienceYears)
+                    : ""
+                );
+                setHourlyRate(
+                  trainer.hourlyRate !== undefined ? String(trainer.hourlyRate) : ""
+                );
+                setSessionRate(
+                  trainer.sessionRate !== undefined
+                    ? String(trainer.sessionRate)
+                    : ""
+                );
+                setLocationCity(trainer.locationCity ?? "");
+                setLocationState(trainer.locationState ?? "");
+                setLocationCountry(trainer.locationCountry ?? "");
+                setSelectedSpecializationIds(
+                  Array.isArray(trainer.specializations)
+                    ? trainer.specializations.map((spec) => spec.id)
+                    : []
+                );
+              }
+              setIsEditing(false);
+            }}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </Pressable>
+        )}
 
         <Pressable
           style={[styles.deleteButton, isDeleting && styles.buttonDisabled]}
@@ -300,6 +594,92 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   bioText: { fontSize: 16, lineHeight: 24, color: "#666" },
+  input: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: "#111827",
+  },
+  textArea: {
+    minHeight: 90,
+    textAlignVertical: "top",
+  },
+  editGrid: {
+    gap: 10,
+  },
+  specGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  specLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  specLoadingText: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  specFallbackBox: {
+    backgroundColor: "#F9FAFB",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    padding: 12,
+    gap: 10,
+  },
+  specFallbackText: {
+    fontSize: 13,
+    color: "#6B7280",
+  },
+  specRetryButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#6366F1",
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  specRetryText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  specChip: {
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#fff",
+  },
+  specChipActive: {
+    backgroundColor: "#3B82F6",
+    borderColor: "#3B82F6",
+  },
+  specChipText: {
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  specChipTextActive: {
+    color: "#fff",
+  },
+  specChipReadOnly: {
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: "#E5E7EB",
+  },
+  specChipReadOnlyText: {
+    color: "#374151",
+    fontSize: 13,
+    fontWeight: "600",
+  },
 
   infoGrid: {
     flexDirection: "row",
@@ -378,6 +758,12 @@ const styles = StyleSheet.create({
 
   editButton: {
     backgroundColor: "#28A745",
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#6B7280",
     padding: 16,
     borderRadius: 8,
     alignItems: "center",

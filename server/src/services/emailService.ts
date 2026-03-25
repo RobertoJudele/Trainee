@@ -69,6 +69,34 @@ export class EmailService {
   ): Promise<void> {
     await this.sendVerificationEmail(email, name, token);
   }
+
+  async sendPasswordResetEmail(
+    email: string,
+    name: string,
+    token: string
+  ): Promise<void> {
+    const frontendBaseUrl = process.env.FRONTEND_URL || "http://localhost:8081";
+    const resetUrl = `${frontendBaseUrl}/reset-password?token=${encodeURIComponent(token)}&email=${encodeURIComponent(email)}`;
+    const template = emailTemplates.passwordReset(name, resetUrl);
+
+    await this.sendEmail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  async sendPasswordResetSuccessEmail(email: string, name: string): Promise<void> {
+    const template = emailTemplates.passwordResetSuccess(name);
+
+    await this.sendEmail({
+      to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+  }
 }
 
 export const emailService = new EmailService();

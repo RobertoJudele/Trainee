@@ -74,4 +74,77 @@ export const emailTemplates = {
     `,
     text: `Hi ${name}, Your email has been verified successfully! Welcome to Trainer Marketplace.`,
   }),
+
+  passwordReset: (name: string, resetUrl: string) => ({
+    subject: "Reset Your Password - Trainer Marketplace",
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
+          .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
+          .content { padding: 30px 20px; }
+          .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+          }
+          .footer { background-color: #f3f4f6; padding: 20px; text-align: center; color: #6b7280; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Password Reset Request</h1>
+          </div>
+          <div class="content">
+            <h2>Hi ${name},</h2>
+            <p>We received a request to reset your password.</p>
+            <p>Click the button below to set a new password:</p>
+            <a href="${resetUrl}" class="button">Reset Password</a>
+            <p>Or copy and paste this link in your browser:</p>
+            <p style="word-break: break-all; color: #2563eb;">${resetUrl}</p>
+            <p><strong>This link will expire in 15 minutes.</strong></p>
+            <p>If you did not request this, you can safely ignore this email.</p>
+          </div>
+          <div class="footer">
+            <p>© 2024 Trainer Marketplace. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `
+      Hi ${name},
+
+      We received a request to reset your password.
+
+      Reset your password here:
+      ${resetUrl}
+
+      This link expires in 15 minutes.
+
+      If you did not request this, you can ignore this email.
+    `,
+  }),
+
+  passwordResetSuccess: (name: string) => ({
+    subject: "Password Reset Successful - Trainer Marketplace",
+    html: `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+        <h2>Password Updated Successfully</h2>
+        <p>Hi ${name},</p>
+        <p>Your password was changed successfully.</p>
+        <p>If you did not perform this action, please contact support immediately.</p>
+        <p>Best regards,<br>The Trainer Marketplace Team</p>
+      </div>
+    `,
+    text: `Hi ${name}, your password was changed successfully. If this was not you, contact support immediately.`,
+  }),
 };

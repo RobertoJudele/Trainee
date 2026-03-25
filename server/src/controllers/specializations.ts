@@ -1,7 +1,22 @@
 import { Response, Request } from "express";
 import { Specialization } from "../models/specialization";
 import { SpecializationCreationAttributes } from "../types/specialization";
-import { sendSuccess } from "../utils/response";
+import { sendError, sendSuccess } from "../utils/response";
+
+export const getSpecializations = async (req: Request, res: Response) => {
+  try {
+    const specializations = await Specialization.findAll({
+      where: { isActive: true },
+      attributes: ["id", "name", "description", "iconUrl", "isActive"],
+      order: [["name", "ASC"]],
+    });
+
+    sendSuccess(res, 200, "Specializations retrieved successfully", specializations);
+  } catch (error: any) {
+    console.error("Error retrieving specializations", error);
+    sendError(res, 500, "Could not retrieve specializations");
+  }
+};
 
 export const createSpecialization = async (
   req: Request<{}, {}, SpecializationCreationAttributes>,

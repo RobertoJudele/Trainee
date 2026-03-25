@@ -118,7 +118,28 @@ export default function SearchScreen() {
   };
 
   const renderTrainerCard = ({ item }: { item: TrainerSearchItem }) => (
-    <TouchableOpacity style={styles.card} activeOpacity={0.85}>
+    <TouchableOpacity
+      style={styles.card}
+      activeOpacity={0.85}
+      onPress={() =>
+        router.push({
+          pathname: "/trainers/[id]",
+          params: {
+            id: String(item.id),
+            firstName: item.user?.firstName ?? "",
+            lastName: item.user?.lastName ?? "",
+            profileImageUrl: item.user?.profileImageUrl ?? "",
+            bio: item.bio ?? "",
+            totalRating: String(Number(item.totalRating ?? 0)),
+            reviewCount: String(item.reviewCount ?? 0),
+            experienceYears: String(item.experienceYears ?? 0),
+            hourlyRate: String(item.hourlyRate ?? 0),
+            sessionRate: String(item.sessionRate ?? 0),
+            isAvailableAtGym: item.isAvailable ? "1" : "0",
+          },
+        })
+      }
+    >
       {/* Avatar */}
       <View style={styles.cardLeft}>
         {item.user?.profileImageUrl ? (

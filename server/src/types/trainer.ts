@@ -19,6 +19,10 @@ export interface TrainerProfileAttributes {
   updatedAt: Date;
 }
 
+export enum subStatus{
+  TRIAL='trial', ACTIVE='active', PAST='past_due', CANCELED='canceled'
+}
+
 export interface TrainerProfileCreationAttributes {
   userId: number;
   bio?: string;
@@ -31,4 +35,9 @@ export interface TrainerProfileCreationAttributes {
   latitude?: number;
   longitude?: number;
   specializationIds?: number[];
+  trialEndsAt:Date;
+  stripeCustomerid:string;
+  stripeSubscriptionId:string;
+  subscriptionStatus: subStatus;
+  currentPeriodEndsAt: Date|null;
 }

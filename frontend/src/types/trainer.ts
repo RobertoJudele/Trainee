@@ -42,4 +42,10 @@ export interface TrainerProfileAttributes {
   reviewCount: number;
   createdAt: Date;
   updatedAt: Date;
+  specializations?: Array<{
+    id: number;
+    name: string;
+    description?: string;
+    iconUrl?: string;
+  }>;
 }
