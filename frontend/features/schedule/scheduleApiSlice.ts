@@ -39,6 +39,12 @@ export interface PublicClient {
   lastName: string;
 }
 
+export interface PendingClientCode {
+  checkInCodeId: number;
+  expiresAt: string;
+  client: PublicClient;
+}
+
 interface ApiResp<T> {
   success: boolean;
   message: string;
@@ -119,6 +125,26 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         body,
       }),
     }),
+    getPendingClientCodes: builder.query<ApiResp<PendingClientCode[]>, void>({
+      query: () => "/trainer-schedule/client-codes/pending",
+    }),
+    resolveClientCode: builder.mutation<ApiResp<PendingClientCode>, { code: string }>({
+      query: (body) => ({
+        url: "/trainer-schedule/client-codes/resolve",
+        method: "POST",
+        body,
+      }),
+    }),
+    assignSlotByCodeId: builder.mutation<
+      ApiResp<{ slot: ScheduleSlot }>,
+      { slotId: number; checkInCodeId: number; note?: string }
+    >({
+      query: ({ slotId, ...body }) => ({
+        url: `/trainer-schedule/slots/${slotId}/assign-by-code-id`,
+        method: "POST",
+        body,
+      }),
+    }),
     getMySchedule: builder.query<ApiResp<ScheduleSlot[]>, { from?: string; to?: string } | void>({
       query: (params) => {
         if (!params) {
@@ -150,6 +176,9 @@ export const {
   useAssignClientToSlotMutation,
   useTrainerCheckInSlotMutation,
   useAssignSlotByClientCodeMutation,
+  useGetPendingClientCodesQuery,
+  useResolveClientCodeMutation,
+  useAssignSlotByCodeIdMutation,
   useGetMyScheduleQuery,
   useGenerateMyCheckInCodeMutation,
 } = scheduleApiSlice;

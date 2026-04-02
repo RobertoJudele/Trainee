@@ -229,6 +229,17 @@ export default function TrainerScheduleScreen() {
                   <Text style={styles.dayColumnTitle}>
                     {dayLabels[day.getDay()]} {day.getDate()}
                   </Text>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: "/trainer-schedule/[date]",
+                        params: { date: dateKey },
+                      })
+                    }
+                    style={styles.dayOpenBtn}
+                  >
+                    <Text style={styles.dayOpenBtnText}>Open Day</Text>
+                  </Pressable>
 
                   {daySlots.length === 0 ? (
                     <Text style={styles.emptyDayText}>No slots</Text>
@@ -445,6 +456,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   dayColumnTitle: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  dayOpenBtn: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    backgroundColor: "#EEF2FF",
+  },
+  dayOpenBtnText: { ...typography.caption, color: theme.colors.primary, fontWeight: "700" },
   emptyDayText: { ...typography.caption, color: theme.colors.textSecondary },
   slotPill: {
     borderWidth: 1,

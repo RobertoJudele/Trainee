@@ -25,6 +25,7 @@ export default function RootLayout() {
           <Stack.Screen name="report-issue" options={{ title: "Report Issue" }} />
           <Stack.Screen name="admin-issues" options={{ title: "Admin Issues" }} />
           <Stack.Screen name="trainer-schedule" options={{ title: "Trainer Schedule" }} />
+          <Stack.Screen name="trainer-schedule/[date]" options={{ title: "Day Schedule" }} />
           <Stack.Screen name="my-schedule" options={{ title: "My Schedule" }} />
           <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
           <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />

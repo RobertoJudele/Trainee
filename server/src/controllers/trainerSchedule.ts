@@ -32,6 +32,53 @@ const getTrainerByUserId = async (userId: number) => {
   return Trainer.findOne({ where: { userId } });
 };
 
+const toDayBounds = (date: Date) => {
+  const start = new Date(date);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(date);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+};
+
+const parseDateQuery = (rawValue: unknown, endOfDay: boolean) => {
+  if (!rawValue) return null;
+  const text = String(rawValue);
+  const date = new Date(text);
+  if (Number.isNaN(date.getTime())) return null;
+
+  // When receiving YYYY-MM-DD, normalize to full-day boundaries.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) {
+    if (endOfDay) {
+      date.setHours(23, 59, 59, 999);
+    } else {
+      date.setHours(0, 0, 0, 0);
+    }
+  }
+
+  return date;
+};
+
+const ensureNoDuplicateClientOnDay = async (
+  trainerId: number,
+  clientId: number,
+  slotId: number,
+  slotStart: Date
+) => {
+  const { start, end } = toDayBounds(slotStart);
+
+  const duplicate = await TrainerScheduleSlot.findOne({
+    where: {
+      trainerId,
+      clientId,
+      id: { [Op.ne]: slotId },
+      startsAt: { [Op.between]: [start, end] },
+      status: { [Op.in]: [SlotStatus.ASSIGNED, SlotStatus.COMPLETED] },
+    },
+  });
+
+  return Boolean(duplicate);
+};
+
 export const upsertWorkingHour = async (req: Request, res: Response): Promise<void> => {
   try {
     const user = req.user;
@@ -227,10 +274,10 @@ export const getTrainerSlots = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    const from = req.query.from ? new Date(String(req.query.from)) : new Date();
-    const to = req.query.to
-      ? new Date(String(req.query.to))
-      : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+    const from = parseDateQuery(req.query.from, false) || new Date();
+    const to =
+      parseDateQuery(req.query.to, true) ||
+      new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
 
     const slots = await TrainerScheduleSlot.findAll({
       where: {
@@ -289,6 +336,17 @@ export const assignClientToSlot = async (req: Request<{ slotId: string }>, res: 
 
     if (slot.status !== SlotStatus.AVAILABLE) {
       sendError(res, 400, "Slot is not available");
+      return;
+    }
+
+    const alreadyAssignedThatDay = await ensureNoDuplicateClientOnDay(
+      trainer.id,
+      clientId,
+      slot.id,
+      slot.startsAt
+    );
+    if (alreadyAssignedThatDay) {
+      sendError(res, 409, "This client is already assigned on the selected day");
       return;
     }
 
@@ -418,6 +476,17 @@ export const assignSlotByClientCode = async (
       return;
     }
 
+    const alreadyAssignedThatDay = await ensureNoDuplicateClientOnDay(
+      trainer.id,
+      generatedCode.clientId,
+      slot.id,
+      slot.startsAt
+    );
+    if (alreadyAssignedThatDay) {
+      sendError(res, 409, "This client is already assigned on the selected day");
+      return;
+    }
+
     await slot.update({
       clientId: generatedCode.clientId,
       note,
@@ -504,6 +573,194 @@ export const trainerCheckInSlot = async (req: Request<{ slotId: string }>, res: 
   } catch (error) {
     console.error("Failed to check in slot:", error);
     sendError(res, 500, "Could not confirm check-in");
+  }
+};
+
+export const getPendingClientCodes = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== "trainer") {
+      sendError(res, 403, "Trainer access required");
+      return;
+    }
+
+    const now = new Date();
+    const codes = await ClientCheckInCode.findAll({
+      where: {
+        consumedAt: null,
+        expiresAt: { [Op.gt]: now },
+      },
+      include: [{ model: User, as: "client", attributes: ["id", "firstName", "lastName", "email"] }],
+      order: [["expiresAt", "ASC"]],
+      limit: 100,
+    });
+
+    const data = codes
+      .map((record) => {
+        const client = (record as any).client as User | undefined;
+        if (!client || !client.isActive || client.role !== "client") return null;
+        return {
+          checkInCodeId: record.id,
+          expiresAt: record.expiresAt,
+          client: {
+            id: client.id,
+            email: client.email,
+            firstName: client.firstName,
+            lastName: client.lastName,
+          },
+        };
+      })
+      .filter(Boolean);
+
+    sendSuccess(res, 200, "Pending client codes retrieved", data);
+  } catch (error) {
+    console.error("Failed to get pending client codes:", error);
+    sendError(res, 500, "Could not retrieve pending client codes");
+  }
+};
+
+export const resolveClientCode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== "trainer") {
+      sendError(res, 403, "Trainer access required");
+      return;
+    }
+
+    const { code } = req.body as { code?: string };
+    if (!code || !/^\d{6}$/.test(code)) {
+      sendError(res, 400, "Code must have 6 digits");
+      return;
+    }
+
+    const now = new Date();
+    const codeHash = hashCheckInCode(code);
+    const record = await ClientCheckInCode.findOne({
+      where: {
+        codeHash,
+        consumedAt: null,
+        expiresAt: { [Op.gt]: now },
+      },
+    });
+
+    if (!record) {
+      sendError(res, 400, "Invalid or expired client code");
+      return;
+    }
+
+    const client = await User.findByPk(record.clientId);
+    if (!client || !client.isActive || client.role !== "client") {
+      sendError(res, 404, "Client for this code was not found");
+      return;
+    }
+
+    sendSuccess(res, 200, "Client code resolved", {
+      checkInCodeId: record.id,
+      expiresAt: record.expiresAt,
+      client: {
+        id: client.id,
+        email: client.email,
+        firstName: client.firstName,
+        lastName: client.lastName,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to resolve client code:", error);
+    sendError(res, 500, "Could not resolve client code");
+  }
+};
+
+export const assignSlotByCodeId = async (
+  req: Request<{ slotId: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== "trainer") {
+      sendError(res, 403, "Trainer access required");
+      return;
+    }
+
+    const trainer = await getTrainerByUserId(user.id);
+    if (!trainer) {
+      sendError(res, 404, "Trainer profile not found");
+      return;
+    }
+
+    const slotId = Number(req.params.slotId);
+    const { checkInCodeId, note } = req.body as { checkInCodeId?: number; note?: string };
+
+    if (!Number.isFinite(slotId) || slotId <= 0) {
+      sendError(res, 400, "Invalid slot id");
+      return;
+    }
+
+    if (!Number.isFinite(checkInCodeId) || Number(checkInCodeId) <= 0) {
+      sendError(res, 400, "Invalid check-in code id");
+      return;
+    }
+
+    const slot = await TrainerScheduleSlot.findOne({ where: { id: slotId, trainerId: trainer.id } });
+    if (!slot) {
+      sendError(res, 404, "Slot not found");
+      return;
+    }
+
+    if (slot.status !== SlotStatus.AVAILABLE) {
+      sendError(res, 400, "Slot is not available");
+      return;
+    }
+
+    const now = new Date();
+    const codeRecord = await ClientCheckInCode.findOne({
+      where: {
+        id: Number(checkInCodeId),
+        consumedAt: null,
+        expiresAt: { [Op.gt]: now },
+      },
+    });
+    if (!codeRecord) {
+      sendError(res, 400, "Check-in code is invalid or expired");
+      return;
+    }
+
+    const client = await User.findByPk(codeRecord.clientId);
+    if (!client || !client.isActive || client.role !== "client") {
+      sendError(res, 404, "Client for this code was not found");
+      return;
+    }
+
+    const alreadyAssignedThatDay = await ensureNoDuplicateClientOnDay(
+      trainer.id,
+      codeRecord.clientId,
+      slot.id,
+      slot.startsAt
+    );
+    if (alreadyAssignedThatDay) {
+      sendError(res, 409, "This client is already assigned on the selected day");
+      return;
+    }
+
+    await slot.update({
+      clientId: codeRecord.clientId,
+      note,
+      status: SlotStatus.ASSIGNED,
+      checkInCodeHash: null,
+      checkInCodeExpiresAt: null,
+      checkInAttempts: 0,
+    });
+
+    await codeRecord.update({
+      consumedAt: now,
+      consumedByUserId: user.id,
+    });
+
+    sendSuccess(res, 200, "Slot assigned using pending client code", {
+      slot,
+    });
+  } catch (error) {
+    console.error("Failed to assign slot by code id:", error);
+    sendError(res, 500, "Could not assign slot by code id");
   }
 };
 
