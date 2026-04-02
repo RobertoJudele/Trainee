@@ -118,7 +118,7 @@ export const getMyGyms = async (req: AuthenticatedRequest, res: Response) => {
 
     const trainer = await Trainer.findOne({ where: { userId } });
     if (!trainer) {
-      sendError(res, 404, "Trainer profile not found");
+      sendError(res, 404, "!!!!!!Trainer profile not found");
       return;
     }
 

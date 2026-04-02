@@ -9,6 +9,7 @@ import { UserRole } from "../types/common";
 import { deleteTrainerProfilePicture } from "./trainerImages";
 import { S3ImageService } from "../services/s3ImageService";
 import { Sequelize } from "sequelize";
+import "../utils/helper";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -22,6 +23,7 @@ import { TrainerImage } from "../models/trainerImage";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { TrainerGym } from "../models/trainerGym";
 import { Gym } from "../models/gym";
+import { stripe } from "../config/stripe";
 
 interface SearchQuery {
   // Text search
@@ -135,15 +137,22 @@ export const createTrainer = async (
 
     user.role = UserRole.TRAINER;
     await user.save();
-    const currentDate= new Date()
-    const trialEndsAt = currentDate.addDays(60)
+    const currentDate = new Date();
+    const trialEndsAt = currentDate;
 
     //to add the actual logic for the stripe customer id and subscription id
-    const stripeCustomerid="dummy"
-    const stripeSubscriptionId="dummy"
-    const subscriptionStatus=subStatus.TRIAL
-    const currentPeriodEndsAt=null
-    console.log(trialEndsAt)
+    const stripeCustomer = await stripe.customers.create({
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      test_clock: process.env.STRIPE_TEST_CLOCK_ID, // Remove this line in production
+      metadata: {
+        userId: user.id.toString(), // Pro-tip: Link Stripe back to your DB ID
+      }
+    });
+    const stripeCustomerId = stripeCustomer.id;
+    const stripeSubscriptionId = "";
+    const subscriptionStatus = subStatus.CANCELED;
+    const currentPeriodEndsAt = null;
 
     const trainer = await Trainer.create({
       userId: userId,
@@ -157,10 +166,10 @@ export const createTrainer = async (
       latitude: profileData.latitude,
       longitude: profileData.longitude,
       trialEndsAt,
-      stripeCustomerid,
+      stripeCustomerId,
       stripeSubscriptionId,
       subscriptionStatus,
-      currentPeriodEndsAt
+      currentPeriodEndsAt,
     });
 
     if (specializationIds && specializationIds.length > 0) {
@@ -544,7 +553,7 @@ export const searchTrainers = async (
       limit = "20",
     } = req.query;
 
-    const trainerWhere: any = {};
+    const trainerWhere: any = {subscriptionStatus: { [Op.in]: [subStatus.ACTIVE, subStatus.TRIAL] }};
     const userWhere: any = {};
 
     if (isAvailable === "true") trainerWhere.isAvailable = true;

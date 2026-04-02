@@ -5,6 +5,7 @@ import sequelize from "./db"; // Import your Sequelize instance
 import mainRouter from "./routes/index";
 import { verifyEmailConnection } from "./config/email";
 import cors from "cors";
+import { stripeWebhook } from "./controllers/billing";
 const app = express();
 
 import { User } from "./models/user";
@@ -13,6 +14,11 @@ import { Specialization } from "./models/specialization";
 import { TrainerSpecialization } from "./models/trainerSpecialization";
 import { TrainerImage } from "./models/trainerImage";
 import { Review } from "./models/review";
+import { TrainerWorkingHour } from "./models/trainerWorkingHour";
+import { TrainerScheduleSlot } from "./models/trainerScheduleSlot";
+import { seedSpecializations } from "./seeds/specializationSeed";
+
+app.post("/billing/webhook", express.raw({ type: "application/json" }), stripeWebhook);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -67,12 +73,12 @@ process.on("unhandledRejection", (reason, promise) => {
   // You might not want to exit on every unhandled rejection
 });
 
-const PORT = process.env.PORT || 8000;
+const PORT = Number(process.env.PORT) || 8000;
 
 // Sync database before starting server
-sequelize.sync({ alter: true }).then(() => {
+sequelize.sync({ alter: true }).then(async () => {
   console.log('✅ Database synchronized');
-  
+  await seedSpecializations();
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server listening on port ${PORT}`);
   });

@@ -176,6 +176,18 @@ export default function TrainerDetailsScreen() {
       <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
         <Text style={styles.primaryButtonText}>Back to map</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={() =>
+          router.push({
+            pathname: "/report-issue",
+            params: { targetType: "trainer", trainerId: String(trainerId) },
+          })
+        }
+      >
+        <Text style={styles.secondaryButtonText}>Report Issue</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -334,6 +346,20 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...typography.body1,
     color: "#fff",
+    fontWeight: "700",
+  },
+  secondaryButton: {
+    marginTop: 2,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#DC2626",
+  },
+  secondaryButtonText: {
+    ...typography.body1,
+    color: "#B91C1C",
     fontWeight: "700",
   },
 });

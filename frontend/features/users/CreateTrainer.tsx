@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useCreateTrainerMutation } from "./usersApiSlicet";
 import { useDispatch, useSelector } from "react-redux";
-import { selectCurrentUser, setTrainerProfile } from "../../features/auth/authSlice";
+import { selectCurrentTrainer, selectCurrentUser, setTrainerProfile } from "../../features/auth/authSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
 import {
@@ -33,6 +33,7 @@ export default function CreateTrainer() {
   const [longitude, setLongitude] = useState("0");
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
   const user = useSelector(selectCurrentUser);
+  const trainer= useSelector(selectCurrentTrainer)
   const errRef = useRef<Text>(null);
   const [errMsg, setErrMsg] = useState("");
 
@@ -159,9 +160,7 @@ export default function CreateTrainer() {
     creatingTrainer,
     dispatch,
   ]);
-
-  console.log(user);
-
+  console.log("Current trainer from store: ", trainer);
   if (!user) {
     return (
       <View style={styles.buttonContainer}>
@@ -171,6 +170,26 @@ export default function CreateTrainer() {
         <Pressable style={styles.button} onPress={() => router.push("/(auth)/login")}>
           <Text>
             Log in or sign up to get started!
+          </Text>
+        </Pressable>
+        <Pressable style={styles.button} onPress={() => router.back()}>
+          <Text>
+            Back
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+  
+  else if (trainer) {
+    return (
+      <View style={styles.buttonContainer}>
+        <Text style={styles.row}>
+          You already have a trainer profile.
+        </Text>
+        <Pressable style={styles.button} onPress={() => router.push("/TrainerProfile") }>
+          <Text>
+            Go to trainer profile
           </Text>
         </Pressable>
         <Pressable style={styles.button} onPress={() => router.back()}>

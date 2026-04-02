@@ -12,6 +12,7 @@ import {
   handleValidationErrors,
   updateTrainerValidation,
 } from "../middleware/validation";
+import { subscription } from "../middleware/subscription";
 
 const router = express.Router();
 
@@ -24,6 +25,6 @@ router.use(authenticate);
 router.post("/create", createTrainer);
 router.get("/", getSelfTrainer);
 router.delete("/", deleteTrainer);
-router.put("/", updateTrainerValidation, handleValidationErrors, updateTrainer);
+router.put("/", updateTrainerValidation, handleValidationErrors, updateTrainer, subscription);
 
 export default router;

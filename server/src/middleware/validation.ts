@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { body, validationResult } from "express-validator";
+import { body, param, validationResult } from "express-validator";
 import { ValidationError } from "sequelize";
 import { UserRole } from "../types/common";
+import { IssueCategory, IssueStatus, IssueTargetType } from "../types/issue";
 import { sendError } from "../utils/response";
 
 export const registerValidation = [
@@ -138,6 +139,45 @@ export const updateTrainerValidation = [
     .optional()
     .isInt({ min: 1 })
     .withMessage("Each specialization id must be a positive integer."),
+];
+
+export const createIssueValidation = [
+  body("targetType")
+    .isIn(Object.values(IssueTargetType))
+    .withMessage("targetType is invalid."),
+  body("category")
+    .isIn(Object.values(IssueCategory))
+    .withMessage("category is invalid."),
+  body("title")
+    .trim()
+    .isLength({ min: 5, max: 140 })
+    .withMessage("Title must be between 5 and 140 characters."),
+  body("description")
+    .trim()
+    .isLength({ min: 10, max: 2000 })
+    .withMessage("Description must be between 10 and 2000 characters."),
+  body("trainerId")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("trainerId must be a positive integer."),
+  body("bookingId")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("bookingId must be a positive integer."),
+];
+
+export const updateIssueStatusValidation = [
+  param("issueId")
+    .isInt({ min: 1 })
+    .withMessage("issueId must be a positive integer."),
+  body("status")
+    .isIn(Object.values(IssueStatus))
+    .withMessage("status is invalid."),
+  body("resolutionNote")
+    .optional()
+    .trim()
+    .isLength({ max: 1000 })
+    .withMessage("resolutionNote must be at most 1000 characters."),
 ];
 
 export const handleValidationErrors = (

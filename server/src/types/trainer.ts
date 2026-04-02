@@ -15,6 +15,11 @@ export interface TrainerProfileAttributes {
   profileViews: number;
   totalRating: number;
   reviewCount: number;
+  trialEndsAt: Date;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
+  subscriptionStatus: subStatus;
+  currentPeriodEndsAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,9 +40,9 @@ export interface TrainerProfileCreationAttributes {
   latitude?: number;
   longitude?: number;
   specializationIds?: number[];
-  trialEndsAt:Date;
-  stripeCustomerid:string;
-  stripeSubscriptionId:string;
+  trialEndsAt: Date;
+  stripeCustomerId: string;
+  stripeSubscriptionId: string;
   subscriptionStatus: subStatus;
-  currentPeriodEndsAt: Date|null;
+  currentPeriodEndsAt?: Date;
 }

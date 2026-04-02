@@ -18,7 +18,8 @@ import {
 import { useRouter } from "expo-router";
 import { useSearchTrainersQuery, TrainerSearchItem } from "../../features/trainer/trainerApiSlice";
 import { useSelector } from "react-redux";
-import { selectCurrentToken, selectCurrentUser } from "../../features/auth/authSlice";
+import { selectCurrentUser } from "../../features/auth/authSlice";
+import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../lib/theme";
 
 const { width } = Dimensions.get("window");
@@ -27,6 +28,69 @@ export default function Home() {
   const router = useRouter();
   const user = useSelector(selectCurrentUser);
   const [refreshing, setRefreshing] = useState(false);
+  const userRole = user?.role;
+
+  const quickActions = [
+    {
+      icon: "🔍",
+      title: "Find Trainers",
+      desc: "Browse all trainers",
+      route: "/search" as const,
+    },
+    {
+      icon: "💼",
+      title: "Become Trainer",
+      desc: "Start your journey",
+      route: "/create-trainer" as const,
+      hiddenIfRole: UserRole.TRAINER,
+    },
+    {
+      icon: "👤",
+      title: "My Profile",
+      desc: "View trainer profile",
+      route: "/TrainerProfile" as const,
+    },
+    {
+      icon: "🗺️",
+      title: "Gym Map",
+      desc: "Find gyms near you",
+      route: "/map" as const,
+    },
+    {
+      icon: "🚩",
+      title: "Report Issue",
+      desc: "Send app feedback",
+      route: {
+        pathname: "/report-issue" as const,
+        params: { targetType: "app" as const },
+      },
+    },
+    {
+      icon: "📅",
+      title: "Trainer Schedule",
+      desc: "Set hours and assign clients",
+      route: "/trainer-schedule" as const,
+      roles: [UserRole.TRAINER],
+    },
+    {
+      icon: "🧾",
+      title: "My Schedule",
+      desc: "See assigned sessions",
+      route: "/my-schedule" as const,
+      roles: [UserRole.CLIENT],
+    },
+    {
+      icon: "🛠️",
+      title: "Admin Issues",
+      desc: "Review reports",
+      route: "/admin-issues" as const,
+      roles: [UserRole.ADMIN],
+    },
+  ].filter((action) => {
+    if (action.hiddenIfRole && userRole === action.hiddenIfRole) return false;
+    if (action.roles && (!userRole || !action.roles.includes(userRole as UserRole))) return false;
+    return true;
+  });
 
   // Home screen shows featured / all trainers by default
   const { data, isLoading, isError, refetch } = useSearchTrainersQuery({
@@ -131,38 +195,17 @@ export default function Home() {
       <View style={styles.quickActions}>
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionGrid}>
-          <TouchableOpacity style={styles.actionCard} onPress={() => router.push("/search")}>
-            <Text style={styles.actionIcon}>🔍</Text>
-            <Text style={styles.actionTitle}>Find Trainers</Text>
-            <Text style={styles.actionDesc}>Browse all trainers</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => router.push("/create-trainer")}
-          >
-            <Text style={styles.actionIcon}>💼</Text>
-            <Text style={styles.actionTitle}>Become Trainer</Text>
-            <Text style={styles.actionDesc}>Start your journey</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => router.push("/TrainerProfile")}
-          >
-            <Text style={styles.actionIcon}>👤</Text>
-            <Text style={styles.actionTitle}>My Profile</Text>
-            <Text style={styles.actionDesc}>View trainer profile</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.actionCard}
-            onPress={() => router.push("/map")}
-          >
-            <Text style={styles.actionIcon}>🗺️</Text>
-            <Text style={styles.actionTitle}>Gym Map</Text>
-            <Text style={styles.actionDesc}>Find gyms near you</Text>
-          </TouchableOpacity>
+          {quickActions.map((action) => (
+            <TouchableOpacity
+              key={action.title}
+              style={styles.actionCard}
+              onPress={() => router.push(action.route as never)}
+            >
+              <Text style={styles.actionIcon}>{action.icon}</Text>
+              <Text style={styles.actionTitle}>{action.title}</Text>
+              <Text style={styles.actionDesc}>{action.desc}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
       </View>
 

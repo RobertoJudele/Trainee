@@ -1,8 +1,8 @@
-import { AuthenticatedRequest } from "src/types/common";
+import { AuthenticatedRequest } from "../types/common";
 import { NextFunction, Response } from "express";
-import { Trainer } from "src/models/trainer";
-import { subStatus } from "src/types/trainer";
-import { sendError } from "src/utils/response";
+import { Trainer } from "../models/trainer";
+import { subStatus } from "../types/trainer";
+import { sendError } from "../utils/response";
 
 export const subscription = async(req: AuthenticatedRequest, res:Response , next:NextFunction) : Promise<void>=>{
     try {
@@ -13,17 +13,17 @@ export const subscription = async(req: AuthenticatedRequest, res:Response , next
             sendError(res,400,"Trainer profile not found");
             return;
         }
-        const subscriptionStatus=trainer.subscriptionStatus;
-        if (subscriptionStatus===subStatus.TRIAL){
-            const trialEndsAt=trainer.trialEndsAt
-            const date=new Date();
-            if (trialEndsAt<date){
+        const subscriptionStatus = trainer.subscriptionStatus;
+        if (subscriptionStatus === subStatus.TRIAL) {
+            const trialEndsAt = trainer.trialEndsAt;
+            const date = new Date();
+            if (!trialEndsAt || trialEndsAt < date) {
                 // Or redirected to payment 
                 sendError(res,402, "Free trial ended")
                 return
             }
         }
-        if (subscriptionStatus===subStatus.CANCELED || subscriptionStatus===subStatus.PAST){
+        if (subscriptionStatus === subStatus.CANCELED || subscriptionStatus === subStatus.PAST) {
 
             sendError(res,402, "Payment unsuccesful or canceled")
             return

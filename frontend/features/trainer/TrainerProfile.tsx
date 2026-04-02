@@ -23,14 +23,17 @@ import {
   useGetSpecializationsQuery,
   useUpdateTrainerProfileMutation,
 } from "./trainerApiSlice";
+import { useCreateSubscriptionMutation } from "../billing/billingApiSlice";
 import { router } from "expo-router";
+import * as Linking from "expo-linking";
+import { useStripe } from '@stripe/stripe-react-native';
 
 function TrainerProfile() {
   const trainer = useSelector(selectCurrentTrainer);
   const user = useSelector(selectCurrentUser);
   const token = useSelector(selectCurrentToken);
   const dispatch = useDispatch();
-
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const {
     data: trainerResponse,
     isLoading,
@@ -72,6 +75,9 @@ function TrainerProfile() {
   const [locationState, setLocationState] = useState("");
   const [locationCountry, setLocationCountry] = useState("");
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const [createSubscription] = useCreateSubscriptionMutation();
 
   useEffect(() => {
     if (trainerResponse?.data) {
@@ -130,6 +136,62 @@ function TrainerProfile() {
       Alert.alert("Error", "Failed to delete trainer profile");
     }
   }, [deleteTrainerProfile, dispatch, user, token]);
+
+  const handleSubscribe = useCallback(async () => {
+    setIsSubscribing(true);
+    try {
+      const response = await createSubscription().unwrap();
+      const { paymentIntent, setupIntent, ephemeralKey, customer } = response.data;
+
+      if (!paymentIntent && !setupIntent) {
+        Alert.alert("Error", "Missing payment details from Stripe.");
+        setIsSubscribing(false);
+        return;
+      }
+
+      const initParams: any = {
+        merchantDisplayName: "Trainee Gym",
+        customerId: customer,
+        customerEphemeralKeySecret: ephemeralKey,
+        returnURL: Linking.createURL("stripe-redirect"),
+        allowsDelayedPaymentMethods: true,
+      };
+
+      if (paymentIntent) {
+        initParams.paymentIntentClientSecret = paymentIntent;
+      }
+
+      if (setupIntent) {
+        initParams.setupIntentClientSecret = setupIntent;
+      }
+
+      const { error: initError } = await initPaymentSheet(initParams);
+
+      if (initError) {
+        Alert.alert("Error", `Failed to initialize payment sheet: ${initError.message}`);
+        setIsSubscribing(false);
+        return;
+      }
+
+      const { error: presentError } = await presentPaymentSheet();
+
+      if (presentError) {
+        if (presentError.code !== "Canceled") {
+          Alert.alert("Error", `Payment failed: ${presentError.message}`);
+        }
+        setIsSubscribing(false);
+        return;
+      }
+
+      Alert.alert("Success", "Your subscription has been activated!");
+      void refetch();
+    } catch (error: any) {
+      const message = error?.data?.message || "Failed to start subscription";
+      Alert.alert("Error", message);
+    } finally {
+      setIsSubscribing(false);
+    }
+  }, [createSubscription, initPaymentSheet, presentPaymentSheet, refetch]);
 
   const handleSaveProfile = useCallback(async () => {
     if (!trainer) return;
@@ -444,6 +506,17 @@ function TrainerProfile() {
       {/* ── Actions ── */}
       <View style={styles.buttonSection}>
 
+        {/* Subscribe Button */}
+        <Pressable
+          style={({ pressed }) => [styles.subscribeButton, pressed && styles.buttonPressed, isSubscribing && styles.buttonDisabled]}
+          onPress={handleSubscribe}
+          disabled={isSubscribing}
+        >
+          <Text style={styles.buttonText}>
+            {isSubscribing ? "🔄 Processing..." : "💳 Subscribe Now"}
+          </Text>
+        </Pressable>
+
         {/* My Gyms — the new button */}
         <Pressable
           style={({ pressed }) => [styles.gymsButton, pressed && styles.buttonPressed]}
@@ -755,6 +828,13 @@ const styles = StyleSheet.create({
   },
   buttonPressed: { opacity: 0.85 },
   // ────────────────────────────────────────────────────────
+
+  subscribeButton: {
+    backgroundColor: "#FF6B00",
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
 
   editButton: {
     backgroundColor: "#28A745",
