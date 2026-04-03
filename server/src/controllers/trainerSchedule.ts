@@ -369,6 +369,57 @@ export const assignClientToSlot = async (req: Request<{ slotId: string }>, res: 
   }
 };
 
+export const unassignClientFromSlot = async (
+  req: Request<{ slotId: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const user = req.user;
+    if (!user || user.role !== "trainer") {
+      sendError(res, 403, "Trainer access required");
+      return;
+    }
+
+    const trainer = await getTrainerByUserId(user.id);
+    if (!trainer) {
+      sendError(res, 404, "Trainer profile not found");
+      return;
+    }
+
+    const slotId = Number(req.params.slotId);
+    if (!Number.isFinite(slotId) || slotId <= 0) {
+      sendError(res, 400, "Invalid slot id");
+      return;
+    }
+
+    const slot = await TrainerScheduleSlot.findOne({ where: { id: slotId, trainerId: trainer.id } });
+    if (!slot) {
+      sendError(res, 404, "Slot not found");
+      return;
+    }
+
+    if (slot.status === SlotStatus.AVAILABLE) {
+      sendSuccess(res, 200, "Slot is already available", { slot });
+      return;
+    }
+
+    await slot.update({
+      clientId: null,
+      note: null,
+      status: SlotStatus.AVAILABLE,
+      checkInCodeHash: null,
+      checkInCodeExpiresAt: null,
+      checkInAttempts: 0,
+      checkedInAt: null,
+    } as any);
+
+    sendSuccess(res, 200, "Client unassigned from slot", { slot });
+  } catch (error) {
+    console.error("Failed to unassign client from slot:", error);
+    sendError(res, 500, "Could not unassign client from slot");
+  }
+};
+
 export const generateClientCheckInCode = async (
   req: Request,
   res: Response

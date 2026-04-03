@@ -17,13 +17,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
 import {
-  PendingClientCode,
   PublicClient,
   ScheduleSlot,
   useAssignClientToSlotMutation,
   useGetPendingClientCodesQuery,
   useGetTrainerSlotsQuery,
   useResolveClientCodeMutation,
+  useUnassignClientFromSlotMutation,
 } from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 
@@ -167,6 +167,7 @@ export default function TrainerDayScheduleScreen() {
 
   const [resolveClientCode, { isLoading: resolvingCode }] = useResolveClientCodeMutation();
   const [assignClientToSlot, { isLoading: assigning }] = useAssignClientToSlotMutation();
+  const [unassignClientFromSlot, { isLoading: unassigning }] = useUnassignClientFromSlotMutation();
 
   useEffect(() => {
     const loadSavedClients = async () => {
@@ -326,6 +327,15 @@ export default function TrainerDayScheduleScreen() {
     }
   };
 
+  const onUnassign = async (slotId: number) => {
+    try {
+      await unassignClientFromSlot({ slotId }).unwrap();
+      await refetchSlots();
+    } catch (error: any) {
+      Alert.alert("Error", error?.data?.message || "Could not remove assignment.");
+    }
+  };
+
   if (user?.role !== UserRole.TRAINER) {
     return (
       <View style={styles.deniedWrap}>
@@ -451,7 +461,16 @@ export default function TrainerDayScheduleScreen() {
           ) : (
             assignedSlots.map((slot) => (
               <View key={slot.id} style={[styles.slotCard, { borderColor: statusColor(slot.status) }]}>
-                <Text style={styles.slotCardTitle}>#{slot.id}</Text>
+                <View style={styles.assignedTopRow}>
+                  <Text style={styles.slotCardTitle}>#{slot.id}</Text>
+                  <Pressable
+                    style={styles.removeBtn}
+                    onPress={() => onUnassign(slot.id)}
+                    disabled={unassigning}
+                  >
+                    <Text style={styles.removeBtnText}>x</Text>
+                  </Pressable>
+                </View>
                 <Text style={styles.slotCardText}>
                   {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
                 </Text>
@@ -557,5 +576,16 @@ const styles = StyleSheet.create({
   slotCardTitle: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
   slotCardText: { ...typography.caption, color: theme.colors.textSecondary },
   slotStatus: { ...typography.caption, fontWeight: "700", textTransform: "capitalize" },
+  assignedTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  removeBtn: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    width: 22,
+    height: 22,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  removeBtnText: { ...typography.caption, color: theme.colors.text, fontWeight: "700" },
   emptyText: { ...typography.caption, color: theme.colors.textSecondary },
 });

@@ -13,6 +13,7 @@ import {
   resolveClientCode,
   searchClientsForTrainer,
   trainerCheckInSlot,
+  unassignClientFromSlot,
   upsertWorkingHour,
 } from "../controllers/trainerSchedule";
 
@@ -28,6 +29,7 @@ router.get("/clients/search", searchClientsForTrainer);
 router.get("/client-codes/pending", getPendingClientCodes);
 router.post("/client-codes/resolve", resolveClientCode);
 router.post("/slots/:slotId/assign-client", assignClientToSlot);
+router.post("/slots/:slotId/unassign-client", unassignClientFromSlot);
 router.post("/slots/:slotId/assign-by-code", assignSlotByClientCode);
 router.post("/slots/:slotId/assign-by-code-id", assignSlotByCodeId);
 router.post("/slots/:slotId/check-in", trainerCheckInSlot);

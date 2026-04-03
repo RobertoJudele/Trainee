@@ -108,6 +108,12 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         body,
       }),
     }),
+    unassignClientFromSlot: builder.mutation<ApiResp<{ slot: ScheduleSlot }>, { slotId: number }>({
+      query: ({ slotId }) => ({
+        url: `/trainer-schedule/slots/${slotId}/unassign-client`,
+        method: "POST",
+      }),
+    }),
     trainerCheckInSlot: builder.mutation<ApiResp<ScheduleSlot>, { slotId: number; code: string }>({
       query: ({ slotId, code }) => ({
         url: `/trainer-schedule/slots/${slotId}/check-in`,
@@ -174,6 +180,7 @@ export const {
   useGetTrainerSlotsQuery,
   useSearchClientsQuery,
   useAssignClientToSlotMutation,
+  useUnassignClientFromSlotMutation,
   useTrainerCheckInSlotMutation,
   useAssignSlotByClientCodeMutation,
   useGetPendingClientCodesQuery,
