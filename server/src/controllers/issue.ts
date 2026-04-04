@@ -39,21 +39,35 @@ export const createIssue = async (
       title,
       description,
       trainerId,
+      trainerPublicId,
       bookingId,
       metadata,
     } = req.body;
 
+    let resolvedTrainerId = trainerId;
+
     if (targetType === IssueTargetType.TRAINER) {
-      if (!trainerId) {
-        sendError(res, 400, "trainerId is required for trainer reports");
+      if (!trainerId && !trainerPublicId) {
+        sendError(res, 400, "trainerId or trainerPublicId is required for trainer reports");
         return;
       }
 
-      const trainer = await Trainer.findByPk(trainerId);
+      let trainer: Trainer | null = null;
+
+      if (trainerId) {
+        trainer = await Trainer.findByPk(trainerId);
+      }
+
+      if (!trainer && trainerPublicId) {
+        trainer = await Trainer.findOne({ where: { publicId: trainerPublicId } });
+      }
+
       if (!trainer) {
         sendError(res, 404, "Trainer not found");
         return;
       }
+
+      resolvedTrainerId = trainer.id;
     }
 
     if (targetType === IssueTargetType.BOOKING && !bookingId) {
@@ -67,16 +81,24 @@ export const createIssue = async (
     }
 
     const duplicateWindowStart = new Date(Date.now() - 10 * 60 * 1000);
+    const duplicateWhere: Record<string, unknown> = {
+      reporterId: user.id,
+      category,
+      targetType,
+      title: title.trim(),
+      createdAt: { [Op.gte]: duplicateWindowStart },
+    };
+
+    if (typeof resolvedTrainerId === "number") {
+      duplicateWhere.trainerId = resolvedTrainerId;
+    }
+
+    if (typeof bookingId === "number") {
+      duplicateWhere.bookingId = bookingId;
+    }
+
     const duplicate = await Issue.findOne({
-      where: {
-        reporterId: user.id,
-        category,
-        targetType,
-        trainerId: trainerId || null,
-        bookingId: bookingId || null,
-        title: title.trim(),
-        createdAt: { [Op.gte]: duplicateWindowStart },
-      },
+      where: duplicateWhere,
     });
 
     if (duplicate) {
@@ -90,7 +112,7 @@ export const createIssue = async (
       category,
       title: title.trim(),
       description: description.trim(),
-      trainerId,
+      trainerId: resolvedTrainerId,
       bookingId,
       metadata,
     });

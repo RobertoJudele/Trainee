@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { randomUUID } from "crypto";
 import { TrainerProfileCreationAttributes, subStatus } from "../types/trainer";
 import { sendError, sendSuccess } from "../utils/response";
 import { Trainer } from "../models/trainer";
@@ -100,6 +101,16 @@ const getSpecializationsForTrainers = async (trainerIds: number[]) => {
   });
 
   return map;
+};
+
+const ensureTrainerPublicId = async (trainer: Trainer): Promise<string> => {
+  if (trainer.publicId) {
+    return trainer.publicId;
+  }
+
+  const generated = randomUUID();
+  await trainer.update({ publicId: generated });
+  return generated;
 };
 
 export const createTrainer = async (
@@ -223,16 +234,24 @@ export const getTrainer = async (
   res: Response
 ) => {
   try {
-    const trainerId = parseInt(req.params.trainerId);
-
-    if (isNaN(trainerId) || trainerId <= 0) {
+    const trainerIdentifier = String(req.params.trainerId || "").trim();
+    if (!trainerIdentifier) {
       sendError(res, 400, "The trainer id is invalid");
       return;
     }
 
-    const trainer = await Trainer.findByPk(trainerId, {
+    const numericTrainerId = Number(trainerIdentifier);
+    const isNumericTrainerId = Number.isFinite(numericTrainerId) && numericTrainerId > 0;
+
+    const trainerWhere = isNumericTrainerId
+      ? { id: numericTrainerId }
+      : { publicId: trainerIdentifier };
+
+    const trainer = await Trainer.findOne({
+      where: trainerWhere,
       attributes: [
         "id",
+        "publicId",
         "userId",
         "bio",
         "experienceYears",
@@ -264,8 +283,11 @@ export const getTrainer = async (
       return;
     }
 
+    const publicId = await ensureTrainerPublicId(trainer);
+    const trainerNumericId = trainer.id;
+
     const trainerGyms = await TrainerGym.findAll({
-      where: { trainerId, isAvailable: true },
+      where: { trainerId: trainerNumericId, isAvailable: true },
       include: [
         {
           model: Gym,
@@ -292,6 +314,8 @@ export const getTrainer = async (
 
     const payload = {
       ...(trainer.toJSON() as any),
+      id: publicId,
+      internalId: trainerNumericId,
       availableGyms,
     };
 
@@ -586,10 +610,14 @@ export const searchTrainers = async (
 
     // Text search — bio on trainer, name on user
     if (q) {
-      trainerWhere[Op.or] = [{ bio: { [Op.iLike]: `%${q}%` } }];
+      const normalizedQuery = String(q).trim();
+      trainerWhere[Op.or] = [
+        { bio: { [Op.iLike]: `%${normalizedQuery}%` } },
+        { publicId: { [Op.iLike]: `%${normalizedQuery}%` } },
+      ];
       userWhere[Op.or] = [
-        { firstName: { [Op.iLike]: `%${q}%` } },
-        { lastName: { [Op.iLike]: `%${q}%` } },
+        { firstName: { [Op.iLike]: `%${normalizedQuery}%` } },
+        { lastName: { [Op.iLike]: `%${normalizedQuery}%` } },
       ];
     }
 
@@ -701,6 +729,7 @@ export const searchTrainers = async (
       offset,
       attributes: [
         "id",
+        "publicId",
         "bio",
         "experienceYears",
         "hourlyRate",
@@ -736,12 +765,14 @@ export const searchTrainers = async (
 
     // Fetch specializations separately for the returned trainers
     const trainerIds = rows.map((t) => t.id);
+    await Promise.all(rows.map((trainer) => ensureTrainerPublicId(trainer)));
     const specializationsMap = await getSpecializationsForTrainers(trainerIds);
 
     const trainersData = rows.map((trainer) => {
       const json = trainer.toJSON() as any;
       return {
-        id: trainer.id,
+        id: trainer.publicId || String(trainer.id),
+        internalId: trainer.id,
         bio: json.bio,
         experienceYears: json.experienceYears,
         hourlyRate: json.hourlyRate,

@@ -206,6 +206,14 @@ Backward-compatible billing paths also exist:
 - `/create-checkout-session`
 - `/create-portal-session`
 
+## Public IDs and Security
+
+- Trainer profiles now use a non-incremental public UUID (`public_id`) for public-facing lookup flows.
+- Public trainer details endpoint (`GET /trainer/:trainerId`) accepts trainer public UUIDs.
+- Trainer search responses expose trainer `id` as the public UUID and include `internalId` for internal compatibility flows.
+- Issue reporting supports both legacy numeric `trainerId` and secure `trainerPublicId`.
+- Incremental numeric IDs are still used internally for relational integrity in the database.
+
 ## Trainer Scheduling Feature (Current)
 
 - Trainer weekly/day schedule views in frontend

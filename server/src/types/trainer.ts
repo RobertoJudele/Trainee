@@ -1,5 +1,6 @@
 export interface TrainerProfileAttributes {
   id: number;
+  publicId?: string;
   userId: number;
   bio?: string;
   experienceYears?: number;

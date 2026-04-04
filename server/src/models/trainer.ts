@@ -34,6 +34,11 @@ export class Trainer extends Model<
   @Column({ type: DataType.INTEGER, primaryKey: true, autoIncrement: true })
   id!: number;
 
+  @AllowNull(true)
+  @Default(DataType.UUIDV4)
+  @Column({ type: DataType.UUID, field: "public_id", unique: true })
+  publicId?: string;
+
   @ForeignKey(() => User)
   @AllowNull(false)
   @Column({ type: DataType.INTEGER, field: "user_id" })

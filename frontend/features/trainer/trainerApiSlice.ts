@@ -60,7 +60,8 @@ export interface PublicTrainerUser {
 }
 
 export interface PublicTrainerProfile {
-  id: number;
+  id: string;
+  internalId?: number;
   userId: number;
   bio?: string;
   experienceYears?: number;
@@ -103,7 +104,8 @@ export interface SearchParams {
 }
 
 export interface TrainerSearchItem {
-  id: number;
+  id: string;
+  internalId?: number;
   bio?: string;
   experienceYears?: number;
   hourlyRate?: number;
@@ -159,7 +161,7 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       },
     }),
 
-    getTrainerById: builder.query<PublicTrainerProfile, number>({
+    getTrainerById: builder.query<PublicTrainerProfile, string>({
       query: (trainerId) => `/trainer/${trainerId}`,
       transformResponse: (response: any) => {
         console.log("🎯 Public trainer response:", response);

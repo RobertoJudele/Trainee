@@ -36,6 +36,7 @@ export default function ReportIssueScreen() {
   const params = useLocalSearchParams<{
     targetType?: IssueTargetType;
     trainerId?: string;
+    trainerPublicId?: string;
     bookingId?: string;
   }>();
 
@@ -52,6 +53,12 @@ export default function ReportIssueScreen() {
     const value = Number(params.trainerId);
     return Number.isFinite(value) && value > 0 ? value : undefined;
   }, [params.trainerId]);
+
+  const trainerPublicId = useMemo(() => {
+    if (typeof params.trainerPublicId !== "string") return undefined;
+    const value = params.trainerPublicId.trim();
+    return value.length > 0 ? value : undefined;
+  }, [params.trainerPublicId]);
 
   const bookingId = useMemo(() => {
     const value = Number(params.bookingId);
@@ -85,6 +92,7 @@ export default function ReportIssueScreen() {
       title: title.trim(),
       description: description.trim(),
       trainerId,
+      trainerPublicId,
       bookingId,
     };
 
@@ -108,6 +116,7 @@ export default function ReportIssueScreen() {
         <Text style={styles.label}>Issue Type</Text>
         <Text style={styles.contextText}>{targetLabels[targetType]}</Text>
         {trainerId ? <Text style={styles.contextText}>Trainer ID: {trainerId}</Text> : null}
+        {trainerPublicId ? <Text style={styles.contextText}>Trainer Code: {trainerPublicId}</Text> : null}
         {bookingId ? <Text style={styles.contextText}>Booking ID: {bookingId}</Text> : null}
       </View>
 

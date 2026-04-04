@@ -14,6 +14,7 @@ export interface CreateIssueRequest {
   title: string;
   description: string;
   trainerId?: number;
+  trainerPublicId?: string;
   bookingId?: number;
 }
 

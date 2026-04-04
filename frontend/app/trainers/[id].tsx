@@ -35,8 +35,8 @@ export default function TrainerDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<TrainerRouteParams>();
 
-  const trainerId = toNumber(params.id) ?? 0;
-  const hasValidTrainerId = trainerId > 0;
+  const trainerPublicId = typeof params.id === "string" ? params.id.trim() : "";
+  const hasValidTrainerId = trainerPublicId.length > 0;
 
   const {
     data: trainer,
@@ -44,7 +44,7 @@ export default function TrainerDetailsScreen() {
     isFetching,
     isError,
     refetch,
-  } = useGetTrainerByIdQuery(trainerId, {
+  } = useGetTrainerByIdQuery(trainerPublicId, {
     skip: !hasValidTrainerId,
   });
 
@@ -182,7 +182,11 @@ export default function TrainerDetailsScreen() {
         onPress={() =>
           router.push({
             pathname: "/report-issue",
-            params: { targetType: "trainer", trainerId: String(trainerId) },
+            params: {
+              targetType: "trainer",
+              trainerId: trainer?.internalId ? String(trainer.internalId) : "",
+              trainerPublicId,
+            },
           })
         }
       >

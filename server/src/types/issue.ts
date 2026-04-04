@@ -50,6 +50,7 @@ export interface IssueCreationAttributes {
 
 export interface CreateIssueRequest {
   trainerId?: number;
+  trainerPublicId?: string;
   bookingId?: number;
   targetType: IssueTargetType;
   category: IssueCategory;
