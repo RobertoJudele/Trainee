@@ -109,6 +109,7 @@ const ensureTrainerPublicId = async (trainer: Trainer): Promise<string> => {
   }
 
   const generated = randomUUID();
+  console.log(`!!!!!!!!!!!!!!Generated publicId ${generated} for trainer ${trainer.id}`);
   await trainer.update({ publicId: generated });
   return generated;
 };
@@ -155,7 +156,6 @@ export const createTrainer = async (
     const stripeCustomer = await stripe.customers.create({
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
-      test_clock: process.env.STRIPE_TEST_CLOCK_ID, // Remove this line in production
       metadata: {
         userId: user.id.toString(), // Pro-tip: Link Stripe back to your DB ID
       }

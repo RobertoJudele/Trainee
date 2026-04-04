@@ -150,6 +150,10 @@ cd server
 npm run dev
 ```
 
+TypeScript note:
+
+- Backend `tsconfig.json` keeps `baseUrl` for existing `src/...` imports and sets `ignoreDeprecations: "6.0"` to prevent TypeScript 6 from failing startup.
+
 ### 3. Start frontend
 
 ```bash
