@@ -231,7 +231,7 @@ export default function Home() {
               {user?.firstName ? `${user.firstName}!` : "Welcome!"}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.push("/TrainerProfile")}>
+          <TouchableOpacity onPress={() => router.push(user ? "/TrainerProfile" : "/login")}>
             <View style={styles.profileAvatar}>
               <Text style={styles.profileInitials}>{user?.firstName?.[0] ?? "U"}</Text>
             </View>

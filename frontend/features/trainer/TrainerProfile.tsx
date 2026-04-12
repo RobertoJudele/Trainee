@@ -26,10 +26,11 @@ import {
   useGetSpecializationsQuery,
   useUpdateTrainerProfileMutation,
 } from "./trainerApiSlice";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import Purchases from "react-native-purchases";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const normalizeSocialUrlForSave = (value: string): string | null | "INVALID" => {
   const trimmed = value.trim();
@@ -119,6 +120,7 @@ function TrainerProfile() {
   const user = useSelector(selectCurrentUser);
   const token = useSelector(selectCurrentToken);
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const {
     data: trainerResponse,
     isLoading,
@@ -394,6 +396,9 @@ function TrainerProfile() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+          </Pressable>
           <Text style={styles.title}>Trainer Profile</Text>
           {!isEditing && (
             <Pressable style={styles.menuIconButton} onPress={() => setMenuVisible(true)}>
@@ -798,15 +803,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     position: "relative",
+    marginBottom: 15,
   },
   title: {
     ...typography.h2,
     color: theme.colors.text,
-    marginBottom: 15,
   },
   menuIconButton: {
     position: "absolute",
     right: 0,
+    top: -5,
+    padding: 10,
+  },
+  backBtn: {
+    position: "absolute",
+    left: 0,
     top: -5,
     padding: 10,
   },
