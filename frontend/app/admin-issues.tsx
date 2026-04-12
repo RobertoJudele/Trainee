@@ -15,6 +15,7 @@ import {
   useUpdateIssueStatusAdminMutation,
 } from "../features/support/issueApiSlice";
 import { theme, typography } from "../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
   "open",
@@ -87,7 +88,10 @@ export default function AdminIssuesScreen() {
       ListEmptyComponent={<Text style={styles.emptyText}>No issues found.</Text>}
       renderItem={({ item }) => (
         <View style={styles.card}>
-          <Text style={styles.title}>{item.title}</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <Ionicons name="information-circle-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
+            <Text style={styles.title}>{item.title}</Text>
+          </View>
           <Text style={styles.meta}>
             #{item.id} • {item.category} • {item.targetType}
           </Text>
@@ -133,13 +137,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    gap: 6,
-    marginBottom: 10,
+    borderRadius: theme.roundness,
+    padding: 16,
+    gap: 8,
+    marginBottom: 12,
+    ...theme.shadows.small,
   },
   title: { ...typography.body1, color: theme.colors.text, fontWeight: "700" },
   meta: { ...typography.caption, color: theme.colors.textSecondary },
@@ -163,9 +168,10 @@ const styles = StyleSheet.create({
   emptyText: { ...typography.body1, color: theme.colors.textSecondary },
   retryButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: theme.roundness,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    ...theme.shadows.small,
   },
   retryText: { ...typography.body2, color: "#fff", fontWeight: "700" },
 });

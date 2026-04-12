@@ -7,10 +7,19 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   Image,
+  Alert,
+  Linking,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useGetTrainerByIdQuery } from "../../features/trainer/trainerApiSlice";
 import { theme, typography } from "../../src/lib/theme";
+import { Ionicons } from '@expo/vector-icons';
+
+type ContactOption = {
+  label: "Instagram" | "Facebook" | "WhatsApp";
+  url: string;
+  fallbackUrl?: string;
+};
 
 type TrainerRouteParams = {
   id?: string;
@@ -29,6 +38,102 @@ type TrainerRouteParams = {
 const toNumber = (value?: string) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const normalizeSocialUrl = (value?: string | null): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalized = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  try {
+    new URL(normalized);
+    return normalized;
+  } catch {
+    return null;
+  }
+};
+
+const normalizeWhatsAppPhoneDigits = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalizedPrefix = trimmed.startsWith("00")
+    ? `+${trimmed.slice(2)}`
+    : trimmed;
+
+  const digits = normalizedPrefix.replace(/\D/g, "");
+  if (!digits || digits.length < 7 || digits.length > 15) {
+    return null;
+  }
+
+  if (!/^[1-9]/.test(digits)) {
+    return null;
+  }
+
+  return digits;
+};
+
+const getWhatsAppContactUrls = (
+  value?: string | null
+): { appUrl: string; webUrl: string } | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let phoneDigits = normalizeWhatsAppPhoneDigits(trimmed);
+
+  if (!phoneDigits) {
+    const withProtocol = /^https?:\/\//i.test(trimmed)
+      ? trimmed
+      : `https://${trimmed}`;
+
+    try {
+      const parsed = new URL(withProtocol);
+      const hostname = parsed.hostname.toLowerCase();
+      const fromQuery = parsed.searchParams.get("phone") ?? "";
+      const fromPath = parsed.pathname.split("/").filter(Boolean)[0] ?? "";
+
+      let phoneCandidate = "";
+      if (hostname === "wa.me" || hostname.endsWith(".wa.me")) {
+        phoneCandidate = fromPath;
+      } else if (
+        hostname === "api.whatsapp.com" ||
+        hostname === "whatsapp.com" ||
+        hostname === "www.whatsapp.com"
+      ) {
+        phoneCandidate = fromQuery;
+      }
+
+      phoneDigits = normalizeWhatsAppPhoneDigits(phoneCandidate);
+    } catch {
+      phoneDigits = null;
+    }
+  }
+
+  if (!phoneDigits) {
+    return null;
+  }
+
+  return {
+    appUrl: `whatsapp://send?phone=${phoneDigits}`,
+    webUrl: `https://wa.me/${phoneDigits}`,
+  };
 };
 
 export default function TrainerDetailsScreen() {
@@ -72,6 +177,71 @@ export default function TrainerDetailsScreen() {
     typeof trainer?.isAvailable === "boolean"
       ? trainer.isAvailable
       : params.isAvailableAtGym === "1";
+
+  const contactOptions = React.useMemo<ContactOption[]>(() => {
+    const options: ContactOption[] = [];
+
+    const instagramUrl = normalizeSocialUrl(trainer?.instagramUrl);
+    if (instagramUrl) {
+      options.push({ label: "Instagram", url: instagramUrl });
+    }
+
+    const facebookUrl = normalizeSocialUrl(trainer?.facebookUrl);
+    if (facebookUrl) {
+      options.push({ label: "Facebook", url: facebookUrl });
+    }
+
+    const whatsappContactUrls = getWhatsAppContactUrls(trainer?.whatsappUrl);
+    if (whatsappContactUrls) {
+      options.push({
+        label: "WhatsApp",
+        url: whatsappContactUrls.appUrl,
+        fallbackUrl: whatsappContactUrls.webUrl,
+      });
+    }
+
+    return options;
+  }, [trainer?.facebookUrl, trainer?.instagramUrl, trainer?.whatsappUrl]);
+
+  const openContactUrl = React.useCallback(async (url: string, fallbackUrl?: string) => {
+    try {
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+        return;
+      }
+
+      if (fallbackUrl) {
+        const canOpenFallback = await Linking.canOpenURL(fallbackUrl);
+        if (canOpenFallback) {
+          await Linking.openURL(fallbackUrl);
+          return;
+        }
+      }
+
+      Alert.alert("Unavailable", "Could not open this social link.");
+    } catch {
+      Alert.alert("Error", "Failed to open social link.");
+    }
+  }, []);
+
+  const handleContactPress = React.useCallback(() => {
+    if (contactOptions.length === 0) {
+      return;
+    }
+
+    Alert.alert(
+      "Contact Trainer",
+      "Choose platform",
+      contactOptions.slice(0, 3).map((option) => ({
+        text: option.label,
+        onPress: () => {
+          void openContactUrl(option.url, option.fallbackUrl);
+        },
+      })),
+      { cancelable: true }
+    );
+  }, [contactOptions, openContactUrl]);
 
   if (!hasValidTrainerId) {
     return (
@@ -123,7 +293,8 @@ export default function TrainerDetailsScreen() {
         </View>
 
         <View style={styles.ratingRow}>
-          <Text style={styles.ratingText}>⭐ {Number(rating).toFixed(1)}</Text>
+          <Ionicons name="star" size={16} color="#F59E0B" />
+          <Text style={styles.ratingText}>{Number(rating).toFixed(1)}</Text>
           <Text style={styles.reviewsText}>({reviewCount} reviews)</Text>
         </View>
       </View>
@@ -165,7 +336,10 @@ export default function TrainerDetailsScreen() {
                   {[gym.address, gym.city, gym.state].filter(Boolean).join(", ")}
                 </Text>
               </View>
-              <Text style={styles.gymRating}>⭐ {Number(gym.rating ?? 0).toFixed(1)}</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <Ionicons name="star" size={12} color="#F59E0B" style={{marginRight: 2}} />
+                <Text style={styles.gymRating}>{Number(gym.rating ?? 0).toFixed(1)}</Text>
+              </View>
             </View>
           ))
         ) : (
@@ -176,6 +350,12 @@ export default function TrainerDetailsScreen() {
       <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
         <Text style={styles.primaryButtonText}>Back to map</Text>
       </TouchableOpacity>
+
+      {contactOptions.length > 0 && (
+        <TouchableOpacity style={styles.contactButton} onPress={handleContactPress}>
+          <Text style={styles.contactButtonText}>Contact</Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={styles.secondaryButton}
@@ -224,12 +404,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   headerCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
     padding: theme.spacing.lg,
     alignItems: "center",
     borderWidth: 1,
     borderColor: theme.colors.border,
+    ...theme.shadows.small,
   },
   avatar: {
     width: 88,
@@ -284,12 +465,13 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   section: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
     padding: theme.spacing.lg,
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: 8,
+    ...theme.shadows.small,
   },
   sectionTitle: {
     ...typography.h3,
@@ -343,9 +525,10 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: 4,
     backgroundColor: theme.colors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: theme.roundness,
+    paddingVertical: 14,
     alignItems: "center",
+    ...theme.shadows.medium,
   },
   primaryButtonText: {
     ...typography.body1,
@@ -354,16 +537,30 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     marginTop: 2,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    paddingVertical: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#DC2626",
+    borderColor: theme.colors.error,
+    ...theme.shadows.small,
   },
   secondaryButtonText: {
     ...typography.body1,
     color: "#B91C1C",
+    fontWeight: "700",
+  },
+  contactButton: {
+    marginTop: 2,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.roundness,
+    paddingVertical: 14,
+    alignItems: "center",
+    ...theme.shadows.medium,
+  },
+  contactButtonText: {
+    ...typography.body1,
+    color: "#fff",
     fontWeight: "700",
   },
 });

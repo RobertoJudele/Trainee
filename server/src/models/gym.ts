@@ -50,6 +50,13 @@ export class Gym extends Model<GymAttributes, GymCreationAttributes> {
   @Column({ type: DataType.DECIMAL(11, 8), field: "longitude" })
   longitude!: number;
 
+  @AllowNull(true)
+  @Column({ type: DataType.GEOMETRY("POINT", 4326), field: "location" })
+  location?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+
   @Column({ type: DataType.STRING(20), field: "phone" })
   phone?: string;
 

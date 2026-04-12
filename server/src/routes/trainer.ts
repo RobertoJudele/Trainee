@@ -25,6 +25,6 @@ router.use(authenticate);
 router.post("/create", createTrainer);
 router.get("/", getSelfTrainer);
 router.delete("/", deleteTrainer);
-router.put("/", updateTrainerValidation, handleValidationErrors, updateTrainer, subscription);
+router.put("/", updateTrainerValidation, handleValidationErrors, subscription, updateTrainer);
 
 export default router;

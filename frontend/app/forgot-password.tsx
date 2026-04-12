@@ -13,6 +13,7 @@ import {
 import { useRouter } from "expo-router";
 import { useForgotPasswordMutation } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -52,6 +53,7 @@ export default function ForgotPasswordScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
+        <Ionicons name="lock-closed-outline" size={48} color={theme.colors.primary} style={{marginBottom: 8}} />
         <Text style={styles.title}>Forgot Password</Text>
         <Text style={styles.subtitle}>
           Enter your email address and we will send a reset link.
@@ -119,6 +121,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
+    ...theme.shadows.medium,
   },
   primaryButtonText: { ...typography.body1, color: "#fff", fontWeight: "700" },
   disabled: { opacity: 0.7 },

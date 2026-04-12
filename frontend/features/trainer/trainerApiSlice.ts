@@ -22,6 +22,9 @@ interface TrainerUpdateRequest {
   locationCountry?: string;
   latitude?: number;
   longitude?: number;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  whatsappUrl?: string | null;
   specializationIds?: number[];
 }
 
@@ -72,6 +75,9 @@ export interface PublicTrainerProfile {
   locationCountry?: string;
   latitude?: number;
   longitude?: number;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  whatsappUrl?: string | null;
   isFeatured: boolean;
   isAvailable: boolean;
   profileViews: number;
@@ -115,6 +121,9 @@ export interface TrainerSearchItem {
   locationCountry?: string;
   latitude?: number;
   longitude?: number;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  whatsappUrl?: string | null;
   isAvailable: boolean;
   isFeatured: boolean;
   profileViews: number;

@@ -5,6 +5,10 @@ import sequelize from "../db";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
+import {
+  ensureDatabaseExtensions,
+  ensureSpatialAndSearchInfrastructure,
+} from "../services/databaseBootstrap";
 
 const trainerSpecializations = [
   // Trainer 1 specializations
@@ -44,7 +48,9 @@ async function seed() {
     await sequelize.authenticate();
     console.log("✅ DB connected");
 
+    await ensureDatabaseExtensions();
     await sequelize.sync({ alter: true });
+    await ensureSpatialAndSearchInfrastructure();
     console.log("✅ Models synced");
 
     // Get all trainers and specializations

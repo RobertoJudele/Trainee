@@ -60,11 +60,35 @@ interface ApiResponse<T> {
   data: T;
 }
 
+export interface GetAllGymsParams {
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+}
+
 export const gymApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // All gyms for map
-    getAllGyms: builder.query<ApiResponse<GymMarker[]>, void>({
-      query: () => "/gyms",
+    getAllGyms: builder.query<ApiResponse<GymMarker[]>, GetAllGymsParams | void>({
+      query: (params) => {
+        if (!params) {
+          return "/gyms";
+        }
+
+        const queryParams = new URLSearchParams();
+        if (params.lat !== undefined) {
+          queryParams.append("lat", String(params.lat));
+        }
+        if (params.lng !== undefined) {
+          queryParams.append("lng", String(params.lng));
+        }
+        if (params.radiusKm !== undefined) {
+          queryParams.append("radiusKm", String(params.radiusKm));
+        }
+
+        const queryString = queryParams.toString();
+        return `/gyms${queryString ? `?${queryString}` : ""}`;
+      },
       providesTags: ["Gyms"],
     }),
 

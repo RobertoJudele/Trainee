@@ -5,6 +5,75 @@ import { UserRole } from "../types/common";
 import { IssueCategory, IssueStatus, IssueTargetType } from "../types/issue";
 import { sendError } from "../utils/response";
 
+const getHostname = (value: string): string | null => {
+  try {
+    return new URL(value).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+};
+
+const matchesHost = (hostname: string, allowedHosts: string[]): boolean =>
+  allowedHosts.some((host) => hostname === host || hostname.endsWith(`.${host}`));
+
+const normalizeWhatsAppPhoneDigits = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalizedPrefix = trimmed.startsWith("00")
+    ? `+${trimmed.slice(2)}`
+    : trimmed;
+
+  const digits = normalizedPrefix.replace(/\D/g, "");
+  if (!digits || digits.length < 7 || digits.length > 15) {
+    return null;
+  }
+
+  if (!/^[1-9]/.test(digits)) {
+    return null;
+  }
+
+  return digits;
+};
+
+const extractWhatsAppPhoneFromValue = (value: string): string | null => {
+  const directPhone = normalizeWhatsAppPhoneDigits(value);
+  if (directPhone) {
+    return directPhone;
+  }
+
+  const trimmed = value.trim();
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    const hostname = parsed.hostname.toLowerCase();
+    const fromQuery = parsed.searchParams.get("phone") ?? "";
+    const fromPath = parsed.pathname.split("/").filter(Boolean)[0] ?? "";
+
+    let phoneCandidate = "";
+    if (hostname === "wa.me" || hostname.endsWith(".wa.me")) {
+      phoneCandidate = fromPath;
+    } else if (
+      hostname === "api.whatsapp.com" ||
+      hostname === "whatsapp.com" ||
+      hostname === "www.whatsapp.com"
+    ) {
+      phoneCandidate = fromQuery;
+    } else {
+      return null;
+    }
+
+    return normalizeWhatsAppPhoneDigits(phoneCandidate);
+  } catch {
+    return null;
+  }
+};
+
 export const registerValidation = [
   body("email")
     .isEmail()
@@ -131,6 +200,48 @@ export const updateTrainerValidation = [
     .optional()
     .isFloat({ min: -180, max: 180 })
     .withMessage("Longitude must be between -180 and 180."),
+  body("instagramUrl")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("Instagram URL must be at most 255 characters.")
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("Instagram URL must be a valid http/https URL.")
+    .custom((value) => {
+      const hostname = getHostname(value);
+      if (!hostname || !matchesHost(hostname, ["instagram.com"])) {
+        throw new Error("Instagram URL must point to instagram.com.");
+      }
+      return true;
+    }),
+  body("facebookUrl")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("Facebook URL must be at most 255 characters.")
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("Facebook URL must be a valid http/https URL.")
+    .custom((value) => {
+      const hostname = getHostname(value);
+      if (!hostname || !matchesHost(hostname, ["facebook.com", "fb.com", "m.me"])) {
+        throw new Error("Facebook URL must point to facebook.com, fb.com, or m.me.");
+      }
+      return true;
+    }),
+  body("whatsappUrl")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("WhatsApp contact must be at most 255 characters.")
+    .custom((value) => {
+      const phoneDigits = extractWhatsAppPhoneFromValue(value);
+      if (!phoneDigits) {
+        throw new Error(
+          "WhatsApp contact must be an international phone number (for example +40712345678) or a wa.me/api.whatsapp.com URL with a phone number."
+        );
+      }
+      return true;
+    }),
   body("specializationIds")
     .optional()
     .isArray()

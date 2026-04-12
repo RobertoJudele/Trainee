@@ -17,10 +17,13 @@ import { useDispatch } from 'react-redux';
 import { setCredentials, setTrainerProfile } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
 import { useGetTrainerProfileQuery } from '../../features/trainer/trainerApiSlice';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Login() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -98,9 +101,9 @@ export default function Login() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) }]}>
           <View style={styles.iconContainer}>
-            <Text style={styles.emoji}>💪</Text>
+            <Ionicons name="barbell" size={40} color="#FFFFFF" />
           </View>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
@@ -149,7 +152,7 @@ export default function Login() {
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Text style={styles.eyeText}>{showPassword ? '👁️' : '👁️‍🗨️'}</Text>
+                <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
             {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
@@ -221,9 +224,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-  },
-  emoji: {
-    fontSize: 40,
+    ...theme.shadows.medium,
   },
   title: {
     ...typography.h1,
@@ -274,9 +275,6 @@ const styles = StyleSheet.create({
     right: theme.spacing.md,
     top: theme.spacing.md,
     padding: theme.spacing.xs,
-  },
-  eyeText: {
-    fontSize: 20,
   },
   forgotPassword: {
     alignSelf: 'flex-end',

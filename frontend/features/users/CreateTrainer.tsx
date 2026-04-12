@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { useCreateTrainerMutation } from "./usersApiSlicet";
 import { useDispatch, useSelector } from "react-redux";
-import { selectCurrentTrainer, selectCurrentUser, setTrainerProfile } from "../../features/auth/authSlice";
+import { selectCurrentToken, selectCurrentTrainer, selectCurrentUser, setCredentials, setTrainerProfile } from "../../features/auth/authSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
 import {
@@ -20,7 +20,9 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
-
+import React from "react";
+import { theme, typography } from "../../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 export default function CreateTrainer() {
   const [bio, setBio] = useState("");
   const [exp, setExp] = useState("");
@@ -33,10 +35,10 @@ export default function CreateTrainer() {
   const [longitude, setLongitude] = useState("0");
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
   const user = useSelector(selectCurrentUser);
-  const trainer= useSelector(selectCurrentTrainer)
+  const trainer = useSelector(selectCurrentTrainer)
   const errRef = useRef<Text>(null);
   const [errMsg, setErrMsg] = useState("");
-
+  const token = useSelector(selectCurrentToken);
   const [creatingTrainer, { isLoading }] = useCreateTrainerMutation();
   const { data: specializationResponse, isLoading: specializationsLoading } =
     useGetSpecializationsQuery();
@@ -78,6 +80,18 @@ export default function CreateTrainer() {
       setErrMsg("Country is required");
       return false;
     }
+    if (country.trim().length < 2) {
+      setErrMsg("Country must be at least 2 characters long");
+      return false;
+    }
+    if (county.trim().length < 2) {
+      setErrMsg("County must be at least 2 characters long");
+      return false;
+    }
+    if (city.trim().length < 2) {
+      setErrMsg("City must be at least 2 characters long");
+      return false;
+    }
     if (selectedSpecializationIds.length === 0) {
       setErrMsg("Please select at least one specialization");
       return false;
@@ -97,7 +111,6 @@ export default function CreateTrainer() {
   };
 
   const handleSubmit = useCallback(async () => {
-    console.log("Create button pressed!");
 
     if (!validateForm()) {
       return;
@@ -119,11 +132,13 @@ export default function CreateTrainer() {
       console.log("Trainer data: ", trainerData);
 
       const result = await creatingTrainer(trainerData);
-      console.log(result);
+      console.log(user);
+
 
       const responseData = (result as any)?.data?.data;
       if (responseData) {
         dispatch(setTrainerProfile(responseData));
+        dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
       }
 
       Alert.alert(
@@ -160,7 +175,6 @@ export default function CreateTrainer() {
     creatingTrainer,
     dispatch,
   ]);
-  console.log("Current trainer from store: ", trainer);
   if (!user) {
     return (
       <View style={styles.buttonContainer}>
@@ -180,14 +194,14 @@ export default function CreateTrainer() {
       </View>
     );
   }
-  
+
   else if (trainer) {
     return (
       <View style={styles.buttonContainer}>
         <Text style={styles.row}>
           You already have a trainer profile.
         </Text>
-        <Pressable style={styles.button} onPress={() => router.push("/TrainerProfile") }>
+        <Pressable style={styles.button} onPress={() => router.push("/TrainerProfile")}>
           <Text>
             Go to trainer profile
           </Text>
@@ -212,7 +226,10 @@ export default function CreateTrainer() {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Text style={styles.title}>✨ Create Your Trainer Profile</Text>
+            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8}}>
+              <Ionicons name="sparkles" size={24} color={theme.colors.primary} style={{marginRight: 8}} />
+              <Text style={[styles.title, {marginBottom: 0}]}>Create Your Trainer Profile</Text>
+            </View>
             <Text style={styles.subtitle}>
               Tell us about yourself and start connecting with clients
             </Text>
@@ -230,7 +247,10 @@ export default function CreateTrainer() {
 
             {/* Bio Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📝 About You</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
+                <Ionicons name="document-text-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>About You</Text>
+              </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Bio *</Text>
@@ -259,7 +279,10 @@ export default function CreateTrainer() {
 
             {/* Specializations Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>🏷️ Specializations *</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
+                <Ionicons name="pricetags-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Specializations *</Text>
+              </View>
               {specializationsLoading ? (
                 <View style={styles.specLoadingRow}>
                   <ActivityIndicator size="small" color="#3B82F6" />
@@ -287,7 +310,10 @@ export default function CreateTrainer() {
 
             {/* Pricing Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>💰 Pricing</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
+                <Ionicons name="cash-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Pricing</Text>
+              </View>
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
@@ -316,7 +342,10 @@ export default function CreateTrainer() {
 
             {/* Location Section */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>📍 Location</Text>
+              <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
+                <Ionicons name="location" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Location</Text>
+              </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>City *</Text>
@@ -367,7 +396,7 @@ export default function CreateTrainer() {
                     <Text style={styles.buttonText}>Creating Profile...</Text>
                   </View>
                 ) : (
-                  <Text style={styles.buttonText}>🚀 Create Trainer Profile</Text>
+                  <Text style={styles.buttonText}>Create Trainer Profile</Text>
                 )}
               </Pressable>
 
@@ -395,16 +424,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 30,
     backgroundColor: "white",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderBottomLeftRadius: theme.roundness,
+    borderBottomRightRadius: theme.roundness,
+    ...theme.shadows.medium,
   },
   title: {
-    fontSize: 28,
+    ...typography.h2,
     fontWeight: "bold",
     color: "#1A1A1A",
     textAlign: "center",
@@ -423,9 +448,8 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#1A1A1A",
+    ...typography.h3,
+    color: theme.colors.text,
     marginBottom: 16,
   },
   inputGroup: {
@@ -439,17 +463,13 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 2,
-    borderColor: "#E5E7EB",
-    backgroundColor: "white",
-    borderRadius: 12,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.background,
+    borderRadius: theme.roundness,
     padding: 16,
-    fontSize: 16,
-    color: "#1A1A1A",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    ...typography.body1,
+    color: theme.colors.text,
+    ...theme.shadows.small,
   },
   textArea: {
     minHeight: 100,
@@ -481,16 +501,12 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   button: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: theme.colors.primary,
     paddingVertical: 18,
-    borderRadius: 16,
+    borderRadius: theme.roundness,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#3B82F6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    ...theme.shadows.medium,
   },
   buttonDisabled: {
     backgroundColor: "#9CA3AF",
@@ -537,8 +553,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   specChipActive: {
-    backgroundColor: "#3B82F6",
-    borderColor: "#3B82F6",
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
   },
   specChipText: {
     color: "#374151",

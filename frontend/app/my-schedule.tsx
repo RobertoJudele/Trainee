@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function MyScheduleScreen() {
   const router = useRouter();
@@ -65,7 +66,10 @@ export default function MyScheduleScreen() {
       onRefresh={refetch}
       ListHeaderComponent={
         <View style={styles.card}>
-          <Text style={styles.title}>Generate Client Code</Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 4}}>
+            <Ionicons name="qr-code-outline" size={24} color={theme.colors.primary} style={{marginRight: 8}}/>
+            <Text style={styles.title}>Generate Client Code</Text>
+          </View>
           <Text style={styles.text}>Create a short-lived code and share it directly with your trainer.</Text>
           <Pressable
             style={[styles.primaryBtn, isGeneratingCode && styles.primaryBtnDisabled]}
@@ -86,10 +90,15 @@ export default function MyScheduleScreen() {
       ListEmptyComponent={<Text style={styles.emptyText}>No upcoming sessions yet. You can still generate a code above.</Text>}
       renderItem={({ item }) => (
         <View style={styles.card}>
-          <Text style={styles.title}>Session #{item.id}</Text>
+          <View style={styles.cardHeader}>
+            <Ionicons name="calendar" size={16} color={theme.colors.primary} style={{marginRight: 6}} />
+            <Text style={styles.title}>Session #{item.id}</Text>
+          </View>
           <Text style={styles.text}>Start: {new Date(item.startsAt).toLocaleString()}</Text>
           <Text style={styles.text}>End: {new Date(item.endsAt).toLocaleString()}</Text>
-          <Text style={styles.text}>Status: {item.status}</Text>
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusText}>{item.status}</Text>
+          </View>
         </View>
       )}
     />
@@ -101,35 +110,47 @@ const styles = StyleSheet.create({
   content: { padding: 16, gap: 10, paddingBottom: 24 },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background },
   card: {
-    backgroundColor: "#fff",
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
-    gap: 4,
-    marginBottom: 10,
+    borderRadius: theme.roundness,
+    padding: 16,
+    gap: 8,
+    marginBottom: 12,
+    ...theme.shadows.small,
   },
+  cardHeader: { flexDirection: "row", alignItems: "center", marginBottom: 4 },
+  statusBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: `${theme.colors.primary}15`,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginTop: 4,
+  },
+  statusText: { ...typography.caption, color: theme.colors.primary, fontWeight: '700', textTransform: 'uppercase' },
   title: { ...typography.body1, color: theme.colors.text, fontWeight: "700" },
   text: { ...typography.body2, color: theme.colors.textSecondary },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary },
   primaryBtn: {
     marginTop: 10,
     backgroundColor: theme.colors.primary,
-    borderRadius: 10,
+    borderRadius: theme.roundness,
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 14,
     alignItems: "center",
+    ...theme.shadows.medium,
   },
   primaryBtnDisabled: { opacity: 0.7 },
   primaryBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
   codeBox: {
-    marginTop: 10,
+    marginTop: 12,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 10,
-    padding: 10,
-    backgroundColor: "#F8FAFF",
-    gap: 2,
+    borderRadius: theme.roundness,
+    padding: 14,
+    backgroundColor: `${theme.colors.primary}10`,
+    gap: 4,
   },
   codeLabel: { ...typography.caption, color: theme.colors.textSecondary },
   codeText: { ...typography.h3, color: theme.colors.primary, fontWeight: "800", letterSpacing: 2 },

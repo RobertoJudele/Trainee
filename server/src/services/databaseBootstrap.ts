@@ -1,0 +1,84 @@
+import sequelize from "../db";
+
+export const ensureDatabaseExtensions = async (): Promise<void> => {
+  await sequelize.query('CREATE EXTENSION IF NOT EXISTS "postgis";');
+  await sequelize.query('CREATE EXTENSION IF NOT EXISTS "pg_trgm";');
+};
+
+export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
+  // Spatial columns
+  await sequelize.query(
+    "ALTER TABLE gyms ADD COLUMN IF NOT EXISTS location geometry(Point, 4326);"
+  );
+  await sequelize.query(
+    "ALTER TABLE trainer_profiles ADD COLUMN IF NOT EXISTS location geometry(Point, 4326);"
+  );
+
+  // Backfill PostGIS geometry from legacy decimal columns
+  await sequelize.query(`
+    UPDATE gyms
+    SET location = ST_SetSRID(ST_MakePoint(longitude::double precision, latitude::double precision), 4326)
+    WHERE location IS NULL
+      AND latitude IS NOT NULL
+      AND longitude IS NOT NULL;
+  `);
+
+  await sequelize.query(`
+    UPDATE trainer_profiles
+    SET location = ST_SetSRID(ST_MakePoint(longitude::double precision, latitude::double precision), 4326)
+    WHERE location IS NULL
+      AND latitude IS NOT NULL
+      AND longitude IS NOT NULL;
+  `);
+
+  // Keep legacy decimal columns filled if location already exists
+  await sequelize.query(`
+    UPDATE gyms
+    SET latitude = ROUND(ST_Y(location)::numeric, 8),
+        longitude = ROUND(ST_X(location)::numeric, 8)
+    WHERE location IS NOT NULL
+      AND (latitude IS NULL OR longitude IS NULL);
+  `);
+
+  await sequelize.query(`
+    UPDATE trainer_profiles
+    SET latitude = ROUND(ST_Y(location)::numeric, 8),
+        longitude = ROUND(ST_X(location)::numeric, 8)
+    WHERE location IS NOT NULL
+      AND (latitude IS NULL OR longitude IS NULL);
+  `);
+
+  // Spatial proximity indexes
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_gyms_location_gist ON gyms USING GIST (location);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_trainer_profiles_location_gist ON trainer_profiles USING GIST (location);"
+  );
+
+  // ILIKE acceleration via trigram GIN indexes
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_trainer_profiles_bio_trgm ON trainer_profiles USING GIN (bio gin_trgm_ops);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_trainer_profiles_public_id_trgm ON trainer_profiles USING GIN ((public_id::text) gin_trgm_ops);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_trainer_profiles_location_city_trgm ON trainer_profiles USING GIN (location_city gin_trgm_ops);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_trainer_profiles_location_state_trgm ON trainer_profiles USING GIN (location_state gin_trgm_ops);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_trainer_profiles_location_country_trgm ON trainer_profiles USING GIN (location_country gin_trgm_ops);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_users_email_trgm ON users USING GIN (email gin_trgm_ops);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_users_first_name_trgm ON users USING GIN (first_name gin_trgm_ops);"
+  );
+  await sequelize.query(
+    "CREATE INDEX IF NOT EXISTS idx_users_last_name_trgm ON users USING GIN (last_name gin_trgm_ops);"
+  );
+};

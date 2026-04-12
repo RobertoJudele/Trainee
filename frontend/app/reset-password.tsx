@@ -13,6 +13,7 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useResetPasswordMutation } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -62,6 +63,7 @@ export default function ResetPasswordScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
+        <Ionicons name="key-outline" size={48} color={theme.colors.primary} style={{marginBottom: 8}} />
         <Text style={styles.title}>Reset Password</Text>
         <Text style={styles.subtitle}>
           {hintEmail
@@ -148,6 +150,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
     paddingVertical: theme.spacing.md,
     alignItems: "center",
+    ...theme.shadows.medium,
   },
   primaryButtonText: { ...typography.body1, color: "#fff", fontWeight: "700" },
   disabled: { opacity: 0.7 },

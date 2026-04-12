@@ -25,6 +25,14 @@ import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { TrainerGym } from "../models/trainerGym";
 import { Gym } from "../models/gym";
 import { stripe } from "../config/stripe";
+import {
+  buildPointFromLatLng,
+  isValidLatitude,
+  isValidLongitude,
+  toFiniteNumber,
+} from "../utils/geo";
+import { get } from "http";
+
 
 interface SearchQuery {
   // Text search
@@ -37,6 +45,7 @@ interface SearchQuery {
   lat?: string;
   lng?: string;
   radius?: string; // in km
+  radiusKm?: string;
 
   // Rate filters
   minRate?: string;
@@ -58,7 +67,14 @@ interface SearchQuery {
   isFeatured?: string;
 
   // Sorting
-  sortBy?: "totalRating" | "experience" | "rate" | "reviews" | "recent";
+  sortBy?:
+    | "totalRating"
+    | "experienceYears"
+    | "hourlyRate"
+    | "sessionRate"
+    | "reviewCount"
+    | "createdAt"
+    | "distance";
   sortOrder?: "asc" | "desc";
 
   // Pagination
@@ -151,8 +167,6 @@ export const createTrainer = async (
     await user.save();
     const currentDate = new Date();
     const trialEndsAt = currentDate;
-
-    //to add the actual logic for the stripe customer id and subscription id
     const stripeCustomer = await stripe.customers.create({
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
@@ -162,8 +176,13 @@ export const createTrainer = async (
     });
     const stripeCustomerId = stripeCustomer.id;
     const stripeSubscriptionId = "";
-    const subscriptionStatus = subStatus.CANCELED;
+    const subscriptionStatus = subStatus.TRIAL;
     const currentPeriodEndsAt = null;
+
+    const trainerLocation = buildPointFromLatLng(
+      toFiniteNumber(profileData.latitude),
+      toFiniteNumber(profileData.longitude)
+    );
 
     const trainer = await Trainer.create({
       userId: userId,
@@ -176,11 +195,14 @@ export const createTrainer = async (
       locationCountry: profileData.locationCountry,
       latitude: profileData.latitude,
       longitude: profileData.longitude,
+      instagramUrl: profileData.instagramUrl,
+      facebookUrl: profileData.facebookUrl,
+      whatsappUrl: profileData.whatsappUrl,
+      location: trainerLocation ?? undefined,
       trialEndsAt,
       stripeCustomerId,
       stripeSubscriptionId,
       subscriptionStatus,
-      currentPeriodEndsAt,
     });
 
     if (specializationIds && specializationIds.length > 0) {
@@ -222,7 +244,7 @@ export const createTrainer = async (
         field: err.path,
         message: err.message,
       }));
-      sendError(res, 400, "Validation trainer error ");
+      sendError(res, 400, "Validation trainer error");
       return;
     }
     sendError(res, 500, "Unexpected error while creating trainer happened");
@@ -262,6 +284,9 @@ export const getTrainer = async (
         "locationCountry",
         "latitude",
         "longitude",
+        "instagramUrl",
+        "facebookUrl",
+        "whatsappUrl",
         "isFeatured",
         "isAvailable",
         "profileViews",
@@ -423,6 +448,9 @@ export const updateTrainer = async (req: Request, res: Response) => {
       locationCountry,
       latitude,
       longitude,
+      instagramUrl,
+      facebookUrl,
+      whatsappUrl,
       specializationIds,
     } = req.body;
     if (!userId) {
@@ -442,6 +470,35 @@ export const updateTrainer = async (req: Request, res: Response) => {
       return;
     }
 
+    const providedLatitude = toFiniteNumber(latitude);
+    const providedLongitude = toFiniteNumber(longitude);
+
+    if (
+      latitude !== undefined &&
+      (providedLatitude === undefined || !isValidLatitude(providedLatitude))
+    ) {
+      sendError(res, 400, "Latitude must be between -90 and 90.");
+      return;
+    }
+
+    if (
+      longitude !== undefined &&
+      (providedLongitude === undefined || !isValidLongitude(providedLongitude))
+    ) {
+      sendError(res, 400, "Longitude must be between -180 and 180.");
+      return;
+    }
+
+    const nextLatitude = providedLatitude ?? toFiniteNumber(trainer.latitude);
+    const nextLongitude = providedLongitude ?? toFiniteNumber(trainer.longitude);
+    const nextLocation = buildPointFromLatLng(nextLatitude, nextLongitude);
+    const nextInstagramUrl =
+      instagramUrl === undefined ? trainer.instagramUrl : instagramUrl || null;
+    const nextFacebookUrl =
+      facebookUrl === undefined ? trainer.facebookUrl : facebookUrl || null;
+    const nextWhatsappUrl =
+      whatsappUrl === undefined ? trainer.whatsappUrl : whatsappUrl || null;
+
     await trainer.update({
       bio: bio ?? trainer.bio,
       experienceYears: experienceYears ?? trainer.experienceYears,
@@ -450,8 +507,12 @@ export const updateTrainer = async (req: Request, res: Response) => {
       locationCity: locationCity ?? trainer.locationCity,
       locationState: locationState ?? trainer.locationState,
       locationCountry: locationCountry ?? trainer.locationCountry,
-      latitude: latitude ?? trainer.latitude,
-      longitude: longitude ?? trainer.longitude,
+      latitude: nextLatitude ?? trainer.latitude,
+      longitude: nextLongitude ?? trainer.longitude,
+      instagramUrl: nextInstagramUrl,
+      facebookUrl: nextFacebookUrl,
+      whatsappUrl: nextWhatsappUrl,
+      location: nextLocation ?? trainer.location,
     });
 
     if (Array.isArray(specializationIds)) {
@@ -562,6 +623,10 @@ export const searchTrainers = async (
       city,
       state,
       country,
+      lat,
+      lng,
+      radius,
+      radiusKm,
       minRate,
       maxRate,
       rateType = "session",
@@ -577,8 +642,62 @@ export const searchTrainers = async (
       limit = "20",
     } = req.query;
 
-    const trainerWhere: any = {subscriptionStatus: { [Op.in]: [subStatus.ACTIVE, subStatus.TRIAL] }};
+    const trainerWhere: any = {
+      subscriptionStatus: { [Op.in]: [subStatus.ACTIVE, subStatus.TRIAL] },
+    };
     const userWhere: any = {};
+
+    const latValue = toFiniteNumber(lat);
+    const lngValue = toFiniteNumber(lng);
+    const radiusValue = toFiniteNumber(radiusKm ?? radius);
+
+    const hasGeoReference =
+      latValue !== undefined &&
+      lngValue !== undefined &&
+      isValidLatitude(latValue) &&
+      isValidLongitude(lngValue);
+
+    if ((lat !== undefined || lng !== undefined) && !hasGeoReference) {
+      sendError(res, 400, "lat/lng must be valid coordinates");
+      return;
+    }
+
+    if ((radius !== undefined || radiusKm !== undefined) && (!radiusValue || radiusValue <= 0)) {
+      sendError(res, 400, "radius must be a positive number in kilometers");
+      return;
+    }
+
+    const hasRadiusFilter = hasGeoReference && radiusValue !== undefined && radiusValue > 0;
+    const distanceExpression = hasGeoReference
+      ? `
+          ST_Distance(
+            "Trainer"."location"::geography,
+            ST_SetSRID(ST_MakePoint(${lngValue}, ${latValue}), 4326)::geography
+          )
+        `
+      : null;
+
+    const applyGeoFilters = (whereClause: any): void => {
+      if (!hasGeoReference) {
+        return;
+      }
+
+      whereClause.location = { [Op.ne]: null };
+
+      if (hasRadiusFilter) {
+        const existingAnd = Array.isArray(whereClause[Op.and]) ? whereClause[Op.and] : [];
+        whereClause[Op.and] = [
+          ...existingAnd,
+          Sequelize.literal(`
+            ST_DWithin(
+              "Trainer"."location"::geography,
+              ST_SetSRID(ST_MakePoint(${lngValue}, ${latValue}), 4326)::geography,
+              ${radiusValue! * 1000}
+            )
+          `),
+        ];
+      }
+    };
 
     if (isAvailable === "true") trainerWhere.isAvailable = true;
     if (isFeatured === "true") trainerWhere.isFeatured = true;
@@ -608,6 +727,8 @@ export const searchTrainers = async (
       trainerWhere.totalRating = { [Op.gte]: parseFloat(minRating) };
     }
 
+    applyGeoFilters(trainerWhere);
+
     // Text search — bio on trainer, name on user
     if (q) {
       const normalizedQuery = String(q).trim();
@@ -630,6 +751,7 @@ export const searchTrainers = async (
       "sessionRate",
       "reviewCount",
       "createdAt",
+      "distance",
     ];
     const safeSortBy = validSortFields.includes(sortBy) ? sortBy : "totalRating";
     const safeSortOrder = sortOrder === "asc" ? "ASC" : "DESC";
@@ -709,6 +831,9 @@ export const searchTrainers = async (
       }
 
       // Re-apply non-text filters
+      finalTrainerWhere.subscriptionStatus = {
+        [Op.in]: [subStatus.ACTIVE, subStatus.TRIAL],
+      };
       if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
       if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
       if (city) finalTrainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
@@ -720,33 +845,55 @@ export const searchTrainers = async (
         if (minRate) finalTrainerWhere[rateField][Op.gte] = parseFloat(minRate);
         if (maxRate) finalTrainerWhere[rateField][Op.lte] = parseFloat(maxRate);
       }
+      if (minExperience || maxExperience) {
+        finalTrainerWhere.experienceYears = {};
+        if (minExperience) finalTrainerWhere.experienceYears[Op.gte] = parseInt(minExperience);
+        if (maxExperience) finalTrainerWhere.experienceYears[Op.lte] = parseInt(maxExperience);
+      }
       if (minRating) finalTrainerWhere.totalRating = { [Op.gte]: parseFloat(minRating) };
+
+      applyGeoFilters(finalTrainerWhere);
     }
+
+    const trainerAttributes: any[] = [
+      "id",
+      "publicId",
+      "bio",
+      "experienceYears",
+      "hourlyRate",
+      "sessionRate",
+      "locationCity",
+      "locationState",
+      "locationCountry",
+      "latitude",
+      "longitude",
+      "instagramUrl",
+      "facebookUrl",
+      "whatsappUrl",
+      "isAvailable",
+      "isFeatured",
+      "profileViews",
+      "totalRating",
+      "reviewCount",
+      "createdAt",
+      "updatedAt",
+    ];
+
+    if (distanceExpression) {
+      trainerAttributes.push([Sequelize.literal(distanceExpression), "distanceMeters"]);
+    }
+
+    const resolvedSortBy = safeSortBy === "distance" && !distanceExpression ? "totalRating" : safeSortBy;
+    const orderClause: any[] =
+      resolvedSortBy === "distance" && distanceExpression
+        ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["totalRating", "DESC"]]
+        : [[resolvedSortBy, safeSortOrder]];
 
     const { count, rows } = await Trainer.findAndCountAll({
       where: finalTrainerWhere,
       limit: parseInt(limit),
       offset,
-      attributes: [
-        "id",
-        "publicId",
-        "bio",
-        "experienceYears",
-        "hourlyRate",
-        "sessionRate",
-        "locationCity",
-        "locationState",
-        "locationCountry",
-        "latitude",
-        "longitude",
-        "isAvailable",
-        "isFeatured",
-        "profileViews",
-        "totalRating",
-        "reviewCount",
-        "createdAt",
-        "updatedAt",
-      ],
+      attributes: trainerAttributes,
       include: [
         {
           model: User,
@@ -759,7 +906,7 @@ export const searchTrainers = async (
           required: false,
         },
       ],
-      order: [[safeSortBy, safeSortOrder]],
+      order: orderClause,
       distinct: true,
     });
 
@@ -770,6 +917,8 @@ export const searchTrainers = async (
 
     const trainersData = rows.map((trainer) => {
       const json = trainer.toJSON() as any;
+      const distanceMeters = toFiniteNumber(json.distanceMeters);
+
       return {
         id: trainer.publicId || String(trainer.id),
         internalId: trainer.id,
@@ -782,11 +931,18 @@ export const searchTrainers = async (
         locationCountry: json.locationCountry,
         latitude: json.latitude,
         longitude: json.longitude,
+        instagramUrl: json.instagramUrl,
+        facebookUrl: json.facebookUrl,
+        whatsappUrl: json.whatsappUrl,
         isAvailable: json.isAvailable,
         isFeatured: json.isFeatured,
         profileViews: json.profileViews,
         totalRating: json.totalRating,
         reviewCount: json.reviewCount,
+        distanceKm:
+          distanceMeters !== undefined
+            ? Number((distanceMeters / 1000).toFixed(2))
+            : undefined,
         createdAt: json.createdAt,
         updatedAt: json.updatedAt,
         user: json.user,

@@ -23,6 +23,7 @@ import {
   MyGym,
 } from "../features/gym/gymApiSlice";
 import { theme, typography } from "../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { useRouter } from "expo-router";
@@ -30,6 +31,7 @@ import { useRouter } from "expo-router";
 export default function MyGymsScreen() {
   const router = useRouter();
   const user = useSelector(selectCurrentUser);
+  console.log("Current user in MyGymsScreen:", user);
   const isTrainer = user?.role === "trainer";
 
   const [showBrowser, setShowBrowser] = useState(false);
@@ -104,7 +106,7 @@ export default function MyGymsScreen() {
   if (!isTrainer) {
     return (
       <View style={styles.centeredBox}>
-        <Text style={styles.emptyIcon}>🏋️</Text>
+        <Ionicons name="barbell" size={48} color={theme.colors.primary} style={{ marginBottom: 8 }} />
         <Text style={styles.emptyTitle}>Trainers only</Text>
         <Text style={styles.emptyDesc}>
           You need a trainer profile to manage gym availability.
@@ -126,11 +128,11 @@ export default function MyGymsScreen() {
         <View style={styles.gymCardLeft}>
           <Text style={styles.gymCardName}>{item.name}</Text>
           <Text style={styles.gymCardAddress}>
-            📍 {item.address}, {item.city}
+            <Ionicons name="location" size={12} color={theme.colors.textSecondary} /> {item.address}, {item.city}
             {item.state ? `, ${item.state}` : ""}
           </Text>
           {item.openingHours && (
-            <Text style={styles.gymCardHours}>🕐 {item.openingHours}</Text>
+            <Text style={styles.gymCardHours}><Ionicons name="time-outline" size={12} color={theme.colors.textSecondary} /> {item.openingHours}</Text>
           )}
         </View>
 
@@ -155,11 +157,14 @@ export default function MyGymsScreen() {
           item.isAvailable ? styles.availRowOn : styles.availRowOff,
         ]}
       >
-        <Text style={styles.availText}>
-          {item.isAvailable
-            ? "✅ Clients can see you as available at this gym"
-            : "🔴 You appear unavailable at this gym"}
-        </Text>
+        <View style={{flexDirection: 'row', alignItems: 'center'}}>
+          <Ionicons name={item.isAvailable ? "checkmark-circle" : "close-circle"} size={16} color={item.isAvailable ? "#059669" : "#DC2626"} style={{marginRight: 6}} />
+          <Text style={styles.availText}>
+            {item.isAvailable
+              ? "Clients can see you as available at this gym"
+              : "You appear unavailable at this gym"}
+          </Text>
+        </View>
       </View>
 
       {/* Leave button */}
@@ -184,7 +189,7 @@ export default function MyGymsScreen() {
             {gym.address}, {gym.city}
           </Text>
           <Text style={styles.browserGymMeta}>
-            ⭐ {Number(gym.rating).toFixed(1)} · {gym.availableTrainerCount} trainer
+            <Ionicons name="star" size={10} color="#D97706" /> {Number(gym.rating).toFixed(1)} · {gym.availableTrainerCount} trainer
             {gym.availableTrainerCount !== 1 ? "s" : ""}
           </Text>
         </View>
@@ -224,7 +229,7 @@ export default function MyGymsScreen() {
         </View>
       ) : myGyms.length === 0 ? (
         <View style={styles.centeredBox}>
-          <Text style={styles.emptyIcon}>📍</Text>
+          <Ionicons name="location" size={48} color={theme.colors.primary} style={{marginBottom: 8}} />
           <Text style={styles.emptyTitle}>No gyms yet</Text>
           <Text style={styles.emptyDesc}>
             Add gyms where you train so clients can find you.
@@ -257,12 +262,12 @@ export default function MyGymsScreen() {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Find a Gym</Text>
             <TouchableOpacity onPress={() => setShowBrowser(false)}>
-              <Text style={styles.modalClose}>✕</Text>
+              <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <View style={styles.searchBox}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Ionicons name="search" size={16} color={theme.colors.textSecondary} style={{marginRight: 8}} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search by name or city..."

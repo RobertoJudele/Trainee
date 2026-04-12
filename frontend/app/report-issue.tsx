@@ -7,6 +7,8 @@ import {
   Text,
   TextInput,
   View,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -108,7 +110,11 @@ export default function ReportIssueScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>Report Issue</Text>
       <Text style={styles.subtitle}>Help us resolve problems faster.</Text>
 
@@ -169,7 +175,8 @@ export default function ReportIssueScreen() {
       >
         <Text style={styles.submitText}>{isLoading ? "Submitting..." : "Submit Report"}</Text>
       </Pressable>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -179,12 +186,13 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, color: theme.colors.text },
   subtitle: { ...typography.body2, color: theme.colors.textSecondary },
   card: {
-    backgroundColor: "#fff",
-    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    padding: 14,
-    gap: 10,
+    padding: 16,
+    gap: 12,
+    ...theme.shadows.small,
   },
   label: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
   contextText: { ...typography.caption, color: theme.colors.textSecondary },
@@ -203,19 +211,20 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 10,
+    borderRadius: theme.roundness,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
+    paddingVertical: 12,
+    backgroundColor: theme.colors.background,
     color: theme.colors.text,
   },
   textArea: { minHeight: 120 },
   marginTop: { marginTop: 6 },
   submitButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 12,
+    borderRadius: theme.roundness,
     paddingVertical: 14,
     alignItems: "center",
+    ...theme.shadows.medium,
   },
   submitButtonDisabled: { opacity: 0.7 },
   submitText: { ...typography.body1, color: "#fff", fontWeight: "700" },

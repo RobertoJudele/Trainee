@@ -1,7 +1,92 @@
 import { Stack } from "expo-router";
+import { useEffect, useRef } from "react";
+import { Platform } from "react-native";
 import { Provider } from "react-redux";
+import { useSelector } from "react-redux";
 import { StripeProvider } from "@stripe/stripe-react-native";
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import { store } from "./store";
+import { selectCurrentUser } from "../features/auth/authSlice";
+import { theme } from "../src/lib/theme";
+import { StatusBar } from "expo-status-bar";
+
+const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
+
+let hasConfiguredRevenueCat = false;
+
+const getRevenueCatApiKey = () => {
+  if (Platform.OS === "ios") {
+    return process.env.EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY || "";
+  }
+
+  if (Platform.OS === "android") {
+    return process.env.EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY || "";
+  }
+
+  return "";
+};
+
+function RevenueCatIdentityBridge() {
+  const user = useSelector(selectCurrentUser);
+  const lastRevenueCatUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!isNativeBillingPlatform) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    const syncRevenueCatIdentity = async () => {
+      try {
+        const apiKey = getRevenueCatApiKey();
+        if (!apiKey) {
+          return;
+        }
+
+        if (!hasConfiguredRevenueCat) {
+          Purchases.setLogLevel(
+            process.env.EXPO_PUBLIC_REVENUECAT_DEBUG === "1"
+              ? LOG_LEVEL.VERBOSE
+              : LOG_LEVEL.INFO
+          );
+          await Purchases.configure({ apiKey });
+          hasConfiguredRevenueCat = true;
+        }
+
+        if (isCancelled) {
+          return;
+        }
+
+        const nextUserId = user?.id ? String(user.id) : null;
+        const lastUserId = lastRevenueCatUserIdRef.current;
+
+        if (!nextUserId) {
+          if (lastUserId) {
+            await Purchases.logOut();
+            lastRevenueCatUserIdRef.current = null;
+          }
+          return;
+        }
+
+        if (nextUserId !== lastUserId) {
+          await Purchases.logIn(nextUserId);
+          lastRevenueCatUserIdRef.current = nextUserId;
+        }
+      } catch (error) {
+        console.error("RevenueCat identity sync failed:", error);
+      }
+    };
+
+    void syncRevenueCatIdentity();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.id]);
+
+  return null;
+}
 
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
@@ -13,12 +98,23 @@ export default function RootLayout() {
       urlScheme="trainee"
     >
       <Provider store={store}>
-        <Stack>
-          <Stack.Screen name="index" options={{ title: "Home" }} />
-          <Stack.Screen name="login" options={{ title: "Login" }} />
-          <Stack.Screen name="signup" options={{ title: "Sign Up" }} />
+        <RevenueCatIdentityBridge />
+        <StatusBar style="light" />
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: theme.colors.primary },
+            headerTintColor: "#fff",
+            headerTitleStyle: { fontWeight: "bold" },
+            headerShadowVisible: false,
+          }}
+        >
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="TrainerProfile" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="signup" options={{ headerShown: false }} />
           <Stack.Screen name="search" options={{ title: "Find Trainers" }} />
-          <Stack.Screen name="map" options={{ title: "Map" }} />
+          <Stack.Screen name="map" options={{ headerShown: false }} />
           <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details" }} />
           <Stack.Screen name="my-gyms" options={{ title: "My Gyms" }} />
           <Stack.Screen name="checkout" options={{ title: "Checkout" }} />

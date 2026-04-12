@@ -6,6 +6,9 @@ export interface TrainerData {
   sessionRate: number;
   locationCity: string;
   locationState: string;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  whatsappUrl?: string | null;
   totalRating: number;
   reviewCount: number;
   user: {
@@ -35,6 +38,9 @@ export interface TrainerProfileAttributes {
   locationCountry?: string;
   latitude?: number;
   longitude?: number;
+  instagramUrl?: string | null;
+  facebookUrl?: string | null;
+  whatsappUrl?: string | null;
   isFeatured: boolean;
   isAvailable: boolean;
   profileViews: number;

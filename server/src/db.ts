@@ -13,6 +13,7 @@ import { Issue } from "./models/issue";
 import { TrainerWorkingHour } from "./models/trainerWorkingHour";
 import { TrainerScheduleSlot } from "./models/trainerScheduleSlot";
 import { ClientCheckInCode } from "./models/clientCheckInCode";
+import { BillingWebhookEvent } from "./models/billingWebhookEvent";
 dotenv.config();
 
 // DEBUG: Log environment variables
@@ -43,6 +44,7 @@ const sequelize = new Sequelize({
     TrainerWorkingHour,
     TrainerScheduleSlot,
     ClientCheckInCode,
+    BillingWebhookEvent,
   ],
   logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {

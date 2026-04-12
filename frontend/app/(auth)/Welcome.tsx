@@ -2,21 +2,26 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, typography } from '../../src/lib/theme';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Welcome() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <LinearGradient
       colors={[theme.colors.primary, theme.colors.tertiary]}
-      style={styles.container}
+      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
     >
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.emoji}>💪</Text>
+          <View style={styles.iconContainer}>
+            <Ionicons name="barbell" size={64} color="#FFFFFF" />
+          </View>
           <Text style={styles.title}>Trainee</Text>
           <Text style={styles.subtitle}>
             Find your perfect fitness trainer and achieve your goals
@@ -27,21 +32,24 @@ export default function Welcome() {
           <TouchableOpacity
             style={[styles.button, styles.primaryButton]}
             onPress={() => router.push('/(auth)/signup')}
+            activeOpacity={0.9}
           >
             <Text style={styles.primaryButtonText}>Get Started</Text>
+            <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, styles.secondaryButton]}
             onPress={() => router.push('/(auth)/login')}
+            activeOpacity={0.8}
           >
             <Text style={styles.secondaryButtonText}>Sign In</Text>
           </TouchableOpacity>
 
           <View style={styles.features}>
-            <FeatureItem icon="✓" text="Certified Trainers" />
-            <FeatureItem icon="✓" text="Personalized Programs" />
-            <FeatureItem icon="✓" text="Track Your Progress" />
+            <FeatureItem icon="checkmark-circle" text="Certified Trainers" />
+            <FeatureItem icon="checkmark-circle" text="Personalized Programs" />
+            <FeatureItem icon="checkmark-circle" text="Track Your Progress" />
           </View>
         </View>
       </View>
@@ -49,10 +57,10 @@ export default function Welcome() {
   );
 }
 
-function FeatureItem({ icon, text }: { icon: string; text: string }) {
+function FeatureItem({ icon, text }: { icon: any; text: string }) {
   return (
     <View style={styles.featureItem}>
-      <Text style={styles.featureIcon}>{icon}</Text>
+      <Ionicons name={icon} size={22} color="#FFFFFF" />
       <Text style={styles.featureText}>{text}</Text>
     </View>
   );
@@ -66,14 +74,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: theme.spacing.lg,
-    paddingTop: height * 0.1,
+    paddingTop: height * 0.12,
     paddingBottom: theme.spacing.xl,
   },
   header: {
     alignItems: 'center',
   },
-  emoji: {
-    fontSize: 80,
+  iconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: theme.spacing.md,
+    borderRadius: 100,
     marginBottom: theme.spacing.md,
   },
   title: {
@@ -81,14 +91,12 @@ const styles = StyleSheet.create({
     fontSize: 48,
     color: '#FFFFFF',
     marginBottom: theme.spacing.sm,
-    fontWeight: '800',
   },
   subtitle: {
     ...typography.body1,
     color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    maxWidth: width * 0.8,
-    lineHeight: 24,
+    maxWidth: width * 0.85,
   },
   buttonContainer: {
     gap: theme.spacing.md,
@@ -98,40 +106,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     borderRadius: theme.roundness,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: theme.spacing.xs,
   },
   primaryButton: {
     backgroundColor: '#FFFFFF',
+    ...theme.shadows.medium,
   },
   secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
   },
   primaryButtonText: {
     ...typography.h3,
     color: theme.colors.primary,
-    fontWeight: '600',
   },
   secondaryButtonText: {
     ...typography.h3,
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   features: {
-    marginTop: theme.spacing.xl,
+    marginTop: theme.spacing.lg,
     gap: theme.spacing.sm,
+    alignItems: 'center',
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
   },
-  featureIcon: {
-    fontSize: 20,
-    color: '#FFFFFF',
-  },
   featureText: {
     ...typography.body1,
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontWeight: '500',
   },
 });

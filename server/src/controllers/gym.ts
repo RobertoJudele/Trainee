@@ -1,11 +1,17 @@
 import { Request, Response } from "express";
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import { Gym } from "../models/gym";
 import { TrainerGym } from "../models/trainerGym";
 import { Trainer } from "../models/trainer";
 import { User } from "../models/user";
 import { sendError, sendSuccess } from "../utils/response";
 import { AuthenticatedRequest } from "../types/common";
+import {
+  buildPointFromLatLng,
+  isValidLatitude,
+  isValidLongitude,
+  toFiniteNumber,
+} from "../utils/geo";
 
 // ─────────────────────────────────────────────
 // GET /gyms  — all active gyms (map markers)
@@ -13,14 +19,74 @@ import { AuthenticatedRequest } from "../types/common";
 // ─────────────────────────────────────────────
 export const getAllGyms = async (req: Request, res: Response) => {
   try {
+    const lat = toFiniteNumber(req.query.lat);
+    const lng = toFiniteNumber(req.query.lng);
+    const radiusKm = toFiniteNumber(req.query.radiusKm);
+
+    const hasGeoReference =
+      lat !== undefined &&
+      lng !== undefined &&
+      isValidLatitude(lat) &&
+      isValidLongitude(lng);
+
+    if ((req.query.lat !== undefined || req.query.lng !== undefined) && !hasGeoReference) {
+      sendError(res, 400, "Invalid lat/lng query parameters");
+      return;
+    }
+
+    const hasRadiusFilter =
+      hasGeoReference && radiusKm !== undefined && Number.isFinite(radiusKm) && radiusKm > 0;
+
+    const where: Record<string | symbol, unknown> = { isActive: true };
+    const attributes: any[] = [
+      "id",
+      "name",
+      "address",
+      "city",
+      "state",
+      "latitude",
+      "longitude",
+      "rating",
+      "reviewCount",
+      "openingHours",
+      "phone",
+      "imageUrl",
+    ];
+
+    let order: any[] = [["name", "ASC"]];
+    let distanceLiteral: string | null = null;
+
+    if (hasGeoReference) {
+      where.location = { [Op.ne]: null };
+
+      distanceLiteral = `
+        ST_Distance(
+          "Gym"."location"::geography,
+          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography
+        )
+      `;
+
+      attributes.push([Sequelize.literal(distanceLiteral), "distanceMeters"]);
+      order = [[Sequelize.literal(distanceLiteral), "ASC"], ["name", "ASC"]];
+
+      if (hasRadiusFilter) {
+        const radiusMeters = Number(radiusKm) * 1000;
+        where[Op.and] = [
+          Sequelize.literal(`
+            ST_DWithin(
+              "Gym"."location"::geography,
+              ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
+              ${radiusMeters}
+            )
+          `),
+        ];
+      }
+    }
+
     const gyms = await Gym.findAll({
-      where: { isActive: true },
-      attributes: [
-        "id", "name", "address", "city", "state",
-        "latitude", "longitude", "rating", "reviewCount",
-        "openingHours", "phone", "imageUrl",
-      ],
-      order: [["name", "ASC"]],
+      where,
+      attributes,
+      order,
     });
 
     // Attach available trainer count to each gym
@@ -35,10 +101,19 @@ export const getAllGyms = async (req: Request, res: Response) => {
       return acc;
     }, {});
 
-    const data = gyms.map((g) => ({
-      ...g.toJSON(),
-      availableTrainerCount: countMap[g.id] ?? 0,
-    }));
+    const data = gyms.map((g) => {
+      const json = g.toJSON() as any;
+      const distanceMeters = toFiniteNumber(json.distanceMeters);
+
+      return {
+        ...json,
+        availableTrainerCount: countMap[g.id] ?? 0,
+        distanceKm:
+          distanceMeters !== undefined
+            ? Number((distanceMeters / 1000).toFixed(2))
+            : undefined,
+      };
+    });
 
     sendSuccess(res, 200, "Gyms retrieved successfully", data);
   } catch (error) {
@@ -292,10 +367,26 @@ export const createGym = async (req: Request, res: Response) => {
       return;
     }
 
+    const parsedLatitude = toFiniteNumber(latitude);
+    const parsedLongitude = toFiniteNumber(longitude);
+
+    if (
+      parsedLatitude === undefined ||
+      parsedLongitude === undefined ||
+      !isValidLatitude(parsedLatitude) ||
+      !isValidLongitude(parsedLongitude)
+    ) {
+      sendError(res, 400, "Invalid latitude/longitude values");
+      return;
+    }
+
+    const location = buildPointFromLatLng(parsedLatitude, parsedLongitude);
+
     const gym = await Gym.create({
       name, address, city, state, country,
-      latitude: parseFloat(latitude),
-      longitude: parseFloat(longitude),
+      latitude: parsedLatitude,
+      longitude: parsedLongitude,
+      location: location ?? undefined,
       phone, openingHours, imageUrl,
     });
 
