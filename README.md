@@ -272,17 +272,31 @@ Billing webhooks:
 ## Trainer Scheduling Feature (Current)
 
 - Trainer weekly/day schedule views in frontend
+- Weekly trainer screen now uses an app-like planner layout with:
+	- top header actions for settings and slot generation
+	- dedicated "Snapshot" action that opens a separate week snapshot screen (`/trainer-schedule/week-snapshot`)
+	- horizontal day-strip navigation inside the selected week
+	- focused single-day slot canvas with status pills and drag-drop targets
+	- fixed bottom "Unassigned Clients" pool for quick drag assignment
+- Week snapshot is now a standalone screen (instead of inline card content) and shows week-level status metrics plus day-by-day slot summaries.
+- Day subscreen (`/trainer-schedule/[date]`) now uses the same visual language with:
+	- focused available-slot section for drag/tap selection
+	- explicit assignment confirmation card (slot + client + optional note)
+	- fixed bottom client pool for add-by-code and reuse
 - Client assignment uses check-in code based workflow
 - Weekly schedule supports real drag-and-drop assignment:
 	- trainer adds a client to drag list by resolving a real 6-digit client code
 	- resolved clients are saved locally per trainer account for future sessions and can be reused later even after the original code expires
+	- resolved clients added in weekly view are mirrored into the day-view client pool storage so opening `/trainer-schedule/[date]` shows the same clients
 	- drag client chip over an `available` slot to assign the saved client directly by `clientId`
 	- dragging uses a floating overlay chip rendered above all cards to avoid going behind calendar columns
 	- weekly scroll is temporarily disabled while dragging to keep chip movement attached to finger on mobile devices
 	- hovered slot highlight and assign loading feedback are shown in UI
 	- no hardcoded/mock client list is used
 - Day schedule also supports drag-and-drop assignment flow
+- Weekly schedule refetches slot data when the screen regains focus, so unassignments made in `/trainer-schedule/[date]` are reflected immediately after navigating back.
 - Slot status management (available, assigned, completed, canceled, no_show)
+- Redesign keeps existing backend contracts and role-based access behavior intact (no API route or auth-flow changes)
 
 ## Gym Map UX (Current)
 

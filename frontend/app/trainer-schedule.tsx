@@ -3,7 +3,9 @@ import {
     ActivityIndicator,
     Alert,
     Animated,
+    KeyboardAvoidingView,
     PanResponder,
+    Platform,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -13,8 +15,11 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSelector } from "react-redux";
+import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import {
+    PublicClient,
     ScheduleSlot,
     useAssignClientToSlotMutation,
     useAssignSlotByClientCodeMutation,
@@ -27,17 +32,34 @@ import {
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
-
-const dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+import {
+    BottomSheet,
+    DayPill,
+    GradientActionButton,
+    OutlineButton,
+    ScheduleCard,
+    StatusBadge,
+    addDays,
+    formatWeekLabel,
+    scheduleDayLabels,
+    scheduleStatusColor,
+    shortTime,
+    startOfWeek,
+    toDateKey,
+} from "../src/components/schedule/SchedulePrimitives";
 
 type DragClient = {
     id: number;
     clientId: number;
     name: string;
     code: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
 };
 
 type StoredDragClient = DragClient;
+type StoredSavedClient = PublicClient & { code?: string };
 
 type SlotRect = {
     x: number;
@@ -56,14 +78,71 @@ type DragClientChipProps = {
 
 type ActiveDrag = {
     client: DragClient;
-    pageX: number;
-    pageY: number;
 };
 
 type ApiErrorShape = {
     data?: {
         message?: string;
     };
+};
+
+const dragClientsStorageKey = (userId: number) => `trainer-schedule-drag-clients:${userId}`;
+const savedClientsStorageKey = (userId: number) => `trainer-saved-clients:${userId}`;
+
+const splitClientName = (fullName: string) => {
+    const trimmed = fullName.trim();
+    if (!trimmed) {
+        return { firstName: "Client", lastName: "" };
+    }
+
+    const parts = trimmed.split(/\s+/);
+    return {
+        firstName: parts[0],
+        lastName: parts.slice(1).join(" "),
+    };
+};
+
+const toPublicClientFromDrag = (client: DragClient): PublicClient => {
+    const parsedName = splitClientName(client.name);
+    return {
+        id: client.clientId,
+        email: client.email || "",
+        firstName: client.firstName || parsedName.firstName,
+        lastName: client.lastName || parsedName.lastName,
+    };
+};
+
+const parseStoredSavedClients = (raw: string | null): StoredSavedClient[] => {
+    if (!raw) {
+        return [];
+    }
+
+    try {
+        const parsed = JSON.parse(raw) as unknown;
+        if (!Array.isArray(parsed)) {
+            return [];
+        }
+
+        return parsed
+            .filter((item): item is StoredSavedClient => {
+                if (!item || typeof item !== "object") {
+                    return false;
+                }
+                const maybe = item as Partial<StoredSavedClient>;
+                return (
+                    typeof maybe.id === "number" &&
+                    typeof maybe.email === "string" &&
+                    typeof maybe.firstName === "string" &&
+                    typeof maybe.lastName === "string"
+                );
+            })
+            .map((client) => ({
+                ...client,
+                code: typeof client.code === "string" ? client.code : undefined,
+            }));
+    } catch {
+        return [];
+    }
 };
 
 const getErrorMessage = (error: unknown, fallback: string) => {
@@ -76,41 +155,6 @@ const getErrorMessage = (error: unknown, fallback: string) => {
     return fallback;
 };
 
-const addDays = (date: Date, days: number) => {
-    const d = new Date(date);
-    d.setDate(d.getDate() + days);
-    return d;
-};
-
-const startOfWeek = (date: Date) => {
-    const d = new Date(date);
-    const day = d.getDay();
-    d.setDate(d.getDate() - day);
-    d.setHours(0, 0, 0, 0);
-    return d;
-};
-
-const toDateKey = (date: Date) => {
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-};
-
-const statusColor = (status: ScheduleSlot["status"]) => {
-    if (status === "available") return "#198754";
-    if (status === "assigned") return "#0D6EFD";
-    if (status === "completed") return "#6F42C1";
-    if (status === "canceled") return "#DC3545";
-    return "#B54708";
-};
-
-const slotShortTime = (iso: string) => {
-    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-};
-
-const dragClientsStorageKey = (userId: number) => `trainer-schedule-drag-clients:${userId}`;
-
 function DragClientChip({
     client,
     dragging,
@@ -118,7 +162,7 @@ function DragClientChip({
     onDragMove,
     onDrop,
 }: DragClientChipProps) {
-    const [chipSize, setChipSize] = useState({ width: 130, height: 40 });
+    const [chipSize, setChipSize] = useState({ width: 140, height: 44 });
 
     const panResponder = useMemo(
         () =>
@@ -160,14 +204,10 @@ function DragClientChip({
                     height: nativeEvent.layout.height,
                 });
             }}
-            style={[
-                styles.dragChip,
-                dragging && styles.dragChipDragging,
-                dragging && styles.dragChipHidden,
-            ]}
+            style={[styles.dragChip, dragging && styles.dragChipDragging, dragging && styles.dragChipHidden]}
         >
-            <Text style={styles.dragChipText}>{client.name}</Text>
-            <Text style={styles.dragChipCode}>Code: {client.code}</Text>
+            <Text style={styles.dragChipName}>{client.name}</Text>
+            <Text style={styles.dragChipCode}>Code {client.code}</Text>
         </View>
     );
 }
@@ -175,11 +215,17 @@ function DragClientChip({
 export default function TrainerScheduleScreen() {
     const router = useRouter();
     const user = useSelector(selectCurrentUser);
+    const isFocused = useIsFocused();
 
     const [weekStartDate, setWeekStartDate] = useState<Date>(startOfWeek(new Date()));
+    const [selectedDayIndex, setSelectedDayIndex] = useState(new Date().getDay());
+
     const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStartDate, i)), [weekStartDate]);
     const weekFrom = useMemo(() => toDateKey(weekDays[0]), [weekDays]);
     const weekTo = useMemo(() => toDateKey(weekDays[6]), [weekDays]);
+
+    const selectedDate = weekDays[selectedDayIndex] || weekDays[0];
+    const selectedDateKey = useMemo(() => toDateKey(selectedDate), [selectedDate]);
 
     const { data: whData, refetch: refetchWh } = useGetWorkingHoursQuery();
     const { data: slotData, isLoading: slotsLoading, refetch: refetchSlots } = useGetTrainerSlotsQuery({
@@ -190,8 +236,12 @@ export default function TrainerScheduleScreen() {
     const [upsertWorkingHour, { isLoading: saveWhLoading }] = useUpsertWorkingHourMutation();
     const [generateSlots, { isLoading: generateLoading }] = useGenerateSlotsMutation();
     const [resolveClientCode, { isLoading: resolvingCode }] = useResolveClientCodeMutation();
-    const [assignClientToSlot, { isLoading: assignByClientLoading }] = useAssignClientToSlotMutation();
+    const [assignClientToSlot] = useAssignClientToSlotMutation();
     const [assignSlotByCode, { isLoading: assignByCodeLoading }] = useAssignSlotByClientCodeMutation();
+
+    const [showTemplateSheet, setShowTemplateSheet] = useState(false);
+    const [showGenerateSheet, setShowGenerateSheet] = useState(false);
+    const [showAssignSheet, setShowAssignSheet] = useState(false);
 
     const [dayOfWeek, setDayOfWeek] = useState("1");
     const [startTime, setStartTime] = useState("09:00");
@@ -212,8 +262,7 @@ export default function TrainerScheduleScreen() {
     const [assigningSlotId, setAssigningSlotId] = useState<number | null>(null);
     const [dragInProgress, setDragInProgress] = useState(false);
     const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
-    // const dragTranslate = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
-    // const dragOriginRef = useRef<{ left: number; top: number } | null>(null);
+
     const dragPosRef = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
     const touchOffsetRef = useRef<{ x: number; y: number } | null>(null);
     const hoveredSlotIdRef = useRef<number | null>(null);
@@ -223,16 +272,13 @@ export default function TrainerScheduleScreen() {
     const slotRefs = useRef<Record<number, View | null>>({});
     const slotRectsRef = useRef<Record<number, SlotRect>>({});
 
-    const measureScreenOffset = () => {
-        requestAnimationFrame(() => {
-            const screenNode = screenRef.current;
-            if (!screenNode) return;
+    useEffect(() => {
+        if (!isFocused || user?.role !== UserRole.TRAINER) {
+            return;
+        }
 
-            screenNode.measureInWindow((x, y) => {
-                screenOffsetRef.current = { x, y };
-            });
-        });
-    };
+        void refetchSlots();
+    }, [isFocused, refetchSlots, user?.role]);
 
     useEffect(() => {
         const loadDragClients = async () => {
@@ -247,12 +293,7 @@ export default function TrainerScheduleScreen() {
 
                 const validClients = parsed
                     .map((client) => {
-                        if (
-                            !client ||
-                            typeof client.id !== "number" ||
-                            typeof client.name !== "string" ||
-                            typeof client.code !== "string"
-                        ) {
+                        if (!client || typeof client.id !== "number" || typeof client.name !== "string" || typeof client.code !== "string") {
                             return null;
                         }
 
@@ -261,13 +302,16 @@ export default function TrainerScheduleScreen() {
                             clientId: typeof client.clientId === "number" ? client.clientId : client.id,
                             name: client.name,
                             code: client.code,
+                            email: typeof client.email === "string" ? client.email : undefined,
+                            firstName: typeof client.firstName === "string" ? client.firstName : undefined,
+                            lastName: typeof client.lastName === "string" ? client.lastName : undefined,
                         } as StoredDragClient;
                     })
                     .filter((client): client is StoredDragClient => Boolean(client));
 
                 setDragClients(validClients);
             } catch {
-                // Ignore storage read/parse errors and continue with an empty list.
+                // Keep drag list optional when local storage is unavailable.
             }
         };
 
@@ -279,9 +323,29 @@ export default function TrainerScheduleScreen() {
             if (!user?.id || user.role !== UserRole.TRAINER) return;
 
             try {
-                await AsyncStorage.setItem(dragClientsStorageKey(user.id), JSON.stringify(dragClients));
+                const dragKey = dragClientsStorageKey(user.id);
+                const savedKey = savedClientsStorageKey(user.id);
+                const existingSaved = parseStoredSavedClients(await AsyncStorage.getItem(savedKey));
+
+                const savedClientsById = new Map<number, PublicClient>();
+                for (const client of existingSaved) {
+                    savedClientsById.set(client.id, {
+                        id: client.id,
+                        email: client.email,
+                        firstName: client.firstName,
+                        lastName: client.lastName,
+                    });
+                }
+                for (const client of dragClients) {
+                    savedClientsById.set(client.clientId, toPublicClientFromDrag(client));
+                }
+
+                await AsyncStorage.multiSet([
+                    [dragKey, JSON.stringify(dragClients)],
+                    [savedKey, JSON.stringify(Array.from(savedClientsById.values()))],
+                ]);
             } catch {
-                // Ignore storage write errors so scheduling stays usable offline.
+                // Ignore storage write errors to avoid breaking scheduling UI.
             }
         };
 
@@ -293,7 +357,7 @@ export default function TrainerScheduleScreen() {
         () => [...(slotData?.data || [])].sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
         [slotData?.data]
     );
-    const availableSlots = useMemo(() => slots.filter((s) => s.status === "available"), [slots]);
+
     const slotsByDay = useMemo(() => {
         const grouped: Record<string, ScheduleSlot[]> = {};
         for (const slot of slots) {
@@ -304,10 +368,43 @@ export default function TrainerScheduleScreen() {
         return grouped;
     }, [slots]);
 
-    const weekLabel = `${weekDays[0].toLocaleDateString()} - ${weekDays[6].toLocaleDateString()}`;
+    const selectedDaySlots = useMemo(
+        () => [...(slotsByDay[selectedDateKey] || [])].sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
+        [selectedDateKey, slotsByDay]
+    );
+
+    const selectedDayAvailableSlots = useMemo(
+        () => selectedDaySlots.filter((slot) => slot.status === "available"),
+        [selectedDaySlots]
+    );
+
+    const weekLabel = formatWeekLabel(weekDays);
+
+    useEffect(() => {
+        slotRefs.current = {};
+        slotRectsRef.current = {};
+        setHoveredSlotId(null);
+    }, [selectedDateKey]);
+
+    useEffect(() => {
+        if (selectedSlotId && !selectedDaySlots.some((slot) => slot.id === selectedSlotId)) {
+            setSelectedSlotId(null);
+        }
+    }, [selectedDaySlots, selectedSlotId]);
+
+    const measureScreenOffset = () => {
+        requestAnimationFrame(() => {
+            const screenNode = screenRef.current;
+            if (!screenNode) return;
+
+            screenNode.measureInWindow((x, y) => {
+                screenOffsetRef.current = { x, y };
+            });
+        });
+    };
 
     const refreshSlotRects = () => {
-        for (const slot of availableSlots) {
+        for (const slot of selectedDayAvailableSlots) {
             const node = slotRefs.current[slot.id];
             if (!node) continue;
             node.measureInWindow((x, y, width, height) => {
@@ -317,15 +414,10 @@ export default function TrainerScheduleScreen() {
     };
 
     const hitTestSlot = (pageX: number, pageY: number) => {
-        const found = availableSlots.find((slot) => {
+        const found = selectedDayAvailableSlots.find((slot) => {
             const rect = slotRectsRef.current[slot.id];
             if (!rect) return false;
-            return (
-                pageX >= rect.x &&
-                pageX <= rect.x + rect.width &&
-                pageY >= rect.y &&
-                pageY <= rect.y + rect.height
-            );
+            return pageX >= rect.x && pageX <= rect.x + rect.width && pageY >= rect.y && pageY <= rect.y + rect.height;
         });
         return found?.id || null;
     };
@@ -333,13 +425,12 @@ export default function TrainerScheduleScreen() {
     const onDragStart = (client: DragClient, pageX: number, pageY: number, touchX: number, touchY: number) => {
         setDragInProgress(true);
         setDraggingClientId(client.id);
-        setActiveDrag({ client, pageX, pageY });
+        setActiveDrag({ client });
         touchOffsetRef.current = { x: touchX, y: touchY };
         dragPosRef.setValue({
             x: pageX - screenOffsetRef.current.x - touchX,
             y: pageY - screenOffsetRef.current.y - touchY,
         });
-        console.log("Location of drag start:", pageX, pageY);
         setHoveredSlotId(null);
         refreshSlotRects();
     };
@@ -356,28 +447,24 @@ export default function TrainerScheduleScreen() {
         }
     };
 
-
+    const resetDragState = () => {
+        setDraggingClientId(null);
+        setHoveredSlotId(null);
+        hoveredSlotIdRef.current = null;
+        setActiveDrag(null);
+        touchOffsetRef.current = null;
+        setDragInProgress(false);
+    };
 
     const onDropClient = async (dragClient: DragClient, pageX: number, pageY: number, moved: boolean) => {
         if (!moved) {
-            setDraggingClientId(null);
-            setHoveredSlotId(null);
-            hoveredSlotIdRef.current = null;
-            setActiveDrag(null);
-            touchOffsetRef.current = null;
-            setDragInProgress(false);
+            resetDragState();
             return;
         }
 
         const slotId = hitTestSlot(pageX, pageY) ?? hoveredSlotIdRef.current;
-
         if (!slotId) {
-            setDraggingClientId(null);
-            setHoveredSlotId(null);
-            hoveredSlotIdRef.current = null;
-            setActiveDrag(null);
-            touchOffsetRef.current = null;
-            setDragInProgress(false);
+            resetDragState();
             return;
         }
 
@@ -389,18 +476,12 @@ export default function TrainerScheduleScreen() {
                 note: "Assigned via drag and drop",
             }).unwrap();
 
-            Alert.alert("Assigned", `${dragClient.name} was assigned to slot #${slotId}.`);
             await refetchSlots();
         } catch (error: unknown) {
             Alert.alert("Error", getErrorMessage(error, "Could not assign slot to client."));
         } finally {
             setAssigningSlotId(null);
-            setDraggingClientId(null);
-            setHoveredSlotId(null);
-            hoveredSlotIdRef.current = null;
-            setActiveDrag(null);
-            touchOffsetRef.current = null;
-            setDragInProgress(false);
+            resetDragState();
         }
     };
 
@@ -419,29 +500,41 @@ export default function TrainerScheduleScreen() {
                 clientId: resolved.id,
                 name: `${resolved.firstName} ${resolved.lastName}`,
                 code,
+                email: resolved.email,
+                firstName: resolved.firstName,
+                lastName: resolved.lastName,
             };
 
             setDragClients((prev) => {
                 const withoutSameClient = prev.filter((client) => client.id !== resolved.id);
                 return [nextClient, ...withoutSameClient];
             });
+
+            if (user?.id && user.role === UserRole.TRAINER) {
+                try {
+                    const key = savedClientsStorageKey(user.id);
+                    const existing = parseStoredSavedClients(await AsyncStorage.getItem(key));
+                    const merged: StoredSavedClient[] = [
+                        {
+                            id: resolved.id,
+                            email: resolved.email,
+                            firstName: resolved.firstName,
+                            lastName: resolved.lastName,
+                            code,
+                        },
+                        ...existing.filter((entry) => entry.id !== resolved.id),
+                    ];
+                    await AsyncStorage.setItem(key, JSON.stringify(merged));
+                } catch {
+                    // Ignore storage write errors to avoid blocking code resolution.
+                }
+            }
+
             setDragClientCode("");
         } catch (error: unknown) {
             Alert.alert("Error", getErrorMessage(error, "Could not resolve client code."));
         }
     };
-
-    if (user?.role !== UserRole.TRAINER) {
-        return (
-            <View style={styles.deniedWrap}>
-                <Text style={styles.deniedTitle}>Trainer access required</Text>
-                <Text style={styles.deniedText}>This page is available only for trainer accounts.</Text>
-                <Pressable style={styles.primaryBtn} onPress={() => router.replace("/")}>
-                    <Text style={styles.primaryBtnText}>Go to Home</Text>
-                </Pressable>
-            </View>
-        );
-    }
 
     const onSaveWorkingHour = async () => {
         const parsedDay = Number(dayOfWeek);
@@ -477,6 +570,7 @@ export default function TrainerScheduleScreen() {
         try {
             await generateSlots({ fromDate, toDate }).unwrap();
             Alert.alert("Done", "Slots generated successfully.");
+            setShowGenerateSheet(false);
             await refetchSlots();
         } catch (error: unknown) {
             Alert.alert("Error", getErrorMessage(error, "Could not generate slots."));
@@ -506,6 +600,7 @@ export default function TrainerScheduleScreen() {
             setClientCode("");
             setAssignNote("");
             setSelectedSlotId(null);
+            setShowAssignSheet(false);
             await refetchSlots();
         } catch (error: unknown) {
             Alert.alert("Error", getErrorMessage(error, "Could not assign slot by code."));
@@ -520,263 +615,189 @@ export default function TrainerScheduleScreen() {
     };
 
     const onJumpToday = () => {
-        setWeekStartDate(startOfWeek(new Date()));
+        const now = new Date();
+        setWeekStartDate(startOfWeek(now));
+        setSelectedDayIndex(now.getDay());
     };
+
+    if (user?.role !== UserRole.TRAINER) {
+        return (
+            <View style={styles.deniedWrap}>
+                <Text style={styles.deniedTitle}>Trainer access required</Text>
+                <Text style={styles.deniedText}>This page is available only for trainer accounts.</Text>
+                <OutlineButton label="Go to Home" onPress={() => router.replace("/")} />
+            </View>
+        );
+    }
 
     return (
         <View ref={screenRef} onLayout={measureScreenOffset} style={styles.screen}>
             <ScrollView
                 style={styles.container}
                 contentContainerStyle={styles.content}
-                scrollEnabled={!dragInProgress}
                 keyboardShouldPersistTaps="handled"
+                scrollEnabled={!dragInProgress}
             >
-                <Text style={styles.title}>Trainer Schedule</Text>
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>0) Drag & Drop Assign by Client Code</Text>
-                    <Text style={styles.hint}>Add a client by 6-digit code, then drag the chip over an available slot.</Text>
-
-                    <View style={styles.inlineRow}>
-                        <TextInput
-                            style={[styles.input, styles.flexInput]}
-                            value={dragClientCode}
-                            onChangeText={setDragClientCode}
-                            placeholder="Client code (6 digits)"
-                            keyboardType="number-pad"
-                        />
-                        <Pressable style={styles.secondaryBtn} onPress={onAddDragClient} disabled={resolvingCode}>
-                            <Text style={styles.secondaryBtnText}>{resolvingCode ? "Adding..." : "Add Client"}</Text>
-                        </Pressable>
-                    </View>
-
-                    <View style={styles.dragClientWrap}>
-                        {dragClients.length === 0 ? (
-                            <Text style={styles.emptyDayText}>No drag clients yet. Add one using a valid code.</Text>
-                        ) : (
-                            dragClients.map((client) => (
-                                <DragClientChip
-                                    key={client.id}
-                                    client={client}
-                                    dragging={draggingClientId === client.id}
-                                    onDragStart={onDragStart}
-                                    onDragMove={onDragMove}
-                                    onDrop={onDropClient}
-                                />
-                            ))
-                        )}
-                    </View>
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>Week Calendar</Text>
-                    <Text style={styles.hint}>{weekLabel}</Text>
-
-                    <View style={styles.weekNavRow}>
-                        <Pressable style={styles.secondaryBtn} onPress={() => onPickWeek(-1)}>
-                            <Text style={styles.secondaryBtnText}>Previous</Text>
-                        </Pressable>
-                        <Pressable style={styles.secondaryBtn} onPress={onJumpToday}>
-                            <Text style={styles.secondaryBtnText}>Today</Text>
-                        </Pressable>
-                        <Pressable style={styles.secondaryBtn} onPress={() => onPickWeek(1)}>
-                            <Text style={styles.secondaryBtnText}>Next</Text>
-                        </Pressable>
-                    </View>
-
-                    {slotsLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
-
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        <View style={styles.weekGrid}>
-                            {weekDays.map((day) => {
-                                const dateKey = toDateKey(day);
-                                const daySlots = slotsByDay[dateKey] || [];
-
-                                return (
-                                    <View key={dateKey} style={styles.dayColumn}>
-                                        <Text style={styles.dayColumnTitle}>
-                                            {dayLabels[day.getDay()]} {day.getDate()}
-                                        </Text>
-                                        <Pressable
-                                            onPress={() =>
-                                                router.push({
-                                                    pathname: "/trainer-schedule/[date]",
-                                                    params: { date: dateKey },
-                                                })
-                                            }
-                                            style={styles.dayOpenBtn}
-                                        >
-                                            <Text style={styles.dayOpenBtnText}>Open Day</Text>
-                                        </Pressable>
-
-                                        {daySlots.length === 0 ? (
-                                            <Text style={styles.emptyDayText}>No slots</Text>
-                                        ) : (
-                                            daySlots.map((slot) => {
-                                                const selected = selectedSlotId === slot.id;
-                                                const selectable = slot.status === "available";
-                                                const hovered = hoveredSlotId === slot.id;
-                                                const assigning = assigningSlotId === slot.id;
-
-                                                return (
-                                                    <View
-                                                        key={slot.id}
-                                                        ref={(node) => {
-                                                            slotRefs.current[slot.id] = node;
-                                                        }}
-                                                        collapsable={false}
-                                                        onLayout={refreshSlotRects}
-                                                    >
-                                                        <Pressable
-                                                            onPress={() => {
-                                                                if (!selectable) return;
-                                                                setSelectedSlotId(slot.id);
-                                                            }}
-                                                            style={[
-                                                                styles.slotPill,
-                                                                { borderColor: statusColor(slot.status) },
-                                                                selected && styles.slotPillSelected,
-                                                                hovered && styles.slotPillHovered,
-                                                                assigning && styles.slotPillAssigning,
-                                                            ]}
-                                                        >
-                                                            <Text style={styles.slotPillTime}>
-                                                                {slotShortTime(slot.startsAt)}-{slotShortTime(slot.endsAt)}
-                                                            </Text>
-                                                            <Text style={[styles.slotPillStatus, { color: statusColor(slot.status) }]}>
-                                                                {slot.status}
-                                                            </Text>
-                                                            {slot.client ? (
-                                                                <Text style={styles.slotPillClient}>
-                                                                    {slot.client.firstName} {slot.client.lastName}
-                                                                </Text>
-                                                            ) : null}
-                                                            {assigning ? <ActivityIndicator size="small" color={theme.colors.primary} /> : null}
-                                                        </Pressable>
-                                                    </View>
-                                                );
-                                            })
-                                        )}
-                                    </View>
-                                );
-                            })}
+                <View style={styles.heroCard}>
+                    <View style={styles.heroTopRow}>
+                        <View style={styles.heroTitleWrap}>
+                            <Text style={styles.eyebrow}>Weekly Planner</Text>
+                            <Text style={styles.title}>Trainer Schedule</Text>
                         </View>
+                        <View style={styles.heroActions}>
+                            <Pressable style={styles.iconBtn} onPress={() => setShowTemplateSheet(true)}>
+                                <Ionicons name="settings-outline" size={18} color={theme.colors.text} />
+                            </Pressable>
+                            <OutlineButton
+                                label="Snapshot"
+                                onPress={() =>
+                                    router.push({
+                                        pathname: "/trainer-schedule/week-snapshot",
+                                        params: { from: weekFrom, to: weekTo },
+                                    })
+                                }
+                            />
+                            <GradientActionButton label="Generate" onPress={() => setShowGenerateSheet(true)} />
+                        </View>
+                    </View>
+
+                    <View style={styles.weekRow}>
+                        <OutlineButton label="Prev" onPress={() => onPickWeek(-1)} />
+                        <View style={styles.weekLabelChip}>
+                            <Text style={styles.weekLabelText}>{weekLabel}</Text>
+                        </View>
+                        <OutlineButton label="Next" onPress={() => onPickWeek(1)} />
+                    </View>
+
+                    <View style={styles.todayRow}>
+                        <OutlineButton label="Today" onPress={onJumpToday} />
+                    </View>
+
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dayStrip}>
+                        {weekDays.map((day, index) => {
+                            const label = `${scheduleDayLabels[day.getDay()]} ${day.getDate()}`;
+                            return <DayPill key={toDateKey(day)} label={label} active={selectedDayIndex === index} onPress={() => setSelectedDayIndex(index)} />;
+                        })}
                     </ScrollView>
                 </View>
 
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>1) Working Day Template</Text>
-                    <Text style={styles.hint}>Choose a day and define your reusable template.</Text>
-                    <View style={styles.dayRow}>
-                        {dayLabels.map((label, idx) => {
-                            const active = dayOfWeek === String(idx);
-                            return (
-                                <Pressable
-                                    key={label}
-                                    onPress={() => setDayOfWeek(String(idx))}
-                                    style={[styles.dayChip, active && styles.dayChipActive]}
-                                >
-                                    <Text style={[styles.dayChipText, active && styles.dayChipTextActive]}>{label}</Text>
-                                </Pressable>
-                            );
-                        })}
-                    </View>
-                    <TextInput style={styles.input} value={startTime} onChangeText={setStartTime} placeholder="Start HH:mm" />
-                    <TextInput style={styles.input} value={endTime} onChangeText={setEndTime} placeholder="End HH:mm" />
-                    <TextInput
-                        style={styles.input}
-                        value={duration}
-                        onChangeText={setDuration}
-                        placeholder="Duration min"
-                        keyboardType="number-pad"
-                    />
-                    <Pressable style={styles.primaryBtn} onPress={onSaveWorkingHour} disabled={saveWhLoading}>
-                        <Text style={styles.primaryBtnText}>{saveWhLoading ? "Saving..." : "Save Working Day"}</Text>
-                    </Pressable>
-
-                    <View style={styles.listWrap}>
-                        {workingHours.map((w) => (
-                            <Text key={w.id} style={styles.listItem}>
-                                {dayLabels[w.dayOfWeek]} {w.startTime}-{w.endTime} ({w.slotDurationMin}m)
-                            </Text>
-                        ))}
-                    </View>
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>2) Generate Slots</Text>
-                    <View style={styles.inlineRow}>
+                <ScheduleCard
+                    title={`Day View - ${selectedDateKey}`}
+                    subtitle="Drag clients from the pool to available slots. Tap a slot to select it for assign-by-code."
+                    rightSlot={
                         <Pressable
-                            style={styles.secondaryBtn}
-                            onPress={() => {
-                                setFromDate(weekFrom);
-                                setToDate(weekTo);
-                            }}
+                            style={styles.openDayBtn}
+                            onPress={() =>
+                                router.push({
+                                    pathname: "/trainer-schedule/[date]",
+                                    params: { date: selectedDateKey },
+                                })
+                            }
                         >
-                            <Text style={styles.secondaryBtnText}>Use displayed week</Text>
+                            <Text style={styles.openDayBtnText}>Open Day</Text>
                         </Pressable>
-                    </View>
-                    <TextInput style={styles.input} value={fromDate} onChangeText={setFromDate} placeholder="from YYYY-MM-DD" />
-                    <TextInput style={styles.input} value={toDate} onChangeText={setToDate} placeholder="to YYYY-MM-DD" />
-                    <Pressable style={styles.primaryBtn} onPress={onGenerateSlots} disabled={generateLoading}>
-                        <Text style={styles.primaryBtnText}>{generateLoading ? "Generating..." : "Generate Slots"}</Text>
-                    </Pressable>
-                </View>
+                    }
+                >
+                    {slotsLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
 
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>3) Assign Slot by Client Code</Text>
-                    <Text style={styles.hint}>Client generates a 6-digit code and gives it to trainer. No client search needed.</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={selectedSlotId ? String(selectedSlotId) : ""}
-                        onChangeText={(v) => setSelectedSlotId(Number(v) || null)}
-                        placeholder="Slot ID"
-                        keyboardType="number-pad"
-                    />
-                    <TextInput
-                        style={styles.input}
-                        value={clientCode}
-                        onChangeText={setClientCode}
-                        placeholder="Client code (6 digits)"
-                        keyboardType="number-pad"
-                    />
-                    <TextInput style={styles.input} value={assignNote} onChangeText={setAssignNote} placeholder="Optional note" />
+                    {selectedDaySlots.length === 0 ? (
+                        <Text style={styles.emptyText}>No slots for this day yet. Generate slots from header actions.</Text>
+                    ) : (
+                        selectedDaySlots.map((slot) => {
+                            const selected = selectedSlotId === slot.id;
+                            const hovered = hoveredSlotId === slot.id;
+                            const isAvailable = slot.status === "available";
+                            const assigning = assigningSlotId === slot.id;
 
-                    <Pressable style={styles.primaryBtn} onPress={onAssignByCode} disabled={assignByCodeLoading}>
-                        <Text style={styles.primaryBtnText}>{assignByCodeLoading ? "Assigning..." : "Assign by Code"}</Text>
-                    </Pressable>
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>Available Slots (Week)</Text>
-                    <View style={styles.listWrap}>
-                        {availableSlots.map((s) => (
-                            <View key={s.id} style={styles.slotCard}>
-                                <Text style={styles.slotCardTitle}>#{s.id} • {new Date(s.startsAt).toLocaleDateString()}</Text>
-                                <Text style={styles.listItem}>
-                                    {new Date(s.startsAt).toLocaleTimeString()} - {new Date(s.endsAt).toLocaleTimeString()}
-                                </Text>
-                                <Text style={styles.slotStatus}>{s.status}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
-
-                <View style={styles.card}>
-                    <Text style={styles.sectionTitle}>Assigned / Completed Slots</Text>
-                    <View style={styles.listWrap}>
-                        {slots
-                            .filter((s) => s.status !== "available")
-                            .map((s) => (
-                                <View key={s.id} style={styles.slotCard}>
-                                    <Text style={styles.slotCardTitle}>#{s.id} • {new Date(s.startsAt).toLocaleString()}</Text>
-                                    <Text style={styles.listItem}>{s.client ? `${s.client.firstName} ${s.client.lastName}` : "No client"}</Text>
-                                    <Text style={styles.slotStatus}>{s.status}</Text>
+                            return (
+                                <View
+                                    key={slot.id}
+                                    ref={(node) => {
+                                        if (isAvailable) {
+                                            slotRefs.current[slot.id] = node;
+                                        }
+                                    }}
+                                    collapsable={false}
+                                    onLayout={isAvailable ? refreshSlotRects : undefined}
+                                >
+                                    <Pressable
+                                        onPress={() => {
+                                            if (!isAvailable) return;
+                                            setSelectedSlotId(slot.id);
+                                        }}
+                                        style={[
+                                            styles.slotCard,
+                                            { borderColor: scheduleStatusColor(slot.status) },
+                                            selected && styles.slotCardSelected,
+                                            hovered && styles.slotCardHovered,
+                                            assigning && styles.slotCardAssigning,
+                                        ]}
+                                    >
+                                        <View style={styles.slotTopRow}>
+                                            <View style={styles.slotTimeWrap}>
+                                                <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} />
+                                                <Text style={styles.slotTimeText}>
+                                                    {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
+                                                </Text>
+                                            </View>
+                                            <StatusBadge status={slot.status} />
+                                        </View>
+                                        {slot.client ? (
+                                            <Text style={styles.slotClientText}>
+                                                {slot.client.firstName} {slot.client.lastName}
+                                            </Text>
+                                        ) : (
+                                            <Text style={styles.slotClientPlaceholder}>Drag and drop a client here</Text>
+                                        )}
+                                        {assigning ? <ActivityIndicator size="small" color={theme.colors.primary} /> : null}
+                                    </Pressable>
                                 </View>
-                            ))}
+                            );
+                        })
+                    )}
+
+                    <View style={styles.assignByCodeRow}>
+                        <Text style={styles.assignByCodeHint}>
+                            {selectedSlotId ? `Selected slot #${selectedSlotId}` : "Select an available slot to assign by client code."}
+                        </Text>
+                        <OutlineButton label="Assign by Code" onPress={() => setShowAssignSheet(true)} disabled={!selectedSlotId} />
                     </View>
-                </View>
+                </ScheduleCard>
             </ScrollView>
+
+            <View style={styles.clientPool}>
+                <View style={styles.clientPoolHead}>
+                    <Text style={styles.clientPoolTitle}>Unassigned Clients</Text>
+                    <Text style={styles.clientPoolHint}>Add by 6-digit code, then drag onto an available slot.</Text>
+                </View>
+                <View style={styles.clientPoolInputRow}>
+                    <TextInput
+                        style={[styles.input, styles.flexInput]}
+                        value={dragClientCode}
+                        onChangeText={setDragClientCode}
+                        placeholder="Client code"
+                        keyboardType="number-pad"
+                    />
+                    <GradientActionButton label={resolvingCode ? "Adding..." : "Add"} onPress={onAddDragClient} disabled={resolvingCode} />
+                </View>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dragList}>
+                    {dragClients.length === 0 ? (
+                        <Text style={styles.emptyText}>No clients in pool yet.</Text>
+                    ) : (
+                        dragClients.map((client) => (
+                            <DragClientChip
+                                key={client.id}
+                                client={client}
+                                dragging={draggingClientId === client.id}
+                                onDragStart={onDragStart}
+                                onDragMove={onDragMove}
+                                onDrop={onDropClient}
+                            />
+                        ))
+                    )}
+                </ScrollView>
+            </View>
+
             {activeDrag ? (
                 <View pointerEvents="none" style={styles.dragOverlay}>
                     <Animated.View
@@ -789,81 +810,352 @@ export default function TrainerScheduleScreen() {
                             },
                         ]}
                     >
-                        <Text style={styles.dragChipText}>{activeDrag.client.name}</Text>
-                        <Text style={styles.dragChipCode}>Code: {activeDrag.client.code}</Text>
+                        <Text style={styles.dragChipName}>{activeDrag.client.name}</Text>
+                        <Text style={styles.dragChipCode}>Code {activeDrag.client.code}</Text>
                     </Animated.View>
                 </View>
             ) : null}
+
+            <BottomSheet
+                visible={showTemplateSheet}
+                title="Working Day Template"
+                subtitle="Define trainer availability templates used for slot generation."
+                onClose={() => setShowTemplateSheet(false)}
+                footer={
+                    <GradientActionButton
+                        label={saveWhLoading ? "Saving..." : "Save Working Day"}
+                        onPress={onSaveWorkingHour}
+                        disabled={saveWhLoading}
+                    />
+                }
+            >
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+                    <ScrollView keyboardShouldPersistTaps="handled" style={styles.sheetScroll}>
+                        <View style={styles.dayPillRow}>
+                            {scheduleDayLabels.map((label, idx) => (
+                                <DayPill key={label} label={label} active={dayOfWeek === String(idx)} onPress={() => setDayOfWeek(String(idx))} />
+                            ))}
+                        </View>
+                        <TextInput style={styles.input} value={startTime} onChangeText={setStartTime} placeholder="Start HH:mm" />
+                        <TextInput style={styles.input} value={endTime} onChangeText={setEndTime} placeholder="End HH:mm" />
+                        <TextInput
+                            style={styles.input}
+                            value={duration}
+                            onChangeText={setDuration}
+                            placeholder="Duration (min)"
+                            keyboardType="number-pad"
+                        />
+
+                        <View style={styles.workingList}>
+                            {workingHours.length === 0 ? (
+                                <Text style={styles.emptyText}>No templates saved yet.</Text>
+                            ) : (
+                                workingHours.map((item) => (
+                                    <View key={item.id} style={styles.workingItem}>
+                                        <Text style={styles.workingItemText}>
+                                            {scheduleDayLabels[item.dayOfWeek]} {item.startTime} - {item.endTime} ({item.slotDurationMin}m)
+                                        </Text>
+                                    </View>
+                                ))
+                            )}
+                        </View>
+                    </ScrollView>
+                </KeyboardAvoidingView>
+            </BottomSheet>
+
+            <BottomSheet
+                visible={showGenerateSheet}
+                title="Generate Slots"
+                subtitle="Generate slots for a custom range or reuse the displayed week."
+                onClose={() => setShowGenerateSheet(false)}
+                footer={
+                    <GradientActionButton
+                        label={generateLoading ? "Generating..." : "Generate Slots"}
+                        onPress={onGenerateSlots}
+                        disabled={generateLoading}
+                    />
+                }
+            >
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+                    <View style={styles.sheetControls}>
+                        <OutlineButton
+                            label="Use Displayed Week"
+                            onPress={() => {
+                                setFromDate(weekFrom);
+                                setToDate(weekTo);
+                            }}
+                        />
+                        <TextInput style={styles.input} value={fromDate} onChangeText={setFromDate} placeholder="From YYYY-MM-DD" />
+                        <TextInput style={styles.input} value={toDate} onChangeText={setToDate} placeholder="To YYYY-MM-DD" />
+                    </View>
+                </KeyboardAvoidingView>
+            </BottomSheet>
+
+            <BottomSheet
+                visible={showAssignSheet}
+                title="Assign Selected Slot by Code"
+                subtitle="Use a client code to assign the currently selected available slot."
+                onClose={() => setShowAssignSheet(false)}
+                footer={
+                    <GradientActionButton
+                        label={assignByCodeLoading ? "Assigning..." : "Assign by Code"}
+                        onPress={onAssignByCode}
+                        disabled={assignByCodeLoading}
+                    />
+                }
+            >
+                <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined}>
+                    <View style={styles.sheetControls}>
+                        <TextInput
+                            style={styles.input}
+                            value={selectedSlotId ? String(selectedSlotId) : ""}
+                            onChangeText={(value) => setSelectedSlotId(Number(value) || null)}
+                            placeholder="Slot ID"
+                            keyboardType="number-pad"
+                        />
+                        <TextInput
+                            style={styles.input}
+                            value={clientCode}
+                            onChangeText={setClientCode}
+                            placeholder="Client code (6 digits)"
+                            keyboardType="number-pad"
+                        />
+                        <TextInput style={styles.input} value={assignNote} onChangeText={setAssignNote} placeholder="Optional note" />
+                    </View>
+                </KeyboardAvoidingView>
+            </BottomSheet>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: theme.colors.background },
-    container: { flex: 1, backgroundColor: theme.colors.background },
-    content: { padding: 16, gap: 12, paddingBottom: 32 },
+    screen: {
+        flex: 1,
+        backgroundColor: "#EEF3F8",
+    },
+    container: {
+        flex: 1,
+        backgroundColor: "#EEF3F8",
+    },
+    content: {
+        padding: 14,
+        paddingBottom: 240,
+        gap: 12,
+    },
     deniedWrap: {
         flex: 1,
-        backgroundColor: theme.colors.background,
+        backgroundColor: "#EEF3F8",
         alignItems: "center",
         justifyContent: "center",
         padding: 24,
         gap: 10,
     },
-    deniedTitle: { ...typography.h3, color: theme.colors.text },
-    deniedText: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
-    title: { ...typography.h2, color: theme.colors.text },
-    card: {
-        backgroundColor: theme.colors.surface,
+    deniedTitle: {
+        ...typography.h3,
+        color: theme.colors.text,
+    },
+    deniedText: {
+        ...typography.body2,
+        color: theme.colors.textSecondary,
+        textAlign: "center",
+    },
+    heroCard: {
+        borderRadius: 20,
         borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: theme.roundness,
-        padding: 16,
-        gap: 12,
+        borderColor: "#D6DEE9",
+        backgroundColor: "#FFFFFF",
+        padding: 14,
+        gap: 10,
         ...theme.shadows.small,
     },
-    sectionTitle: { ...typography.body1, color: theme.colors.text, fontWeight: "700" },
-    hint: { ...typography.caption, color: theme.colors.textSecondary },
-    input: {
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: 10,
-        paddingHorizontal: 10,
-        paddingVertical: 10,
-        color: theme.colors.text,
-        backgroundColor: "#fff",
-    },
-    flexInput: { flex: 1 },
-    primaryBtn: {
-        backgroundColor: theme.colors.primary,
-        borderRadius: theme.roundness,
-        paddingVertical: 14,
-        paddingHorizontal: 16,
+    heroTopRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
         alignItems: "center",
+        gap: 10,
+    },
+    heroTitleWrap: {
+        flex: 1,
+        gap: 2,
+    },
+    eyebrow: {
+        ...typography.caption,
+        color: theme.colors.textSecondary,
+        textTransform: "none",
+    },
+    title: {
+        ...typography.h2,
+        color: theme.colors.text,
+        fontWeight: "800",
+    },
+    heroActions: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    iconBtn: {
+        width: 38,
+        height: 38,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: "#CED7E3",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#FFFFFF",
+    },
+    weekRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+    },
+    weekLabelChip: {
+        flex: 1,
+        borderRadius: 12,
+        backgroundColor: "#F5F8FC",
+        borderWidth: 1,
+        borderColor: "#DCE5F0",
+        paddingVertical: 10,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    weekLabelText: {
+        ...typography.body2,
+        color: theme.colors.text,
+        fontWeight: "700",
+    },
+    todayRow: {
+        alignItems: "flex-end",
+    },
+    dayStrip: {
+        gap: 8,
+        paddingRight: 8,
+    },
+    openDayBtn: {
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        borderRadius: 999,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        backgroundColor: `${theme.colors.primary}15`,
+    },
+    openDayBtnText: {
+        ...typography.caption,
+        color: theme.colors.primary,
+        fontWeight: "700",
+        textTransform: "none",
+    },
+    slotCard: {
+        borderWidth: 1,
+        borderRadius: 12,
+        backgroundColor: "#FFFFFF",
+        padding: 10,
+        gap: 6,
+    },
+    slotCardSelected: {
+        borderColor: theme.colors.primary,
+        backgroundColor: `${theme.colors.primary}10`,
+    },
+    slotCardHovered: {
+        borderColor: theme.colors.success,
+        backgroundColor: `${theme.colors.success}12`,
+    },
+    slotCardAssigning: {
+        opacity: 0.75,
+    },
+    slotTopRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 8,
+    },
+    slotTimeWrap: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 6,
+    },
+    slotTimeText: {
+        ...typography.body2,
+        color: theme.colors.text,
+        fontWeight: "700",
+    },
+    slotIdText: {
+        ...typography.caption,
+        color: theme.colors.textSecondary,
+        textTransform: "none",
+    },
+    slotClientText: {
+        ...typography.body2,
+        color: theme.colors.text,
+    },
+    slotClientPlaceholder: {
+        ...typography.body2,
+        color: theme.colors.textSecondary,
+    },
+    assignByCodeRow: {
+        marginTop: 4,
+        gap: 8,
+    },
+    assignByCodeHint: {
+        ...typography.body2,
+        color: theme.colors.textSecondary,
+    },
+    clientPool: {
+        position: "absolute",
+        left: 12,
+        right: 12,
+        bottom: 12,
+        borderWidth: 1,
+        borderColor: "#CED8E6",
+        borderRadius: 18,
+        backgroundColor: "#FFFFFF",
+        padding: 12,
+        gap: 10,
+        maxHeight: 220,
         ...theme.shadows.medium,
     },
-    primaryBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
-    secondaryBtn: {
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: theme.roundness,
-        paddingHorizontal: 14,
-        paddingVertical: 12,
-        backgroundColor: theme.colors.surface,
-        ...theme.shadows.small,
+    clientPoolHead: {
+        gap: 2,
     },
-    secondaryBtnText: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
-    inlineRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-    dragClientWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginTop: 4 },
+    clientPoolTitle: {
+        ...typography.body1,
+        color: theme.colors.text,
+        fontWeight: "700",
+    },
+    clientPoolHint: {
+        ...typography.body2,
+        color: theme.colors.textSecondary,
+    },
+    clientPoolInputRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    input: {
+        borderWidth: 1,
+        borderColor: "#CFD9E7",
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        color: theme.colors.text,
+        backgroundColor: "#FFFFFF",
+    },
+    flexInput: {
+        flex: 1,
+    },
+    dragList: {
+        gap: 8,
+        paddingRight: 6,
+    },
     dragChip: {
         borderWidth: 1,
         borderColor: theme.colors.primary,
-        borderRadius: theme.roundness,
+        borderRadius: 12,
         paddingHorizontal: 12,
         paddingVertical: 10,
         backgroundColor: `${theme.colors.primary}15`,
-        minWidth: 130,
-        ...theme.shadows.small,
+        minWidth: 140,
+        gap: 2,
     },
     dragChipDragging: {
         borderColor: "#D97706",
@@ -873,88 +1165,55 @@ const styles = StyleSheet.create({
     dragChipHidden: {
         opacity: 0,
     },
-    dragOverlay: {
-        ...StyleSheet.absoluteFillObject,
-        zIndex: 99999,
-        elevation: 999,
-    },
     dragChipFloating: {
         position: "absolute",
+        ...theme.shadows.large,
     },
-    dragChipText: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
-    dragChipCode: { ...typography.caption, color: theme.colors.textSecondary },
-    weekNavRow: { flexDirection: "row", justifyContent: "space-between", gap: 8 },
-    weekGrid: { flexDirection: "row", gap: 10, marginTop: 10, paddingBottom: 2 },
-    dayColumn: {
-        width: 170,
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: theme.roundness,
-        padding: 12,
-        backgroundColor: theme.colors.surface,
+    dragChipName: {
+        ...typography.body2,
+        color: theme.colors.text,
+        fontWeight: "700",
+    },
+    dragChipCode: {
+        ...typography.caption,
+        color: theme.colors.textSecondary,
+        textTransform: "none",
+    },
+    dragOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        zIndex: 9999,
+        elevation: 999,
+    },
+    emptyText: {
+        ...typography.body2,
+        color: theme.colors.textSecondary,
+    },
+    sheetScroll: {
+        maxHeight: 360,
+    },
+    dayPillRow: {
+        flexDirection: "row",
+        flexWrap: "wrap",
         gap: 8,
-        ...theme.shadows.small,
+        marginBottom: 8,
     },
-    dayColumnTitle: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
-    dayOpenBtn: {
-        alignSelf: "flex-start",
+    workingList: {
+        marginTop: 10,
+        gap: 8,
+    },
+    workingItem: {
         borderWidth: 1,
-        borderColor: theme.colors.primary,
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: `${theme.colors.primary}10`,
+        borderColor: "#DEE6EF",
+        borderRadius: 12,
+        backgroundColor: "#F7FAFE",
+        paddingHorizontal: 10,
+        paddingVertical: 8,
     },
-    dayOpenBtnText: { ...typography.caption, color: theme.colors.primary, fontWeight: "700" },
-    emptyDayText: { ...typography.caption, color: theme.colors.textSecondary },
-    slotPill: {
-        borderWidth: 1,
-        borderRadius: 8,
-        paddingHorizontal: 8,
-        paddingVertical: 7,
-        backgroundColor: "#fff",
-        gap: 2,
+    workingItemText: {
+        ...typography.body2,
+        color: theme.colors.text,
     },
-    slotPillSelected: {
-        backgroundColor: `${theme.colors.primary}15`,
-        borderColor: theme.colors.primary,
+    sheetControls: {
+        gap: 10,
     },
-    slotPillHovered: {
-        backgroundColor: `${theme.colors.success}15`,
-        borderColor: theme.colors.success,
-    },
-    slotPillAssigning: {
-        opacity: 0.75,
-    },
-    slotPillTime: { ...typography.caption, color: theme.colors.text, fontWeight: "700" },
-    slotPillStatus: { ...typography.caption, fontWeight: "700", textTransform: "capitalize" },
-    slotPillClient: { ...typography.caption, color: theme.colors.textSecondary },
-    listWrap: { gap: 6, marginTop: 4 },
-    listItem: { ...typography.caption, color: theme.colors.textSecondary },
-    dayRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-    dayChip: {
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: 999,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: "#fff",
-    },
-    dayChipActive: {
-        borderColor: theme.colors.primary,
-        backgroundColor: `${theme.colors.primary}15`,
-    },
-    dayChipText: { ...typography.caption, color: theme.colors.textSecondary, fontWeight: "600" },
-    dayChipTextActive: { color: theme.colors.primary },
-    slotCard: {
-        borderWidth: 1,
-        borderColor: theme.colors.border,
-        borderRadius: theme.roundness,
-        padding: 12,
-        backgroundColor: theme.colors.surface,
-        gap: 4,
-        ...theme.shadows.small,
-    },
-    slotCardTitle: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
-    slotStatus: { ...typography.caption, color: theme.colors.primary, fontWeight: "700" },
 });

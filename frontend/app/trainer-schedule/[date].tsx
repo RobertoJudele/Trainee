@@ -18,7 +18,6 @@ import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
 import {
   PublicClient,
-  ScheduleSlot,
   useAssignClientToSlotMutation,
   useGetPendingClientCodesQuery,
   useGetTrainerSlotsQuery,
@@ -26,6 +25,15 @@ import {
   useUnassignClientFromSlotMutation,
 } from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
+import {
+  OutlineButton,
+  ScheduleCard,
+  StatusBadge,
+  GradientActionButton,
+  scheduleStatusColor,
+  shortTime,
+  toDateKey,
+} from "../../src/components/schedule/SchedulePrimitives";
 
 type SlotRect = {
   x: number;
@@ -34,25 +42,20 @@ type SlotRect = {
   height: number;
 };
 
-const toDateKey = (date: Date) => {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+type ApiErrorShape = {
+  data?: {
+    message?: string;
+  };
 };
 
-const shortTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-const statusColor = (status: ScheduleSlot["status"]) => {
-  if (status === "available") return "#198754";
-  if (status === "assigned") return "#0D6EFD";
-  if (status === "completed") return "#6F42C1";
-  if (status === "canceled") return "#DC3545";
-  return "#B54708";
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error && typeof error === "object") {
+    const maybeError = error as ApiErrorShape;
+    if (maybeError.data?.message) {
+      return maybeError.data.message;
+    }
+  }
+  return fallback;
 };
 
 const savedClientsStorageKey = (trainerUserId: number) => `trainer-saved-clients:${trainerUserId}`;
@@ -125,7 +128,9 @@ function DraggableClientCard({
       <Text style={styles.clientName}>
         {client.firstName} {client.lastName}
       </Text>
-      <Text style={styles.clientSub}>{client.email}</Text>
+      <Text numberOfLines={1} style={styles.clientSub}>
+        {client.email}
+      </Text>
     </Animated.View>
   );
 }
@@ -135,9 +140,7 @@ export default function TrainerDayScheduleScreen() {
   const params = useLocalSearchParams<{ date?: string }>();
   const user = useSelector(selectCurrentUser);
 
-  const routeDate = typeof params.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
-    ? params.date
-    : toDateKey(new Date());
+  const routeDate = typeof params.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : toDateKey(new Date());
 
   const slotRefs = useRef<Record<number, View | null>>({});
   const slotRectsRef = useRef<Record<number, SlotRect>>({});
@@ -149,6 +152,7 @@ export default function TrainerDayScheduleScreen() {
   const [savedClients, setSavedClients] = useState<PublicClient[]>([]);
   const [draggingClientId, setDraggingClientId] = useState<number | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<number | null>(null);
+  const [dragInProgress, setDragInProgress] = useState(false);
 
   const {
     data: slotsResp,
@@ -179,7 +183,7 @@ export default function TrainerDayScheduleScreen() {
         if (!Array.isArray(parsed)) return;
         setSavedClients(parsed);
       } catch {
-        // Ignore local storage parse errors and continue with empty list.
+        // Keep local list optional.
       }
     };
 
@@ -192,7 +196,7 @@ export default function TrainerDayScheduleScreen() {
       try {
         await AsyncStorage.setItem(savedClientsStorageKey(user.id), JSON.stringify(savedClients));
       } catch {
-        // Ignore local storage write errors.
+        // Ignore persistence errors.
       }
     };
 
@@ -204,8 +208,8 @@ export default function TrainerDayScheduleScreen() {
     [slotsResp?.data]
   );
 
-  const availableSlots = useMemo(() => daySlots.filter((s) => s.status === "available"), [daySlots]);
-  const assignedSlots = useMemo(() => daySlots.filter((s) => s.status !== "available"), [daySlots]);
+  const availableSlots = useMemo(() => daySlots.filter((slot) => slot.status === "available"), [daySlots]);
+  const assignedSlots = useMemo(() => daySlots.filter((slot) => slot.status !== "available"), [daySlots]);
 
   const availableClients = useMemo(() => {
     const byId = new Map<number, PublicClient>();
@@ -229,10 +233,10 @@ export default function TrainerDayScheduleScreen() {
       }
     }
 
-    return Array.from(byId.values()).sort((a, b) =>
-      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
-    );
+    return Array.from(byId.values()).sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
   }, [pendingResp?.data, savedClients, assignedSlots]);
+
+  const selectedClient = availableClients.find((client) => client.id === selectedClientId) || null;
 
   const refreshSlotRects = () => {
     for (const slot of availableSlots) {
@@ -248,17 +252,13 @@ export default function TrainerDayScheduleScreen() {
     const found = availableSlots.find((slot) => {
       const rect = slotRectsRef.current[slot.id];
       if (!rect) return false;
-      return (
-        pageX >= rect.x &&
-        pageX <= rect.x + rect.width &&
-        pageY >= rect.y &&
-        pageY <= rect.y + rect.height
-      );
+      return pageX >= rect.x && pageX <= rect.x + rect.width && pageY >= rect.y && pageY <= rect.y + rect.height;
     });
     return found?.id || null;
   };
 
   const onDragStart = (clientId: number) => {
+    setDragInProgress(true);
     setDraggingClientId(clientId);
     setHoveredSlotId(null);
     refreshSlotRects();
@@ -275,6 +275,7 @@ export default function TrainerDayScheduleScreen() {
       setSelectedSlotId(dropSlotId);
       setSelectedClientId(clientId);
     }
+    setDragInProgress(false);
     setDraggingClientId(null);
     setHoveredSlotId(null);
   };
@@ -290,13 +291,13 @@ export default function TrainerDayScheduleScreen() {
       const resp = await resolveClientCode({ code }).unwrap();
       const client = resp.data.client;
       setSavedClients((prev) => {
-        if (prev.some((p) => p.id === client.id)) return prev;
+        if (prev.some((entry) => entry.id === client.id)) return prev;
         return [client, ...prev];
       });
       setSelectedClientId(client.id);
       setClientCodeInput("");
-    } catch (error: any) {
-      Alert.alert("Error", error?.data?.message || "Could not resolve client code.");
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not resolve client code."));
     }
   };
 
@@ -307,7 +308,7 @@ export default function TrainerDayScheduleScreen() {
     }
 
     if (!selectedClientId) {
-      Alert.alert("Validation", "Select a client from the clients area first.");
+      Alert.alert("Validation", "Select a client first.");
       return;
     }
 
@@ -322,8 +323,8 @@ export default function TrainerDayScheduleScreen() {
       setSelectedSlotId(null);
       setAssignNote("");
       await Promise.all([refetchSlots(), refetchPending()]);
-    } catch (error: any) {
-      Alert.alert("Error", error?.data?.message || "Could not assign client.");
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not assign client."));
     }
   };
 
@@ -331,8 +332,8 @@ export default function TrainerDayScheduleScreen() {
     try {
       await unassignClientFromSlot({ slotId }).unwrap();
       await refetchSlots();
-    } catch (error: any) {
-      Alert.alert("Error", error?.data?.message || "Could not remove assignment.");
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not remove assignment."));
     }
   };
 
@@ -341,27 +342,117 @@ export default function TrainerDayScheduleScreen() {
       <View style={styles.deniedWrap}>
         <Text style={styles.deniedTitle}>Trainer access required</Text>
         <Text style={styles.deniedText}>This page is available only for trainer accounts.</Text>
-        <Pressable style={styles.primaryBtn} onPress={() => router.replace("/")}>
-          <Text style={styles.primaryBtnText}>Go to Home</Text>
-        </Pressable>
+        <OutlineButton label="Go to Home" onPress={() => router.replace("/")} />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <Pressable style={styles.secondaryBtn} onPress={() => router.back()}>
-          <Text style={styles.secondaryBtnText}>Back</Text>
-        </Pressable>
-        <Text style={styles.title}>Day: {routeDate}</Text>
-      </View>
+    <View style={styles.screen}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        scrollEnabled={!dragInProgress}
+      >
+        <View style={styles.heroCard}>
+          <View style={styles.heroTopRow}>
+            <OutlineButton label="Back" onPress={() => router.back()} />
+            <View style={styles.heroTitleWrap}>
+              <Text style={styles.heroEyebrow}>Daily Planner</Text>
+              <Text style={styles.heroTitle}>{routeDate}</Text>
+            </View>
+          </View>
 
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Clients Area</Text>
-        <Text style={styles.hint}>Insert code once, then reuse the client by drag-drop or tap-select.</Text>
+          <View style={styles.heroStatsRow}>
+            <View style={styles.statChip}>
+              <Text style={styles.statLabel}>Available</Text>
+              <Text style={styles.statValue}>{availableSlots.length}</Text>
+            </View>
+            <View style={styles.statChip}>
+              <Text style={styles.statLabel}>Assigned+</Text>
+              <Text style={styles.statValue}>{assignedSlots.length}</Text>
+            </View>
+          </View>
+        </View>
 
-        <View style={styles.inlineRow}>
+        <ScheduleCard
+          title="Available Slots"
+          subtitle="Drop a client card on a slot, or tap a slot to select it for assignment."
+        >
+          {slotsLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
+
+          {availableSlots.length === 0 ? (
+            <Text style={styles.emptyText}>No available slots for this day.</Text>
+          ) : (
+            availableSlots.map((slot) => {
+              const selected = selectedSlotId === slot.id;
+              const hovered = hoveredSlotId === slot.id;
+
+              return (
+                <View
+                  key={slot.id}
+                  ref={(node) => {
+                    slotRefs.current[slot.id] = node;
+                  }}
+                  collapsable={false}
+                  onLayout={refreshSlotRects}
+                >
+                  <Pressable
+                    onPress={() => setSelectedSlotId(slot.id)}
+                    style={[
+                      styles.slotCard,
+                      { borderColor: scheduleStatusColor(slot.status) },
+                      selected && styles.slotCardSelected,
+                      hovered && styles.slotCardHovered,
+                    ]}
+                  >
+                    <View style={styles.slotTopRow}>
+                      <Text style={styles.slotTimeText}>
+                        {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
+                      </Text>
+                      <StatusBadge status={slot.status} />
+                    </View>
+                  </Pressable>
+                </View>
+              );
+            })
+          )}
+        </ScheduleCard>
+
+      
+
+        <ScheduleCard title="Assigned / Completed" subtitle="Manage existing assignments for this day.">
+          {assignedSlots.length === 0 ? (
+            <Text style={styles.emptyText}>No assigned slots yet.</Text>
+          ) : (
+            assignedSlots.map((slot) => (
+              <View key={slot.id} style={[styles.slotCard, { borderColor: scheduleStatusColor(slot.status) }]}>
+                <View style={styles.slotTopRow}>
+                  <Text style={styles.slotTimeText}>
+                    {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
+                  </Text>
+                  <StatusBadge status={slot.status} />
+                </View>
+                <Text style={styles.assignedClientText}>
+                  {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
+                </Text>
+                <Pressable style={styles.unassignBtn} onPress={() => onUnassign(slot.id)} disabled={unassigning}>
+                  <Text style={styles.unassignBtnText}>{unassigning ? "Removing..." : "Unassign"}</Text>
+                </Pressable>
+              </View>
+            ))
+          )}
+        </ScheduleCard>
+      </ScrollView>
+
+      <View style={styles.clientPool}>
+        <View style={styles.clientPoolHeader}>
+          <Text style={styles.clientPoolTitle}>Clients Area</Text>
+          <Text style={styles.clientPoolHint}>Add by code once, then drag or tap-select.</Text>
+        </View>
+
+        <View style={styles.clientInputRow}>
           <TextInput
             style={[styles.input, styles.codeInput]}
             value={clientCodeInput}
@@ -369,16 +460,14 @@ export default function TrainerDayScheduleScreen() {
             placeholder="Client code (6 digits)"
             keyboardType="number-pad"
           />
-          <Pressable style={styles.secondaryBtn} onPress={onAddClientCode} disabled={resolvingCode}>
-            <Text style={styles.secondaryBtnText}>{resolvingCode ? "Adding..." : "Add"}</Text>
-          </Pressable>
+          <GradientActionButton label={resolvingCode ? "Adding..." : "Add"} onPress={onAddClientCode} disabled={resolvingCode} />
         </View>
 
         {pendingLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
 
-        <View style={styles.clientList}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clientList}>
           {availableClients.length === 0 ? (
-            <Text style={styles.emptyText}>No clients added yet. Add one with a valid 6-digit code.</Text>
+            <Text style={styles.emptyText}>No clients added yet.</Text>
           ) : (
             availableClients.map((client) => {
               const selected = selectedClientId === client.id;
@@ -398,194 +487,221 @@ export default function TrainerDayScheduleScreen() {
               );
             })
           )}
-        </View>
+        </ScrollView>
       </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Available Slots</Text>
-        <Text style={styles.hint}>Drop a client card on a slot, or tap a slot to select it.</Text>
-
-        {slotsLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
-
-        <View style={styles.slotList}>
-          {availableSlots.length === 0 ? (
-            <Text style={styles.emptyText}>No available slots for this day.</Text>
-          ) : (
-            availableSlots.map((slot) => {
-              const selected = selectedSlotId === slot.id;
-              const hovered = hoveredSlotId === slot.id;
-
-              return (
-                <View
-                  key={slot.id}
-                  ref={(node) => {
-                    slotRefs.current[slot.id] = node;
-                  }}
-                  onLayout={refreshSlotRects}
-                  style={[
-                    styles.slotCard,
-                    { borderColor: statusColor(slot.status) },
-                    selected && styles.slotCardSelected,
-                    hovered && styles.slotCardHovered,
-                  ]}
-                >
-                  <Pressable onPress={() => setSelectedSlotId(slot.id)}>
-                    <Text style={styles.slotCardTitle}>#{slot.id}</Text>
-                    <Text style={styles.slotCardText}>
-                      {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
-                    </Text>
-                  </Pressable>
-                </View>
-              );
-            })
-          )}
-        </View>
-
-        <TextInput
-          style={styles.input}
-          value={assignNote}
-          onChangeText={setAssignNote}
-          placeholder="Optional note"
-        />
-
-        <Pressable style={styles.primaryBtn} onPress={onAssign} disabled={assigning}>
-          <Text style={styles.primaryBtnText}>{assigning ? "Assigning..." : "Confirm Assignment"}</Text>
-        </Pressable>
-      </View>
-
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>Assigned / Completed</Text>
-        <View style={styles.slotList}>
-          {assignedSlots.length === 0 ? (
-            <Text style={styles.emptyText}>No assigned slots yet.</Text>
-          ) : (
-            assignedSlots.map((slot) => (
-              <View key={slot.id} style={[styles.slotCard, { borderColor: statusColor(slot.status) }]}>
-                <View style={styles.assignedTopRow}>
-                  <Text style={styles.slotCardTitle}>#{slot.id}</Text>
-                  <Pressable
-                    style={styles.removeBtn}
-                    onPress={() => onUnassign(slot.id)}
-                    disabled={unassigning}
-                  >
-                    <Text style={styles.removeBtnText}>x</Text>
-                  </Pressable>
-                </View>
-                <Text style={styles.slotCardText}>
-                  {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
-                </Text>
-                <Text style={styles.slotCardText}>
-                  {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
-                </Text>
-                <Text style={[styles.slotStatus, { color: statusColor(slot.status) }]}>{slot.status}</Text>
-              </View>
-            ))
-          )}
-        </View>
-      </View>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.colors.background },
-  content: { padding: 16, paddingBottom: 32, gap: 12 },
+  screen: {
+    flex: 1,
+    backgroundColor: "#EEF3F8",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#EEF3F8",
+  },
+  content: {
+    padding: 14,
+    gap: 12,
+    paddingBottom: 235,
+  },
   deniedWrap: {
     flex: 1,
-    backgroundColor: theme.colors.background,
+    backgroundColor: "#EEF3F8",
     alignItems: "center",
     justifyContent: "center",
     padding: 24,
     gap: 10,
   },
-  deniedTitle: { ...typography.h3, color: theme.colors.text },
-  deniedText: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
-  headerRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  title: { ...typography.h3, color: theme.colors.text, fontWeight: "700" },
-  card: {
-    backgroundColor: "#fff",
+  deniedTitle: {
+    ...typography.h3,
+    color: theme.colors.text,
+  },
+  deniedText: {
+    ...typography.body2,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+  },
+  heroCard: {
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 12,
-    padding: 12,
+    borderColor: "#D6DEE9",
+    backgroundColor: "#FFFFFF",
+    padding: 14,
+    gap: 10,
+    ...theme.shadows.small,
+  },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  heroTitleWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  heroEyebrow: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    textTransform: "none",
+  },
+  heroTitle: {
+    ...typography.h2,
+    color: theme.colors.text,
+    fontWeight: "800",
+  },
+  heroStatsRow: {
+    flexDirection: "row",
     gap: 8,
   },
-  sectionTitle: { ...typography.body1, color: theme.colors.text, fontWeight: "700" },
-  hint: { ...typography.caption, color: theme.colors.textSecondary },
-  inlineRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  statChip: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#DBE3EF",
+    backgroundColor: "#F7FAFE",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  statLabel: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    textTransform: "none",
+  },
+  statValue: {
+    ...typography.h3,
+    color: theme.colors.text,
+    fontWeight: "800",
+  },
+  slotCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 10,
+    backgroundColor: "#FFFFFF",
+    gap: 6,
+  },
+  slotCardSelected: {
+    borderColor: theme.colors.primary,
+    backgroundColor: `${theme.colors.primary}10`,
+  },
+  slotCardHovered: {
+    borderColor: theme.colors.success,
+    backgroundColor: `${theme.colors.success}12`,
+  },
+  slotTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  slotTimeText: {
+    ...typography.body2,
+    color: theme.colors.text,
+    fontWeight: "700",
+  },
+  selectionText: {
+    ...typography.body2,
+    color: theme.colors.text,
+  },
+  assignedClientText: {
+    ...typography.body2,
+    color: theme.colors.text,
+  },
+  unassignBtn: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "#CFD8E6",
+    borderRadius: 999,
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  unassignBtnText: {
+    ...typography.caption,
+    color: theme.colors.text,
+    textTransform: "none",
+    fontWeight: "700",
+  },
+  clientPool: {
+    position: "absolute",
+    left: 12,
+    right: 12,
+    bottom: 12,
+    borderWidth: 1,
+    borderColor: "#CED8E6",
+    borderRadius: 18,
+    backgroundColor: "#FFFFFF",
+    padding: 12,
+    gap: 10,
+    maxHeight: 220,
+    ...theme.shadows.medium,
+  },
+  clientPoolHeader: {
+    gap: 2,
+  },
+  clientPoolTitle: {
+    ...typography.body1,
+    color: theme.colors.text,
+    fontWeight: "700",
+  },
+  clientPoolHint: {
+    ...typography.body2,
+    color: theme.colors.textSecondary,
+  },
+  clientInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   input: {
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    borderColor: "#CFD9E7",
+    borderRadius: 12,
+    paddingHorizontal: 12,
     paddingVertical: 10,
     color: theme.colors.text,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
   },
-  codeInput: { flex: 1 },
-  primaryBtn: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    alignItems: "center",
+  codeInput: {
+    flex: 1,
   },
-  primaryBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
-  secondaryBtn: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    backgroundColor: "#fff",
+  clientList: {
+    gap: 8,
+    paddingRight: 8,
   },
-  secondaryBtnText: { ...typography.caption, color: theme.colors.text, fontWeight: "700" },
-  clientList: { gap: 8 },
   clientCard: {
+    width: 210,
     borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 10,
+    borderColor: "#D5DEEA",
+    borderRadius: 12,
     padding: 10,
-    backgroundColor: "#fff",
+    backgroundColor: "#FFFFFF",
+    gap: 3,
   },
   clientCardSelected: {
     borderColor: theme.colors.primary,
-    backgroundColor: "#EEF2FF",
+    backgroundColor: `${theme.colors.primary}10`,
   },
   clientCardDragging: {
     borderColor: "#D97706",
     backgroundColor: "#FFF7ED",
+    ...theme.shadows.large,
   },
-  clientName: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
-  clientSub: { ...typography.caption, color: theme.colors.textSecondary },
-  slotList: { gap: 8 },
-  slotCard: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    backgroundColor: "#fff",
+  clientName: {
+    ...typography.body2,
+    color: theme.colors.text,
+    fontWeight: "700",
   },
-  slotCardSelected: {
-    backgroundColor: "#EEF2FF",
-    borderColor: theme.colors.primary,
+  clientSub: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    textTransform: "none",
   },
-  slotCardHovered: {
-    backgroundColor: "#ECFDF3",
-    borderColor: "#198754",
+  emptyText: {
+    ...typography.body2,
+    color: theme.colors.textSecondary,
   },
-  slotCardTitle: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
-  slotCardText: { ...typography.caption, color: theme.colors.textSecondary },
-  slotStatus: { ...typography.caption, fontWeight: "700", textTransform: "capitalize" },
-  assignedTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  removeBtn: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    width: 22,
-    height: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  removeBtnText: { ...typography.caption, color: theme.colors.text, fontWeight: "700" },
-  emptyText: { ...typography.caption, color: theme.colors.textSecondary },
 });
