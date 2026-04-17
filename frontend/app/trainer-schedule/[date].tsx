@@ -3,7 +3,11 @@ import {
   ActivityIndicator,
   Animated,
   Alert,
+  Keyboard,
+  KeyboardEvent,
+  KeyboardAvoidingView,
   PanResponder,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -144,6 +148,7 @@ export default function TrainerDayScheduleScreen() {
 
   const slotRefs = useRef<Record<number, View | null>>({});
   const slotRectsRef = useRef<Record<number, SlotRect>>({});
+  const scrollRef = useRef<ScrollView | null>(null);
 
   const [clientCodeInput, setClientCodeInput] = useState("");
   const [assignNote, setAssignNote] = useState("");
@@ -153,6 +158,8 @@ export default function TrainerDayScheduleScreen() {
   const [draggingClientId, setDraggingClientId] = useState<number | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<number | null>(null);
   const [dragInProgress, setDragInProgress] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [clientInputY, setClientInputY] = useState(0);
 
   const {
     data: slotsResp,
@@ -203,6 +210,27 @@ export default function TrainerDayScheduleScreen() {
     persistSavedClients();
   }, [savedClients, user?.id, user?.role]);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const onShow = (event: KeyboardEvent) => {
+      setKeyboardHeight(event.endCoordinates?.height ?? 0);
+    };
+
+    const onHide = () => {
+      setKeyboardHeight(0);
+    };
+
+    const showSub = Keyboard.addListener(showEvent, onShow);
+    const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const daySlots = useMemo(
     () => [...(slotsResp?.data || [])].sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
     [slotsResp?.data]
@@ -237,6 +265,16 @@ export default function TrainerDayScheduleScreen() {
   }, [pendingResp?.data, savedClients, assignedSlots]);
 
   const selectedClient = availableClients.find((client) => client.id === selectedClientId) || null;
+  const contentBottomPadding = keyboardHeight > 0 ? keyboardHeight + 90 : 24;
+
+  const scrollToClientInput = () => {
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({
+        y: Math.max(0, clientInputY - 140),
+        animated: true,
+      });
+    });
+  };
 
   const refreshSlotRects = () => {
     for (const slot of availableSlots) {
@@ -348,10 +386,15 @@ export default function TrainerDayScheduleScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <KeyboardAvoidingView
+      style={styles.screen}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={0}
+    >
       <ScrollView
+        ref={scrollRef}
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding }]}
         keyboardShouldPersistTaps="handled"
         scrollEnabled={!dragInProgress}
       >
@@ -444,52 +487,58 @@ export default function TrainerDayScheduleScreen() {
             ))
           )}
         </ScheduleCard>
+
+        <View style={styles.clientPool}>
+          <View style={styles.clientPoolHeader}>
+            <Text style={styles.clientPoolTitle}>Clients Area</Text>
+            <Text style={styles.clientPoolHint}>Add by code once, then drag or tap-select.</Text>
+          </View>
+
+          <View style={styles.clientInputRow} onLayout={(event) => setClientInputY(event.nativeEvent.layout.y)}>
+            <TextInput
+              style={[styles.input, styles.codeInput]}
+              value={clientCodeInput}
+              onChangeText={setClientCodeInput}
+              placeholder="Client code (6 digits)"
+              placeholderTextColor={theme.colors.textSecondary}
+              selectionColor={theme.colors.primary}
+              cursorColor={theme.colors.primary}
+              autoCapitalize="none"
+              autoCorrect={false}
+              onFocus={scrollToClientInput}
+              keyboardType="number-pad"
+            />
+            <GradientActionButton label={resolvingCode ? "Adding..." : "Add"} onPress={onAddClientCode} disabled={resolvingCode} />
+          </View>
+
+          {pendingLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clientList}>
+            {availableClients.length === 0 ? (
+              <Text style={styles.emptyText}>No clients added yet.</Text>
+            ) : (
+              availableClients.map((client) => {
+                const selected = selectedClientId === client.id;
+                const dragging = draggingClientId === client.id;
+
+                return (
+                  <DraggableClientCard
+                    key={client.id}
+                    client={client}
+                    selected={selected}
+                    dragging={dragging}
+                    onSelect={(id) => setSelectedClientId(id)}
+                    onDragStart={onDragStart}
+                    onDragMove={onDragMove}
+                    onDragEnd={onDragEnd}
+                  />
+                );
+              })
+            )}
+          </ScrollView>
+        </View>
       </ScrollView>
-
-      <View style={styles.clientPool}>
-        <View style={styles.clientPoolHeader}>
-          <Text style={styles.clientPoolTitle}>Clients Area</Text>
-          <Text style={styles.clientPoolHint}>Add by code once, then drag or tap-select.</Text>
-        </View>
-
-        <View style={styles.clientInputRow}>
-          <TextInput
-            style={[styles.input, styles.codeInput]}
-            value={clientCodeInput}
-            onChangeText={setClientCodeInput}
-            placeholder="Client code (6 digits)"
-            keyboardType="number-pad"
-          />
-          <GradientActionButton label={resolvingCode ? "Adding..." : "Add"} onPress={onAddClientCode} disabled={resolvingCode} />
-        </View>
-
-        {pendingLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
-
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clientList}>
-          {availableClients.length === 0 ? (
-            <Text style={styles.emptyText}>No clients added yet.</Text>
-          ) : (
-            availableClients.map((client) => {
-              const selected = selectedClientId === client.id;
-              const dragging = draggingClientId === client.id;
-
-              return (
-                <DraggableClientCard
-                  key={client.id}
-                  client={client}
-                  selected={selected}
-                  dragging={dragging}
-                  onSelect={(id) => setSelectedClientId(id)}
-                  onDragStart={onDragStart}
-                  onDragMove={onDragMove}
-                  onDragEnd={onDragEnd}
-                />
-              );
-            })
-          )}
-        </ScrollView>
-      </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -505,7 +554,7 @@ const styles = StyleSheet.create({
   content: {
     padding: 14,
     gap: 12,
-    paddingBottom: 235,
+    paddingBottom: 24,
   },
   deniedWrap: {
     flex: 1,
@@ -626,17 +675,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   clientPool: {
-    position: "absolute",
-    left: 12,
-    right: 12,
-    bottom: 12,
     borderWidth: 1,
     borderColor: "#CED8E6",
     borderRadius: 18,
     backgroundColor: "#FFFFFF",
     padding: 12,
     gap: 10,
-    maxHeight: 220,
     ...theme.shadows.medium,
   },
   clientPoolHeader: {

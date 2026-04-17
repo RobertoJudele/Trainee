@@ -18,6 +18,7 @@ import { useRouter } from "expo-router";
 import { useSearchTrainersQuery, TrainerSearchItem } from "../../features/trainer/trainerApiSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentUser, logOut } from "../../features/auth/authSlice";
+import { apiSlice } from "../api/apiSlice";
 import Purchases from "react-native-purchases";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../lib/theme";
@@ -133,6 +134,7 @@ export default function Home() {
 
   const handleLogout = async () => {
     dispatch(logOut());
+    dispatch(apiSlice.util.resetApiState());
     try {
       if (Platform.OS === "ios" || Platform.OS === "android") {
         await Purchases.logOut();

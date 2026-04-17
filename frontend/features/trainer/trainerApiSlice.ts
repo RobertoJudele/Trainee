@@ -156,6 +156,58 @@ export interface TrainerSearchResponse {
   };
 }
 
+export interface TrainerAnalyticsDayItem {
+  date: string;
+  label: string;
+  count: number;
+}
+
+export interface TrainerAnalyticsBreakdown {
+  search: number;
+  map: number;
+  direct: number;
+  other: number;
+}
+
+export interface TrainerAnalyticsAgeBreakdown {
+  under_18: number;
+  "18_24": number;
+  "25_34": number;
+  "35_44": number;
+  "45_54": number;
+  "55_plus": number;
+  unknown: number;
+}
+
+export interface TrainerAnalyticsSexBreakdown {
+  male: number;
+  female: number;
+  non_binary: number;
+  other: number;
+  prefer_not_to_say: number;
+  unknown: number;
+}
+
+export interface TrainerAnalyticsRecentView {
+  id: number;
+  viewedAt: string;
+  sourceType: keyof TrainerAnalyticsBreakdown;
+  viewerUserId?: number | null;
+  viewerIpAddress: string;
+  age: number | null;
+  sex: string;
+}
+
+export interface TrainerAnalyticsResponseData {
+  totalViews: number;
+  uniqueViewEvents: number;
+  viewsByDay: TrainerAnalyticsDayItem[];
+  sourceBreakdown: TrainerAnalyticsBreakdown;
+  ageBreakdown: TrainerAnalyticsAgeBreakdown;
+  sexBreakdown: TrainerAnalyticsSexBreakdown;
+  recentViews: TrainerAnalyticsRecentView[];
+}
+
 export const trainerApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTrainerProfile: builder.query<TrainerProfileResponse, void>({
@@ -220,6 +272,18 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       },
     }),
 
+    getTrainerAnalytics: builder.query<TrainerAnalyticsResponseData, void>({
+      query: () => "/trainer/analytics",
+      transformResponse: (response: any) => {
+        console.log("📈 Trainer analytics response:", response);
+        return response?.data ?? response;
+      },
+      transformErrorResponse: (response: any) => {
+        console.log("🔴 Trainer analytics error:", JSON.stringify(response));
+        return response;
+      },
+    }),
+
     searchTrainers: builder.query<TrainerSearchResponse, SearchParams | void>({
       query: (params) => {
         if (!params) return "/trainer/search";
@@ -248,6 +312,7 @@ export const {
   useGetTrainerProfileQuery,
   useGetTrainerByIdQuery,
   useGetSpecializationsQuery,
+  useGetTrainerAnalyticsQuery,
   useDeleteTrainerProfileMutation,
   useUpdateTrainerProfileMutation,
   useSearchTrainersQuery,

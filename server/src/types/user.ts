@@ -8,6 +8,8 @@ export interface UserAttributes {
   firstName: string;
   lastName: string;
   phone?: string;
+  birthDate?: Date | null;
+  sex?: UserSex | null;
   role: UserRole;
   profileImageUrl?: string | null;
   isVerified: boolean;
@@ -24,6 +26,8 @@ export interface UserCreationAttributes {
   firstName: string;
   lastName: string;
   phone?: string;
+  birthDate?: Date | null;
+  sex?: UserSex | null;
   role?: UserRole;
   profileImageUrl?: string;
 }
@@ -32,6 +36,8 @@ export interface UserUpdateAttributes {
   firstName?: string;
   lastName?: string;
   phone?: string;
+  birthDate?: Date | null;
+  sex?: UserSex | null;
   profileImageUrl?: string;
 }
 
@@ -46,6 +52,8 @@ export interface RegisterRequest {
   firstName: string;
   lastName: string;
   phone?: string;
+  birthDate?: Date | null;
+  sex?: UserSex | null;
   role?: UserRole;
 }
 
@@ -62,3 +70,5 @@ export interface AuthResponse {
   user: Omit<UserAttributes, "password">;
   token: string;
 }
+
+export type UserSex = "male" | "female" | "non_binary" | "other" | "prefer_not_to_say";

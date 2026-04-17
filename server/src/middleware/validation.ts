@@ -143,6 +143,14 @@ export const updateProfileValidation = [
     .trim()
     .isMobilePhone("ro-RO")
     .withMessage("Invalid phone number"),
+  body("birthDate")
+    .optional()
+    .isISO8601()
+    .withMessage("Birth date must be a valid ISO date."),
+  body("sex")
+    .optional()
+    .isIn(["male", "female", "non_binary", "other", "prefer_not_to_say"])
+    .withMessage("Sex must be one of the supported values."),
   body("profileImageUrl")
     .optional()
     .custom((value) => {

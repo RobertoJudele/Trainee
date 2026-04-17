@@ -136,7 +136,7 @@ export default function CreateTrainer() {
 
 
       const responseData = (result as any)?.data?.data;
-      if (responseData) {
+      if (responseData && user) {
         dispatch(setTrainerProfile(responseData));
         dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
       }

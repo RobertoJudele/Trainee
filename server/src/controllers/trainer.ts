@@ -25,6 +25,8 @@ import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { TrainerGym } from "../models/trainerGym";
 import { Gym } from "../models/gym";
 import { stripe } from "../config/stripe";
+import { trackTrainerProfileView } from "../services/profileViewTracking";
+import { ProfileViewEvent } from "../models/profileViewEvent";
 import {
   buildPointFromLatLng,
   isValidLatitude,
@@ -128,6 +130,148 @@ const ensureTrainerPublicId = async (trainer: Trainer): Promise<string> => {
   console.log(`!!!!!!!!!!!!!!Generated publicId ${generated} for trainer ${trainer.id}`);
   await trainer.update({ publicId: generated });
   return generated;
+};
+
+const computeAge = (birthDate?: Date | null) => {
+  if (!birthDate) {
+    return null;
+  }
+
+  const date = new Date(birthDate);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const diff = Date.now() - date.getTime();
+  const ageDate = new Date(diff);
+  return Math.abs(ageDate.getUTCFullYear() - 1970);
+};
+
+const getAgeBucket = (age: number | null) => {
+  if (age === null) return "unknown";
+  if (age < 18) return "under_18";
+  if (age < 25) return "18_24";
+  if (age < 35) return "25_34";
+  if (age < 45) return "35_44";
+  if (age < 55) return "45_54";
+  return "55_plus";
+};
+
+const normalizeSex = (sex?: string | null) => sex ?? "unknown";
+
+export const getTrainerAnalytics = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    if (!req.user) {
+      sendError(res, 401, "User is not authenticated");
+      return;
+    }
+
+    if (req.user.role !== UserRole.TRAINER) {
+      sendError(res, 403, "You are not a trainer");
+      return;
+    }
+
+    const trainer = await Trainer.findOne({
+      where: { userId: req.user.id },
+    });
+
+    if (!trainer) {
+      sendError(res, 404, "Trainer profile not found");
+      return;
+    }
+
+    const views = await ProfileViewEvent.findAll({
+      where: { trainerId: trainer.id },
+      include: [
+        {
+          model: User,
+          attributes: ["id", "birthDate", "sex", "createdAt"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    const now = new Date();
+    const last7Days = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(now);
+      date.setDate(now.getDate() - (6 - index));
+      const key = date.toISOString().slice(0, 10);
+      return { key, label: key, count: 0 };
+    });
+
+    const sourceBreakdown = {
+      search: 0,
+      map: 0,
+      direct: 0,
+      other: 0,
+    };
+
+    const ageBuckets = {
+      under_18: 0,
+      18_24: 0,
+      25_34: 0,
+      35_44: 0,
+      45_54: 0,
+      "55_plus": 0,
+      unknown: 0,
+    };
+
+    const sexBreakdown = {
+      male: 0,
+      female: 0,
+      non_binary: 0,
+      other: 0,
+      prefer_not_to_say: 0,
+      unknown: 0,
+    };
+
+    for (const view of views) {
+      const createdAt = new Date(view.createdAt);
+      const dayKey = createdAt.toISOString().slice(0, 10);
+      const matchingDay = last7Days.find((day) => day.key === dayKey);
+      if (matchingDay) {
+        matchingDay.count += 1;
+      }
+
+      const sourceType = (view.sourceType as keyof typeof sourceBreakdown) || "other";
+      sourceBreakdown[sourceType] += 1;
+
+      const viewerUser = view.viewerUser as User | undefined;
+      const ageBucket = getAgeBucket(computeAge(viewerUser?.birthDate ?? null));
+      ageBuckets[ageBucket as keyof typeof ageBuckets] += 1;
+
+      const normalizedSex = normalizeSex(viewerUser?.sex);
+      if (normalizedSex in sexBreakdown) {
+        sexBreakdown[normalizedSex as keyof typeof sexBreakdown] += 1;
+      } else {
+        sexBreakdown.unknown += 1;
+      }
+    }
+
+    sendSuccess(res, 200, "Trainer analytics retrieved successfully", {
+      totalViews: trainer.profileViews || 0,
+      uniqueViewEvents: views.length,
+      viewsByDay: last7Days.map(({ key, label, count }) => ({ date: key, label, count })),
+      sourceBreakdown,
+      ageBreakdown: ageBuckets,
+      sexBreakdown,
+      recentViews: views.slice(0, 20).map((view) => ({
+        id: view.id,
+        viewedAt: view.createdAt,
+        sourceType: view.sourceType,
+        viewerUserId: view.viewerUserId,
+        viewerIpAddress: view.viewerIpAddress,
+        age: computeAge((view.viewerUser as User | undefined)?.birthDate ?? null),
+        sex: normalizeSex((view.viewerUser as User | undefined)?.sex),
+      })),
+    });
+  } catch (error) {
+    console.error("Error while fetching trainer analytics", error);
+    sendError(res, 500, "Failed to retrieve trainer analytics");
+  }
 };
 
 export const createTrainer = async (
@@ -310,6 +454,11 @@ export const getTrainer = async (
 
     const publicId = await ensureTrainerPublicId(trainer);
     const trainerNumericId = trainer.id;
+
+    await trackTrainerProfileView({
+      trainer,
+      req: req as Request & { user?: { id?: number } },
+    });
 
     const trainerGyms = await TrainerGym.findAll({
       where: { trainerId: trainerNumericId, isAvailable: true },

@@ -8,6 +8,8 @@ Trainee connects clients with trainers. Core capabilities include:
 
 - Authentication and role-based access (client, trainer, admin)
 - Trainer discovery and profile browsing
+- Public trainer profile views are deduplicated for 24 hours and rate-limited per viewer/IP so profile counts cannot be inflated by refresh spam or automated bursts
+- Trainer analytics are available from the trainer profile screen and include view trends, source breakdown, and audience age/sex buckets where viewer profile data exists
 - Gym management
 - Gym map marker clustering for dense areas
 - Trainer schedule generation and assignment flow
@@ -85,6 +87,9 @@ server/
 - Frontend API URL is set in `frontend/src/constants/config.ts`
 - Frontend uses IP-based API URL in development
 - Backend startup runs idempotent DB bootstrap for `postgis`/`pg_trgm`, syncs models, backfills spatial columns, and ensures GiST/GIN indexes
+- Frontend logout and auth-account switching now clear trainer-specific Redux state and RTK Query cache to prevent trainer profile data from appearing in subsequent non-trainer sessions
+- Public trainer profile screens refetch on mount so the backend records a real view event, while repeated hits are deduplicated and rate-limited server-side
+- Trainers can open a dedicated analytics screen from their profile to inspect 7-day view trends, discovery sources, and demographic breakdowns
 
 ## Prerequisites
 
@@ -244,6 +249,13 @@ All API routers are mounted from backend root router:
 - `/issues`
 - `/trainer-schedule`
 
+Trainer profile browsing behavior:
+
+- `GET /trainer/:trainerId` records profile views on the backend for public trainer profiles
+- `GET /trainer/analytics` returns the authenticated trainer's view analytics, including trend and demographic aggregates
+- Repeated requests from the same viewer are deduplicated within a 24-hour window
+- Rapid repeated requests are rate-limited before a new view event is recorded
+
 Geospatial query support:
 
 - `GET /gyms?lat=<number>&lng=<number>&radiusKm=<number>`
@@ -295,6 +307,7 @@ Billing webhooks:
 	- no hardcoded/mock client list is used
 - Day schedule also supports drag-and-drop assignment flow
 - Weekly schedule refetches slot data when the screen regains focus, so unassignments made in `/trainer-schedule/[date]` are reflected immediately after navigating back.
+- Weekly and day schedule screens now use keyboard-avoiding layout during code entry, with extra keyboard-aware bottom spacing and focus-to-input scrolling so client code fields stay visible; unassigned client pools are rendered in normal scroll flow (not sticky overlays).
 - Slot status management (available, assigned, completed, canceled, no_show)
 - Redesign keeps existing backend contracts and role-based access behavior intact (no API route or auth-flow changes)
 

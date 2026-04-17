@@ -2,6 +2,7 @@ import express from "express";
 import {
   createTrainer,
   deleteTrainer,
+  getTrainerAnalytics,
   searchTrainers,
   getSelfTrainer,
   getTrainer,
@@ -17,6 +18,7 @@ import { subscription } from "../middleware/subscription";
 const router = express.Router();
 
 router.get("/search", searchTrainers);
+router.get("/analytics", authenticate, getTrainerAnalytics);
 router.get("/:trainerId", getTrainer);
 router.use(authenticate);
 

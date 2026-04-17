@@ -3,6 +3,8 @@ import {
     ActivityIndicator,
     Alert,
     Animated,
+    Keyboard,
+    KeyboardEvent,
     KeyboardAvoidingView,
     PanResponder,
     Platform,
@@ -262,12 +264,14 @@ export default function TrainerScheduleScreen() {
     const [assigningSlotId, setAssigningSlotId] = useState<number | null>(null);
     const [dragInProgress, setDragInProgress] = useState(false);
     const [activeDrag, setActiveDrag] = useState<ActiveDrag | null>(null);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
 
     const dragPosRef = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
     const touchOffsetRef = useRef<{ x: number; y: number } | null>(null);
     const hoveredSlotIdRef = useRef<number | null>(null);
     const screenRef = useRef<View | null>(null);
     const screenOffsetRef = useRef({ x: 0, y: 0 });
+    const scrollRef = useRef<ScrollView | null>(null);
 
     const slotRefs = useRef<Record<number, View | null>>({});
     const slotRectsRef = useRef<Record<number, SlotRect>>({});
@@ -352,6 +356,27 @@ export default function TrainerScheduleScreen() {
         persistDragClients();
     }, [dragClients, user?.id, user?.role]);
 
+    useEffect(() => {
+        const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+        const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+        const onShow = (event: KeyboardEvent) => {
+            setKeyboardHeight(event.endCoordinates?.height ?? 0);
+        };
+
+        const onHide = () => {
+            setKeyboardHeight(0);
+        };
+
+        const showSub = Keyboard.addListener(showEvent, onShow);
+        const hideSub = Keyboard.addListener(hideEvent, onHide);
+
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+
     const workingHours = whData?.data || [];
     const slots = useMemo(
         () => [...(slotData?.data || [])].sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
@@ -377,6 +402,13 @@ export default function TrainerScheduleScreen() {
         () => selectedDaySlots.filter((slot) => slot.status === "available"),
         [selectedDaySlots]
     );
+    const contentBottomPadding = keyboardHeight > 0 ? keyboardHeight + 140 : 24;
+
+    const scrollToClientInput = () => {
+        requestAnimationFrame(() => {
+            scrollRef.current?.scrollToEnd({ animated: true });
+        });
+    };
 
     const weekLabel = formatWeekLabel(weekDays);
 
@@ -631,10 +663,16 @@ export default function TrainerScheduleScreen() {
     }
 
     return (
-        <View ref={screenRef} onLayout={measureScreenOffset} style={styles.screen}>
+        <KeyboardAvoidingView
+            style={styles.screen}
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            keyboardVerticalOffset={0}
+        >
+            <View ref={screenRef} onLayout={measureScreenOffset} style={styles.screen}>
             <ScrollView
+                ref={scrollRef}
                 style={styles.container}
-                contentContainerStyle={styles.content}
+                contentContainerStyle={[styles.content, { paddingBottom: contentBottomPadding }]}
                 keyboardShouldPersistTaps="handled"
                 scrollEnabled={!dragInProgress}
             >
@@ -763,40 +801,46 @@ export default function TrainerScheduleScreen() {
                         <OutlineButton label="Assign by Code" onPress={() => setShowAssignSheet(true)} disabled={!selectedSlotId} />
                     </View>
                 </ScheduleCard>
-            </ScrollView>
 
-            <View style={styles.clientPool}>
-                <View style={styles.clientPoolHead}>
-                    <Text style={styles.clientPoolTitle}>Unassigned Clients</Text>
-                    <Text style={styles.clientPoolHint}>Add by 6-digit code, then drag onto an available slot.</Text>
+                <View style={styles.clientPool}>
+                    <View style={styles.clientPoolHead}>
+                        <Text style={styles.clientPoolTitle}>Unassigned Clients</Text>
+                        <Text style={styles.clientPoolHint}>Add by 6-digit code, then drag onto an available slot.</Text>
+                    </View>
+                    <View style={styles.clientPoolInputRow}>
+                        <TextInput
+                            style={[styles.input, styles.flexInput]}
+                            value={dragClientCode}
+                            onChangeText={setDragClientCode}
+                            placeholder="Client code"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            selectionColor={theme.colors.primary}
+                            cursorColor={theme.colors.primary}
+                            autoCapitalize="none"
+                            autoCorrect={false}
+                            onFocus={scrollToClientInput}
+                            keyboardType="number-pad"
+                        />
+                        <GradientActionButton label={resolvingCode ? "Adding..." : "Add"} onPress={onAddDragClient} disabled={resolvingCode} />
+                    </View>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dragList}>
+                        {dragClients.length === 0 ? (
+                            <Text style={styles.emptyText}>No clients in pool yet.</Text>
+                        ) : (
+                            dragClients.map((client) => (
+                                <DragClientChip
+                                    key={client.id}
+                                    client={client}
+                                    dragging={draggingClientId === client.id}
+                                    onDragStart={onDragStart}
+                                    onDragMove={onDragMove}
+                                    onDrop={onDropClient}
+                                />
+                            ))
+                        )}
+                    </ScrollView>
                 </View>
-                <View style={styles.clientPoolInputRow}>
-                    <TextInput
-                        style={[styles.input, styles.flexInput]}
-                        value={dragClientCode}
-                        onChangeText={setDragClientCode}
-                        placeholder="Client code"
-                        keyboardType="number-pad"
-                    />
-                    <GradientActionButton label={resolvingCode ? "Adding..." : "Add"} onPress={onAddDragClient} disabled={resolvingCode} />
-                </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dragList}>
-                    {dragClients.length === 0 ? (
-                        <Text style={styles.emptyText}>No clients in pool yet.</Text>
-                    ) : (
-                        dragClients.map((client) => (
-                            <DragClientChip
-                                key={client.id}
-                                client={client}
-                                dragging={draggingClientId === client.id}
-                                onDragStart={onDragStart}
-                                onDragMove={onDragMove}
-                                onDrop={onDropClient}
-                            />
-                        ))
-                    )}
-                </ScrollView>
-            </View>
+            </ScrollView>
 
             {activeDrag ? (
                 <View pointerEvents="none" style={styles.dragOverlay}>
@@ -911,6 +955,11 @@ export default function TrainerScheduleScreen() {
                             value={selectedSlotId ? String(selectedSlotId) : ""}
                             onChangeText={(value) => setSelectedSlotId(Number(value) || null)}
                             placeholder="Slot ID"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            selectionColor={theme.colors.primary}
+                            cursorColor={theme.colors.primary}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                             keyboardType="number-pad"
                         />
                         <TextInput
@@ -918,13 +967,19 @@ export default function TrainerScheduleScreen() {
                             value={clientCode}
                             onChangeText={setClientCode}
                             placeholder="Client code (6 digits)"
+                            placeholderTextColor={theme.colors.textSecondary}
+                            selectionColor={theme.colors.primary}
+                            cursorColor={theme.colors.primary}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                             keyboardType="number-pad"
                         />
                         <TextInput style={styles.input} value={assignNote} onChangeText={setAssignNote} placeholder="Optional note" />
                     </View>
                 </KeyboardAvoidingView>
             </BottomSheet>
-        </View>
+            </View>
+        </KeyboardAvoidingView>
     );
 }
 
@@ -939,7 +994,7 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 14,
-        paddingBottom: 240,
+        paddingBottom: 24,
         gap: 12,
     },
     deniedWrap: {
@@ -1101,17 +1156,12 @@ const styles = StyleSheet.create({
         color: theme.colors.textSecondary,
     },
     clientPool: {
-        position: "absolute",
-        left: 12,
-        right: 12,
-        bottom: 12,
         borderWidth: 1,
         borderColor: "#CED8E6",
         borderRadius: 18,
         backgroundColor: "#FFFFFF",
         padding: 12,
         gap: 10,
-        maxHeight: 220,
         ...theme.shadows.medium,
     },
     clientPoolHead: {

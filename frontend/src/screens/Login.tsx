@@ -14,9 +14,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
-import { setCredentials, setTrainerProfile } from '../../features/auth/authSlice';
+import { setCredentials } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
-import { useGetTrainerProfileQuery } from '../../features/trainer/trainerApiSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -31,9 +30,6 @@ export default function Login() {
   const [passwordError, setPasswordError] = useState('');
   
   const [login, { isLoading }] = useLoginMutation();
-  const {
-    data: trainerResponse,
-  } = useGetTrainerProfileQuery();
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -68,7 +64,6 @@ export default function Login() {
 
     try {
       const result = await login({ email, password }).unwrap();
-      console.log(trainerResponse);
       console.log('✅ Login successful:', result);
       
       // Store credentials in Redux
@@ -76,10 +71,6 @@ export default function Login() {
         user: result.data.user,
         token: result.data.token,
       }));
-
-      
-
-      dispatch(setTrainerProfile(trainerResponse));
 
       // Navigate to home
       router.replace('/');

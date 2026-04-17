@@ -9,7 +9,7 @@ export const updateProfile = async (
 ) => {
   try {
     const userId = req.user!.id;
-    const { firstName, lastName, phone, profileImageUrl } = req.body;
+    const { firstName, lastName, phone, birthDate, sex, profileImageUrl } = req.body;
 
     const user = await User.findByPk(userId);
     if (!user) {
@@ -21,6 +21,8 @@ export const updateProfile = async (
       firstName: firstName || user.firstName,
       lastName: lastName || user.lastName,
       phone: phone || user.phone,
+      birthDate: birthDate ?? user.birthDate,
+      sex: sex ?? user.sex,
       profileImageUrl: profileImageUrl || user.profileImageUrl,
     });
 

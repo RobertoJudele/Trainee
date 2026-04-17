@@ -123,6 +123,7 @@ export default function RootLayout() {
           <Stack.Screen name="trainer-schedule" options={{ title: "Trainer Schedule" }} />
           <Stack.Screen name="trainer-schedule/[date]" options={{ title: "Day Schedule" }} />
           <Stack.Screen name="trainer-schedule/week-snapshot" options={{ title: "Week Snapshot" }} />
+          <Stack.Screen name="trainer-analytics" options={{ title: "Trainer Analytics" }} />
           <Stack.Screen name="my-schedule" options={{ title: "My Schedule" }} />
           <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
           <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />

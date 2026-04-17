@@ -20,6 +20,7 @@ import {
   selectCurrentToken,
   logOut,
 } from "../auth/authSlice";
+import { UserRole } from "../auth/authApiSlice";
 import {
   useDeleteTrainerProfileMutation,
   useGetTrainerProfileQuery,
@@ -27,6 +28,7 @@ import {
   useUpdateTrainerProfileMutation,
 } from "./trainerApiSlice";
 import { router, useRouter } from "expo-router";
+import { apiSlice } from "../../src/api/apiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import Purchases from "react-native-purchases";
@@ -126,7 +128,9 @@ function TrainerProfile() {
     isLoading,
     isError,
     refetch,
-  } = useGetTrainerProfileQuery();
+  } = useGetTrainerProfileQuery(undefined, {
+    skip: user?.role !== UserRole.TRAINER,
+  });
   const {
     data: specializationsResponse,
     isLoading: isSpecializationsLoading,
@@ -169,10 +173,14 @@ function TrainerProfile() {
   const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
+    if (user?.role !== UserRole.TRAINER) {
+      return;
+    }
+
     if (trainerResponse?.data) {
       dispatch(setTrainerProfile(trainerResponse.data));
     }
-  }, [trainerResponse, dispatch]);
+  }, [trainerResponse, dispatch, user?.role]);
 
   useEffect(() => {
     if (!trainer) return;
@@ -237,6 +245,7 @@ function TrainerProfile() {
 
   const handleLogout = useCallback(async () => {
     dispatch(logOut());
+    dispatch(apiSlice.util.resetApiState());
     try {
       if (Platform.OS === "ios" || Platform.OS === "android") {
         await Purchases.logOut();
@@ -343,6 +352,17 @@ function TrainerProfile() {
     selectedSpecializationIds,
     dispatch,
   ]);
+
+  if (user?.role !== UserRole.TRAINER) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Trainer profile is available only for trainer accounts.</Text>
+        <Pressable style={styles.button} onPress={() => router.push("/")}>
+          <Text style={styles.buttonText}>Go Home</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -656,6 +676,20 @@ function TrainerProfile() {
           </View>
         </View>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.analyticsButton, pressed && styles.buttonPressed]}
+        onPress={() => router.push("/trainer-analytics")}
+      >
+        <View style={styles.analyticsButtonInner}>
+          <Ionicons name="analytics-outline" size={26} color={theme.colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.analyticsButtonTitle}>Trainer Analytics</Text>
+            <Text style={styles.analyticsButtonSub}>View trends, sources, age, and sex breakdowns</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+        </View>
+      </Pressable>
 
       {/* ── Account info ── */}
       <View style={styles.section}>
@@ -1046,6 +1080,30 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     fontSize: 16,
     fontWeight: "600",
+  },
+  analyticsButton: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    ...theme.shadows.small,
+  },
+  analyticsButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 14,
+  },
+  analyticsButtonTitle: {
+    ...typography.body1,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  analyticsButtonSub: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
   },
   dangerZone: {
     backgroundColor: theme.colors.surface,

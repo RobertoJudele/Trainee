@@ -151,6 +151,7 @@ export default function TrainerDetailsScreen() {
     refetch,
   } = useGetTrainerByIdQuery(trainerPublicId, {
     skip: !hasValidTrainerId,
+    refetchOnMountOrArgChange: true,
   });
 
   const fullName =
@@ -296,6 +297,11 @@ export default function TrainerDetailsScreen() {
           <Ionicons name="star" size={16} color="#F59E0B" />
           <Text style={styles.ratingText}>{Number(rating).toFixed(1)}</Text>
           <Text style={styles.reviewsText}>({reviewCount} reviews)</Text>
+        </View>
+
+        <View style={styles.viewRow}>
+          <Ionicons name="eye-outline" size={16} color={theme.colors.textSecondary} />
+          <Text style={styles.viewText}>{trainer?.profileViews ?? 0} views</Text>
         </View>
       </View>
 
@@ -455,12 +461,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
   },
+  viewRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: 10,
+  },
   ratingText: {
     ...typography.body1,
     color: theme.colors.text,
     fontWeight: "700",
   },
   reviewsText: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+  },
+  viewText: {
     ...typography.caption,
     color: theme.colors.textSecondary,
   },

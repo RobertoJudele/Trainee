@@ -18,6 +18,7 @@ import { UserAttributes, UserCreationAttributes } from "../types/user";
 import { UserRole } from "../types/common";
 import crypto from "crypto";
 import { Review } from "./review";
+import { UserSex } from "../types/user";
 
 @Scopes(() => ({
   withPassword: {
@@ -97,6 +98,20 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
     },
   })
   phone?: string;
+
+  @Column({
+    type: DataType.DATEONLY,
+    allowNull: true,
+    field: "birth_date",
+  })
+  birthDate?: Date | null;
+
+  @Column({
+    type: DataType.ENUM("male", "female", "non_binary", "other", "prefer_not_to_say"),
+    allowNull: true,
+    field: "sex",
+  })
+  sex?: UserSex | null;
 
   @Column({
     type: DataType.STRING, // Use STRING instead of ENUM since your DB has string
