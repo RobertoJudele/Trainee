@@ -6,9 +6,11 @@ import {
   updateIssueStatusAdmin,
 } from "../controllers/issue";
 import { authenticate } from "../middleware/auth";
+import { requireAdmin } from "../middleware/authorization";
 import {
   createIssueValidation,
   handleValidationErrors,
+  listIssuesAdminQueryValidation,
   updateIssueStatusValidation,
 } from "../middleware/validation";
 
@@ -18,9 +20,16 @@ router.use(authenticate);
 
 router.post("/", createIssueValidation, handleValidationErrors, createIssue);
 router.get("/me", getMyIssues);
-router.get("/", listIssuesAdmin);
+router.get(
+  "/",
+  requireAdmin,
+  listIssuesAdminQueryValidation,
+  handleValidationErrors,
+  listIssuesAdmin
+);
 router.patch(
   "/:issueId/status",
+  requireAdmin,
   updateIssueStatusValidation,
   handleValidationErrors,
   updateIssueStatusAdmin

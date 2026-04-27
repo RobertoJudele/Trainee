@@ -1,0 +1,127 @@
+\chapter{Analiza cerintelor}
+
+\section{Parti interesate si roluri}
+
+Trainee este construit in jurul a trei roluri principale:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Client}: cauta antrenori, consulta profiluri, urmareste programari si foloseste fluxul de check-in;
+    \item \textbf{Antrenor}: isi administreaza profilul, disponibilitatea si alocarea clientilor pe intervale;
+    \item \textbf{Administrator}: gestioneaza incidentele si operatiunile de moderare.
+\end{itemize}
+
+Pe langa aceste roluri, exista parti interesate secundare: echipa tehnica, zona de suport si furnizorii de servicii externe (billing, email, stocare).
+
+\section{Cerintele functionale}
+
+\subsection{Autentificare si cont}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item Sistemul permite inregistrare cu email si parola.
+    \item Sistemul permite autentificare si emitere token valid.
+    \item Sistemul permite resetare parola prin email.
+    \item Sistemul permite verificarea adresei de email.
+\end{enumerate}
+
+\subsection{Descoperire antrenori}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item Clientul poate cauta antrenori dupa text, localizare, tarif si experienta.
+    \item Rezultatele pot fi sortate dupa criterii functionale, inclusiv distanta.
+    \item Sistemul afiseaza profil complet pentru fiecare antrenor.
+    \item Sistemul limiteaza inflatarea artificiala a vizualizarilor de profil.
+\end{enumerate}
+
+\subsection{Scheduling}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item Antrenorul poate defini intervale de lucru pe zile.
+    \item Sistemul poate genera sloturi pe perioade calendaristice.
+    \item Antrenorul poate aloca clienti pe sloturi disponibile.
+    \item Clientul poate folosi coduri de check-in in fluxul dedicat.
+\end{enumerate}
+
+\subsection{Billing}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item Sistemul gestioneaza entitlement-ul de subscriere pentru antrenori.
+    \item Sistemul proceseaza webhook-uri in mod idempotent.
+    \item Sistemul permite validarea achizitiilor in-app pe platforme mobile.
+\end{enumerate}
+
+\subsection{Suport si administrare}
+
+\begin{enumerate}[leftmargin=1.2cm]
+    \item Utilizatorii pot raporta incidente.
+    \item Administratorii pot filtra si actualiza statusul incidentelor.
+    \item Sistemul pastreaza date suficiente pentru audit operational.
+\end{enumerate}
+
+\section{Cerintele nefunctionale}
+
+\begin{table}[H]
+\centering
+\caption{Cerintele nefunctionale principale}
+\begin{tabular}{p{0.22\textwidth} p{0.68\textwidth}}
+\toprule
+\textbf{Categorie} & \textbf{Criteriu} \\
+\midrule
+Performanta & Endpoint-urile de cautare trebuie sa raspunda stabil pentru trafic uzual; paginarea si limitarea rezultatului sunt obligatorii. \\
+Securitate & Endpoint-urile publice necesita rate limiting; payload-urile sunt validate strict; secretele nu se expun in client. \\
+Disponibilitate & Aplicatia trebuie sa degradeze controlat cand servicii externe devin indisponibile partial. \\
+Scalabilitate & Arhitectura trebuie sa permita extinderea pe mai multe instante si inlocuirea store-ului de rate limiting. \\
+Mentenabilitate & Modulele trebuie separate pe feature-uri, cu tipuri explicite si configuratie centralizata. \\
+Observabilitate & Sistemul trebuie sa poata integra health checks, metrici de latenta si monitorizare trafic. \\
+Conformitate & Produsul trebuie sa includa documente legale si reguli de protectie a datelor. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Constrangeri de proiect}
+
+Cea mai importanta constrangere a fost pastrarea functionalitatii pe durata evolutiei tehnice. Cu alte cuvinte, masurile de hardening nu trebuiau sa rupa fluxurile deja folosite in aplicatie.
+
+Alte constrangeri relevante:
+\begin{itemize}[leftmargin=1.2cm]
+    \item dependenta de servicii externe cu reguli proprii (Stripe, RevenueCat, AWS, SMTP);
+    \item interval de timp limitat pentru implementare si documentare;
+    \item necesitatea alinierii la regulamentele academice de finalizare studii.
+\end{itemize}
+
+\section{Scenarii de utilizare reprezentative}
+
+\subsection{Scenariul S1: Cautare antrenor}
+
+Clientul acceseaza ecranul de cautare, aplica filtre dupa locatie si tarif, apoi intra pe profilul unui antrenor. Backend-ul valideaza query-ul, executa filtrarea si inregistreaza evenimentul de vizualizare conform regulilor anti-abuz.
+
+\subsection{Scenariul S2: Programare asistata de cod}
+
+Antrenorul genereaza sloturi pentru perioada curenta, selecteaza un interval liber si asociaza clientul prin cod de check-in. Sistemul verifica validitatea codului, marcheaza asocierea si actualizeaza statusul slotului.
+
+\subsection{Scenariul S3: Raportare incident}
+
+Utilizatorul transmite un incident din aplicatie, iar administratorul il preia, il analizeaza si actualizeaza statusul pana la rezolvare.
+
+\section{Model de cazuri de utilizare}
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.88\textwidth}{
+\textbf{Placeholder diagrama Use Case} \\
+Diagrama finala va include actorii Client, Antrenor si Administrator, impreuna cu cazurile-cheie: autentificare, cautare antrenori, programari, billing, raportare si administrare incidente.
+}}
+\caption{Model conceptual de cazuri de utilizare}
+\end{figure}
+
+\section{Criterii de acceptanta}
+
+Criteriile de acceptanta definesc pragul minim pentru validarea implementarii:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item Fluxurile de autentificare functioneaza end-to-end.
+    \item Cautarea antrenorilor produce rezultate coerente pentru filtre valide.
+    \item Scheduling-ul permite creare si alocare de sloturi fara erori de integritate.
+    \item Endpoint-urile publice aplica limitare de trafic si validare de payload.
+    \item Billing-ul sincronizeaza entitlement-ul pe baza evenimentelor externe.
+    \item Modulul de issue management acopera ciclul complet de raportare si rezolvare.
+\end{enumerate}
+
+Prin formalizarea acestor cerinte, capitolul urmator poate detalia arhitectura tehnica aleasa pentru a le sustine.

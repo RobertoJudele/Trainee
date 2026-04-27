@@ -15,6 +15,12 @@ import {
 	createCheckoutSession,
 	createPortalSession,
 } from "../controllers/billing";
+import { checkoutRateLimit } from "../middleware/rateLimitProfiles";
+import {
+	createCheckoutSessionValidation,
+	createPortalSessionValidation,
+	handleValidationErrors,
+} from "../middleware/validation";
 
 const router = express.Router();
 router.use("/gyms", gymRouter);
@@ -31,7 +37,19 @@ router.use("/issues", issueRouter);
 router.use("/trainer-schedule", trainerScheduleRouter);
 
 // Backward-compatible paths used by the existing checkout screen.
-router.post("/create-checkout-session", createCheckoutSession);
-router.post("/create-portal-session", createPortalSession);
+router.post(
+	"/create-checkout-session",
+	checkoutRateLimit,
+	createCheckoutSessionValidation,
+	handleValidationErrors,
+	createCheckoutSession
+);
+router.post(
+	"/create-portal-session",
+	checkoutRateLimit,
+	createPortalSessionValidation,
+	handleValidationErrors,
+	createPortalSession
+);
 
 export default router;

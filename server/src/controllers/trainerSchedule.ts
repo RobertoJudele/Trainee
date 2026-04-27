@@ -8,6 +8,7 @@ import { TrainerWorkingHour } from "../models/trainerWorkingHour";
 import { User } from "../models/user";
 import { SlotStatus } from "../types/schedule";
 import { sendError, sendSuccess } from "../utils/response";
+import { getRequiredEnv } from "../config/env";
 
 const parseTimeToMinutes = (time: string): number => {
   const [h, m] = time.split(":").map(Number);
@@ -23,9 +24,13 @@ const toDateAtMinutes = (day: Date, minutes: number): Date => {
 
 const buildCheckInCode = () => Math.floor(100000 + Math.random() * 900000).toString();
 
+const CHECKIN_CODE_SECRET = getRequiredEnv("CHECKIN_CODE_SECRET");
+
 const hashCheckInCode = (code: string) => {
-  const secret = process.env.CHECKIN_CODE_SECRET || "trainer-checkin-secret";
-  return crypto.createHash("sha256").update(`${code}:${secret}`).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(`${code}:${CHECKIN_CODE_SECRET}`)
+    .digest("hex");
 };
 
 const getTrainerByUserId = async (userId: number) => {

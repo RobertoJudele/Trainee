@@ -1,7 +1,23 @@
 // frontend/src/constants/config.ts
-const WORK_IP = "10.50.20.58"; // Update this when your IP changes
-const HOME_IP = "192.168.1.129"; // Update this when your IP changes
-const GAROAFA_IP = "192.168.0.40"; // Update this when your IP changes
-export const API_URL = __DEV__
-  ? `http://${WORK_IP}:8000`
-  : "https://your-production-api.com";
+const normalizeUrl = (value: string): string => value.replace(/\/+$/, "");
+
+const resolveApiUrl = (): string => {
+  const explicit = process.env.EXPO_PUBLIC_API_URL?.trim();
+  if (explicit) {
+    return normalizeUrl(explicit);
+  }
+
+  const devUrl = process.env.EXPO_PUBLIC_API_URL_DEV?.trim();
+  if (__DEV__ && devUrl) {
+    return normalizeUrl(devUrl);
+  }
+
+  const prodUrl = process.env.EXPO_PUBLIC_API_URL_PROD?.trim();
+  if (!__DEV__ && prodUrl) {
+    return normalizeUrl(prodUrl);
+  }
+
+  return __DEV__ ? "http://localhost:8000" : "https://your-production-api.com";
+};
+
+export const API_URL = resolveApiUrl();

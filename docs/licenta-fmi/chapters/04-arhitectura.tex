@@ -1,0 +1,127 @@
+\chapter{Arhitectura sistemului}
+
+\section{Vedere de ansamblu}
+
+Arhitectura Trainee este distribuita si impartita clar pe straturi: aplicatie mobila, backend API, baza de date relationala si servicii externe. Structura monorepo pastreaza codul intr-un singur spatiu de lucru, dar fara sa amestece responsabilitatile dintre frontend si backend.
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Placeholder diagrama de context} \\
+Nivel 1: client mobil (Expo React Native) \\
+Nivel 2: API server (Express + TypeScript) \\
+Nivel 3: PostgreSQL + PostGIS \\
+Servicii externe: Stripe, RevenueCat, SMTP, AWS S3
+}}
+\caption{Diagrama de context a sistemului Trainee}
+\end{figure}
+
+\section{Arhitectura frontend}
+
+Frontend-ul este impartit in module functionale:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \texttt{app/} pentru ecrane si rute Expo Router;
+    \item \texttt{features/} pentru logica pe domenii (auth, billing, gym, schedule, trainer, support);
+    \item \texttt{src/api/} pentru comunicatia comuna cu backend-ul;
+    \item \texttt{src/constants/} pentru configurari de runtime.
+\end{itemize}
+
+Aceasta organizare limiteaza cuplarea dintre componente si permite extindere graduala. Comunicatia cu backend-ul este standardizata prin RTK Query, ceea ce aduce cache, invalidare si retry intr-o forma controlabila.
+
+\subsection{Fluxul de date in frontend}
+
+Fluxul uzual este direct:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item utilizatorul declanseaza o actiune in UI;
+    \item ecranul apeleaza un hook RTK Query;
+    \item request-ul HTTP pleaca spre backend, cu token daca sesiunea este autentificata;
+    \item starea se actualizeaza in store, iar interfata se rerandeaza.
+\end{enumerate}
+
+In practica, acest tip de flux face comportamentul mai previzibil si simplifica tratarea erorilor de retea.
+
+\section{Arhitectura backend}
+
+Backend-ul foloseste Express si o separare clasica pe layere:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Routes}: definirea endpoint-urilor pe domenii;
+    \item \textbf{Middleware}: validare, autentificare, autorizare, rate limiting;
+    \item \textbf{Controllers}: orchestration pentru cazurile de utilizare;
+    \item \textbf{Models}: mapare ORM pe tabelele PostgreSQL;
+    \item \textbf{Services}: integrare externa si utilitare de domeniu.
+\end{itemize}
+
+\subsection{Pipeline HTTP}
+
+Pe endpoint-urile principale, ordinea executiei este:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item parsare request;
+    \item aplicare profile de rate limit;
+    \item validare schema pe \texttt{body/query/params};
+    \item autentificare JWT, daca ruta este protejata;
+    \item autorizare pe rol, unde este cazul;
+    \item executie controller;
+    \item raspuns standardizat.
+\end{enumerate}
+
+Acest pipeline separa clar controalele defensive de logica de business si reduce duplicarea de cod.
+
+\section{Persistenta si modelul relational}
+
+Persistenta este realizata in PostgreSQL. Entitatea centrala este \texttt{User}, extinsa cu profil de antrenor, relatii cu sali, sloturi de programare si evenimente operationale.
+
+Zonele cu impact major sunt:
+\begin{itemize}[leftmargin=1.2cm]
+    \item date de identitate si roluri;
+    \item profiluri de antrenori, specializari si recenzii;
+    \item programari, coduri de check-in si statusuri de slot;
+    \item issue management si evenimente billing pentru idempotenta.
+\end{itemize}
+
+PostGIS si pg\_trgm completeaza modelul pentru cautare geografica si textuala la cost operational rezonabil.
+
+\section{Integrarea cu servicii externe}
+
+\subsection{Billing}
+
+Fluxurile de billing sunt gandite sa functioneze in moduri de runtime diferite. Endpoint-urile de webhook sunt separate si procesate idempotent, tocmai pentru a evita efecte secundare in scenarii de retry.
+
+\subsection{Email}
+
+Email-ul este folosit pentru verificare cont si resetare parola. Separarea in servicii dedicate izoleaza dependinta de furnizor si simplifica inlocuirea ulterioara.
+
+\subsection{Storage media}
+
+Resursele media sunt stocate in S3, iar backend-ul gestioneaza metadatele si asocierea cu entitatile de domeniu relevante.
+
+\section{Arhitectura de securitate}
+
+Modelul de securitate este stratificat:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Layer 1 - Input hardening}: validare stricta si control pentru campuri neasteptate;
+    \item \textbf{Layer 2 - Traffic shaping}: rate limiting profilat;
+    \item \textbf{Layer 3 - Identity and access}: JWT + autorizare pe rol;
+    \item \textbf{Layer 4 - Secret management}: secrete obligatorii in configurare;
+    \item \textbf{Layer 5 - Business anti-abuse}: reguli anti-inflatie pentru vizualizari profil.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Placeholder diagrama securitate multi-layer} \\
+Input Validation -> Rate Limiting -> Auth/Role -> Business Rules -> Persistence
+}}
+\caption{Model defensiv pe mai multe straturi}
+\end{figure}
+
+\section{Scalabilitate si extensibilitate}
+
+Desi proiectul este in etapa academica, structura actuala sustine extensii reale:
+\begin{itemize}[leftmargin=1.2cm]
+    \item inlocuirea rate limiter in-memory cu un store distribuit;
+    \item introducerea observabilitatii avansate (Prometheus + Grafana);
+    \item separarea unor domenii in servicii dedicate, daca traficul o cere;
+    \item adaugarea de metode noi de autentificare si plata.
+\end{itemize}
+
+In ansamblu, arhitectura aleasa echilibreaza viteza de livrare cu cerintele de siguranta si mentenabilitate.

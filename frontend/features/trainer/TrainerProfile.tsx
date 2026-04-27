@@ -792,6 +792,11 @@ function TrainerProfile() {
             {isSubscribing ? <ActivityIndicator size="small" color={theme.colors.text} /> : <Ionicons name="receipt-outline" size={18} color={theme.colors.text} />}
             <Text style={styles.dropdownItemText}>{isSubscribing ? "Processing..." : "Manage Subscription"}</Text>
           </Pressable>
+
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push("/legal"); }}>
+            <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>Legal & Policies</Text>
+          </Pressable>
           
           <View style={styles.dropdownDivider} />
           

@@ -14,11 +14,13 @@ interface ResendVerificationRequest {
 }
 
 export const verifyEmail = async (
-  req: Request<{}, {}, {}, VerifyEmailRequest>,
+  req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const { email, token } = req.query;
+    const email = typeof req.query.email === "string" ? req.query.email : "";
+    const token = typeof req.query.token === "string" ? req.query.token : "";
+
     if (!token || !email) {
       sendError(res, 400, "Token and email invalid");
       return;
@@ -33,7 +35,7 @@ export const verifyEmail = async (
       return;
     }
 
-    const isValid = await user.verfiyEmailToken(token as string);
+    const isValid = await user.verfiyEmailToken(token);
     await user.save();
     // console.log(token);
 
@@ -71,14 +73,15 @@ export const resendVerifyEmail = async (
         200,
         "If an account with this email exists, a verification email has been sent"
       );
+      return;
     }
 
-    const token = user!.generateEmailVerificationToken();
+    const token = user.generateEmailVerificationToken();
     await user?.save();
 
     await emailService.resendVerificationEmail(
       email,
-      `${user?.firstName} ${user?.lastName}`,
+      `${user.firstName} ${user.lastName}`,
       token
     );
     sendSuccess(res, 200, "Verification email sent successfully");

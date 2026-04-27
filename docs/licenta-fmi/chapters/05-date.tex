@@ -1,0 +1,106 @@
+\chapter{Proiectarea datelor si persistenta}
+
+\section{Obiective de modelare}
+
+Modelul de date pentru Trainee este construit astfel incat sa sustina simultan mai multe nevoi: identitate pe roluri, fluxuri de marketplace, scheduling operational si trasabilitate pentru evenimente sensibile. Cu alte cuvinte, nu este doar un model pentru stocare, ci un model pentru operare.
+
+In proiectare s-a urmarit un compromis controlat intre normalizare si simplitatea interogarilor frecvente. Accentul a fost pus pe scenariile de citire din zona de discovery si profiluri, unde timpul de raspuns influenteaza direct experienta utilizatorului.
+
+\section{Entitati principale}
+
+\begin{table}[H]
+\centering
+\caption{Entitati principale in baza de date}
+\begin{tabular}{p{0.24\textwidth} p{0.66\textwidth}}
+\toprule
+\textbf{Entitate} & \textbf{Rol in sistem} \\
+\midrule
+User & Entitatea centrala pentru identitate, autentificare si roluri. \\
+Trainer & Extensie de profil profesional pentru utilizatorii cu rol de antrenor. \\
+Gym & Catalog de sali cu localizare geografica si metadate operationale. \\
+TrainerGym & Relatie many-to-many intre antrenori si sali. \\
+Specialization / TrainerSpecialization & Domenii de expertiza si asocierea lor cu profilurile de antrenor. \\
+Review & Feedback numeric si textual pentru antrenori. \\
+TrainerScheduleSlot & Intervale efective pentru sesiuni programate. \\
+TrainerWorkingHour & Sablon de disponibilitate pe zile ale saptamanii. \\
+ClientCheckInCode & Coduri de validare pentru asociere client-slot. \\
+Issue & Incident reporting si workflow administrativ de rezolvare. \\
+BillingWebhookEvent & Persistenta evenimentelor de billing pentru procesare idempotenta. \\
+ProfileViewEvent & Evenimente folosite pentru analytics si protectie anti-abuz. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Relatii si cardinalitati}
+
+Cardinalitatile dominante in model sunt:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \texttt{User} 1:1 \texttt{Trainer};
+    \item \texttt{Trainer} M:N \texttt{Gym} prin \texttt{TrainerGym};
+    \item \texttt{Trainer} M:N \texttt{Specialization} prin \texttt{TrainerSpecialization};
+    \item \texttt{Trainer} 1:N \texttt{TrainerScheduleSlot};
+    \item \texttt{TrainerScheduleSlot} 0:1 \texttt{User} pentru clientul alocat;
+    \item \texttt{Trainer} 1:N \texttt{Review};
+    \item \texttt{Trainer} 1:N \texttt{ProfileViewEvent}.
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Placeholder ERD} \\
+Diagrama finala va include entitatile principale, cheile primare/straine si cardinalitatile explicite.
+}}
+\caption{Model ERD conceptual pentru Trainee}
+\end{figure}
+
+\section{Persistenta pentru cautare geospatiala}
+
+Pentru cautare pe proximitate, modelul foloseste coordonate geografice pe entitatile relevante. PostGIS permite calcul de distanta, filtrare pe raza si ordonare dupa apropiere direct in query.
+
+Beneficii operationale:
+\begin{itemize}[leftmargin=1.2cm]
+    \item rezultate mai relevante pentru utilizatorii mobili;
+    \item reducerea logicii geospatiale in client;
+    \item baza tehnica pentru extinderi ulterioare (de exemplu geofencing).
+\end{itemize}
+
+\section{Indexare si performanta interogarilor}
+
+Strategia de indexare urmareste traseele de trafic ridicat:
+\begin{itemize}[leftmargin=1.2cm]
+    \item indexuri pe chei straine pentru join-uri frecvente;
+    \item indexuri geospatiale pe coloane de localizare;
+    \item indexuri text/trigram pentru cautare dupa nume si metadate.
+\end{itemize}
+
+Aceasta combinatie scade costul interogarilor in zona de discovery si pastreaza timpi de raspuns stabili pe volume mai mari de date.
+
+\section{Fluxuri de date sensibile}
+
+\subsection{Fluxul de check-in}
+
+Codurile de check-in nu sunt stocate in clar, ci hash-uite. In plus, sunt legate de reguli de expirare si stare de consum. Astfel, reutilizarea abuziva devine dificil de realizat.
+
+\subsection{Fluxul de webhook billing}
+
+Evenimentele de billing se salveaza cu identificatori unici pentru procesare idempotenta. Practic, acelasi eveniment retrimis nu produce efecte duble.
+
+\section{Calitatea datelor si validare}
+
+Integritatea datelor este protejata in doua etape:
+\begin{itemize}[leftmargin=1.2cm]
+    \item validare stricta in middleware, inainte de logica de business;
+    \item constrangeri si tipuri explicite la nivel de model ORM.
+\end{itemize}
+
+Aceasta separare elimina devreme datele invalide si reduce inconsistenta persistentei.
+
+\section{Retentie, audit si conformitate}
+
+Modelul include entitati dedicate auditului operational (vizualizari profil, issue tracking, evenimente webhook). Aceste date sustin analiza incidentelor, raportarea tehnica si justificarea unor decizii de securitate.
+
+La nivel de conformitate, componenta tehnica este completata de documentele legale ale platformei (politica de confidentialitate si termeni de utilizare).
+
+\section{Concluzie intermediara}
+
+Modelul de date este suficient de expresiv pentru functionalitatile curente si suficient de flexibil pentru extensii viitoare. Deciziile de proiectare au urmarit claritatea operationala, protectia datelor sensibile si trasabilitatea proceselor critice.

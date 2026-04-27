@@ -242,6 +242,7 @@ export default function TrainerScheduleScreen() {
     const [assignSlotByCode, { isLoading: assignByCodeLoading }] = useAssignSlotByClientCodeMutation();
 
     const [showTemplateSheet, setShowTemplateSheet] = useState(false);
+    const [showSettingsSheet, setShowSettingsSheet] = useState(false);
     const [showGenerateSheet, setShowGenerateSheet] = useState(false);
     const [showAssignSheet, setShowAssignSheet] = useState(false);
 
@@ -683,7 +684,7 @@ export default function TrainerScheduleScreen() {
                             <Text style={styles.title}>Trainer Schedule</Text>
                         </View>
                         <View style={styles.heroActions}>
-                            <Pressable style={styles.iconBtn} onPress={() => setShowTemplateSheet(true)}>
+                            <Pressable style={styles.iconBtn} onPress={() => setShowSettingsSheet(true)}>
                                 <Ionicons name="settings-outline" size={18} color={theme.colors.text} />
                             </Pressable>
                             <OutlineButton
@@ -859,6 +860,37 @@ export default function TrainerScheduleScreen() {
                     </Animated.View>
                 </View>
             ) : null}
+
+            <BottomSheet
+                visible={showSettingsSheet}
+                title="Settings"
+                subtitle="Choose a schedule action or open the app legal documents."
+                onClose={() => setShowSettingsSheet(false)}
+            >
+                <View style={styles.settingsMenu}>
+                    <Pressable
+                        style={styles.settingsMenuItem}
+                        onPress={() => {
+                            setShowSettingsSheet(false);
+                            setShowTemplateSheet(true);
+                        }}
+                    >
+                        <Ionicons name="calendar-outline" size={18} color={theme.colors.text} />
+                        <Text style={styles.settingsMenuText}>Working Day Template</Text>
+                    </Pressable>
+
+                    <Pressable
+                        style={styles.settingsMenuItem}
+                        onPress={() => {
+                            setShowSettingsSheet(false);
+                            router.push("/legal");
+                        }}
+                    >
+                        <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
+                        <Text style={styles.settingsMenuText}>Legal & Policies</Text>
+                    </Pressable>
+                </View>
+            </BottomSheet>
 
             <BottomSheet
                 visible={showTemplateSheet}
@@ -1265,5 +1297,24 @@ const styles = StyleSheet.create({
     },
     sheetControls: {
         gap: 10,
+    },
+    settingsMenu: {
+        gap: 10,
+    },
+    settingsMenuItem: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 14,
+        borderRadius: 14,
+        backgroundColor: "#F8FAFC",
+        borderWidth: 1,
+        borderColor: "#E2E8F0",
+    },
+    settingsMenuText: {
+        ...typography.body2,
+        color: theme.colors.text,
+        fontWeight: "700",
     },
 });

@@ -7,6 +7,8 @@ Full-stack fitness trainer marketplace with a React Native (Expo) client and a N
 Trainee connects clients with trainers. Core capabilities include:
 
 - Authentication and role-based access (client, trainer, admin)
+- Public endpoint rate limiting with graceful `429` responses and `Retry-After` headers
+- Strict request validation with schema-based checks and unknown-field monitoring/enforcement modes
 - Trainer discovery and profile browsing
 - Public trainer profile views are deduplicated for 24 hours and rate-limited per viewer/IP so profile counts cannot be inflated by refresh spam or automated bursts
 - Trainer analytics are available from the trainer profile screen and include view trends, source breakdown, and audience age/sex buckets where viewer profile data exists
@@ -17,6 +19,16 @@ Trainee connects clients with trainers. Core capabilities include:
 - Billing integration (Stripe)
 - Image upload support (AWS S3)
 - Issue reporting
+
+## Legal
+
+The full privacy policy is available in [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+The full terms of use are available in [TERMS_OF_USE.md](TERMS_OF_USE.md).
+The app also exposes a combined "Legal & Policies" screen from the trainer schedule settings menu.
+
+## Academic Documentation
+
+An FMI-oriented LaTeX draft for the bachelor's thesis is available in [docs/licenta-fmi/](docs/licenta-fmi/), including chapter structure, appendices, and APA bibliography setup.
 
 ## Monorepo Structure
 
@@ -84,8 +96,7 @@ server/
 ## Current Runtime Behavior
 
 - Backend default port: `8000` (from `PORT`, fallback 8000)
-- Frontend API URL is set in `frontend/src/constants/config.ts`
-- Frontend uses IP-based API URL in development
+- Frontend API URL is loaded from Expo env (`EXPO_PUBLIC_API_URL` / env-specific fallbacks)
 - Backend startup runs idempotent DB bootstrap for `postgis`/`pg_trgm`, syncs models, backfills spatial columns, and ensures GiST/GIN indexes
 - Frontend logout and auth-account switching now clear trainer-specific Redux state and RTK Query cache to prevent trainer profile data from appearing in subsequent non-trainer sessions
 - Public trainer profile screens refetch on mount so the backend records a real view event, while repeated hits are deduplicated and rate-limited server-side
@@ -101,10 +112,19 @@ server/
 
 ## Environment Variables
 
-Create `server/.env` with at least:
+Copy templates first:
+
+```bash
+cp server/.env.example server/.env
+cp frontend/.env.example frontend/.env
+```
+
+Set `server/.env` values:
 
 ```env
 PORT=8000
+NODE_ENV=development
+TRUST_PROXY=true
 
 DB_HOST=localhost
 DB_PORT=5432
@@ -134,11 +154,30 @@ AWS_REGION=...
 AWS_S3_BUCKET=...
 
 CHECKIN_CODE_SECRET=your_checkin_secret
+
+# Unknown field strictness mode: monitor | enforce
+INPUT_UNKNOWN_FIELDS_MODE=monitor
+
+# Optional rate limit overrides
+RATE_LIMIT_PUBLIC_WINDOW_MS=60000
+RATE_LIMIT_PUBLIC_MAX=120
+RATE_LIMIT_AUTH_WINDOW_MS=900000
+RATE_LIMIT_AUTH_MAX=25
+RATE_LIMIT_EMAIL_WINDOW_MS=900000
+RATE_LIMIT_EMAIL_MAX=15
+RATE_LIMIT_CHECKOUT_WINDOW_MS=60000
+RATE_LIMIT_CHECKOUT_MAX=30
+RATE_LIMIT_WEBHOOK_WINDOW_MS=60000
+RATE_LIMIT_WEBHOOK_MAX=600
 ```
 
 Frontend billing keys (Expo):
 
 ```env
+EXPO_PUBLIC_API_URL=http://localhost:8000
+EXPO_PUBLIC_API_URL_DEV=http://localhost:8000
+EXPO_PUBLIC_API_URL_PROD=https://your-production-api.com
+
 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=appl_...
 EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY=goog_...
@@ -149,8 +188,7 @@ EXPO_PUBLIC_ENABLE_STRIPE_CHECKOUT=0
 
 Note:
 
-- Frontend currently reads API URL from `frontend/src/constants/config.ts` (not from env)
-- Update the local IP in that file when your network changes
+- Frontend API URLs are env-driven; avoid hardcoded local IP addresses in source files.
 - Real RevenueCat purchase testing requires an Expo development build (Expo Go preview mode does not execute real store purchases)
 
 ## Setup and Run
@@ -196,13 +234,12 @@ npm run web
 ### Backend (`server/package.json`)
 
 - `npm run dev` - start API using ts-node-dev
+- `npm run typecheck` - run backend TypeScript checks (`tsc --noEmit`)
+- `npm run lint` - run backend static checks (currently aliases to typecheck)
+- `npm run test` - run Jest tests (`--passWithNoTests` enabled)
 - `npm run seed:gyms` - seed gyms (fallback sample data by default)
 - `npm run seed:specializations` - seed specialization records
 - `npm run seed:trainer-specializations` - seed trainer-specialization relations
-
-Important:
-
-- There is currently no `build` script in backend `package.json`
 
 Gym import modes for Romania:
 
@@ -231,6 +268,7 @@ npm run seed:gyms
 - `npm run android`
 - `npm run ios`
 - `npm run web`
+- `npm run typecheck`
 
 ## API Routing Summary
 
@@ -280,6 +318,56 @@ Billing webhooks:
 - Trainer search responses expose trainer `id` as the public UUID and include `internalId` for internal compatibility flows.
 - Issue reporting supports both legacy numeric `trainerId` and secure `trainerPublicId`.
 - Incremental numeric IDs are still used internally for relational integrity in the database.
+
+## Security Hardening Rollout
+
+- Public endpoints apply rate limits with endpoint-specific defaults (auth, email verification, discovery reads, checkout compatibility routes, webhooks).
+- Throttled responses use the existing API envelope and return `429` with `Retry-After` headers.
+- Validation now supports unknown-field policy through `INPUT_UNKNOWN_FIELDS_MODE`:
+	- `monitor` (default): unexpected fields are logged and request continues.
+	- `enforce`: unexpected fields are rejected with `400 Validation failed`.
+
+Recommended rollout:
+
+1. Deploy with `INPUT_UNKNOWN_FIELDS_MODE=monitor`.
+2. Observe logs for payload drift (minimum 7 days).
+3. Fix payload drift in clients/integrations.
+4. Switch to `INPUT_UNKNOWN_FIELDS_MODE=enforce`.
+
+## Secret Rotation and Hygiene Commands
+
+Rotate immediately if any credential was committed or leaked:
+
+1. Stripe: rotate `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
+2. RevenueCat: rotate `REVENUECAT_SECRET_API_KEY` and `REVENUECAT_WEBHOOK_AUTH`.
+3. AWS: rotate `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+4. Google Places: rotate `GOOGLE_PLACES_API_KEY`.
+5. JWT secrets: rotate `JWT_SECRET` and `JWT_RESET_SECRET` (plan token/session invalidation).
+
+Useful commands:
+
+```bash
+# Check tracked env files
+git ls-files | grep -E "(^|/)\.env($|\.)"
+
+# PowerShell equivalent
+git ls-files | Select-String -Pattern "(^|/)\.env($|\.)"
+
+# Scan tracked files for common secret markers
+git grep -n "sk_live_|AKIA|REVENUECAT_SECRET_API_KEY|JWT_SECRET="
+
+# PowerShell equivalent
+git grep -n "sk_live_|AKIA|REVENUECAT_SECRET_API_KEY|JWT_SECRET="
+
+# Verification checks
+cd server
+npm run typecheck
+npm run lint
+npm run test
+
+cd ../frontend
+npm run typecheck
+```
 
 ## Trainer Scheduling Feature (Current)
 
@@ -373,8 +461,7 @@ Billing webhooks:
 
 ## Suggested Next Improvements
 
-- Add backend scripts for `build`, `typecheck`, and `test`
-- Add `.env.example` files for frontend and backend
-- Move frontend API URL/IP selection to environment config
+- Add backend `build` script for production artifact generation
+- Add request/response audit logging pipeline for security events
 - Add API docs (OpenAPI/Swagger)
 - Add CI checks for linting and type safety

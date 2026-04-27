@@ -11,12 +11,28 @@ import {
   ensureSpatialAndSearchInfrastructure,
 } from "./services/databaseBootstrap";
 import { seedSpecializations } from "./seeds/specializationSeed";
-import { User } from "./models/user";
+import { getMissingRequiredSecurityEnv, securityConfig } from "./config/security";
+import {
+  publicReadRateLimit,
+  webhookRateLimit,
+} from "./middleware/rateLimitProfiles";
 
 const app = express();
 
-app.post("/billing/webhook", express.raw({ type: "application/json" }), stripeWebhook);
-app.post("/billing/webhooks/revenuecat", express.json({ type: "application/json" }), revenueCatWebhook);
+app.set("trust proxy", securityConfig.trustProxy);
+
+app.post(
+  "/billing/webhook",
+  webhookRateLimit,
+  express.raw({ type: "application/json" }),
+  stripeWebhook
+);
+app.post(
+  "/billing/webhooks/revenuecat",
+  webhookRateLimit,
+  express.json({ type: "application/json" }),
+  revenueCatWebhook
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -30,17 +46,18 @@ app.use(
 
 app.use(mainRouter);
 
-app.get("/", async (req, res) => {
-  try {
-    const users = await User.findAll();
-    res.json(users);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send("Internal Server Error");
-  }
+app.get("/", publicReadRateLimit, (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: "Trainee API is running",
+    data: {
+      service: "trainee-api",
+      uptimeSeconds: Math.floor(process.uptime()),
+    },
+  });
 });
 
-app.get("/hello", (request, response) => {
+app.get("/hello", publicReadRateLimit, (request, response) => {
   response.send("<h1>Hello World, How Are You?</h1>");
 });
 
@@ -58,6 +75,19 @@ const PORT = Number(process.env.PORT) || 8000;
 
 const startServer = async () => {
   try {
+    const missingSecurityEnv = getMissingRequiredSecurityEnv();
+    if (missingSecurityEnv.length > 0) {
+      const errorMessage = `Missing required security environment variables: ${missingSecurityEnv.join(
+        ", "
+      )}`;
+
+      if (process.env.NODE_ENV === "production") {
+        throw new Error(errorMessage);
+      }
+
+      console.warn(`[SECURITY_WARNING] ${errorMessage}`);
+    }
+
     await sequelize.authenticate();
     console.log("Database connection established successfully.");
 

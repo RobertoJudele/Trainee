@@ -1,0 +1,121 @@
+\chapter{Implementare frontend}
+
+\section{Obiective de implementare frontend}
+
+Frontend-ul Trainee urmareste sa ofere o experienta mobila coerenta pentru toate rolurile de utilizator, pastrand in acelasi timp o integrare stricta cu API-ul backend. Din punct de vedere tehnic, obiectivele au fost:
+\begin{itemize}[leftmargin=1.2cm]
+    \item navigatie predictibila pe fluxuri;
+    \item sincronizare stabila a starii aplicatiei;
+    \item tratare consistenta a erorilor de autentificare si retea;
+    \item reutilizare de componente intre ecrane similare.
+\end{itemize}
+
+\section{Structura aplicatiei}
+
+Aplicatia este organizata in trei zone majore:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \texttt{app/}: ecrane, layout global si rute Expo Router;
+    \item \texttt{features/}: module pe domenii (auth, trainer, gym, billing, schedule, support);
+    \item \texttt{src/}: infrastructura comuna (base API slice, tema, tipuri, componente reutilizabile).
+\end{itemize}
+
+Aceasta impartire reduce riscul de dependinte circulare si permite evolutie modulara pe feature-uri.
+
+\section{Navigatie si layout}
+
+Navigatia este construita cu Expo Router, astfel incat structura fisierelor se reflecta direct in rute. Layout-ul global configureaza providerii transversali (Redux, Stripe, RevenueCat) si punctele de intrare in fluxurile principale.
+
+Avantajele acestei alegeri sunt:
+\begin{itemize}[leftmargin=1.2cm]
+    \item definire clara a rutelor;
+    \item extindere simpla cu ecrane noi;
+    \item centralizare a configuratiei de sesiune si billing in root layout.
+\end{itemize}
+
+\section{State management si comunicare API}
+
+\subsection{Redux Toolkit + RTK Query}
+
+Starea globala este gestionata cu Redux Toolkit, iar comunicarea cu backend-ul este realizata prin RTK Query slices pe domenii. Modelul rezultat aduce:
+\begin{itemize}[leftmargin=1.2cm]
+    \item cache transparent pe interogari frecvente;
+    \item invalidare controlata dupa mutatii;
+    \item mai putin boilerplate fata de implementari manuale.
+\end{itemize}
+
+\subsection{Base API si reauth}
+
+Aplicatia foloseste un \texttt{apiSlice} centralizat care adauga token-ul in request-urile autentificate si trateaza scenariile de sesiune expirata. In consecinta, logica de autentificare ramane separata de ecranele de business.
+
+\section{Ecrane si fluxuri cheie}
+
+\subsection{Home si quick actions}
+
+Ecranul principal adapteaza actiunile rapide in functie de rol, astfel incat utilizatorul sa ajunga rapid la fluxurile relevante.
+
+\subsection{Search si profile trainer}
+
+Fluxul de discovery include cautare, filtrare si acces la profiluri detaliate. Rezultatele sunt paginate, iar UI afiseaza in prim-plan date utile deciziei (rating, experienta, tarif, localizare).
+
+\subsection{Gym map}
+
+Ecranul de harta combina vizualizarea geografica cu selectie de sali, inclusiv mecanisme de clustering pentru zone cu densitate mare.
+
+\subsection{Scheduling}
+
+Zona de scheduling pentru antrenori este una dintre cele mai complexe, deoarece reuneste:
+\begin{itemize}[leftmargin=1.2cm]
+    \item gestionare intervale pe zile;
+    \item generare sloturi pe perioade calendaristice;
+    \item asignare client pe slot;
+    \item fluxuri asistate de cod de check-in;
+    \item stocare locala pentru liste temporare.
+\end{itemize}
+
+\subsection{Billing si entitlement}
+
+Checkout-ul si sincronizarea cu RevenueCat sunt integrate in layout-ul global pentru a mentine coerenta starii de entitlement in raport cu rolul de antrenor.
+
+\subsection{Legal UI}
+
+Aplicatia include ecranul \texttt{Legal \& Policies}, accesibil din zona de profil/setari, pentru transparenta privind termenii de utilizare si politica de confidentialitate.
+
+\section{Design UX si consistenta vizuala}
+
+Tema UI centralizeaza culori, spacing, tipografie si umbre, mentinand o prezentare unitara intre ecrane. Acest strat comun simplifica mentenanta si reduce variatiile necontrolate.
+
+Principiile UX urmarite au fost:
+\begin{itemize}[leftmargin=1.2cm]
+    \item feedback clar pentru loading, eroare si succes;
+    \item diferentiere vizibila a actiunilor principale;
+    \item densitate controlata in ecrane cu multe date;
+    \item confirmari explicite pentru actiuni sensibile.
+\end{itemize}
+
+\section{Gestionarea erorilor in frontend}
+
+Erorile API sunt mapate in mesaje relevante pentru utilizator, iar fallback-urile de navigatie previn blocarea in ecrane neutilizabile. In plus, la logout se curata starea sensibila pentru a evita transferul de context intre sesiuni.
+
+\section{Configuratie runtime}
+
+Endpoint-ul API si cheile publice sunt gestionate prin variabile de mediu Expo, fara hardcodare in codul sursa. Aceasta decizie simplifica trecerea intre medii si reduce erorile de conectivitate, in special pe dispozitive reale.
+
+\section{Limitari si directii de imbunatatire frontend}
+
+Limitari observate:
+\begin{itemize}[leftmargin=1.2cm]
+    \item lipsa unui error boundary global dedicat;
+    \item dependenta de conectivitate pentru unele fluxuri critice;
+    \item nevoia de extindere a accesibilitatii.
+\end{itemize}
+
+Directii de evolutie:
+\begin{itemize}[leftmargin=1.2cm]
+    \item integrare crash/reporting la nivel client;
+    \item extindere testare automata e2e pe mobil;
+    \item optimizare accesibilitate pentru componente interactive complexe.
+\end{itemize}
+
+\section{Concluzie intermediara}
+
+Frontend-ul Trainee arata ca un stack mobil modern poate sustine fluxuri de business diverse intr-o aplicatie unica, cu UI coerent si contracte API clare. Organizarea pe feature-uri, impreuna cu RTK Query, ofera o baza buna pentru extinderea produsului.
