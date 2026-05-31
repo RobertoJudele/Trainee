@@ -1,560 +1,467 @@
-# # Trainee
+# Trainee
 
-# 💪 Trainer Marketplace
+Full-stack fitness trainer marketplace with a React Native (Expo) client and a Node.js/Express + PostgreSQL backend.
 
-A full-stack mobile marketplace connecting fitness trainers with clients. Trainers can create profiles and offer their services, while clients can browse, search, and contact trainers.
+## Overview
 
-## 📱 Features
+Trainee connects clients with trainers. Core capabilities include:
 
-### For Clients
+- Authentication and role-based access (client, trainer, admin)
+- Public endpoint rate limiting with graceful `429` responses and `Retry-After` headers
+- Strict request validation with schema-based checks and unknown-field monitoring/enforcement modes
+- Trainer discovery and profile browsing
+- Public trainer profile views are deduplicated for 24 hours and rate-limited per viewer/IP so profile counts cannot be inflated by refresh spam or automated bursts
+- Trainer analytics are available from the trainer profile screen and include view trends, source breakdown, and audience age/sex buckets where viewer profile data exists
+- Gym management
+- Gym map marker clustering for dense areas
+- Trainer schedule generation and assignment flow
+- Client check-in code workflow for trainer scheduling
+- Billing integration (Stripe)
+- Image upload support (AWS S3)
+- Issue reporting
 
-- ✅ Browse trainers without an account (anonymous mode)
-- ✅ Search and filter trainers by location, specialty, price, and ratings
-- ✅ View detailed trainer profiles with photos and reviews
-- ✅ Contact trainers directly through the app
-- ✅ Leave reviews and ratings (requires account)
-- ✅ Save favorite trainers
+## Legal
 
-### For Trainers
+The full privacy policy is available in [PRIVACY_POLICY.md](PRIVACY_POLICY.md).
+The full terms of use are available in [TERMS_OF_USE.md](TERMS_OF_USE.md).
+The app also exposes a combined "Legal & Policies" screen from the trainer schedule settings menu.
 
-- ✅ Create detailed professional profiles
-- ✅ Upload multiple photos showcasing training style
-- ✅ Set hourly rates and session prices
-- ✅ List specializations (Yoga, CrossFit, Personal Training, etc.)
-- ✅ Receive and manage client inquiries
-- ✅ Track profile views and analytics
-- ✅ Subscription-based visibility
+## Academic Documentation
 
-### Platform Features
+An FMI-oriented LaTeX draft for the bachelor's thesis is available in [docs/licenta-fmi/](docs/licenta-fmi/), including chapter structure, appendices, and APA bibliography setup.
 
-- 🔐 JWT-based authentication with role management
-- 📧 Email verification system
-- 🔄 Account upgrade (Client → Trainer)
-- 🌍 Location-based trainer search
-- ⭐ Review and rating system
-- 💬 In-app messaging (planned)
-- 💳 Stripe payment integration (planned)
+## Monorepo Structure
 
----
+```text
+.
+|- frontend/   Expo Router React Native app
+|- server/     Express + Sequelize TypeScript API
+`- README.md
+```
 
-## 🏗️ Tech Stack
+### Frontend high-level structure
+
+```text
+frontend/
+|- app/                    Expo Router screens and route groups
+|- features/               RTK Query slices and feature modules
+|- src/
+|  |- api/                 Base API slice and auth reauth flow
+|  |- components/          Reusable UI pieces
+|  |- constants/           App constants including API URL
+|  |- lib/                 Theme and shared utilities
+|  |- screens/             Legacy or shared screen modules
+|  `- types/               Frontend TypeScript types
+`- package.json
+```
+
+### Backend high-level structure
+
+```text
+server/
+|- src/
+|  |- config/              Stripe, email, S3 configuration
+|  |- controllers/         Route handlers
+|  |- middleware/          Auth and request guards
+|  |- models/              Sequelize models
+|  |- routes/              Express routers
+|  |- seeds/               Seed scripts
+|  |- services/            Service-layer helpers
+|  |- types/               Backend TypeScript types
+|  `- utils/               Utility helpers
+`- package.json
+```
+
+## Tech Stack
+
+### Frontend
+
+- Expo + React Native + TypeScript
+- Expo Router
+- Redux Toolkit + RTK Query
+- AsyncStorage
+- Stripe React Native SDK
 
 ### Backend
 
-- **Runtime:** Node.js with TypeScript
-- **Framework:** Express.js
-- **Database:** PostgreSQL with Sequelize ORM
-- **Authentication:** JWT (jsonwebtoken) + bcryptjs
-- **Image Storage:** AWS S3 (SDK v3)
-- **Email:** Nodemailer
-- **Validation:** express-validator
-- **API Documentation:** RESTful API design
+- Node.js + Express + TypeScript
+- Sequelize (sequelize-typescript) + PostgreSQL
+- PostGIS (geospatial storage + distance queries)
+- pg_trgm (trigram text search acceleration)
+- JWT auth
+- Nodemailer (SMTP)
+- Stripe
+- AWS S3 (uploads)
 
-### Frontend (Mobile)
+## Current Runtime Behavior
 
-- **Framework:** React Native (Expo)
-- **Language:** TypeScript
-- **Navigation:** React Navigation v6
-- **State Management:** Redux Toolkit + Redux Persist
-- **HTTP Client:** Axios
-- **Form Handling:** React Hook Form
-- **UI Components:** React Native Paper
-- **Storage:** AsyncStorage
+- Backend default port: `8000` (from `PORT`, fallback 8000)
+- Frontend API URL is loaded from Expo env (`EXPO_PUBLIC_API_URL` / env-specific fallbacks)
+- Backend startup runs idempotent DB bootstrap for `postgis`/`pg_trgm`, syncs models, backfills spatial columns, and ensures GiST/GIN indexes
+- Frontend logout and auth-account switching now clear trainer-specific Redux state and RTK Query cache to prevent trainer profile data from appearing in subsequent non-trainer sessions
+- Public trainer profile screens refetch on mount so the backend records a real view event, while repeated hits are deduplicated and rate-limited server-side
+- Trainers can open a dedicated analytics screen from their profile to inspect 7-day view trends, discovery sources, and demographic breakdowns
 
-### DevOps & Tools
+## Prerequisites
 
-- **Version Control:** Git
-- **Testing:** Jest + Supertest
-- **Code Quality:** ESLint + Prettier
-- **CI/CD:** GitHub Actions (planned)
+- Node.js 18+
+- npm
+- PostgreSQL running locally or reachable remotely
+- PostgreSQL with permission to enable `postgis` and `pg_trgm` extensions
+- Expo-compatible environment (Expo Go or emulator/simulator)
 
----
+## Environment Variables
 
-## 📁 Project Structure
-
-```
-trainer-marketplace/
-├── backend/                    # Node.js/Express API
-│   ├── src/
-│   │   ├── config/            # Configuration files (DB, S3, email)
-│   │   ├── controllers/       # Request handlers
-│   │   ├── middleware/        # Auth, validation, error handling
-│   │   ├── models/            # Sequelize models
-│   │   ├── routes/            # API routes
-│   │   ├── services/          # Business logic (email, S3)
-│   │   ├── types/             # TypeScript types
-│   │   └── utils/             # Helper functions
-│   ├── tests/                 # API tests
-│   ├── scripts/               # Utility scripts (seeds, migrations)
-│   └── package.json
-│
-└── mobile/                     # React Native Expo App
-    ├── src/
-    │   ├── components/        # Reusable UI components
-    │   ├── navigation/        # Navigation configuration
-    │   ├── screens/           # App screens
-    │   ├── store/             # Redux store, slices, API
-    │   ├── types/             # TypeScript types
-    │   ├── constants/         # Colors, config
-    │   └── utils/             # Helper functions
-    ├── assets/                # Images, fonts, icons
-    └── package.json
-```
-
----
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- **Node.js** 18+ and npm
-- **PostgreSQL** 15+
-- **AWS Account** (for S3 image storage)
-- **Expo CLI** (`npm install -g expo-cli`)
-- **iOS Simulator** (macOS) or **Android Studio** (for Android)
-
-### Backend Setup
-
-1. **Clone the repository**
+Copy templates first:
 
 ```bash
-git clone https://github.com/yourusername/trainer-marketplace.git
-cd trainer-marketplace/backend
+cp server/.env.example server/.env
+cp frontend/.env.example frontend/.env
 ```
 
-2. **Install dependencies**
-
-```bash
-npm install
-```
-
-3. **Set up environment variables**
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your configuration:
+Set `server/.env` values:
 
 ```env
+PORT=8000
 NODE_ENV=development
-PORT=3000
+TRUST_PROXY=true
 
-# Database
 DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=trainee
 DB_USER=postgres
-DB_PASSWORD=your_password
+DB_PASS=your_password
 
-# JWT
-JWT_SECRET=your-super-secret-jwt-key-change-this
+JWT_SECRET=your_jwt_secret
 JWT_EXPIRES_IN=7d
 
-# AWS S3
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_REGION=us-east-1
-AWS_S3_BUCKET=trainer-marketplace-images
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_email_password_or_app_password
 
-# Email (for verification)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-FROM_EMAIL=noreply@trainermarketplace.com
+# Billing runtime mode
+BILLING_MODE=revenuecat_only
 
-# Frontend URL
-FRONTEND_URL=http://localhost:3000
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+REVENUECAT_SECRET_API_KEY=rc_secret_...
+REVENUECAT_WEBHOOK_AUTH=your_webhook_auth_value
+REVENUECAT_ENTITLEMENT_ID=trainer_subscription
+
+AWS_ACCESS_KEY_ID=...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=...
+AWS_S3_BUCKET=...
+
+CHECKIN_CODE_SECRET=your_checkin_secret
+
+# Unknown field strictness mode: monitor | enforce
+INPUT_UNKNOWN_FIELDS_MODE=monitor
+
+# Optional rate limit overrides
+RATE_LIMIT_PUBLIC_WINDOW_MS=60000
+RATE_LIMIT_PUBLIC_MAX=120
+RATE_LIMIT_AUTH_WINDOW_MS=900000
+RATE_LIMIT_AUTH_MAX=25
+RATE_LIMIT_EMAIL_WINDOW_MS=900000
+RATE_LIMIT_EMAIL_MAX=15
+RATE_LIMIT_CHECKOUT_WINDOW_MS=60000
+RATE_LIMIT_CHECKOUT_MAX=30
+RATE_LIMIT_WEBHOOK_WINDOW_MS=60000
+RATE_LIMIT_WEBHOOK_MAX=600
 ```
 
-4. **Create PostgreSQL database**
+Frontend billing keys (Expo):
 
-```bash
-createdb trainer_marketplace
+```env
+EXPO_PUBLIC_API_URL=http://localhost:8000
+EXPO_PUBLIC_API_URL_DEV=http://localhost:8000
+EXPO_PUBLIC_API_URL_PROD=https://your-production-api.com
+
+EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=appl_...
+EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY=goog_...
+EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID=trainer_subscription
+EXPO_PUBLIC_REVENUECAT_PRODUCT_ID=com.trainee.trainer_monthly
+EXPO_PUBLIC_ENABLE_STRIPE_CHECKOUT=0
 ```
 
-5. **Run database migrations**
+Note:
+
+- Frontend API URLs are env-driven; avoid hardcoded local IP addresses in source files.
+- Real RevenueCat purchase testing requires an Expo development build (Expo Go preview mode does not execute real store purchases)
+
+## Setup and Run
+
+### 1. Install dependencies
 
 ```bash
-npm run build
-npm run migrate
-```
+cd server
+npm install
 
-6. **Seed initial data (optional)**
-
-```bash
-npm run seed:specializations
-npm run seed:trainers
-```
-
-7. **Start development server**
-
-```bash
-npm run dev
-```
-
-Backend will run at `http://localhost:3000`
-
-### Mobile App Setup
-
-1. **Navigate to mobile directory**
-
-```bash
-cd ../mobile
-```
-
-2. **Install dependencies**
-
-```bash
+cd ../frontend
 npm install
 ```
 
-3. **Configure API endpoint**
-
-Edit `src/constants/config.ts`:
-
-```typescript
-const ENV = {
-  dev: {
-    apiUrl: "http://localhost:3000/api/v1", // Use your computer's IP for physical devices
-  },
-};
-```
-
-4. **Start Expo development server**
+### 2. Start backend
 
 ```bash
+cd server
+npm run dev
+```
+
+TypeScript note:
+
+- Backend `tsconfig.json` keeps `baseUrl` for existing `src/...` imports and sets `ignoreDeprecations: "6.0"` to prevent TypeScript 6 from failing startup.
+
+### 3. Start frontend
+
+```bash
+cd frontend
 npm start
 ```
 
-5. **Run on device/simulator**
-
-- Press `i` for iOS simulator
-- Press `a` for Android emulator
-- Scan QR code with Expo Go app for physical device
-
----
-
-## 🧪 Testing
-
-### Backend Tests
+Useful frontend commands:
 
 ```bash
-cd backend
-npm test                # Run all tests
-npm run test:watch      # Watch mode
-npm run test:coverage   # Coverage report
+npm run android
+npm run ios
+npm run web
 ```
 
-### Mobile Tests (planned)
+## Available Scripts
+
+### Backend (`server/package.json`)
+
+- `npm run dev` - start API using ts-node-dev
+- `npm run typecheck` - run backend TypeScript checks (`tsc --noEmit`)
+- `npm run lint` - run backend static checks (currently aliases to typecheck)
+- `npm run test` - run Jest tests (`--passWithNoTests` enabled)
+- `npm run seed:gyms` - seed gyms (fallback sample data by default)
+- `npm run seed:specializations` - seed specialization records
+- `npm run seed:trainer-specializations` - seed trainer-specialization relations
+
+Gym import modes for Romania:
+
+- Google Places import (primary): set `IMPORT_GOOGLE_PLACES_ROMANIA=1` and `GOOGLE_PLACES_API_KEY`.
+- PowerShell example:
+
+```powershell
+cd server
+$env:IMPORT_GOOGLE_PLACES_ROMANIA = "1"
+$env:GOOGLE_PLACES_API_KEY = "<your-google-api-key>"
+npm run seed:gyms
+```
+
+- Google importer runs Romania-wide grid batching, paginates results, retries transient API failures, deduplicates entries, country-verifies each place via Google Place Details, and stores results in the `gyms` table used by the app map.
+- Optional Google tuning env vars: `GOOGLE_PLACES_MAX_RETRIES`, `GOOGLE_PLACES_REQUEST_TIMEOUT_MS`, `GOOGLE_PLACES_REQUEST_PAUSE_MS`, `GOOGLE_PLACES_PAGE_TOKEN_WAIT_MS`, `GOOGLE_PLACES_RADIUS_METERS`, `GOOGLE_PLACES_GRID_STEP_DEGREES`, `GOOGLE_PLACES_MAX_PAGES_PER_CELL`, `GOOGLE_PLACES_MAX_CELLS`, `GOOGLE_PLACES_FETCH_DETAILS`.
+- `GOOGLE_PLACES_FETCH_DETAILS=0` still fetches minimal details for country verification (RO-only safety) and skips phone/opening-hours enrichment.
+- Legacy OSM import is still available when `IMPORT_OSM_ROMANIA=1` is set.
+- If both Google and OSM flags are enabled, Google mode takes precedence (set `IMPORT_OSM_ROMANIA=0` to remove the warning).
+- If no import flag is set, the seed uses built-in fallback sample gyms.
+- OSM resilience env vars: `OSM_OVERPASS_URL`, `OSM_OVERPASS_URLS` (comma-separated mirrors), `OSM_MAX_RETRIES`, `OSM_REQUEST_TIMEOUT_MS`, `OSM_REQUEST_PAUSE_MS`.
+- No external POI provider guarantees perfect real-world completeness; plan for periodic re-imports and optional manual augmentation for missing gyms.
+
+### Frontend (`frontend/package.json`)
+
+- `npm start`
+- `npm run android`
+- `npm run ios`
+- `npm run web`
+- `npm run typecheck`
+
+## API Routing Summary
+
+All API routers are mounted from backend root router:
+
+- `/auth`
+- `/users`
+- `/email`
+- `/reviews`
+- `/trainer`
+- `/trainer-images`
+- `/specialization`
+- `/trainer-specializations`
+- `/gyms`
+- `/billing`
+- `/issues`
+- `/trainer-schedule`
+
+Trainer profile browsing behavior:
+
+- `GET /trainer/:trainerId` records profile views on the backend for public trainer profiles
+- `GET /trainer/analytics` returns the authenticated trainer's view analytics, including trend and demographic aggregates
+- Repeated requests from the same viewer are deduplicated within a 24-hour window
+- Rapid repeated requests are rate-limited before a new view event is recorded
+
+Geospatial query support:
+
+- `GET /gyms?lat=<number>&lng=<number>&radiusKm=<number>`
+	- filters gyms by radius and sorts by distance when `lat`/`lng` are provided
+- `GET /trainer/search?...&lat=<number>&lng=<number>&radius=<number>&sortBy=distance`
+	- filters trainers by radius and can sort by geospatial distance
+
+Backward-compatible billing paths also exist:
+
+- `/create-checkout-session`
+- `/create-portal-session`
+
+Billing webhooks:
+
+- `/billing/webhook` (Stripe)
+- `/billing/webhooks/revenuecat` (RevenueCat)
+
+## Public IDs and Security
+
+- Trainer profiles now use a non-incremental public UUID (`public_id`) for public-facing lookup flows.
+- Public trainer details endpoint (`GET /trainer/:trainerId`) accepts trainer public UUIDs.
+- Trainer search responses expose trainer `id` as the public UUID and include `internalId` for internal compatibility flows.
+- Issue reporting supports both legacy numeric `trainerId` and secure `trainerPublicId`.
+- Incremental numeric IDs are still used internally for relational integrity in the database.
+
+## Security Hardening Rollout
+
+- Public endpoints apply rate limits with endpoint-specific defaults (auth, email verification, discovery reads, checkout compatibility routes, webhooks).
+- Throttled responses use the existing API envelope and return `429` with `Retry-After` headers.
+- Validation now supports unknown-field policy through `INPUT_UNKNOWN_FIELDS_MODE`:
+	- `monitor` (default): unexpected fields are logged and request continues.
+	- `enforce`: unexpected fields are rejected with `400 Validation failed`.
+
+Recommended rollout:
+
+1. Deploy with `INPUT_UNKNOWN_FIELDS_MODE=monitor`.
+2. Observe logs for payload drift (minimum 7 days).
+3. Fix payload drift in clients/integrations.
+4. Switch to `INPUT_UNKNOWN_FIELDS_MODE=enforce`.
+
+## Secret Rotation and Hygiene Commands
+
+Rotate immediately if any credential was committed or leaked:
+
+1. Stripe: rotate `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`.
+2. RevenueCat: rotate `REVENUECAT_SECRET_API_KEY` and `REVENUECAT_WEBHOOK_AUTH`.
+3. AWS: rotate `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`.
+4. Google Places: rotate `GOOGLE_PLACES_API_KEY`.
+5. JWT secrets: rotate `JWT_SECRET` and `JWT_RESET_SECRET` (plan token/session invalidation).
+
+Useful commands:
 
 ```bash
-cd mobile
-npm test
+# Check tracked env files
+git ls-files | grep -E "(^|/)\.env($|\.)"
+
+# PowerShell equivalent
+git ls-files | Select-String -Pattern "(^|/)\.env($|\.)"
+
+# Scan tracked files for common secret markers
+git grep -n "sk_live_|AKIA|REVENUECAT_SECRET_API_KEY|JWT_SECRET="
+
+# PowerShell equivalent
+git grep -n "sk_live_|AKIA|REVENUECAT_SECRET_API_KEY|JWT_SECRET="
+
+# Verification checks
+cd server
+npm run typecheck
+npm run lint
+npm run test
+
+cd ../frontend
+npm run typecheck
 ```
 
----
-
-## 📡 API Documentation
-
-### Base URL
-
-```
-http://localhost:3000/api/v1
-```
-
-### Authentication Endpoints
-
-#### Register User
-
-```http
-POST /auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "Password123",
-  "firstName": "John",
-  "lastName": "Doe",
-  "role": "client" // or "trainer"
-}
-```
-
-#### Login
-
-```http
-POST /auth/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "Password123"
-}
-```
-
-#### Get Profile
-
-```http
-GET /auth/profile
-Authorization: Bearer {token}
-```
-
-### Trainer Endpoints
-
-#### Create Trainer Profile
-
-```http
-POST /trainers
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "bio": "Experienced yoga instructor...",
-  "experienceYears": 5,
-  "hourlyRate": 75.00,
-  "locationCity": "San Francisco",
-  "locationState": "California",
-  "specializationIds": [1, 2]
-}
-```
-
-#### Search Trainers
-
-```http
-GET /search/trainers?city=San%20Francisco&specialization=Yoga&minRating=4
-```
-
-#### Upload Trainer Images
-
-```http
-POST /images/trainer/single
-Authorization: Bearer {token}
-Content-Type: multipart/form-data
-
-image: [file]
-```
-
-### Review Endpoints
-
-#### Create Review
-
-```http
-POST /reviews/{trainerId}
-Authorization: Bearer {token}
-Content-Type: application/json
-
-{
-  "rating": 5,
-  "reviewText": "Great trainer! Very professional..."
-}
-```
-
-For complete API documentation, see [API_DOCS.md](./API_DOCS.md) (planned).
-
----
-
-## 🔐 Environment Variables
-
-### Backend Required Variables
-
-- `DATABASE_URL` or `DB_*` - PostgreSQL connection
-- `JWT_SECRET` - Secret key for JWT tokens
-- `AWS_*` - S3 credentials for image storage
-- `SMTP_*` - Email service credentials
-
-### Backend Optional Variables
-
-- `PORT` - Server port (default: 3000)
-- `NODE_ENV` - Environment (development/production)
-- `BCRYPT_ROUNDS` - Password hashing rounds (default: 12)
-
-### Mobile Required Variables
-
-None - configuration is in code
-
----
-
-## 🗄️ Database Schema
-
-### Core Tables
-
-- **users** - All user accounts (clients, trainers, admins)
-- **trainer_profiles** - Extended trainer information
-- **specializations** - Training specialties (Yoga, CrossFit, etc.)
-- **trainer_specializations** - Many-to-many relationship
-- **trainer_images** - Trainer profile photos
-- **reviews** - Trainer reviews and ratings
-- **subscriptions** - Trainer subscription status (planned)
-- **messages** - In-app messaging (planned)
-
-See [DATABASE.md](./DATABASE.md) for complete schema documentation (planned).
-
----
-
-## 🎨 Design Decisions
-
-### Why This Architecture?
-
-**Backend: TypeScript + Express**
-
-- Type safety catches errors early
-- Express is battle-tested and flexible
-- Easy to scale with microservices later
-
-**Database: PostgreSQL**
-
-- ACID compliance for financial transactions
-- Excellent geospatial support for location search
-- Robust for complex relationships (users ↔ trainers ↔ reviews)
-
-**Mobile: React Native + Expo**
-
-- Single codebase for iOS and Android
-- Fast development with hot reload
-- Large ecosystem of libraries
-- Easy OTA updates with Expo
-
-**State: Redux Toolkit**
-
-- Predictable state management
-- Excellent DevTools
-- Redux Persist for offline support
-- Type-safe with TypeScript
-
-**Images: AWS S3**
-
-- Scalable and reliable
-- Global CDN for fast delivery
-- Cost-effective pay-per-use
-
----
-
-## 🔮 Roadmap
-
-### Phase 1: MVP (Current)
-
-- ✅ User authentication and roles
-- ✅ Trainer profiles and search
-- ✅ Review system
-- ✅ Image uploads
-- ⏳ Mobile app screens
-
-### Phase 2: Core Features
-
-- ⏳ In-app messaging system
-- ⏳ Stripe subscription payments for trainers
-- ⏳ Email notifications
-- ⏳ Push notifications
-- ⏳ Advanced search filters
-
-### Phase 3: Enhanced Experience
-
-- 📅 Booking/scheduling system
-- 📊 Trainer analytics dashboard
-- 💳 Commission-based booking payments
-- 🎥 Video calling integration
-- 🏆 Trainer verification badges
-
-### Phase 4: Growth
-
-- 🌐 Multi-language support
-- 🗺️ Map view for trainers
-- 📱 Web app version
-- 🤖 AI trainer recommendations
-- 📈 Advanced analytics
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-### Code Style
-
-- Follow TypeScript best practices
-- Use ESLint and Prettier (configs included)
-- Write meaningful commit messages
-- Add tests for new features
-- Update documentation
-
----
-
-## 🐛 Known Issues
-
-- Email verification links expire after 24 hours (by design)
-- Image uploads limited to 10MB (configurable)
-- Search radius limited to 500km (configurable)
-- Anonymous users must create account to contact trainers
-
-See [GitHub Issues](https://github.com/yourusername/trainer-marketplace/issues) for tracking.
-
----
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👥 Authors
-
-- **Your Name** - _Initial work_ - [YourGitHub](https://github.com/yourusername)
-
----
-
-## 🙏 Acknowledgments
-
-- Inspired by platforms like Thumbtack and TaskRabbit
-- Built during learning journey with Claude AI
-- Thanks to the open-source community
-
----
-
-## 📞 Support
-
-- **Documentation:** [Link to docs]
-- **Issues:** [GitHub Issues](https://github.com/yourusername/trainer-marketplace/issues)
-- **Email:** support@trainermarketplace.com
-
----
-
-## 🎓 Learning Resources
-
-This project is great for learning:
-
-- Full-stack TypeScript development
-- RESTful API design
-- React Native mobile development
-- Redux state management
-- AWS S3 integration
-- JWT authentication
-- PostgreSQL database design
-
-### Useful Links
-
-- [React Native Docs](https://reactnative.dev/docs/getting-started)
-- [Expo Docs](https://docs.expo.dev/)
-- [Redux Toolkit Docs](https://redux-toolkit.js.org/)
-- [Sequelize Docs](https://sequelize.org/docs/v6/)
-- [Express.js Docs](https://expressjs.com/)
-
----
-
-## 📊 Project Stats
-
-- **Backend:** ~15,000 lines of TypeScript
-- **Mobile:** ~8,000 lines of TypeScript/TSX
-- **Database:** 10+ tables with relationships
-- **API Endpoints:** 25+ RESTful endpoints
-- **Test Coverage:** 80%+ (goal)
-
----
-
-**Built with ❤️ using TypeScript, React Native, and Node.js**
+## Trainer Scheduling Feature (Current)
+
+- Trainer weekly/day schedule views in frontend
+- Weekly trainer screen now uses an app-like planner layout with:
+	- top header actions for settings and slot generation
+	- dedicated "Snapshot" action that opens a separate week snapshot screen (`/trainer-schedule/week-snapshot`)
+	- horizontal day-strip navigation inside the selected week
+	- focused single-day slot canvas with status pills and drag-drop targets
+	- fixed bottom "Unassigned Clients" pool for quick drag assignment
+- Week snapshot is now a standalone screen (instead of inline card content) and shows week-level status metrics plus day-by-day slot summaries.
+- Day subscreen (`/trainer-schedule/[date]`) now uses the same visual language with:
+	- focused available-slot section for drag/tap selection
+	- explicit assignment confirmation card (slot + client + optional note)
+	- fixed bottom client pool for add-by-code and reuse
+- Client assignment uses check-in code based workflow
+- Weekly schedule supports real drag-and-drop assignment:
+	- trainer adds a client to drag list by resolving a real 6-digit client code
+	- resolved clients are saved locally per trainer account for future sessions and can be reused later even after the original code expires
+	- resolved clients added in weekly view are mirrored into the day-view client pool storage so opening `/trainer-schedule/[date]` shows the same clients
+	- drag client chip over an `available` slot to assign the saved client directly by `clientId`
+	- dragging uses a floating overlay chip rendered above all cards to avoid going behind calendar columns
+	- weekly scroll is temporarily disabled while dragging to keep chip movement attached to finger on mobile devices
+	- hovered slot highlight and assign loading feedback are shown in UI
+	- no hardcoded/mock client list is used
+- Day schedule also supports drag-and-drop assignment flow
+- Weekly schedule refetches slot data when the screen regains focus, so unassignments made in `/trainer-schedule/[date]` are reflected immediately after navigating back.
+- Weekly and day schedule screens now use keyboard-avoiding layout during code entry, with extra keyboard-aware bottom spacing and focus-to-input scrolling so client code fields stay visible; unassigned client pools are rendered in normal scroll flow (not sticky overlays).
+- Slot status management (available, assigned, completed, canceled, no_show)
+- Redesign keeps existing backend contracts and role-based access behavior intact (no API route or auth-flow changes)
+
+## Gym Map UX (Current)
+
+- The map fetches nearby gyms based on current map center and adaptive radius (`lat`, `lng`, `radiusKm`) instead of loading all gyms at once.
+- Nearby gym markers are clustered at lower zoom levels to prevent overlap
+- Tapping a cluster zooms in to expand into smaller clusters or individual gyms
+- Tapping an individual gym marker keeps the existing bottom-sheet details flow
+- Rapid marker taps are throttled and recenter animations are guarded to avoid request/animation storms.
+- Programmatic recenter after marker tap does not trigger an extra nearby refetch; nearby refetch is driven by meaningful user map movement.
+- While a gym detail sheet is active, map region-driven nearby refetch updates are deferred and applied after the selection is closed.
+- In dense-city areas, the map filters clustering input to a buffered viewport window and limits maximum marker render count to keep panning stable.
+- Cluster cells are globally anchored so small map pans do not reshuffle all cluster keys every frame.
+- Dense clusters increase bucket size automatically, and tiny rapid map movements are cooldown-throttled before applying new fetch/render regions.
+
+## Home Feed UX (Current)
+
+- Top Rated Trainers on Home is intentionally capped to 5 cards for faster scan and reduced feed length
+- Each Top Rated trainer card is tappable and opens the trainer details route (`/trainers/[id]`)
+- "See All" in the Top Rated section still navigates to full trainer search
+
+## Trainer Profile UX (Current)
+
+- Bottom-heavy action blocks were collapsed into a clean unified top-right Dropdown navigation modal.
+- Active actions (Edit, Manage Subscription, Log Out, Delete Profile) are hidden in the dropdown unless invoked.
+- Bottom actions are strictly contextual, displaying 'Save' and 'Cancel' safely during edit mode natively.
+
+## Trainer Social Contact UX (Current)
+
+- Trainer profiles now support optional social links for Instagram, Facebook, and WhatsApp.
+- Trainers can add, update, or clear these social contacts from their profile editor.
+- WhatsApp contact is stored as an international phone number (or compatible WhatsApp link that includes a phone number).
+- Public trainer details (`/trainers/[id]`) show a single Contact button only when at least one social link is available.
+- Tapping Contact opens a chooser with available platforms; WhatsApp tries to open direct in-app chat with the trainer first.
+- Backend validation enforces safe platform formats: URL/domain checks for Instagram/Facebook and phone-or-WhatsApp-link checks for WhatsApp.
+
+## Auth Model
+
+- JWT bearer tokens
+- Backend `authenticate` middleware protects secured routes
+- Role-based behavior implemented at controller level (`client`, `trainer`, `admin`)
+
+## Billing Mode (Current)
+
+- RevenueCat is the active billing runtime for trainer subscriptions in this release.
+- Stripe code paths are intentionally preserved in backend and frontend for future reactivation.
+- Stripe runtime actions are currently disabled by billing mode guards (`BILLING_MODE=revenuecat_only`).
+- Backend tracks subscription source (`none`, `stripe`, `apple`, `google`) and IAP metadata fields on trainer profiles.
+- Authenticated billing endpoints:
+	- `GET /billing/entitlement` returns normalized subscription entitlement state.
+	- `POST /billing/iap/validate` and `POST /billing/revenuecat/sync` sync RevenueCat-backed mobile subscription state.
+- RevenueCat webhook ingestion endpoint:
+	- `POST /billing/webhooks/revenuecat` supports auth-header validation and idempotent event processing.
+- Subscription gating middleware resolves entitlement through a unified service, and trainer update routes enforce subscription checks before applying updates.
+
+## Known Notes
+
+- Backend startup currently includes `sequelize.sync({ alter: true })`; use caution in production
+- Backend startup also seeds specializations automatically
+- Spatial migration is backward-compatible: legacy `latitude`/`longitude` are still returned while PostGIS `location` is used for proximity queries
+- Some debug logging is enabled for DB/API flows
+
+## Suggested Next Improvements
+
+- Add backend `build` script for production artifact generation
+- Add request/response audit logging pipeline for security events
+- Add API docs (OpenAPI/Swagger)
+- Add CI checks for linting and type safety

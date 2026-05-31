@@ -1,0 +1,96 @@
+\chapter{Implementare backend}
+
+\section{Organizarea codului backend}
+
+Backend-ul este implementat in TypeScript si organizat pe directoare cu roluri clare: \texttt{controllers}, \texttt{routes}, \texttt{middleware}, \texttt{models}, \texttt{services}, \texttt{config}. Structura nu este doar estetica; ea permite lucru incremental pe domenii fara sa introduca dependinte fragile.
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Routes}: definesc endpoint-urile si ordinea middleware-urilor;
+    \item \textbf{Middleware}: controale transversale pentru auth, validare, rate limiting si autorizare;
+    \item \textbf{Controllers}: orchestration pentru scenarii de business;
+    \item \textbf{Services}: integrare externa si logica reutilizabila;
+    \item \textbf{Config}: centralizare pentru variabile de mediu si politici runtime.
+\end{itemize}
+
+\section{Bootstrap aplicatie si pipeline global}
+
+La startup, aplicatia verifica conectivitatea cu baza de date, initializeaza componentele necesare infrastructurii si monteaza rutele principale. Endpoint-urile de webhook sunt configurate explicit cu parsare potrivita si reguli defensive dedicate.
+
+Ordinea pipeline-ului este esentiala: parsare request, limitare trafic, validare, autentificare, autorizare, apoi controller. In lipsa acestei ordini, logica de business ar putea procesa date invalide sau trafic abuziv.
+
+\section{Autentificare si autorizare}
+
+\subsection{Autentificare}
+
+Autentificarea se bazeaza pe JWT. Fluxul uzual este:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item validarea credentialelor;
+    \item generarea token-ului semnat server-side;
+    \item transmiterea token-ului in antetul \texttt{Authorization};
+    \item verificarea token-ului in middleware pe rutele protejate.
+\end{enumerate}
+
+\subsection{Autorizare pe rol}
+
+Controlul de acces pe roluri separa explicit operatiunile disponibile pentru client, antrenor si administrator. Aceasta masura reduce riscul de acces neautorizat la functii sensibile.
+
+\section{Validare de input si sanitizare}
+
+Validarea este centralizata cu \texttt{express-validator} si schema middleware dedicat. Beneficiile sunt concrete:
+\begin{itemize}[leftmargin=1.2cm]
+    \item raspunsuri de eroare uniforme;
+    \item eliminarea validarii repetitive din controller;
+    \item control explicit pe \texttt{body}, \texttt{query} si \texttt{params};
+    \item suport pentru politici \texttt{monitor}/\texttt{enforce} pe campuri neasteptate.
+\end{itemize}
+
+Aceasta abordare este critica in endpoint-urile publice, unde payload-ul vine din surse necontrolate.
+
+\section{Rate limiting si protectie anti-abuz}
+
+Rate limiting-ul este implementat prin middleware custom, cu profile diferite in functie de natura rutei: autentificare, email, discovery public, billing compatibility si webhook. Raspunsurile de limitare folosesc \texttt{429} plus \texttt{Retry-After}.
+
+Cheia de limitare combina IP si identitate de utilizator atunci cand exista sesiune autentificata, astfel incat abuzul anonim si cel autentificat sa fie tratate diferit, dar predictibil.
+
+\section{Implementarea domeniilor principale}
+
+\subsection{Domeniul trainer discovery}
+
+Controller-ele de trainer si gym gestioneaza cautare, filtrare si detalii de profil. Pentru profilurile publice se aplica reguli anti-abuz (deduplicare pe fereastra de timp si limitare burst).
+
+\subsection{Domeniul scheduling}
+
+Modulul de scheduling acopera definirea orelor de lucru, generarea sloturilor, alocarea clientilor si check-in. O decizie importanta este stocarea codurilor de check-in in forma hash.
+
+\subsection{Domeniul billing}
+
+Billing-ul include endpoint-uri pentru checkout/sincronizare entitlement si procesare webhook. Persistenta idempotenta a evenimentelor previne dublarile in scenarii de retry.
+
+\subsection{Domeniul support}
+
+Issue management-ul ofera un flux complet pentru raportare, triere si actualizare status de catre administratori.
+
+\section{Configurare si management secrete}
+
+Configurarea backend este centralizata in variabile de mediu. Secretele critice sunt verificate explicit la pornire, iar fallback-urile nesigure sunt evitate. Practic, acest lucru reduce surprizele in deploy si limiteaza vectorii de risc.
+
+\section{Standardizarea raspunsurilor API}
+
+Raspunsurile sunt generate prin helperi comuni pentru success/error. E un detaliu aparent mic, dar util in trei zone: contract stabil pentru client, debugging mai rapid si integrare mai simpla cu instrumente de observabilitate.
+
+\section{Robustete si tratamentul erorilor}
+
+Controller-ele folosesc \texttt{try/catch} pentru erori operationale, iar la nivel de proces exista handlere pentru \texttt{uncaughtException} si \texttt{unhandledRejection}. Nu reprezinta observabilitate completa, dar constituie un prag minim necesar pentru runtime.
+
+\section{Extensibilitate backend}
+
+Implementarea este pregatita pentru extinderi graduale:
+\begin{itemize}[leftmargin=1.2cm]
+    \item integrare Prometheus/Grafana pentru latenta, throughput si error rate;
+    \item migrare a rate limiting-ului catre store distribuit;
+    \item endpoint-uri dedicate de health/readiness pentru orchestrare.
+\end{itemize}
+
+\section{Concluzie intermediara}
+
+Backend-ul Trainee ofera o structura matura pentru un proiect de licenta aplicata: layere bine separate, mecanisme defensive coerente si o baza tehnica ce poate fi extinsa fara rescrieri majore.

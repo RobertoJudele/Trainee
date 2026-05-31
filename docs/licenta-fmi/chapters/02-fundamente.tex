@@ -1,0 +1,86 @@
+\chapter{Fundamente teoretice si tehnologice}
+
+\section{Paradigme si principii de proiectare}
+
+Trainee urmeaza un model client-server clasic, dar bine delimitat: interfata mobila este separata de logica de business si de persistenta datelor. Aceasta separare simplifica testarea, mentenanta si, foarte important, controlul asupra punctelor sensibile de securitate.
+
+In proiectare au fost urmate principii standard de inginerie software:
+\begin{itemize}[leftmargin=1.2cm]
+    \item \textbf{Single Responsibility}: fiecare componenta trateaza un set restrans de responsabilitati;
+    \item \textbf{Separation of Concerns}: validarea, autentificarea, autorizarea si limitarea traficului sunt tratate in middleware-uri distincte;
+    \item \textbf{Fail Fast}: configuratiile critice sunt validate inainte ca aplicatia sa serveasca trafic;
+    \item \textbf{Defence in Depth}: fluxurile sensibile sunt protejate pe mai multe niveluri, nu printr-un singur control.
+\end{itemize}
+
+Aceste principii raman coerente cu recomandarile generale din literatura de specialitate \parencite{pressman2014software}.
+
+\section{Tehnologii utilizate}
+
+\subsection{Frontend mobil}
+
+Partea client este dezvoltata cu Expo si React Native, iar navigatia este gestionata cu Expo Router. Pentru stare si comunicare API este folosit Redux Toolkit impreuna cu RTK Query \parencite{reduxdocs}. Combinatia a fost aleasa pentru ca ofera un echilibru bun intre viteza de dezvoltare si predictibilitatea comportamentului.
+
+Avantaje practice observate:
+\begin{itemize}[leftmargin=1.2cm]
+    \item iteratie rapida pe dispozitive mobile;
+    \item integrare naturala cu ecosistemul React;
+    \item gestionare unitara pentru cache, refetch si actualizari de stare;
+    \item reducerea codului repetitiv in ecranele care consuma endpoint-uri similare.
+\end{itemize}
+
+\subsection{Backend API}
+
+Backend-ul este construit cu Node.js, Express si TypeScript. Express a fost preferat datorita flexibilitatii si usurintei de integrare cu middleware-uri custom \parencite{expressdocs}. TypeScript adauga un strat important de siguranta prin tipuri explicite pe payload-uri, modele si raspunsuri.
+
+\subsection{Persistenta si cautare geospatiala}
+
+Persistenta foloseste PostgreSQL prin Sequelize, cu extensii PostGIS pentru proximitate si pg\_trgm pentru cautare text optimizata \parencite{postgresdocs,postgisdocs}. In termeni functionali, asta inseamna rezultate de cautare mai relevante in functie de locatie si performanta stabila la cresterea datelor.
+
+\subsection{Servicii externe}
+
+Platforma se integreaza cu servicii externe pentru functionalitati specializate:
+\begin{itemize}[leftmargin=1.2cm]
+    \item Stripe si RevenueCat pentru billing si entitlement;
+    \item SMTP/Nodemailer pentru emailuri de sistem;
+    \item AWS S3 pentru stocare media;
+    \item surse externe pentru popularea datelor initiale de sali.
+\end{itemize}
+
+\section{Securitate aplicata}
+
+Abordarea de securitate este inspirata din recomandarile OWASP Top 10 \parencite{owasp2021top10}, dar aplicata pragmatic in cod:
+\begin{itemize}[leftmargin=1.2cm]
+    \item autentificare JWT pentru endpoint-uri protejate;
+    \item validare stricta pe \texttt{body}, \texttt{query} si \texttt{params};
+    \item profile de rate limiting in functie de tipul endpoint-ului;
+    \item autorizare pe rol pentru operatiuni administrative;
+    \item gestiune explicita a secretelor prin variabile de mediu.
+\end{itemize}
+
+Pe langa aceste mecanisme, proiectul include reguli anti-abuz pentru vizualizarile de profil public, astfel incat indicatorii de analytics sa nu poata fi manipulati usor.
+
+\section{Alternative analizate}
+
+Inainte de alegerea stack-ului final au fost evaluate mai multe optiuni.
+
+\begin{table}[H]
+\centering
+\caption{Alternative tehnologice evaluate}
+\begin{tabular}{p{0.23\textwidth} p{0.27\textwidth} p{0.40\textwidth}}
+\toprule
+\textbf{Domeniu} & \textbf{Optiuni evaluate} & \textbf{Argument pentru alegerea finala} \\
+\midrule
+Frontend mobil & React Native / Flutter & React Native + Expo a oferit timp de livrare mai bun si integrare mai directa cu expertiza existenta. \\
+Backend API & Express / NestJS / Fastify & Express a oferit libertate maxima pentru un design incremental al middleware-urilor. \\
+ORM & Sequelize / Prisma / TypeORM & Sequelize era deja compatibil cu structura proiectului si modelele existente. \\
+Persistenta & PostgreSQL / MongoDB & Cerintele relationale si suportul geospatial au favorizat PostgreSQL. \\
+Billing & Stripe-only / RevenueCat-only / hibrid & Modelul hibrid permite tranzitie operationala fara rescrieri majore de flux. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Cadru academic si conformitate}
+
+Redactarea lucrarii urmeaza reperele publicate de FMI pentru finalizarea studiilor \parencite{fmi2026finalizare}. Folosirea LaTeX/Overleaf ofera control bun asupra structurii, numerotarii, citarilor si anexelor tehnice.
+
+In acest cadru, capitolele urmatoare detaliaza modul in care deciziile tehnologice sunt transformate in implementare concreta.

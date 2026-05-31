@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
+  Platform,
+  Modal,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -16,27 +18,119 @@ import {
   setTrainerProfile,
   setCredentials,
   selectCurrentToken,
+  logOut,
 } from "../auth/authSlice";
+import { UserRole } from "../auth/authApiSlice";
 import {
   useDeleteTrainerProfileMutation,
   useGetTrainerProfileQuery,
   useGetSpecializationsQuery,
   useUpdateTrainerProfileMutation,
 } from "./trainerApiSlice";
-import { router } from "expo-router";
+import { router, useRouter } from "expo-router";
+import { apiSlice } from "../../src/api/apiSlice";
+import { theme, typography } from "../../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
+import Purchases from "react-native-purchases";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const normalizeSocialUrlForSave = (value: string): string | null | "INVALID" => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  try {
+    new URL(withProtocol);
+    return withProtocol;
+  } catch {
+    return "INVALID";
+  }
+};
+
+const normalizeWhatsAppPhone = (value: string): string | null => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const normalizedPrefix = trimmed.startsWith("00")
+    ? `+${trimmed.slice(2)}`
+    : trimmed;
+
+  const digitsOnly = normalizedPrefix.replace(/\D/g, "");
+
+  if (!digitsOnly || digitsOnly.length < 7 || digitsOnly.length > 15) {
+    return null;
+  }
+
+  if (!/^[1-9]/.test(digitsOnly)) {
+    return null;
+  }
+
+  return `+${digitsOnly}`;
+};
+
+const normalizeWhatsAppForSave = (value: string): string | null | "INVALID" => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  const directPhone = normalizeWhatsAppPhone(trimmed);
+  if (directPhone) {
+    return directPhone;
+  }
+
+  const withProtocol = /^https?:\/\//i.test(trimmed)
+    ? trimmed
+    : `https://${trimmed}`;
+
+  try {
+    const parsed = new URL(withProtocol);
+    const hostname = parsed.hostname.toLowerCase();
+
+    const fromQuery = parsed.searchParams.get("phone") ?? "";
+    const fromPath = parsed.pathname.split("/").filter(Boolean)[0] ?? "";
+
+    let phoneCandidate = "";
+    if (hostname === "wa.me" || hostname.endsWith(".wa.me")) {
+      phoneCandidate = fromPath;
+    } else if (
+      hostname === "api.whatsapp.com" ||
+      hostname === "whatsapp.com" ||
+      hostname === "www.whatsapp.com"
+    ) {
+      phoneCandidate = fromQuery;
+    } else {
+      return "INVALID";
+    }
+
+    const parsedPhone = normalizeWhatsAppPhone(phoneCandidate);
+    return parsedPhone ?? "INVALID";
+  } catch {
+    return "INVALID";
+  }
+};
 
 function TrainerProfile() {
   const trainer = useSelector(selectCurrentTrainer);
   const user = useSelector(selectCurrentUser);
   const token = useSelector(selectCurrentToken);
   const dispatch = useDispatch();
-
+  const insets = useSafeAreaInsets();
   const {
     data: trainerResponse,
     isLoading,
     isError,
     refetch,
-  } = useGetTrainerProfileQuery();
+  } = useGetTrainerProfileQuery(undefined, {
+    skip: user?.role !== UserRole.TRAINER,
+  });
   const {
     data: specializationsResponse,
     isLoading: isSpecializationsLoading,
@@ -71,13 +165,22 @@ function TrainerProfile() {
   const [locationCity, setLocationCity] = useState("");
   const [locationState, setLocationState] = useState("");
   const [locationCountry, setLocationCountry] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [facebookUrl, setFacebookUrl] = useState("");
+  const [whatsappUrl, setWhatsappUrl] = useState("");
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
+    if (user?.role !== UserRole.TRAINER) {
+      return;
+    }
+
     if (trainerResponse?.data) {
       dispatch(setTrainerProfile(trainerResponse.data));
     }
-  }, [trainerResponse, dispatch]);
+  }, [trainerResponse, dispatch, user?.role]);
 
   useEffect(() => {
     if (!trainer) return;
@@ -94,6 +197,9 @@ function TrainerProfile() {
     setLocationCity(trainer.locationCity ?? "");
     setLocationState(trainer.locationState ?? "");
     setLocationCountry(trainer.locationCountry ?? "");
+    setInstagramUrl(trainer.instagramUrl ?? "");
+    setFacebookUrl(trainer.facebookUrl ?? "");
+    setWhatsappUrl(trainer.whatsappUrl ?? "");
     setSelectedSpecializationIds(
       Array.isArray(trainer.specializations)
         ? trainer.specializations.map((spec) => spec.id)
@@ -131,6 +237,25 @@ function TrainerProfile() {
     }
   }, [deleteTrainerProfile, dispatch, user, token]);
 
+  const handleSubscribe = useCallback(async () => {
+    setIsSubscribing(true);
+    router.push("/checkout");
+    setIsSubscribing(false);
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    dispatch(logOut());
+    dispatch(apiSlice.util.resetApiState());
+    try {
+      if (Platform.OS === "ios" || Platform.OS === "android") {
+        await Purchases.logOut();
+      }
+    } catch (error) {
+      console.log('RevenueCat logout error:', error);
+    }
+    router.replace("/(auth)/Welcome");
+  }, [dispatch]);
+
   const handleSaveProfile = useCallback(async () => {
     if (!trainer) return;
 
@@ -166,6 +291,27 @@ function TrainerProfile() {
       return;
     }
 
+    const instagramPayload = normalizeSocialUrlForSave(instagramUrl);
+    if (instagramPayload === "INVALID") {
+      Alert.alert("Invalid input", "Instagram link must be a valid URL.");
+      return;
+    }
+
+    const facebookPayload = normalizeSocialUrlForSave(facebookUrl);
+    if (facebookPayload === "INVALID") {
+      Alert.alert("Invalid input", "Facebook link must be a valid URL.");
+      return;
+    }
+
+    const whatsappPayload = normalizeWhatsAppForSave(whatsappUrl);
+    if (whatsappPayload === "INVALID") {
+      Alert.alert(
+        "Invalid input",
+        "WhatsApp must be a valid phone number (for example +40712345678) or a wa.me/api.whatsapp.com link with a phone number."
+      );
+      return;
+    }
+
     try {
       const response = await updateTrainerProfile({
         bio: bio.trim() || undefined,
@@ -175,6 +321,9 @@ function TrainerProfile() {
         locationCity: locationCity.trim() || undefined,
         locationState: locationState.trim() || undefined,
         locationCountry: locationCountry.trim() || undefined,
+        instagramUrl: instagramPayload,
+        facebookUrl: facebookPayload,
+        whatsappUrl: whatsappPayload,
         specializationIds: selectedSpecializationIds,
       }).unwrap();
 
@@ -197,9 +346,23 @@ function TrainerProfile() {
     locationCity,
     locationState,
     locationCountry,
+    instagramUrl,
+    facebookUrl,
+    whatsappUrl,
     selectedSpecializationIds,
     dispatch,
   ]);
+
+  if (user?.role !== UserRole.TRAINER) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Trainer profile is available only for trainer accounts.</Text>
+        <Pressable style={styles.button} onPress={() => router.push("/")}>
+          <Text style={styles.buttonText}>Go Home</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -232,25 +395,51 @@ function TrainerProfile() {
     });
   };
 
-  const renderStars = (rating: number) =>
-    Array.from({ length: 5 }, (_, i) =>
-      i < Math.floor(rating) ? "⭐" : "☆"
-    ).join("");
+  const renderStars = (rating: number) => (
+    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <Ionicons
+          key={i}
+          name={i < Math.floor(rating) ? "star" : "star-outline"}
+          size={14}
+          color={i < Math.floor(rating) ? "#F59E0B" : "#E5E7EB"}
+          style={{ marginRight: 2 }}
+        />
+      ))}
+    </View>
+  );
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
       {/* ── Header ── */}
       <View style={styles.header}>
-        <Text style={styles.title}>Trainer Profile</Text>
+        <View style={styles.headerTop}>
+          <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+          </Pressable>
+          <Text style={styles.title}>Trainer Profile</Text>
+          {!isEditing && (
+            <Pressable style={styles.menuIconButton} onPress={() => setMenuVisible(true)}>
+              <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
+            </Pressable>
+          )}
+        </View>
         <View style={[styles.statusBadge, trainer.isAvailable ? styles.available : styles.unavailable]}>
-          <Text style={styles.statusText}>
-            {trainer.isAvailable ? "🟢 Available" : "🔴 Unavailable"}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Ionicons name="ellipse" size={10} color={trainer.isAvailable ? theme.colors.success : theme.colors.error} style={{marginRight: 4}} />
+            <Text style={styles.statusText}>
+              {trainer.isAvailable ? "Available" : "Unavailable"}
+            </Text>
+          </View>
         </View>
         {trainer.isFeatured && (
           <View style={styles.featuredBadge}>
-            <Text style={styles.featuredText}>⭐ Featured Trainer</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="star" size={14} color="#D97706" style={{marginRight: 4}} />
+              <Text style={styles.featuredText}>Featured Trainer</Text>
+            </View>
           </View>
         )}
       </View>
@@ -318,7 +507,10 @@ function TrainerProfile() {
 
       {/* ── Location ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📍 Location</Text>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
+          <Ionicons name="location" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Location</Text>
+        </View>
         {isEditing ? (
           <View style={styles.editGrid}>
             <TextInput
@@ -355,7 +547,62 @@ function TrainerProfile() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🏷️ Specializations</Text>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
+          <Ionicons name="phone-portrait-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Social Media</Text>
+        </View>
+        {isEditing ? (
+          <View style={styles.editGrid}>
+            <TextInput
+              style={styles.input}
+              value={instagramUrl}
+              onChangeText={setInstagramUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder="Instagram profile URL"
+            />
+            <TextInput
+              style={styles.input}
+              value={facebookUrl}
+              onChangeText={setFacebookUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              placeholder="Facebook profile URL"
+            />
+            <TextInput
+              style={styles.input}
+              value={whatsappUrl}
+              onChangeText={setWhatsappUrl}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="phone-pad"
+              placeholder="WhatsApp number (e.g. +40712345678)"
+            />
+          </View>
+        ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
+          <View style={styles.socialList}>
+            {trainer.instagramUrl ? (
+              <Text style={styles.socialItem}>Instagram: {trainer.instagramUrl}</Text>
+            ) : null}
+            {trainer.facebookUrl ? (
+              <Text style={styles.socialItem}>Facebook: {trainer.facebookUrl}</Text>
+            ) : null}
+            {trainer.whatsappUrl ? (
+              <Text style={styles.socialItem}>WhatsApp: {trainer.whatsappUrl}</Text>
+            ) : null}
+          </View>
+        ) : (
+          <Text style={styles.locationSubtext}>No social links added</Text>
+        )}
+      </View>
+
+      <View style={styles.section}>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
+          <Ionicons name="pricetag-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Specializations</Text>
+        </View>
         {isEditing ? (
           isSpecializationsLoading ? (
             <View style={styles.specLoadingRow}>
@@ -410,7 +657,10 @@ function TrainerProfile() {
 
       {/* ── Stats ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📊 Statistics</Text>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
+          <Ionicons name="bar-chart-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Statistics</Text>
+        </View>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{trainer.profileViews || 0}</Text>
@@ -422,11 +672,24 @@ function TrainerProfile() {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{Number(trainer.totalRating || 0).toFixed(1)}</Text>
-            <Text style={styles.statLabel}>Rating</Text>
-            <Text style={styles.starsText}>{renderStars(Number(trainer.totalRating || 0))}</Text>
+            <View style={styles.starsText}>{renderStars(Number(trainer.totalRating || 0))}</View>
           </View>
         </View>
       </View>
+
+      <Pressable
+        style={({ pressed }) => [styles.analyticsButton, pressed && styles.buttonPressed]}
+        onPress={() => router.push("/trainer-analytics")}
+      >
+        <View style={styles.analyticsButtonInner}>
+          <Ionicons name="analytics-outline" size={26} color={theme.colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.analyticsButtonTitle}>Trainer Analytics</Text>
+            <Text style={styles.analyticsButtonSub}>View trends, sources, age, and sex breakdowns</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+        </View>
+      </Pressable>
 
       {/* ── Account info ── */}
       <View style={styles.section}>
@@ -443,95 +706,115 @@ function TrainerProfile() {
 
       {/* ── Actions ── */}
       <View style={styles.buttonSection}>
-
         {/* My Gyms — the new button */}
         <Pressable
           style={({ pressed }) => [styles.gymsButton, pressed && styles.buttonPressed]}
           onPress={() => router.push("/my-gyms")}
         >
           <View style={styles.gymsButtonInner}>
-            <Text style={styles.gymsButtonIcon}>🏋️</Text>
-            <View>
+            <Ionicons name="barbell" size={28} color={theme.colors.primary} />
+            <View style={{flex: 1}}>
               <Text style={styles.gymsButtonTitle}>My Gyms</Text>
               <Text style={styles.gymsButtonSub}>Manage your gym locations & availability</Text>
             </View>
-            <Text style={styles.gymsButtonArrow}>›</Text>
+            <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
           </View>
         </Pressable>
 
-        <Pressable
-          style={styles.editButton}
-          onPress={() => {
-            if (isEditing) {
-              void handleSaveProfile();
-              return;
-            }
-            setIsEditing(true);
-          }}
-          disabled={isUpdating}
-        >
-          <Text style={styles.buttonText}>
-            {isUpdating
-              ? "🔄 Saving..."
-              : isEditing
-              ? "💾 Save Profile"
-              : "✏️ Edit Profile"}
-          </Text>
-        </Pressable>
-
         {isEditing && (
-          <Pressable
-            style={styles.cancelButton}
-            onPress={() => {
-              if (trainer) {
-                setBio(trainer.bio ?? "");
-                setExperienceYears(
-                  trainer.experienceYears !== undefined
-                    ? String(trainer.experienceYears)
-                    : ""
-                );
-                setHourlyRate(
-                  trainer.hourlyRate !== undefined ? String(trainer.hourlyRate) : ""
-                );
-                setSessionRate(
-                  trainer.sessionRate !== undefined
-                    ? String(trainer.sessionRate)
-                    : ""
-                );
-                setLocationCity(trainer.locationCity ?? "");
-                setLocationState(trainer.locationState ?? "");
-                setLocationCountry(trainer.locationCountry ?? "");
-                setSelectedSpecializationIds(
-                  Array.isArray(trainer.specializations)
-                    ? trainer.specializations.map((spec) => spec.id)
-                    : []
-                );
-              }
-              setIsEditing(false);
-            }}
-          >
-            <Text style={styles.buttonText}>Cancel</Text>
-          </Pressable>
+          <View style={styles.actionContainer}>
+            <Text style={styles.actionHeader}>Save Changes</Text>
+            
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionButton,
+                styles.primaryAction,
+                isUpdating && styles.buttonDisabled,
+                pressed && styles.buttonPressed
+              ]}
+              onPress={() => {
+                void handleSaveProfile();
+              }}
+              disabled={isUpdating}
+            >
+              <Ionicons 
+                name={isUpdating ? "sync" : "save-outline"} 
+                size={18} 
+                color="#fff" 
+              />
+              <Text style={styles.primaryActionText}>
+                {isUpdating ? "Saving..." : "Save Profile"}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [
+                styles.actionButton,
+                styles.secondaryAction,
+                pressed && styles.buttonPressed
+              ]}
+              onPress={() => {
+                if (trainer) {
+                  setBio(trainer.bio ?? "");
+                  setExperienceYears(trainer.experienceYears !== undefined ? String(trainer.experienceYears) : "");
+                  setHourlyRate(trainer.hourlyRate !== undefined ? String(trainer.hourlyRate) : "");
+                  setSessionRate(trainer.sessionRate !== undefined ? String(trainer.sessionRate) : "");
+                  setLocationCity(trainer.locationCity ?? "");
+                  setLocationState(trainer.locationState ?? "");
+                  setLocationCountry(trainer.locationCountry ?? "");
+                  setInstagramUrl(trainer.instagramUrl ?? "");
+                  setFacebookUrl(trainer.facebookUrl ?? "");
+                  setWhatsappUrl(trainer.whatsappUrl ?? "");
+                  setSelectedSpecializationIds(
+                    Array.isArray(trainer.specializations) ? trainer.specializations.map((spec) => spec.id) : []
+                  );
+                }
+                setIsEditing(false);
+              }}
+            >
+              <Text style={styles.secondaryActionText}>Cancel</Text>
+            </Pressable>
+          </View>
         )}
-
-        <Pressable
-          style={[styles.deleteButton, isDeleting && styles.buttonDisabled]}
-          onPress={handleDelete}
-          disabled={isDeleting}
-        >
-          <Text style={styles.buttonText}>
-            {isDeleting ? "🔄 Deleting..." : "🗑️ Delete Profile"}
-          </Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.push("/(auth)/Welcome")}
-        >
-          <Text style={styles.buttonText}>← Back to Welcome</Text>
-        </Pressable>
       </View>
     </ScrollView>
+
+    {/* ── Dropdown Modal ── */}
+    <Modal visible={menuVisible} transparent animationType="fade">
+      <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
+        <View style={styles.dropdownMenu}>
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); setIsEditing(true); }}>
+            <Ionicons name="pencil" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>Edit Profile</Text>
+          </Pressable>
+          
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); handleSubscribe(); }} disabled={isSubscribing}>
+            {isSubscribing ? <ActivityIndicator size="small" color={theme.colors.text} /> : <Ionicons name="receipt-outline" size={18} color={theme.colors.text} />}
+            <Text style={styles.dropdownItemText}>{isSubscribing ? "Processing..." : "Manage Subscription"}</Text>
+          </Pressable>
+
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push("/legal"); }}>
+            <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>Legal & Policies</Text>
+          </Pressable>
+          
+          <View style={styles.dropdownDivider} />
+          
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleLogout(); }}>
+            <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>Log Out</Text>
+          </Pressable>
+          
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleDelete(); }} disabled={isDeleting}>
+            <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+            <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
+              {isDeleting ? "Deleting..." : "Delete Profile"}
+            </Text>
+          </Pressable>
+        </View>
+      </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -552,12 +835,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 30,
     paddingTop: 20,
+    zIndex: 1,
+  },
+  headerTop: {
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "relative",
+    marginBottom: 15,
   },
   title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 15,
+    ...typography.h2,
+    color: theme.colors.text,
+  },
+  menuIconButton: {
+    position: "absolute",
+    right: 0,
+    top: -5,
+    padding: 10,
+  },
+  backBtn: {
+    position: "absolute",
+    left: 0,
+    top: -5,
+    padding: 10,
   },
   statusBadge: {
     paddingHorizontal: 15,
@@ -577,20 +878,15 @@ const styles = StyleSheet.create({
   featuredText: { fontSize: 14, fontWeight: "600", color: "#856404" },
 
   section: {
-    backgroundColor: "white",
-    borderRadius: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
     padding: 20,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...theme.shadows.medium,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#333",
+    ...typography.h3,
+    color: theme.colors.text,
     marginBottom: 15,
   },
   bioText: { fontSize: 16, lineHeight: 24, color: "#666" },
@@ -700,6 +996,8 @@ const styles = StyleSheet.create({
 
   locationText: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 5 },
   locationSubtext: { fontSize: 14, color: "#666" },
+  socialList: { gap: 6 },
+  socialItem: { fontSize: 14, color: "#374151" },
 
   statsGrid: { flexDirection: "row", justifyContent: "space-around", gap: 15 },
   statCard: { alignItems: "center", flex: 1 },
@@ -720,15 +1018,11 @@ const styles = StyleSheet.create({
   // ── My Gyms button ──────────────────────────────────────
   gymsButton: {
     backgroundColor: "white",
-    borderRadius: 12,
+    borderRadius: theme.roundness,
     borderWidth: 2,
-    borderColor: "#6366F1",
+    borderColor: theme.colors.primary,
     overflow: "hidden",
-    shadowColor: "#6366F1",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    ...theme.shadows.medium,
   },
   gymsButtonInner: {
     flexDirection: "row",
@@ -738,9 +1032,9 @@ const styles = StyleSheet.create({
   },
   gymsButtonIcon: { fontSize: 28 },
   gymsButtonTitle: {
-    fontSize: 16,
+    ...typography.body1,
     fontWeight: "700",
-    color: "#6366F1",
+    color: theme.colors.primary,
     marginBottom: 2,
   },
   gymsButtonSub: {
@@ -753,42 +1047,158 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
     fontWeight: "300",
   },
-  buttonPressed: { opacity: 0.85 },
+  buttonPressed: { opacity: 0.8 },
   // ────────────────────────────────────────────────────────
 
-  editButton: {
-    backgroundColor: "#28A745",
+  actionContainer: {
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing.md,
+  },
+  actionHeader: {
+    ...typography.h3,
+    color: theme.colors.text,
+    marginBottom: theme.spacing.xs,
+  },
+  actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 16,
-    borderRadius: 8,
+    borderRadius: theme.roundness,
+    gap: 8,
+  },
+  primaryAction: {
+    backgroundColor: theme.colors.primary,
+    ...theme.shadows.small,
+  },
+  primaryActionText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  secondaryAction: {
+    backgroundColor: theme.colors.background,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  secondaryActionText: {
+    color: theme.colors.textSecondary,
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  analyticsButton: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    ...theme.shadows.small,
+  },
+  analyticsButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 14,
+  },
+  analyticsButtonTitle: {
+    ...typography.body1,
+    fontWeight: "700",
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  analyticsButtonSub: {
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+  },
+  dangerZone: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+    marginTop: theme.spacing.sm,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 16,
+    gap: 12,
+  },
+  actionRowIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: theme.colors.background,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionRowText: {
+    ...typography.body1,
+    color: theme.colors.text,
+    fontWeight: "600",
+  },
+  actionRowDestructiveText: {
+    ...typography.body1,
+    color: theme.colors.error,
+    fontWeight: "600",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginLeft: 60,
+  },
+  buttonDisabled: { opacity: 0.6 },
+  errorText: { fontSize: 16, color: theme.colors.error, textAlign: "center" },
+  subscribeButton: {
+    backgroundColor: theme.colors.primary,
+    padding: 16,
+    borderRadius: theme.roundness,
     alignItems: "center",
   },
-  cancelButton: {
-    backgroundColor: "#6B7280",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  deleteButton: {
-    backgroundColor: "#DC3545",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  backButton: {
-    backgroundColor: "#007AFF",
-    padding: 16,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  buttonDisabled: { backgroundColor: "#ccc" },
-  buttonText: { color: "white", fontSize: 16, fontWeight: "bold" },
-  errorText: { fontSize: 16, color: "red", textAlign: "center" },
   button: {
-    backgroundColor: "#007AFF",
-    padding: 15,
-    borderRadius: 8,
+    backgroundColor: theme.colors.primary,
+    padding: 16,
+    borderRadius: theme.roundness,
     alignItems: "center",
     width: "100%",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+  },
+  dropdownMenu: {
+    position: "absolute",
+    top: 60,
+    right: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    minWidth: 220,
+    ...theme.shadows.medium,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    overflow: "hidden",
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+  },
+  dropdownItemText: {
+    ...typography.body1,
+    color: theme.colors.text,
+    marginLeft: 12,
+    fontWeight: "600",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
   },
 });
 

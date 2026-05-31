@@ -1,0 +1,99 @@
+\chapter{Testare, rezultate si limitari}
+
+\section{Strategia de testare}
+
+Testarea a fost organizata pe trei niveluri complementare:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{Verificare statica}: typecheck pentru frontend si backend, plus lint unde este configurat.
+    \item \textbf{Testare functionala manuala}: scenarii end-to-end pe fluxurile critice.
+    \item \textbf{Testare de robustete}: input invalid, trafic burst si verificarea comportamentului defensiv.
+\end{enumerate}
+
+Aceasta combinatie este potrivita pentru un proiect de licenta aplicata, unde validarea functionala in scenarii realiste are prioritate.
+
+\section{Scenarii functionale evaluate}
+
+\begin{table}[H]
+\centering
+\caption{Scenarii functionale principale}
+\begin{tabular}{p{0.14\textwidth} p{0.52\textwidth} p{0.24\textwidth}}
+\toprule
+\textbf{Cod} & \textbf{Scenariu} & \textbf{Rezultat asteptat} \\
+\midrule
+T1 & Inregistrare + verificare email + login & Sesiune valida, acces pe rol corect \\
+T2 & Cautare antrenor cu filtre combinate & Rezultate coerente, paginate \\
+T3 & Vizualizare profil repetata in interval scurt & Fara inflatie artificiala de views \\
+T4 & Definire ore de lucru + generare sloturi & Sloturi create conform parametrilor \\
+T5 & Alocare client pe slot prin cod check-in & Slot actualizat, cod validat \\
+T6 & Raportare issue + actualizare status admin & Workflow complet de incident \\
+T7 & Sync entitlement billing prin endpoint dedicat & Stare de entitlement consistenta \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Verificari de securitate}
+
+In timpul evaluarii au fost rulate verificari orientate pe suprafata de risc:
+\begin{itemize}[leftmargin=1.2cm]
+    \item solicitari burst pe endpoint-uri publice pentru validarea raspunsului \texttt{429};
+    \item payload-uri cu campuri neasteptate pentru verificarea politicii schema stricta;
+    \item acces la endpoint-uri protejate fara token pentru validarea raspunsurilor \texttt{401}/\texttt{403};
+    \item verificarea absentei secretelor in zone client-side;
+    \item verificarea fluxului de check-in cu cod invalid/expirat.
+\end{itemize}
+
+Rezultatele au confirmat functionarea pipeline-ului defensiv pentru scenariile acoperite.
+
+\section{Rezultate observate}
+
+Rezultatele pot fi sintetizate astfel:
+\begin{itemize}[leftmargin=1.2cm]
+    \item fluxurile de baza pentru cele trei roluri sunt functionale end-to-end;
+    \item separarea pe module reduce riscul de regresie intre feature-uri;
+    \item middleware-urile comune simplifica aplicarea uniforma a politicilor de securitate;
+    \item integrarea billing in mod runtime configurabil permite tranzitie controlata intre strategii de monetizare;
+    \item componenta de scheduling atinge obiectivul principal de asociere antrenor-client pe sloturi gestionate.
+\end{itemize}
+
+\section{Indicatori de calitate tehnica}
+
+Desi proiectul nu include inca benchmark-uri automate extinse, au fost urmariti urmatorii indicatori calitativi:
+\begin{itemize}[leftmargin=1.2cm]
+    \item consistenta contractelor API (format raspunsuri, coduri status);
+    \item consistenta validarii input in toate rutele majore;
+    \item reproductibilitatea scenariilor principale in medii de dezvoltare;
+    \item claritatea organizarii codului pentru mentenanta.
+\end{itemize}
+
+\section{Limitari curente}
+
+Limitari identificate in stadiul actual:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item lipsa unei observabilitati complete (dashboard metrici, alerte, SLO-uri);
+    \item dependenta de disponibilitatea serviciilor externe pentru anumite fluxuri;
+    \item acoperire limitata de teste automate pe componente complexe UI;
+    \item absenta unei suite de testare de performanta sistematica.
+\end{enumerate}
+
+\section{Amenintari la validitate}
+
+Interpretarea rezultatelor trebuie facuta cu prudenta din cauza urmatoarelor aspecte:
+\begin{itemize}[leftmargin=1.2cm]
+    \item mediul de testare poate fi diferit de medii de productie reale;
+    \item volumul de date de test este mai redus fata de utilizare la scara mare;
+    \item unele comportamente depind de configurari locale de retea sau device.
+\end{itemize}
+
+\section{Plan de imbunatatire a evaluarii}
+
+Pentru iteratii viitoare se recomanda:
+\begin{itemize}[leftmargin=1.2cm]
+    \item introducerea observabilitatii cu Prometheus + Grafana;
+    \item definirea unor KPI/SLI de latenta, eroare si throughput;
+    \item extinderea testarii automate (unit, integration, e2e);
+    \item introducerea unor testari de rezilienta pentru dependinte externe.
+\end{itemize}
+
+\section{Concluzie capitol}
+
+Evaluarea confirma ca Trainee este un produs software functional, cu un nivel bun de robustete pentru stadiul academic al proiectului. Limitarile raman prezente, dar sunt bine delimitate si pot fi tratate incremental printr-un roadmap de observabilitate, automatizare si optimizare de performanta.

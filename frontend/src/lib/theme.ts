@@ -4,39 +4,65 @@ export const theme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: '#6366F1', // Indigo
-    secondary: '#EC4899', // Pink
-    tertiary: '#8B5CF6', // Purple
-    background: '#F9FAFB',
+    primary: '#10B981', // Emerald Green
+    secondary: '#0D9488', // Teal
+    tertiary: '#059669', // Dark Emerald
+    background: '#F8FAFC', // Crisp cool grey background
     surface: '#FFFFFF',
     error: '#EF4444',
     success: '#10B981',
     warning: '#F59E0B',
-    text: '#111827',
-    textSecondary: '#6B7280',
-    border: '#E5E7EB',
+    text: '#0F172A', // Slate 900
+    textSecondary: '#64748B', // Slate 500
+    border: '#E2E8F0', // Slate 200
     card: '#FFFFFF',
   },
-  roundness: 12,
+  roundness: 16, // Softer curves for modern look
   spacing: {
     xs: 4,
     sm: 8,
     md: 16,
     lg: 24,
     xl: 32,
+    xxl: 48,
   },
+  shadows: {
+    small: {
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 2,
+    },
+    medium: {
+      shadowColor: '#0F172A',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 4,
+    },
+    large: {
+      shadowColor: '#10B981', // subtle green glow for emphasis items
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.15,
+      shadowRadius: 24,
+      elevation: 8,
+    },
+  }
 };
 
 export const typography = {
   h1: {
-    fontSize: 32,
-    fontWeight: '700' as const,
-    lineHeight: 40,
+    fontSize: 34,
+    fontWeight: '800' as const,
+    lineHeight: 42,
+    letterSpacing: -0.5,
   },
   h2: {
-    fontSize: 24,
-    fontWeight: '600' as const,
-    lineHeight: 32,
+    fontSize: 26,
+    fontWeight: '700' as const,
+    lineHeight: 34,
+    letterSpacing: -0.3,
   },
   h3: {
     fontSize: 20,
@@ -55,8 +81,8 @@ export const typography = {
   },
   caption: {
     fontSize: 12,
-    fontWeight: '400' as const,
+    fontWeight: '500' as const,
     lineHeight: 16,
+    textTransform: 'uppercase' as const,
   },
 };
-

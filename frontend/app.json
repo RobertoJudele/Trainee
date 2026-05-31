@@ -1,7 +1,8 @@
 {
   "expo": {
-    "name": "frontend",
+    "name": "Trainee",
     "slug": "frontend",
+    "scheme": "trainee",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -13,7 +14,15 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.juroctech.frontend",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Your app needs access to your photo library to upload profile pictures and workout photos.",
+        "NSPhotoLibraryAddOnlyUsageDescription": "Your app needs permission to save photos to your library.",
+        "NSLocationWhenInUseUsageDescription": "Your app uses your location to find nearby gyms and trainers.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app uses your location to find nearby gyms and trainers."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,13 +30,28 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.juroctech.frontend"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-router"
-    ]
+      "expo-router",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.example.trainee",
+          "enableGooglePay": true
+        }
+      ],
+      "expo-font"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1dc4c0a3-075a-4b96-8cd1-1f66b1d89362"
+      }
+    }
   }
 }

@@ -7,6 +7,10 @@ export interface GymAttributes {
   country?: string;
   latitude: number;
   longitude: number;
+  location?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
   phone?: string;
   openingHours?: string; // e.g. "Mon-Fri 6:00-22:00, Sat-Sun 8:00-20:00"
   imageUrl?: string;
@@ -25,6 +29,10 @@ export interface GymCreationAttributes {
   country?: string;
   latitude: number;
   longitude: number;
+  location?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
   phone?: string;
   openingHours?: string;
   imageUrl?: string;

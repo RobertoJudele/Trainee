@@ -1,0 +1,87 @@
+\chapter{Concluzii si directii viitoare}
+
+\section{Sinteza rezultatelor}
+
+Lucrarea a avut ca obiectiv dezvoltarea unei platforme full-stack care conecteaza clienti si antrenori, cu accent pe coerenta arhitecturala si securitate operationala. In urma implementarii, obiectivele initiale au fost atinse la nivelul unui prototip functional matur:
+\begin{itemize}[leftmargin=1.2cm]
+    \item aplicatie mobila cu fluxuri clare pentru rolurile principale;
+    \item backend modular, separat pe domenii functionale;
+    \item model relational robust, extins cu capabilitati geospatiale;
+    \item mecanisme defensive aplicate pe suprafata publica a API-ului;
+    \item integrare de billing, issue management si componente legale.
+\end{itemize}
+
+Rezultatul obtinut depaseste nivelul unui demo de interfata si ofera o baza tehnica extindibila pentru etape ulterioare.
+
+\section{Contributia personala}
+
+Contributia personala poate fi sintetizata pe patru directii:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item proiectarea arhitecturii generale si a granitei frontend-backend;
+    \item implementarea modulelor de business critice (discovery, scheduling, billing support);
+    \item proiectarea si aplicarea unui pachet de hardening de securitate;
+    \item redactarea documentatiei academice cu trasabilitate intre cerinte, design, implementare si rezultate.
+\end{enumerate}
+
+Aceasta contributie urmareste atat livrarea unei solutii functionale, cat si justificarea deciziilor tehnice din perspectiva calitatii software.
+
+\section{Lectii invatate}
+
+Procesul de dezvoltare a scos in evidenta cateva lectii importante:
+\begin{itemize}[leftmargin=1.2cm]
+    \item modularitatea introdusa devreme reduce costul schimbarilor ulterioare;
+    \item securitatea trebuie tratata ca parte din design, nu ca etapa finala;
+    \item consistenta contractelor API accelereaza iteratia in frontend;
+    \item integrarea serviciilor externe cere mecanisme explicite de fallback si idempotenta.
+\end{itemize}
+
+\section{Limitari care raman deschise}
+
+Desi rezultatele sunt solide pentru stadiul academic, exista limitari care trebuie asumate:
+\begin{itemize}[leftmargin=1.2cm]
+    \item acoperire incompleta a testarii automate raportat la complexitatea produsului;
+    \item observabilitate limitata in versiunea curenta;
+    \item dependenta de servicii externe pentru billing si comunicare;
+    \item nevoie de validare pe volume mai mari de trafic.
+\end{itemize}
+
+\section{Directii viitoare}
+
+\subsection{Observabilitate si operare}
+
+Un pas imediat recomandat este introducerea unui stack Prometheus + Grafana pentru monitorizarea uptime-ului, erorilor, latentei, throughput-ului, consumului de resurse si starii dependintelor critice.
+
+\subsection{Scalare si rezilienta}
+
+Pe masura ce volumul de utilizatori creste, sunt recomandate:
+\begin{itemize}[leftmargin=1.2cm]
+    \item migrarea rate limiting-ului spre storage distribuit;
+    \item optimizare suplimentara a query-urilor geospatiale;
+    \item cache stratificat pentru endpoint-uri de citire frecventa;
+    \item politici de retry si circuit breaker pentru dependinte externe.
+\end{itemize}
+
+\subsection{Calitate software}
+
+Pentru cresterea calitatii pe termen lung:
+\begin{itemize}[leftmargin=1.2cm]
+    \item extinderea testelor automate e2e pe fluxurile principale;
+    \item definirea unor SLO-uri si praguri de alerta;
+    \item introducerea unei suite de performanta reproductibile in CI.
+\end{itemize}
+
+\subsection{Evolutie produs}
+
+La nivel de functionalitate, pot fi adaugate:
+\begin{itemize}[leftmargin=1.2cm]
+    \item recomandari personalizate de antrenori;
+    \item pachete tarifare extinse si campanii promotionale;
+    \item notificari proactive pentru schimbari de program;
+    \item analytics extins pentru antrenori.
+\end{itemize}
+
+\section{Concluzie finala}
+
+Trainee valideaza fezabilitatea unei platforme full-stack de tip fitness marketplace, proiectata cu principii moderne de inginerie software si securitate aplicata. Lucrarea arata ca, printr-o abordare metodica si modulara, un proiect de licenta poate depasi nivelul de demonstrator si poate oferi un fundament tehnic credibil pentru dezvoltare ulterioara.
+
+Combinatia dintre backend robust, frontend mobil orientat pe fluxuri reale si documentatie tehnica coerenta ofera atat valoare practica imediata, cat si consistenta academica pentru evaluare.

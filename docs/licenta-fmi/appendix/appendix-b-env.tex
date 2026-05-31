@@ -1,0 +1,98 @@
+\chapter{Anexa B: Variabile de mediu si configurare}
+
+\section{Scop}
+
+Aceasta anexa sumarizeaza variabilele de mediu relevante pentru rularea sistemului. Structura explicita este utila atat pentru reproducibilitate tehnica, cat si pentru audit operational.
+
+\section{Backend}
+
+\begin{longtable}{p{0.34\textwidth} p{0.58\textwidth}}
+\caption{Variabile de mediu backend} \\
+\toprule
+\textbf{Variabila} & \textbf{Rol} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Variabila} & \textbf{Rol} \\
+\midrule
+\endhead
+
+PORT & Portul pe care ruleaza API-ul backend. \\
+NODE\_ENV & Mediu runtime (development/production). \\
+TRUST\_PROXY & Configureaza comportamentul Express in spatele unui proxy. \\
+
+DB\_HOST & Host baza de date PostgreSQL. \\
+DB\_PORT & Port baza de date. \\
+DB\_NAME & Nume baza de date. \\
+DB\_USER & Utilizator DB. \\
+DB\_PASS & Parola DB. \\
+
+JWT\_SECRET & Secret pentru semnare/verificare JWT. \\
+JWT\_RESET\_SECRET & Secret optional pentru token reset parola. \\
+CHECKIN\_CODE\_SECRET & Secret pentru hash coduri check-in. \\
+
+SMTP\_USER & Utilizator SMTP pentru email transactional. \\
+SMTP\_PASS & Credential SMTP. \\
+
+BILLING\_MODE & Modul runtime billing (de exemplu revenuecat\_only). \\
+STRIPE\_SECRET\_KEY & Cheie privata Stripe backend. \\
+STRIPE\_WEBHOOK\_SECRET & Secret validare webhook Stripe. \\
+REVENUECAT\_SECRET\_API\_KEY & Cheie server-side RevenueCat. \\
+REVENUECAT\_WEBHOOK\_AUTH & Credential verificare webhook RevenueCat. \\
+REVENUECAT\_ENTITLEMENT\_ID & ID entitlement pentru subscriere. \\
+
+AWS\_ACCESS\_KEY\_ID & Cheie acces AWS. \\
+AWS\_SECRET\_ACCESS\_KEY & Secret cheie AWS. \\
+AWS\_REGION & Regiune AWS pentru S3. \\
+AWS\_S3\_BUCKET & Bucket pentru upload media. \\
+
+INPUT\_UNKNOWN\_FIELDS\_MODE & Politica pentru campuri necunoscute (monitor/enforce). \\
+RATE\_LIMIT\_PUBLIC\_WINDOW\_MS & Fereastra rate limiting endpoint-uri publice. \\
+RATE\_LIMIT\_PUBLIC\_MAX & Maxim request-uri publice pe fereastra. \\
+RATE\_LIMIT\_AUTH\_WINDOW\_MS & Fereastra rate limiting auth. \\
+RATE\_LIMIT\_AUTH\_MAX & Maxim request-uri auth pe fereastra. \\
+RATE\_LIMIT\_EMAIL\_WINDOW\_MS & Fereastra rate limiting email. \\
+RATE\_LIMIT\_EMAIL\_MAX & Maxim request-uri email pe fereastra. \\
+RATE\_LIMIT\_CHECKOUT\_WINDOW\_MS & Fereastra rate limiting billing checkout. \\
+RATE\_LIMIT\_CHECKOUT\_MAX & Maxim request-uri checkout pe fereastra. \\
+RATE\_LIMIT\_WEBHOOK\_WINDOW\_MS & Fereastra rate limiting webhook. \\
+RATE\_LIMIT\_WEBHOOK\_MAX & Maxim request-uri webhook pe fereastra. \\
+
+\bottomrule
+\end{longtable}
+
+\section{Frontend}
+
+\begin{longtable}{p{0.34\textwidth} p{0.58\textwidth}}
+\caption{Variabile de mediu frontend} \\
+\toprule
+\textbf{Variabila} & \textbf{Rol} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Variabila} & \textbf{Rol} \\
+\midrule
+\endhead
+
+EXPO\_PUBLIC\_API\_URL & URL API explicit (override general). \\
+EXPO\_PUBLIC\_API\_URL\_DEV & URL API pentru mediu development. \\
+EXPO\_PUBLIC\_API\_URL\_PROD & URL API pentru mediu productie. \\
+
+EXPO\_PUBLIC\_STRIPE\_PUBLISHABLE\_KEY & Cheie publica Stripe pentru client mobil. \\
+EXPO\_PUBLIC\_REVENUECAT\_APPLE\_API\_KEY & Cheie publica RevenueCat iOS. \\
+EXPO\_PUBLIC\_REVENUECAT\_GOOGLE\_API\_KEY & Cheie publica RevenueCat Android. \\
+EXPO\_PUBLIC\_REVENUECAT\_ENTITLEMENT\_ID & Entitlement vizat in client. \\
+EXPO\_PUBLIC\_REVENUECAT\_PRODUCT\_ID & Product id pentru abonament mobil. \\
+EXPO\_PUBLIC\_ENABLE\_STRIPE\_CHECKOUT & Toggle pentru flux checkout Stripe in UI. \\
+
+\bottomrule
+\end{longtable}
+
+\section{Recomandari de operare}
+
+\begin{itemize}[leftmargin=1.2cm]
+    \item Fisierele \texttt{.env} reale nu se versioneaza in repository.
+    \item In client se folosesc doar chei publice, iar cheile private raman exclusiv in backend.
+    \item Pentru credentialele critice se defineste o procedura de rotatie periodica.
+    \item In productie este recomandata folosirea unui secret manager dedicat.
+\end{itemize}

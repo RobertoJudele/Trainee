@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
 	ActivityIndicator,
 	Alert,
+	Platform,
 	Pressable,
 	SafeAreaView,
 	StyleSheet,
@@ -10,13 +11,55 @@ import {
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import * as Linking from "expo-linking";
+import Purchases from "react-native-purchases";
+import { useSelector } from "react-redux";
 import { API_URL } from "../src/constants/config";
+import { useValidateIapSubscriptionMutation } from "../features/billing/billingApiSlice";
+import { selectCurrentUser } from "../features/auth/authSlice";
+import { theme, typography } from "../src/lib/theme";
+import { Ionicons } from "@expo/vector-icons";
 
 const LOOKUP_KEY = "MonthlySubscription-349c6bd";
+const REVENUECAT_ENTITLEMENT_ID =
+	process.env.EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID || "trainer_subscription";
+const REVENUECAT_MONTHLY_PRODUCT_ID =
+	process.env.EXPO_PUBLIC_REVENUECAT_PRODUCT_ID || "com.trainee.trainer_monthly";
+const STRIPE_CHECKOUT_RUNTIME_ENABLED =
+	process.env.EXPO_PUBLIC_ENABLE_STRIPE_CHECKOUT === "1";
 
 type CheckoutResponse = {
 	url?: string;
 	message?: string;
+};
+
+type RevenueCatEntitlement = {
+	expirationDate?: string | null;
+	productIdentifier?: string;
+};
+
+type RevenueCatCustomerInfo = {
+	originalAppUserId?: string;
+	entitlements?: {
+		active?: Record<string, RevenueCatEntitlement>;
+		all?: Record<string, RevenueCatEntitlement>;
+	};
+};
+
+type RevenueCatPackage = {
+	identifier?: string;
+	product?: {
+		identifier?: string;
+	};
+};
+
+type RevenueCatOfferings = {
+	current?: {
+		availablePackages?: RevenueCatPackage[];
+	};
+};
+
+type RevenueCatPurchaseResult = {
+	customerInfo?: RevenueCatCustomerInfo;
 };
 
 type SuccessDisplayProps = {
@@ -30,18 +73,30 @@ type MessageProps = {
 };
 
 const ProductDisplay = ({
+	title,
+	subtitle,
+	actionLabel,
 	onCheckout,
 	loading,
+	onRestore,
+	restoreLoading,
+	restoreLabel,
 }: {
+	title: string;
+	subtitle: string;
+	actionLabel: string;
 	onCheckout: () => Promise<void>;
 	loading: boolean;
+	onRestore?: () => Promise<void>;
+	restoreLoading?: boolean;
+	restoreLabel?: string;
 }) => (
 	<View style={styles.section}>
 		<View style={styles.productRow}>
 			<Logo />
 			<View style={styles.description}>
-				<Text style={styles.title}>MonthlySubscription</Text>
-				<Text style={styles.subtitle}>RON 100.00 / month</Text>
+				<Text style={styles.title}>{title}</Text>
+				<Text style={styles.subtitle}>{subtitle}</Text>
 			</View>
 		</View>
 
@@ -53,9 +108,28 @@ const ProductDisplay = ({
 			{loading ? (
 				<ActivityIndicator color="#ffffff" />
 			) : (
-				<Text style={styles.buttonText}>Checkout</Text>
+				<Text style={styles.buttonText}>{actionLabel}</Text>
 			)}
 		</Pressable>
+
+		{onRestore ? (
+			<Pressable
+				style={({ pressed }) => [
+					styles.secondaryButton,
+					pressed && styles.buttonPressed,
+				]}
+				onPress={onRestore}
+				disabled={Boolean(restoreLoading)}
+			>
+				{restoreLoading ? (
+					<ActivityIndicator color={theme.colors.primary} />
+				) : (
+					<Text style={styles.secondaryButtonText}>
+						{restoreLabel || "Restore Purchases"}
+					</Text>
+				)}
+			</Pressable>
+		) : null}
 	</View>
 );
 
@@ -95,17 +169,42 @@ const Message = ({ message }: MessageProps) => (
 	</View>
 );
 
+const NativeIapNotice = () => (
+	<View style={styles.section}>
+		<Text style={styles.title}>RevenueCat Billing</Text>
+		<Text style={styles.message}>
+			Subscriptions are handled through Apple App Store / Google Play via RevenueCat
+			 in this release.
+		</Text>
+	</View>
+);
+
+const WebBillingModeNotice = () => (
+	<View style={styles.section}>
+		<Text style={styles.title}>Web Checkout Disabled</Text>
+		<Text style={styles.message}>
+			RevenueCat mobile billing is active right now. Stripe checkout code is preserved
+			 for future activation but is not enabled in this build.
+		</Text>
+	</View>
+);
+
 export default function CheckoutScreen() {
 	const params = useLocalSearchParams<{
 		success?: string;
 		canceled?: string;
 		session_id?: string;
 	}>();
+	const user = useSelector(selectCurrentUser);
+	const [validateIapSubscription] = useValidateIapSubscriptionMutation();
 
 	const [message, setMessage] = useState("");
 	const [success, setSuccess] = useState(false);
 	const [sessionId, setSessionId] = useState("");
 	const [loading, setLoading] = useState(false);
+	const [isRestoring, setIsRestoring] = useState(false);
+	const isNativeApp = Platform.OS === "ios" || Platform.OS === "android";
+	const canUseStripeWebCheckout = !isNativeApp && STRIPE_CHECKOUT_RUNTIME_ENABLED;
 
 	const normalizedParams = useMemo(
 		() => ({
@@ -121,6 +220,12 @@ export default function CheckoutScreen() {
 	);
 
 	useEffect(() => {
+		if (!canUseStripeWebCheckout) {
+			setSuccess(false);
+			setSessionId("");
+			return;
+		}
+
 		if (normalizedParams.success) {
 			setSuccess(true);
 			setSessionId(normalizedParams.sessionId ?? "");
@@ -140,7 +245,65 @@ export default function CheckoutScreen() {
 		setSuccess(false);
 		setSessionId("");
 		setMessage("");
-	}, [normalizedParams]);
+	}, [canUseStripeWebCheckout, normalizedParams]);
+
+	const resolveNativePackage = (offerings: RevenueCatOfferings): RevenueCatPackage | undefined => {
+		const availablePackages = offerings.current?.availablePackages ?? [];
+		if (availablePackages.length === 0) {
+			return undefined;
+		}
+
+		const byProductId = availablePackages.find(
+			(pkg) => pkg.product?.identifier === REVENUECAT_MONTHLY_PRODUCT_ID
+		);
+		if (byProductId) {
+			return byProductId;
+		}
+
+		return availablePackages[0];
+	};
+
+	const resolveEntitlement = (
+		customerInfo: RevenueCatCustomerInfo
+	): RevenueCatEntitlement | undefined => {
+		const activeEntitlement =
+			customerInfo.entitlements?.active?.[REVENUECAT_ENTITLEMENT_ID];
+		if (activeEntitlement) {
+			return activeEntitlement;
+		}
+
+		const allEntitlement = customerInfo.entitlements?.all?.[REVENUECAT_ENTITLEMENT_ID];
+		if (!allEntitlement) {
+			return undefined;
+		}
+
+		if (!allEntitlement.expirationDate) {
+			return allEntitlement;
+		}
+
+		const expiration = new Date(allEntitlement.expirationDate);
+		if (Number.isFinite(expiration.getTime()) && expiration.getTime() > Date.now()) {
+			return allEntitlement;
+		}
+
+		return undefined;
+	};
+
+	const syncRevenueCatToBackend = async (payload: {
+		productId: string;
+		expiresAt?: string;
+		purchaseToken?: string;
+		originalTransactionId?: string;
+	}) => {
+		const platform = Platform.OS === "ios" ? "ios" : "android";
+		await validateIapSubscription({
+			platform,
+			productId: payload.productId,
+			expiresAt: payload.expiresAt,
+			purchaseToken: payload.purchaseToken,
+			originalTransactionId: payload.originalTransactionId,
+		}).unwrap();
+	};
 
 	const openExternalUrl = async (url: string) => {
 		const canOpen = await Linking.canOpenURL(url);
@@ -152,6 +315,75 @@ export default function CheckoutScreen() {
 	};
 
 	const startCheckout = async () => {
+		if (isNativeApp) {
+			if (!user) {
+				Alert.alert("Login Required", "Please sign in before starting a subscription.");
+				return;
+			}
+
+			setLoading(true);
+			setMessage("");
+			setSuccess(false);
+
+			try {
+				const offerings = (await Purchases.getOfferings()) as unknown as RevenueCatOfferings;
+				const targetPackage = resolveNativePackage(offerings);
+				if (!targetPackage) {
+					throw new Error("No subscription package is available right now.");
+				}
+
+				const purchaseResult = (await Purchases.purchasePackage(
+					targetPackage as any
+				)) as unknown as RevenueCatPurchaseResult;
+
+				const customerInfo = purchaseResult.customerInfo || {};
+				const entitlement = resolveEntitlement(customerInfo);
+				if (!entitlement) {
+					throw new Error(
+						"Purchase completed but entitlement is not active yet. Try Restore Purchases."
+					);
+				}
+
+				const selectedProductId =
+					targetPackage.product?.identifier
+					|| entitlement.productIdentifier
+					|| REVENUECAT_MONTHLY_PRODUCT_ID;
+
+				await syncRevenueCatToBackend({
+					productId: selectedProductId,
+					expiresAt: entitlement.expirationDate || undefined,
+					purchaseToken: `rc-purchase-${Date.now()}`,
+					originalTransactionId: customerInfo.originalAppUserId,
+				});
+
+				setSuccess(true);
+				setMessage("Subscription activated successfully.");
+			} catch (error) {
+				const typedError = error as { userCancelled?: boolean; code?: string; message?: string };
+				const errorCode = String(typedError.code || "").toLowerCase();
+				const wasCancelled = Boolean(typedError.userCancelled) || errorCode.includes("cancel");
+
+				if (wasCancelled) {
+					setMessage("Purchase cancelled.");
+				} else {
+					const fallback = "Unable to complete purchase. Please try again.";
+					Alert.alert("Purchase Error", typedError.message || fallback);
+				}
+			} finally {
+				setLoading(false);
+			}
+
+			return;
+		}
+
+		if (!STRIPE_CHECKOUT_RUNTIME_ENABLED) {
+			Alert.alert(
+				"Unavailable",
+				"Web Stripe checkout is currently disabled in this release mode."
+			);
+			return;
+		}
+
 		setLoading(true);
 		try {
 			const response = await fetch(`${API_URL}/create-checkout-session`, {
@@ -182,6 +414,22 @@ export default function CheckoutScreen() {
 	};
 
 	const openBillingPortal = async () => {
+		if (isNativeApp) {
+			Alert.alert(
+				"Unavailable",
+				"Billing portal is disabled in native mode for this release."
+			);
+			return;
+		}
+
+		if (!STRIPE_CHECKOUT_RUNTIME_ENABLED) {
+			Alert.alert(
+				"Unavailable",
+				"Web Stripe billing portal is currently disabled in this release mode."
+			);
+			return;
+		}
+
 		if (!sessionId) {
 			Alert.alert("Missing session", "Session id was not found.");
 			return;
@@ -216,10 +464,82 @@ export default function CheckoutScreen() {
 		}
 	};
 
+	const restorePurchases = async () => {
+		if (!isNativeApp) {
+			Alert.alert("Unavailable", "Restore purchases is available only on native app builds.");
+			return;
+		}
+
+		if (!user) {
+			Alert.alert("Login Required", "Please sign in before restoring purchases.");
+			return;
+		}
+
+		setIsRestoring(true);
+		setMessage("");
+
+		try {
+			const customerInfo = (await Purchases.restorePurchases()) as unknown as RevenueCatCustomerInfo;
+			const entitlement = resolveEntitlement(customerInfo);
+
+			if (!entitlement) {
+				Alert.alert("No Active Subscription", "No active subscription was found to restore.");
+				return;
+			}
+
+			await syncRevenueCatToBackend({
+				productId: entitlement.productIdentifier || REVENUECAT_MONTHLY_PRODUCT_ID,
+				expiresAt: entitlement.expirationDate || undefined,
+				purchaseToken: `rc-restore-${Date.now()}`,
+				originalTransactionId: customerInfo.originalAppUserId,
+			});
+
+			setSuccess(true);
+			setMessage("Purchases restored successfully.");
+		} catch (error) {
+			const typedError = error as { message?: string };
+			Alert.alert(
+				"Restore Error",
+				typedError.message || "Unable to restore purchases. Please try again."
+			);
+		} finally {
+			setIsRestoring(false);
+		}
+	};
+
 	return (
 		<SafeAreaView style={styles.container}>
+			{isNativeApp && <NativeIapNotice />}
+			{isNativeApp && (
+				<>
+					{!success && (
+						<ProductDisplay
+							title="MonthlySubscription"
+							subtitle="RON 100.00 / month"
+							actionLabel="Subscribe"
+							onCheckout={startCheckout}
+							loading={loading}
+							onRestore={restorePurchases}
+							restoreLoading={isRestoring}
+							restoreLabel="Restore Purchases"
+						/>
+					)}
+					{message !== "" && <Message message={message} />}
+				</>
+			)}
+
+			{!isNativeApp && !STRIPE_CHECKOUT_RUNTIME_ENABLED && <WebBillingModeNotice />}
+
+			{canUseStripeWebCheckout && (
+				<>
 			{!success && message === "" && (
-				<ProductDisplay onCheckout={startCheckout} loading={loading} />
+				<ProductDisplay
+					title="MonthlySubscription"
+					subtitle="RON 100.00 / month"
+					actionLabel="Checkout"
+					onCheckout={startCheckout}
+					loading={loading}
+				/>
 			)}
 			{success && sessionId !== "" && (
 				<SuccessDisplay
@@ -236,34 +556,32 @@ export default function CheckoutScreen() {
 					}
 				/>
 			) : null}
+				</>
+			)}
 		</SafeAreaView>
 	);
 }
 
 const Logo = () => (
 	<View style={styles.logoContainer}>
-		<Text style={styles.logoText}>S</Text>
+		<Ionicons name="card" size={20} color="#ffffff" />
 	</View>
 );
 
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#f4f7fb",
+		backgroundColor: theme.colors.background,
 		justifyContent: "center",
 		paddingHorizontal: 20,
 	},
 	section: {
-		backgroundColor: "#ffffff",
-		borderRadius: 14,
+		backgroundColor: theme.colors.surface,
+		borderRadius: theme.roundness,
 		padding: 20,
 		borderWidth: 1,
-		borderColor: "#e7ebf0",
-		shadowColor: "#000000",
-		shadowOffset: { width: 0, height: 6 },
-		shadowOpacity: 0.08,
-		shadowRadius: 10,
-		elevation: 3,
+		borderColor: theme.colors.border,
+		...theme.shadows.medium,
 	},
 	productRow: {
 		flexDirection: "row",
@@ -275,51 +593,61 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	title: {
-		fontSize: 18,
-		fontWeight: "700",
-		color: "#172036",
+		...typography.h3,
+		color: theme.colors.text,
 	},
 	subtitle: {
 		marginTop: 6,
-		fontSize: 14,
-		color: "#5b667f",
+		...typography.body2,
+		color: theme.colors.textSecondary,
 	},
 	sessionText: {
 		marginTop: 6,
-		fontSize: 12,
-		color: "#6d768c",
+		...typography.caption,
+		color: theme.colors.textSecondary,
 	},
 	button: {
-		backgroundColor: "#0f5bff",
-		borderRadius: 10,
-		height: 46,
+		backgroundColor: theme.colors.primary,
+		borderRadius: theme.roundness,
+		height: 48,
 		alignItems: "center",
 		justifyContent: "center",
+		...theme.shadows.small,
+	},
+	secondaryButton: {
+		marginTop: 12,
+		borderRadius: theme.roundness,
+		height: 48,
+		alignItems: "center",
+		justifyContent: "center",
+		borderWidth: 1,
+		borderColor: theme.colors.primary,
+		backgroundColor: theme.colors.surface,
 	},
 	buttonPressed: {
 		opacity: 0.9,
 	},
 	buttonText: {
+		...typography.body2,
 		color: "#ffffff",
-		fontSize: 15,
+		fontWeight: "700",
+	},
+	secondaryButtonText: {
+		...typography.body2,
+		color: theme.colors.primary,
 		fontWeight: "700",
 	},
 	message: {
-		fontSize: 15,
-		color: "#1f2a44",
+		...typography.body2,
+		color: theme.colors.textSecondary,
 		lineHeight: 22,
 	},
 	logoContainer: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "#0f5bff",
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		backgroundColor: theme.colors.primary,
 		alignItems: "center",
 		justifyContent: "center",
-	},
-	logoText: {
-		color: "#ffffff",
-		fontSize: 18,
-		fontWeight: "800",
 	},
 });

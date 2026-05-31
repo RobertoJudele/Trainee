@@ -1,0 +1,82 @@
+\chapter{Introducere}
+
+\section{Contextul lucrarii}
+
+Piata serviciilor de fitness s-a mutat, aproape pe nesimtite, in zona digitala. Utilizatorii cauta viteza, claritate si raspunsuri imediate, iar profesionistii din domeniu incearca sa tina pasul cu acest ritm. In practica, lucrurile nu sunt chiar lineare: clientii gasesc antrenori pe canale diferite, programarile se fac in aplicatii separate, iar interactiunile legate de plati, verificare sau suport ajung frecvent in mesaje ad-hoc.
+
+Platforma Trainee este gandita exact pentru acest context fragmentat. Solutia propusa aduce intr-un singur produs fluxurile esentiale: descoperirea antrenorilor, filtrare relevanta, gestionarea programarilor, interactiunea cu sali de sport, raportarea incidentelor si componenta de monetizare. Rezultatul vizat este unul simplu de enuntat, dar greu de implementat corect: un parcurs coerent pentru trei roluri distincte, respectiv client, antrenor si administrator.
+
+Din punct de vedere tehnic, lucrarea analizeaza un studiu de caz realist de inginerie software aplicata, unde tehnologiile mobile moderne sunt combinate cu un backend modular, reguli explicite de securitate si un strat relational de date extins cu capabilitati geospatiale.
+
+\section{Problema abordata}
+
+Problema centrala a lucrarii poate fi formulata astfel: cum poate fi proiectata o platforma sigura si extensibila care sa intermedieze eficient relatia dintre clienti si antrenori, fara compromisuri asupra calitatii datelor, a controlului de acces si a experientei de utilizare pe mobil?
+
+Aceasta intrebare se descompune in cateva sub-probleme concrete:
+\begin{itemize}[leftmargin=1.2cm]
+    \item alegerea unei arhitecturi potrivite pentru un produs cu mai multe domenii functionale;
+    \item mentinerea consistentei intre aplicatia mobila si API-ul backend;
+    \item gestionarea corecta a fluxurilor sensibile (autentificare, billing, check-in);
+    \item proiectarea unei persistente care suporta atat cautare text, cat si proximitate geografica;
+    \item introducerea unui nucleu de securitate capabil sa limiteze abuzul, datele invalide si expunerea accidentala de secrete.
+\end{itemize}
+
+\section{Obiectivele lucrarii}
+
+\subsection{Obiectiv general}
+
+Obiectivul general este proiectarea si implementarea unei aplicatii full-stack functionale pentru domeniul fitness marketplace, cu accent pe robustete operationala, modularitate si posibilitate de extindere.
+
+\subsection{Obiective specifice}
+
+\begin{table}[H]
+\centering
+\caption{Obiective specifice ale implementarii}
+\begin{tabular}{p{0.12\textwidth} p{0.78\textwidth}}
+\toprule
+\textbf{Cod} & \textbf{Obiectiv} \\
+\midrule
+O1 & Definirea unei arhitecturi front-back cu delimitare explicita a responsabilitatilor tehnice. \\
+O2 & Implementarea unui mecanism de autentificare JWT cu control de acces pe roluri. \\
+O3 & Implementarea unui flux de cautare antrenori cu filtre functionale si proximitate. \\
+O4 & Realizarea fluxurilor de scheduling si check-in pentru interactiunea antrenor-client. \\
+O5 & Integrarea unui model de billing cu suport pentru provideri externi si webhook idempotent. \\
+O6 & Aplicarea unui pachet de masuri de securitate: rate limiting, validare stricta si management al secretelor. \\
+O7 & Redactarea unei documentatii tehnice academice complete, aliniata cerintelor FMI. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Contributii}
+
+Contributiile principale ale lucrarii sunt urmatoarele:
+\begin{enumerate}[leftmargin=1.2cm]
+    \item \textbf{Contributie de arhitectura}: proiectarea unei structuri monorepo cu separare clara intre frontend, backend si infrastructura de date.
+    \item \textbf{Contributie de implementare}: realizarea unui prototip functional care acopera fluxurile esentiale pentru rolurile principale.
+    \item \textbf{Contributie de securitate}: introducerea unui set de masuri defensive inspirate din bune practici OWASP \parencite{owasp2021top10}.
+    \item \textbf{Contributie de conformitate}: integrarea documentelor legale si a unui punct de acces in aplicatie pentru transparenta utilizatorilor.
+    \item \textbf{Contributie de documentare}: trasabilitate intre cerinte, design, implementare si evaluare.
+\end{enumerate}
+
+\section{Metodologie}
+
+Metodologia de lucru este una iterativa. Fiecare componenta majora a trecut prin acelasi ciclu: clarificare cerinte, proiectare, implementare, verificare functionala, apoi hardening de securitate. In termeni practici, aceasta abordare a redus riscul de blocaj pe finalul proiectului si a permis corectii timpurii.
+
+La nivel tehnic au fost urmarite cateva principii simple, dar importante: configurare separata pe medii, validare centralizata, control explicit al dependintelor externe si un format stabil al raspunsurilor API.
+
+\section{Structura lucrarii}
+
+Documentul este organizat in noua capitole:
+\begin{itemize}[leftmargin=1.2cm]
+    \item Capitolul 1 introduce contextul, problema, obiectivele si contributiile;
+    \item Capitolul 2 prezinta fundamentele teoretice si tehnologiile alese;
+    \item Capitolul 3 formalizeaza cerintele functionale si nefunctionale;
+    \item Capitolul 4 detaliaza arhitectura sistemului;
+    \item Capitolul 5 trateaza modelarea datelor si persistenta;
+    \item Capitolul 6 descrie implementarea backend;
+    \item Capitolul 7 descrie implementarea frontend;
+    \item Capitolul 8 prezinta testarea, rezultatele si limitarile;
+    \item Capitolul 9 sintetizeaza concluziile si directiile viitoare.
+\end{itemize}
+
+Structura urmareste un traseu logic: de la motivatie si cerinte catre design, implementare si validare.

@@ -1,0 +1,81 @@
+\chapter{Anexa A: Sinteza endpoint-uri API}
+
+\section{Observatii generale}
+
+Aceasta anexa centralizeaza endpoint-urile principale folosite in proiect, grupate pe domenii functionale. Scopul este trasabilitatea dintre capitolele descriptive si implementarea efectiva din backend.
+
+\begin{longtable}{p{0.16\textwidth} p{0.28\textwidth} p{0.49\textwidth}}
+\caption{Endpoint-uri principale Trainee API} \\
+\toprule
+\textbf{Metoda} & \textbf{Ruta} & \textbf{Descriere} \\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Metoda} & \textbf{Ruta} & \textbf{Descriere} \\
+\midrule
+\endhead
+
+POST & /auth/register & Inregistrare utilizator nou (client/trainer/admin) \\
+POST & /auth/login & Autentificare si emitere token \\
+POST & /auth/forgot-password & Initiaza flux resetare parola \\
+POST & /auth/reset-password & Finalizare resetare parola \\
+
+GET & /email/verify & Verificare email prin token \\
+POST & /email/resend & Retrimite email de verificare \\
+GET & /email/status & Verifica starea de verificare email pentru utilizator autentificat \\
+
+GET & /trainer/search & Cautare antrenori cu filtre multiple \\
+GET & /trainer/:trainerId & Detalii profil trainer public \\
+GET & /trainer/analytics & Indicatori de analytics pentru trainer autentificat \\
+POST & /trainer/create & Creeaza profil trainer \\
+PUT & /trainer/ & Actualizeaza profil trainer \\
+DELETE & /trainer/ & Sterge profil trainer \\
+
+GET & /gyms/ & Lista sali (cu suport proximitate) \\
+GET & /gyms/:gymId & Detalii sala \\
+POST & /gyms/:gymId/join & Asociere trainer cu sala \\
+PATCH & /gyms/:gymId/availability & Schimbare disponibilitate trainer in sala \\
+DELETE & /gyms/:gymId/leave & Parasire sala \\
+POST & /gyms/ & Creare sala (admin) \\
+
+GET & /specialization/ & Lista specializari \\
+POST & /specialization/ & Creeaza specializare \\
+POST & /trainer-specialization/ & Asociaza specializari pentru trainer \\
+GET & /trainer-specialization/ & Lista specializari trainer \\
+
+POST & /review/:trainerId & Creeaza review trainer \\
+PUT & /review/:reviewId & Actualizeaza review existent \\
+DELETE & /review/:reviewId & Sterge review \\
+
+POST & /issues/ & Raportare incident \\
+GET & /issues/me & Lista issue-uri ale utilizatorului curent \\
+GET & /issues/ & Lista issue-uri admin (filtrata) \\
+PATCH & /issues/:issueId/status & Actualizare status issue (admin) \\
+
+POST & /billing/subscribe & Initiere flux subscribe \\
+GET & /billing/entitlement & Returneaza starea entitlement \\
+POST & /billing/iap/validate & Validare achizitie in-app \\
+POST & /billing/revenuecat/sync & Sincronizare entitlement mobile \\
+POST & /billing/create-checkout-session & Creeaza sesiune checkout \\
+POST & /billing/create-portal-session & Creeaza sesiune portal billing \\
+POST & /billing/webhook & Webhook Stripe \\
+POST & /billing/webhooks/revenuecat & Webhook RevenueCat \\
+
+POST & /trainer-schedule/working-hours & Definire sablon ore de lucru \\
+GET & /trainer-schedule/working-hours & Citire ore de lucru \\
+POST & /trainer-schedule/generate-slots & Generare sloturi pe interval calendaristic \\
+GET & /trainer-schedule/slots & Lista sloturi trainer \\
+GET & /trainer-schedule/clients/search & Cauta clienti pentru asignare \\
+POST & /trainer-schedule/client-codes/resolve & Rezolva cod client \\
+POST & /trainer-schedule/slots/:slotId/assign-client & Asigneaza client pe slot \\
+POST & /trainer-schedule/slots/:slotId/unassign-client & Elimina client de pe slot \\
+POST & /trainer-schedule/slots/:slotId/assign-by-code & Asignare prin cod de check-in \\
+POST & /trainer-schedule/slots/:slotId/check-in & Confirmare check-in trainer \\
+POST & /trainer-schedule/my-schedule/generate-check-in-code & Genereaza cod check-in pentru client \\
+GET & /trainer-schedule/my-schedule & Programul clientului autentificat \\
+
+PUT & /user/ & Actualizare profil utilizator \\
+DELETE & /user/ & Stergere profil utilizator \\
+
+\bottomrule
+\end{longtable}

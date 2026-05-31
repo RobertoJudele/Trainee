@@ -19,7 +19,6 @@ const baseQuery = fetchBaseQuery({
   prepareHeaders: (headers, { getState }) => {
     const token = (getState() as RootState).auth.token;
     if (token) {
-      console.log("Attaching token to request:", token); // ✅ Add debug log
       headers.set("authorization", `Bearer ${token}`);
     }
     return headers;
@@ -31,18 +30,13 @@ const baseQueryWithReauth: BaseQueryFn<
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
-  console.log("Making API request:", args); // ✅ Add debug log
-
   let result = await baseQuery(args, api, extraOptions);
-  console.log("🌐 API response:", result); // ✅ Add response debug log
 
   if (result.error?.status === 401) {
-    console.log("Sending refresh token");
     const refreshResult = await baseQuery("/refresh", api, extraOptions);
 
     const refreshData = refreshResult.data as RefreshResponse;
 
-    console.log(refreshResult);
     if (refreshResult.data) {
       const user = (api.getState() as RootState).auth.user;
       //store the new token
@@ -51,6 +45,7 @@ const baseQueryWithReauth: BaseQueryFn<
       result = await baseQuery(args, api, extraOptions);
     } else {
       api.dispatch(logOut());
+      api.dispatch(apiSlice.util.resetApiState());
     }
   }
   return result;

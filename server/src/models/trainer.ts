@@ -34,6 +34,11 @@ export class Trainer extends Model<
   @Column({ type: DataType.INTEGER, primaryKey: true, autoIncrement: true })
   id!: number;
 
+  @AllowNull(true)
+  @Default(DataType.UUIDV4)
+  @Column({ type: DataType.UUID, field: "public_id", unique: true })
+  publicId?: string;
+
   @ForeignKey(() => User)
   @AllowNull(false)
   @Column({ type: DataType.INTEGER, field: "user_id" })
@@ -72,6 +77,21 @@ export class Trainer extends Model<
   @Column({ type: DataType.DECIMAL(11, 8) })
   longitude?: number;
 
+  @Column({ type: DataType.STRING(255), field: "instagram_url" })
+  instagramUrl?: string;
+
+  @Column({ type: DataType.STRING(255), field: "facebook_url" })
+  facebookUrl?: string;
+
+  @Column({ type: DataType.STRING(255), field: "whatsapp_url" })
+  whatsappUrl?: string;
+
+  @Column({ type: DataType.GEOMETRY("POINT", 4326), field: "location" })
+  location?: {
+    type: "Point";
+    coordinates: [number, number];
+  };
+
   @Default(false)
   @Column({ type: DataType.BOOLEAN, field: "is_featured" })
   isFeatured!: boolean;
@@ -104,6 +124,25 @@ export class Trainer extends Model<
 
   @Column({type: DataType.STRING(100),field:"stripe_subscription_id"})
   stripeSubscriptionId!: string
+
+  @Default("none")
+  @Column({ type: DataType.ENUM("none", "stripe", "apple", "google"), field: "billing_provider" })
+  billingProvider!: string
+
+  @Column({ type: DataType.STRING(255), field: "apple_original_transaction_id" })
+  appleOriginalTransactionId?: string
+
+  @Column({ type: DataType.STRING(255), field: "google_purchase_token" })
+  googlePurchaseToken?: string
+
+  @Column({ type: DataType.STRING(120), field: "iap_product_id" })
+  iapProductId?: string
+
+  @Column({ type: DataType.DATE, field: "iap_expires_at" })
+  iapExpiresAt?: Date
+
+  @Column({ type: DataType.DATE, field: "iap_last_verified_at" })
+  iapLastVerifiedAt?: Date
 
   @Column({type: DataType.DATE, field: "current_period_ends_at"})
   currentPeriodEndsAt?: Date

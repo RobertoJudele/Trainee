@@ -14,17 +14,32 @@ import {
   registerValidation,
   resetPasswordValidation,
 } from "../middleware/validation";
+import { authRateLimit } from "../middleware/rateLimitProfiles";
 const router = express.Router();
-router.post("/register", registerValidation, handleValidationErrors, register);
-router.post("/login", loginValidation, handleValidationErrors, login);
+router.post(
+  "/register",
+  authRateLimit,
+  registerValidation,
+  handleValidationErrors,
+  register
+);
+router.post(
+  "/login",
+  authRateLimit,
+  loginValidation,
+  handleValidationErrors,
+  login
+);
 router.post(
   "/forgot-password",
+  authRateLimit,
   forgotPasswordValidation,
   handleValidationErrors,
   forgotPassword
 );
 router.post(
   "/reset-password",
+  authRateLimit,
   resetPasswordValidation,
   handleValidationErrors,
   resetPassword

@@ -1,0 +1,78 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[romanian,english]{babel}
+\usepackage{setspace}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{csquotes}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{listings}
+\usepackage[style=apa,sorting=nyt,backend=biber]{biblatex}
+
+\addbibresource{references.bib}
+
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{0.25em}
+\onehalfspacing
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=black,
+  urlcolor=blue
+}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue!70!black},
+  commentstyle=\color{green!40!black},
+  stringstyle=\color{orange!60!black},
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  tabsize=2
+}
+
+\begin{document}
+
+\pagenumbering{roman}
+\input{frontmatter/title}
+\input{frontmatter/abstract}
+
+\tableofcontents
+\clearpage
+\listoffigures
+\clearpage
+\listoftables
+\clearpage
+
+\pagenumbering{arabic}
+
+\input{chapters/01-introducere}
+\input{chapters/02-fundamente}
+\input{chapters/03-cerinte}
+\input{chapters/04-arhitectura}
+\input{chapters/05-date}
+\input{chapters/06-backend}
+\input{chapters/07-frontend}
+\input{chapters/08-testare}
+\input{chapters/09-concluzii}
+
+\appendix
+\input{appendix/appendix-a-api}
+\input{appendix/appendix-b-env}
+
+\printbibliography
+
+\end{document}

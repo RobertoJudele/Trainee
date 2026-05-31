@@ -1,5 +1,5 @@
 // frontend/app/search.tsx  (or frontend/src/screens/Search.tsx)
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
-  Animated,
   LayoutAnimation,
   Platform,
   UIManager,
@@ -18,6 +17,8 @@ import {
 import { useSearchTrainersQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
 import { theme, typography } from "../src/lib/theme";
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -111,9 +112,13 @@ export default function SearchScreen() {
   const renderStars = (rating: number) => {
     const full = Math.floor(rating);
     return Array.from({ length: 5 }, (_, i) => (
-      <Text key={i} style={i < full ? styles.starFull : styles.starEmpty}>
-        ★
-      </Text>
+      <Ionicons
+        key={i}
+        name={i < full ? "star" : "star-outline"}
+        size={12}
+        color={i < full ? "#F59E0B" : theme.colors.border}
+        style={{ marginRight: 2 }}
+      />
     ));
   };
 
@@ -163,6 +168,7 @@ export default function SearchScreen() {
           </Text>
           {item.isFeatured && (
             <View style={styles.featuredBadge}>
+              <Ionicons name="star" size={10} color="#D97706" style={{marginRight: 2}} />
               <Text style={styles.featuredText}>Featured</Text>
             </View>
           )}
@@ -198,9 +204,12 @@ export default function SearchScreen() {
 
         {/* Location */}
         {(item.locationCity || item.locationState) && (
-          <Text style={styles.cardLocation}>
-            📍 {[item.locationCity, item.locationState].filter(Boolean).join(", ")}
-          </Text>
+          <View style={styles.locationContainer}>
+             <Ionicons name="location" size={12} color={theme.colors.textSecondary} />
+             <Text style={styles.cardLocation}>
+               {[item.locationCity, item.locationState].filter(Boolean).join(", ")}
+             </Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -211,7 +220,7 @@ export default function SearchScreen() {
     if (Object.keys(activeParams).length === 0) {
       return (
         <View style={styles.emptyState}>
-          <Text style={styles.emptyIcon}>🔍</Text>
+          <Ionicons name="search" size={48} color={theme.colors.textSecondary} style={{ marginBottom: theme.spacing.md }} />
           <Text style={styles.emptyTitle}>Find your trainer</Text>
           <Text style={styles.emptyDesc}>Search by name, location, or specialization</Text>
         </View>
@@ -219,7 +228,7 @@ export default function SearchScreen() {
     }
     return (
       <View style={styles.emptyState}>
-        <Text style={styles.emptyIcon}>😕</Text>
+        <Ionicons name="sad-outline" size={48} color={theme.colors.textSecondary} style={{ marginBottom: theme.spacing.md }} />
         <Text style={styles.emptyTitle}>No trainers found</Text>
         <Text style={styles.emptyDesc}>Try adjusting your filters</Text>
         <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
@@ -235,7 +244,7 @@ export default function SearchScreen() {
       <View style={styles.topBar}>
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
-            <Text style={styles.searchIcon}>🔍</Text>
+            <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search trainers..."
@@ -247,7 +256,7 @@ export default function SearchScreen() {
             />
             {query.length > 0 && (
               <TouchableOpacity onPress={() => setQuery("")}>
-                <Text style={styles.clearX}>✕</Text>
+                <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             )}
           </View>
@@ -255,7 +264,7 @@ export default function SearchScreen() {
             style={[styles.filterToggle, showFilters && styles.filterToggleActive]}
             onPress={toggleFilters}
           >
-            <Text style={styles.filterToggleIcon}>⚙️</Text>
+            <Ionicons name="options" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
           </TouchableOpacity>
         </View>
 
@@ -410,7 +419,7 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
     <View style={styles.activeChip}>
       <Text style={styles.activeChipText}>{label}</Text>
       <TouchableOpacity onPress={onRemove}>
-        <Text style={styles.activeChipX}>✕</Text>
+        <Ionicons name="close" size={14} color={theme.colors.primary} style={{marginLeft: 2}}/>
       </TouchableOpacity>
     </View>
   );
@@ -440,21 +449,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   },
-  searchIcon: { fontSize: 16, marginRight: 8 },
+  searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, ...typography.body1, color: theme.colors.text },
-  clearX: { fontSize: 14, color: theme.colors.textSecondary, paddingLeft: 8 },
   filterToggle: {
-    width: 46,
-    height: 46,
+    width: 48,
+    height: 48,
     borderRadius: theme.roundness,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
     justifyContent: "center",
     alignItems: "center",
+    ...theme.shadows.small,
   },
   filterToggleActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  filterToggleIcon: { fontSize: 18 },
 
   // Filters panel
   filtersPanel: {
@@ -465,63 +473,64 @@ const styles = StyleSheet.create({
   },
   filterSection: {
     ...typography.body2,
-    fontWeight: "600",
+    fontWeight: "700",
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.sm,
   },
   row: { flexDirection: "row" },
   filterInput: {
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    borderRadius: 8,
+    borderRadius: theme.roundness,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     ...typography.body2,
     color: theme.colors.text,
   },
   specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   specPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
   },
   specPillActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary },
-  specPillText: { ...typography.caption, color: theme.colors.text },
-  specPillTextActive: { color: "#fff", fontWeight: "600" },
+  specPillText: { ...typography.caption, color: theme.colors.textSecondary },
+  specPillTextActive: { color: "#fff", fontWeight: "700" },
   sortRow: { marginBottom: theme.spacing.sm },
   sortChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: theme.colors.border,
     marginRight: 8,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.surface,
   },
   sortChipActive: { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
   sortChipText: { ...typography.caption, color: theme.colors.textSecondary },
-  sortChipTextActive: { color: theme.colors.primary, fontWeight: "600" },
+  sortChipTextActive: { color: theme.colors.primary, fontWeight: "700" },
   filterActions: { flexDirection: "row", gap: 12, marginTop: theme.spacing.md, marginBottom: theme.spacing.sm },
   clearFilterBtn: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: theme.roundness,
     borderWidth: 1,
     borderColor: theme.colors.border,
     alignItems: "center",
   },
-  clearFilterText: { ...typography.body2, color: theme.colors.text },
+  clearFilterText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
   applyBtn: {
     flex: 2,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: theme.roundness,
     backgroundColor: theme.colors.primary,
     alignItems: "center",
+    ...theme.shadows.medium,
   },
   applyBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
 
@@ -530,15 +539,13 @@ const styles = StyleSheet.create({
   activeChip: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: `${theme.colors.primary}20`,
+    backgroundColor: `${theme.colors.primary}15`,
     borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginRight: 6,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
   },
-  activeChipText: { ...typography.caption, color: theme.colors.primary, fontWeight: "600" },
-  activeChipX: { fontSize: 10, color: theme.colors.primary },
+  activeChipText: { ...typography.caption, color: theme.colors.primary, fontWeight: "700" },
 
   // List
   listContent: { padding: theme.spacing.md, paddingBottom: 40 },
@@ -551,79 +558,74 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    ...theme.shadows.small,
   },
   cardLeft: { marginRight: theme.spacing.md, alignItems: "center" },
-  avatar: { width: 56, height: 56, borderRadius: 28 },
+  avatar: { width: 60, height: 60, borderRadius: 30 },
   avatarPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: theme.colors.primary,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: `${theme.colors.primary}20`,
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitials: { ...typography.h3, color: "#fff", fontWeight: "700" },
+  avatarInitials: { ...typography.h3, color: theme.colors.primary, fontWeight: "700" },
   availableDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: "#10B981",
-    marginTop: 4,
-    borderWidth: 1.5,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: theme.colors.success,
+    marginTop: -8,
+    marginLeft: 40,
+    borderWidth: 2,
     borderColor: "#fff",
   },
-  cardBody: { flex: 1 },
-  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
-  cardName: { ...typography.h3, color: theme.colors.text, fontWeight: "700", fontSize: 15 },
-  featuredBadge: { backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  featuredText: { fontSize: 10, color: "#92400E", fontWeight: "700" },
-  cardBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 6 },
-  specRow: { marginBottom: 6 },
+  cardBody: { flex: 1, justifyContent: 'center' },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  cardName: { ...typography.h3, color: theme.colors.text, fontWeight: "700", fontSize: 16 },
+  featuredBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
+  featuredText: { fontSize: 10, color: "#92400E", fontWeight: "700", textTransform: 'uppercase' },
+  cardBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 8 },
+  specRow: { marginBottom: 8 },
   specChip: {
-    backgroundColor: `${theme.colors.primary}15`,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    marginRight: 4,
+    backgroundColor: `${theme.colors.primary}10`,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 6,
   },
-  specChipText: { fontSize: 11, color: theme.colors.primary, fontWeight: "600" },
-  cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 2 },
+  specChipText: { fontSize: 11, color: theme.colors.primary, fontWeight: "700", textTransform: 'uppercase' },
+  cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   ratingRow: { flexDirection: "row", alignItems: "center" },
-  starFull: { fontSize: 12, color: "#F59E0B" },
-  starEmpty: { fontSize: 12, color: theme.colors.border },
-  ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4 },
-  cardPrice: { ...typography.body2, fontWeight: "700", color: theme.colors.primary },
-  cardLocation: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 2 },
+  ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 6, textTransform: 'none' },
+  cardPrice: { ...typography.body1, fontWeight: "800", color: theme.colors.primary },
+  locationContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 2},
+  cardLocation: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: 'none' },
 
   // States
-  loadingBox: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12 },
+  loadingBox: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, marginTop: 40 },
   loadingText: { ...typography.body2, color: theme.colors.textSecondary },
   emptyState: { flex: 1, alignItems: "center", paddingTop: 80 },
-  emptyIcon: { fontSize: 48, marginBottom: theme.spacing.md },
   emptyTitle: { ...typography.h3, color: theme.colors.text, marginBottom: theme.spacing.xs },
   emptyDesc: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center", paddingHorizontal: 40 },
   clearBtn: {
     marginTop: theme.spacing.lg,
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderRadius: theme.roundness,
+    ...theme.shadows.medium,
   },
   clearBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
   loadMoreBtn: {
     alignItems: "center",
-    paddingVertical: theme.spacing.md,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: theme.colors.border,
     borderRadius: theme.roundness,
     marginTop: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
   },
-  loadMoreText: { ...typography.body2, color: theme.colors.primary, fontWeight: "600" },
+  loadMoreText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
 });
