@@ -21,7 +21,8 @@
         "NSPhotoLibraryUsageDescription": "Your app needs access to your photo library to upload profile pictures and workout photos.",
         "NSPhotoLibraryAddOnlyUsageDescription": "Your app needs permission to save photos to your library.",
         "NSLocationWhenInUseUsageDescription": "Your app uses your location to find nearby gyms and trainers.",
-        "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app uses your location to find nearby gyms and trainers."
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Your app uses your location to find nearby gyms and trainers.",
+        "NSCameraUsageDescription": "Your app needs access to the camera to take profile pictures and workout photos."
       }
     },
     "android": {
