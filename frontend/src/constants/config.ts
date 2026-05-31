@@ -21,3 +21,6 @@ const resolveApiUrl = (): string => {
 };
 
 export const API_URL = resolveApiUrl();
+
+// Log API URL for debugging
+console.log("🔗 API_URL:", API_URL);
