@@ -92,7 +92,7 @@ const startServer = async () => {
     console.log("Database connection established successfully.");
 
     await ensureDatabaseExtensions();
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: false });
     await ensureSpatialAndSearchInfrastructure();
     console.log("✅ Database synchronized and optimized.");
 
