@@ -5,6 +5,7 @@ import {
 	Platform,
 	Pressable,
 	SafeAreaView,
+	ScrollView,
 	StyleSheet,
 	Text,
 	View,
@@ -47,8 +48,13 @@ type RevenueCatCustomerInfo = {
 
 type RevenueCatPackage = {
 	identifier?: string;
+	packageType?: string;
 	product?: {
 		identifier?: string;
+		title?: string;
+		description?: string;
+		price?: number;
+		priceString?: string;
 	};
 };
 
@@ -203,6 +209,12 @@ export default function CheckoutScreen() {
 	const [sessionId, setSessionId] = useState("");
 	const [loading, setLoading] = useState(false);
 	const [isRestoring, setIsRestoring] = useState(false);
+	
+	// Dynamic package state for multi-product support
+	const [packages, setPackages] = useState<RevenueCatPackage[]>([]);
+	const [selectedPackage, setSelectedPackage] = useState<RevenueCatPackage | null>(null);
+	const [fetchingOfferings, setFetchingOfferings] = useState(false);
+
 	const isNativeApp = Platform.OS === "ios" || Platform.OS === "android";
 	const canUseStripeWebCheckout = !isNativeApp && STRIPE_CHECKOUT_RUNTIME_ENABLED;
 
@@ -247,21 +259,36 @@ export default function CheckoutScreen() {
 		setMessage("");
 	}, [canUseStripeWebCheckout, normalizedParams]);
 
-	const resolveNativePackage = (offerings: RevenueCatOfferings): RevenueCatPackage | undefined => {
-		const availablePackages = offerings.current?.availablePackages ?? [];
-		if (availablePackages.length === 0) {
-			return undefined;
+	// Fetch offerings dynamically on native apps
+	useEffect(() => {
+		if (!isNativeApp) {
+			return;
 		}
 
-		const byProductId = availablePackages.find(
-			(pkg) => pkg.product?.identifier === REVENUECAT_MONTHLY_PRODUCT_ID
-		);
-		if (byProductId) {
-			return byProductId;
-		}
+		const fetchOfferings = async () => {
+			setFetchingOfferings(true);
+			try {
+				const offerings = (await Purchases.getOfferings()) as unknown as RevenueCatOfferings;
+				const availablePackages = offerings.current?.availablePackages ?? [];
+				setPackages(availablePackages);
 
-		return availablePackages[0];
-	};
+				if (availablePackages.length > 0) {
+					// Pre-select the monthly subscription if it exists, otherwise default to first
+					const defaultPkg = availablePackages.find(
+						(pkg) => pkg.product?.identifier === REVENUECAT_MONTHLY_PRODUCT_ID
+					) || availablePackages[0];
+					setSelectedPackage(defaultPkg);
+				}
+			} catch (error) {
+				console.error("Failed to fetch RevenueCat offerings:", error);
+				setMessage("Failed to load subscription plans. Please try again.");
+			} finally {
+				setFetchingOfferings(false);
+			}
+		};
+
+		void fetchOfferings();
+	}, [isNativeApp]);
 
 	const resolveEntitlement = (
 		customerInfo: RevenueCatCustomerInfo
@@ -321,19 +348,18 @@ export default function CheckoutScreen() {
 				return;
 			}
 
+			if (!selectedPackage) {
+				Alert.alert("Selection Required", "Please choose a subscription package.");
+				return;
+			}
+
 			setLoading(true);
 			setMessage("");
 			setSuccess(false);
 
 			try {
-				const offerings = (await Purchases.getOfferings()) as unknown as RevenueCatOfferings;
-				const targetPackage = resolveNativePackage(offerings);
-				if (!targetPackage) {
-					throw new Error("No subscription package is available right now.");
-				}
-
 				const purchaseResult = (await Purchases.purchasePackage(
-					targetPackage as any
+					selectedPackage as any
 				)) as unknown as RevenueCatPurchaseResult;
 
 				const customerInfo = purchaseResult.customerInfo || {};
@@ -345,7 +371,7 @@ export default function CheckoutScreen() {
 				}
 
 				const selectedProductId =
-					targetPackage.product?.identifier
+					selectedPackage.product?.identifier
 					|| entitlement.productIdentifier
 					|| REVENUECAT_MONTHLY_PRODUCT_ID;
 
@@ -510,22 +536,85 @@ export default function CheckoutScreen() {
 	return (
 		<SafeAreaView style={styles.container}>
 			{isNativeApp && <NativeIapNotice />}
+			
 			{isNativeApp && (
-				<>
+				<ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
 					{!success && (
-						<ProductDisplay
-							title="MonthlySubscription"
-							subtitle="RON 100.00 / month"
-							actionLabel="Subscribe"
-							onCheckout={startCheckout}
-							loading={loading}
-							onRestore={restorePurchases}
-							restoreLoading={isRestoring}
-							restoreLabel="Restore Purchases"
-						/>
+						<View style={styles.section}>
+							<Text style={styles.title}>Choose Your Plan</Text>
+							<Text style={styles.subtitle}>Select a subscription length that fits your needs.</Text>
+
+							{fetchingOfferings ? (
+								<ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 32 }} />
+							) : packages.length === 0 ? (
+								<Text style={[styles.message, { textAlign: "center", marginVertical: 20 }]}>
+									No subscription plans found. Please check your RevenueCat credentials or portal products configuration.
+								</Text>
+							) : (
+								<View style={styles.packageList}>
+									{packages.map((pkg) => {
+										const isSelected = selectedPackage?.identifier === pkg.identifier;
+										return (
+											<Pressable
+												key={pkg.identifier}
+												style={[
+													styles.packageItem,
+													isSelected && styles.packageItemSelected,
+												]}
+												onPress={() => setSelectedPackage(pkg)}
+											>
+												<View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
+													<View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+														{isSelected && <View style={styles.radioInner} />}
+													</View>
+													<View style={styles.packageInfo}>
+														<Text style={styles.packageTitle}>
+															{pkg.product?.title || pkg.identifier || "Premium Subscription"}
+														</Text>
+														{pkg.product?.description ? (
+															<Text style={styles.packageSubtitle}>{pkg.product.description}</Text>
+														) : null}
+													</View>
+												</View>
+												<Text style={[styles.packagePrice, isSelected && styles.packagePriceSelected]}>
+													{pkg.product?.priceString || "Free"}
+												</Text>
+											</Pressable>
+										);
+									})}
+								</View>
+							)}
+
+							<Pressable
+								style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
+								onPress={startCheckout}
+								disabled={loading || fetchingOfferings || packages.length === 0}
+							>
+								{loading ? (
+									<ActivityIndicator color="#ffffff" />
+								) : (
+									<Text style={styles.buttonText}>Subscribe Now</Text>
+								)}
+							</Pressable>
+
+							<Pressable
+								style={({ pressed }) => [
+									styles.secondaryButton,
+									pressed && styles.buttonPressed,
+								]}
+								onPress={restorePurchases}
+								disabled={isRestoring}
+							>
+								{isRestoring ? (
+									<ActivityIndicator color={theme.colors.primary} />
+								) : (
+									<Text style={styles.secondaryButtonText}>Restore Purchases</Text>
+								)}
+							</Pressable>
+						</View>
 					)}
 					{message !== "" && <Message message={message} />}
-				</>
+				</ScrollView>
 			)}
 
 			{!isNativeApp && !STRIPE_CHECKOUT_RUNTIME_ENABLED && <WebBillingModeNotice />}
@@ -649,5 +738,65 @@ const styles = StyleSheet.create({
 		backgroundColor: theme.colors.primary,
 		alignItems: "center",
 		justifyContent: "center",
+	},
+	packageList: {
+		marginVertical: 16,
+	},
+	packageItem: {
+		backgroundColor: theme.colors.surface,
+		borderRadius: theme.roundness,
+		padding: 16,
+		borderWidth: 2,
+		borderColor: theme.colors.border,
+		marginBottom: 12,
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-between",
+		...theme.shadows.small,
+	},
+	packageItemSelected: {
+		borderColor: theme.colors.primary,
+		backgroundColor: theme.colors.surface,
+	},
+	packageInfo: {
+		flex: 1,
+	},
+	packageTitle: {
+		...typography.body1,
+		color: theme.colors.text,
+		fontWeight: "600",
+	},
+	packageSubtitle: {
+		...typography.caption,
+		color: theme.colors.textSecondary,
+		marginTop: 4,
+	},
+	packagePrice: {
+		...typography.body2,
+		color: theme.colors.text,
+		fontWeight: "700",
+		marginLeft: 8,
+	},
+	packagePriceSelected: {
+		color: theme.colors.primary,
+	},
+	radioOuter: {
+		width: 20,
+		height: 20,
+		borderRadius: 10,
+		borderWidth: 2,
+		borderColor: theme.colors.border,
+		alignItems: "center",
+		justifyContent: "center",
+		marginRight: 12,
+	},
+	radioOuterSelected: {
+		borderColor: theme.colors.primary,
+	},
+	radioInner: {
+		width: 10,
+		height: 10,
+		borderRadius: 5,
+		backgroundColor: theme.colors.primary,
 	},
 });
