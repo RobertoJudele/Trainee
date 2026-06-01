@@ -214,6 +214,7 @@ export default function CheckoutScreen() {
 	const [packages, setPackages] = useState<RevenueCatPackage[]>([]);
 	const [selectedPackage, setSelectedPackage] = useState<RevenueCatPackage | null>(null);
 	const [fetchingOfferings, setFetchingOfferings] = useState(false);
+	const [debugErrorMessage, setDebugErrorMessage] = useState("");
 
 	const isNativeApp = Platform.OS === "ios" || Platform.OS === "android";
 	const canUseStripeWebCheckout = !isNativeApp && STRIPE_CHECKOUT_RUNTIME_ENABLED;
@@ -293,10 +294,12 @@ export default function CheckoutScreen() {
 					} else {
 						setPackages([]);
 						setMessage("no_plans");
+						setDebugErrorMessage("No active offerings returned from RevenueCat. Please make sure: \n1. Your Apple Paid Apps Agreement is signed.\n2. Your products are in 'Ready to Submit' status in App Store Connect.\n3. The product identifiers match exactly in RC dashboard.");
 					}
 				}
 			} catch (error) {
 				console.error("Failed to fetch RevenueCat offerings:", error);
+				const errStr = error instanceof Error ? error.message : JSON.stringify(error);
 				if (!cancelled) {
 					if (attempt < 4) {
 						const delay = (attempt + 1) * 800;
@@ -308,6 +311,7 @@ export default function CheckoutScreen() {
 						return;
 					}
 					setMessage("no_plans");
+					setDebugErrorMessage(`Failed to fetch offerings. Native Error: ${errStr}`);
 				}
 			} finally {
 				if (!cancelled) {
@@ -669,7 +673,13 @@ export default function CheckoutScreen() {
 							</Pressable>
 						</View>
 					)}
-					{message !== "" && <Message message={message} />}
+					{message !== "" && message !== "no_plans" && <Message message={message} />}
+					{debugErrorMessage !== "" && (
+						<View style={[styles.section, styles.debugErrorContainer]}>
+							<Text style={styles.debugErrorTitle}>Debug Diagnostics</Text>
+							<Text style={styles.debugErrorText}>{debugErrorMessage}</Text>
+						</View>
+					)}
 				</ScrollView>
 			)}
 
@@ -854,5 +864,22 @@ const styles = StyleSheet.create({
 		height: 10,
 		borderRadius: 5,
 		backgroundColor: theme.colors.primary,
+	},
+	debugErrorContainer: {
+		marginTop: 20,
+		backgroundColor: "#fef2f2",
+		borderColor: "#f87171",
+		borderWidth: 1.5,
+	},
+	debugErrorTitle: {
+		...typography.body1,
+		color: "#dc2626",
+		fontWeight: "700",
+		marginBottom: 6,
+	},
+	debugErrorText: {
+		...typography.body2,
+		color: "#7f1d1d",
+		lineHeight: 20,
 	},
 });
