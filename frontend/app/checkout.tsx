@@ -259,35 +259,68 @@ export default function CheckoutScreen() {
 		setMessage("");
 	}, [canUseStripeWebCheckout, normalizedParams]);
 
-	// Fetch offerings dynamically on native apps
+	// Fetch offerings dynamically on native apps — retries to handle SDK configure() race condition
 	useEffect(() => {
 		if (!isNativeApp) {
 			return;
 		}
 
-		const fetchOfferings = async () => {
+		let cancelled = false;
+
+		const fetchOfferings = async (attempt = 0) => {
 			setFetchingOfferings(true);
 			try {
 				const offerings = (await Purchases.getOfferings()) as unknown as RevenueCatOfferings;
 				const availablePackages = offerings.current?.availablePackages ?? [];
-				setPackages(availablePackages);
 
-				if (availablePackages.length > 0) {
-					// Pre-select the monthly subscription if it exists, otherwise default to first
-					const defaultPkg = availablePackages.find(
-						(pkg) => pkg.product?.identifier === REVENUECAT_MONTHLY_PRODUCT_ID
-					) || availablePackages[0];
-					setSelectedPackage(defaultPkg);
+				if (!cancelled) {
+					if (availablePackages.length > 0) {
+						setPackages(availablePackages);
+						const defaultPkg = availablePackages.find(
+							(pkg) => pkg.product?.identifier === REVENUECAT_MONTHLY_PRODUCT_ID
+						) || availablePackages[0];
+						setSelectedPackage(defaultPkg);
+						setMessage("");
+					} else if (attempt < 4) {
+						// SDK may not be fully configured yet — retry after a short delay
+						const delay = (attempt + 1) * 800;
+						setTimeout(() => {
+							if (!cancelled) {
+								void fetchOfferings(attempt + 1);
+							}
+						}, delay);
+						return; // don't set fetchingOfferings false yet
+					} else {
+						setPackages([]);
+						setMessage("no_plans");
+					}
 				}
 			} catch (error) {
 				console.error("Failed to fetch RevenueCat offerings:", error);
-				setMessage("Failed to load subscription plans. Please try again.");
+				if (!cancelled) {
+					if (attempt < 4) {
+						const delay = (attempt + 1) * 800;
+						setTimeout(() => {
+							if (!cancelled) {
+								void fetchOfferings(attempt + 1);
+							}
+						}, delay);
+						return;
+					}
+					setMessage("no_plans");
+				}
 			} finally {
-				setFetchingOfferings(false);
+				if (!cancelled) {
+					setFetchingOfferings(false);
+				}
 			}
 		};
 
 		void fetchOfferings();
+
+		return () => {
+			cancelled = true;
+		};
 	}, [isNativeApp]);
 
 	const resolveEntitlement = (
@@ -545,12 +578,35 @@ export default function CheckoutScreen() {
 							<Text style={styles.subtitle}>Select a subscription length that fits your needs.</Text>
 
 							{fetchingOfferings ? (
-								<ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 32 }} />
-							) : packages.length === 0 ? (
-								<Text style={[styles.message, { textAlign: "center", marginVertical: 20 }]}>
-									No subscription plans found. Please check your RevenueCat credentials or portal products configuration.
-								</Text>
-							) : (
+					<ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 32 }} />
+				) : message === "no_plans" ? (
+					<View style={{ alignItems: "center", marginVertical: 20 }}>
+						<Text style={[styles.message, { textAlign: "center", marginBottom: 16 }]}>
+							Could not load subscription plans. Check your internet connection and try again.
+						</Text>
+						<Pressable
+							style={({ pressed }) => [styles.secondaryButton, { width: "100%" }, pressed && styles.buttonPressed]}
+							onPress={() => {
+								setMessage("");
+								setFetchingOfferings(true);
+								Purchases.getOfferings()
+									.then((res: any) => {
+										const pkgs = res?.current?.availablePackages ?? [];
+										if (pkgs.length > 0) {
+											setPackages(pkgs);
+											setSelectedPackage(pkgs[0]);
+										} else {
+											setMessage("no_plans");
+										}
+									})
+									.catch(() => setMessage("no_plans"))
+									.finally(() => setFetchingOfferings(false));
+							}}
+						>
+							<Text style={styles.secondaryButtonText}>Try Again</Text>
+						</Pressable>
+					</View>
+				) : (
 								<View style={styles.packageList}>
 									{packages.map((pkg) => {
 										const isSelected = selectedPackage?.identifier === pkg.identifier;
