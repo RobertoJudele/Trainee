@@ -428,6 +428,35 @@ export default function MapScreen() {
   const hiddenMapItemCount = Math.max(0, mapItems.length - mapItemsToRender.length);
   const hiddenGymsCount = Math.max(0, gyms.length - gymsForClustering.length);
 
+  // ── Deferred marker rendering (Fabric interop crash fix) ──
+  // react-native-maps runs through RCTLegacyViewManagerInteropComponentView
+  // under New Architecture. Rapid child-list mutations cause an
+  // NSMutableArray out-of-bounds crash. We clear → wait one frame → re-set
+  // so the native view never receives conflicting insert instructions.
+  const [deferredMarkers, setDeferredMarkers] = useState<MapItem[]>([]);
+  const deferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Clear markers immediately so native view removes all children first
+    setDeferredMarkers([]);
+
+    if (deferTimerRef.current) {
+      clearTimeout(deferTimerRef.current);
+    }
+
+    // Re-add the new set on the next frame after the clear has flushed
+    deferTimerRef.current = setTimeout(() => {
+      setDeferredMarkers(mapItemsToRender);
+      deferTimerRef.current = null;
+    }, 80);
+
+    return () => {
+      if (deferTimerRef.current) {
+        clearTimeout(deferTimerRef.current);
+      }
+    };
+  }, [mapItemsToRender]);
+
   const gymDetailQueryArg = selectedGymId ?? skipToken;
   const { data: gymDetailResponse, isFetching: detailFetching } =
     useGetGymByIdQuery(gymDetailQueryArg);
@@ -733,7 +762,7 @@ export default function MapScreen() {
           showsUserLocation
           showsMyLocationButton
         >
-          {mapItemsToRender.map((item) => {
+          {deferredMarkers.map((item) => {
             if (item.type === "cluster") {
               const pointCount = item.gyms.length;
               const clusterSize = getClusterSize(pointCount);
