@@ -22,18 +22,21 @@ interface User {
 interface AuthState {
   user: User | null;
   token: string | null;
+  refreshToken: string | null;
   trainer: TrainerProfileAttributes | null;
 }
 
 interface SetCredentialsPayload {
   user: User | null;
   token: string | null;
+  refreshToken?: string | null;
   trainer?: TrainerProfileAttributes | null;
 }
 
 const initialState: AuthState = {
   user: null,
   token: null,
+  refreshToken: null,
   trainer: null,
 };
 
@@ -46,7 +49,7 @@ const authSlice = createSlice({
   initialState: initialState,
   reducers: {
     setCredentials: (state, action: PayloadAction<SetCredentialsPayload>) => {
-      const { user, token, trainer } = action.payload;
+      const { user, token, refreshToken, trainer } = action.payload;
       const previousUserId = state.user?.id ?? null;
       const previousRole = state.user?.role ?? null;
       const nextUserId = user?.id ?? null;
@@ -54,6 +57,9 @@ const authSlice = createSlice({
 
       state.user = user;
       state.token = token;
+      if (refreshToken !== undefined) {
+        state.refreshToken = refreshToken;
+      }
 
       if (nextRole !== "trainer") {
         state.trainer = null;
@@ -78,6 +84,7 @@ const authSlice = createSlice({
     logOut: (state) => {
       state.user = null;
       state.token = null;
+      state.refreshToken = null;
       state.trainer = null;
     },
   },
@@ -89,5 +96,6 @@ export default authSlice.reducer;
 
 export const selectCurrentUser = (state: Authenticated) => state.auth.user;
 export const selectCurrentToken = (state: Authenticated) => state.auth.token;
+export const selectCurrentRefreshToken = (state: Authenticated) => state.auth.refreshToken;
 export const selectCurrentTrainer = (state: Authenticated) =>
   state.auth.trainer;

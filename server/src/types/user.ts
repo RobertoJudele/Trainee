@@ -69,6 +69,7 @@ export interface DeleteAccountRequest {
 export interface AuthResponse {
   user: Omit<UserAttributes, "password">;
   token: string;
+  refreshToken?: string;
 }
 
 export type UserSex = "male" | "female" | "non_binary" | "other" | "prefer_not_to_say";

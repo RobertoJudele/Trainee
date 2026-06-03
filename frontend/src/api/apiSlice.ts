@@ -11,7 +11,11 @@ import { User } from "../types/user";
 import { API_URL } from "../constants/config";
 
 interface RefreshResponse {
-  token: string;
+  success: boolean;
+  data: {
+    token: string;
+    refreshToken: string;
+  };
 }
 
 const baseQuery = fetchBaseQuery({
@@ -33,16 +37,36 @@ const baseQueryWithReauth: BaseQueryFn<
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error?.status === 401) {
-    const refreshResult = await baseQuery("/refresh", api, extraOptions);
+    const refreshToken = (api.getState() as RootState).auth.refreshToken;
+    if (refreshToken) {
+      const refreshResult = await baseQuery(
+        {
+          url: "/auth/refresh",
+          method: "POST",
+          body: { refreshToken },
+        },
+        api,
+        extraOptions
+      );
 
-    const refreshData = refreshResult.data as RefreshResponse;
+      const refreshResponse = refreshResult.data as RefreshResponse;
 
-    if (refreshResult.data) {
-      const user = (api.getState() as RootState).auth.user;
-      //store the new token
-      api.dispatch(setCredentials({ ...refreshData, user }));
-      //retry original query with new JWT
-      result = await baseQuery(args, api, extraOptions);
+      if (refreshResponse && refreshResponse.success && refreshResponse.data) {
+        const user = (api.getState() as RootState).auth.user;
+        // Store the new access token and rotated refresh token
+        api.dispatch(
+          setCredentials({
+            token: refreshResponse.data.token,
+            refreshToken: refreshResponse.data.refreshToken,
+            user,
+          })
+        );
+        // Retry original query with new JWT
+        result = await baseQuery(args, api, extraOptions);
+      } else {
+        api.dispatch(logOut());
+        api.dispatch(apiSlice.util.resetApiState());
+      }
     } else {
       api.dispatch(logOut());
       api.dispatch(apiSlice.util.resetApiState());

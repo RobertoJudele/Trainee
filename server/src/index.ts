@@ -3,6 +3,7 @@ import "dotenv/config";
 import "reflect-metadata"; // Add this for Sequelize
 import sequelize from "./db"; // Import your Sequelize instance
 import mainRouter from "./routes/index";
+import { errorHandler } from "./middleware/errorHandler";
 import { verifyEmailConnection } from "./config/email";
 import cors from "cors";
 import { revenueCatWebhook, stripeWebhook } from "./controllers/billing";
@@ -45,6 +46,7 @@ app.use(
 );
 
 app.use(mainRouter);
+app.use(errorHandler);
 
 app.get("/", publicReadRateLimit, (req, res) => {
   res.status(200).json({

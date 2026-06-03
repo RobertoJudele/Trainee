@@ -1,9 +1,11 @@
 import { Request, Response } from "express";
 import { User } from "../models/user";
+import { RefreshToken } from "../models/refreshToken";
 import { AuthResponse, RegisterRequest } from "../types/user";
 import {
   generatePasswordResetToken,
   generateToken,
+  generateRefreshToken,
   verifyPasswordResetToken,
 } from "../utils/jwt";
 import { sendError, sendSuccess } from "../utils/response";
@@ -46,6 +48,14 @@ export const register = async (
       email: user.email,
     });
 
+    const rawRefreshToken = generateRefreshToken();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    await RefreshToken.create({
+      token: rawRefreshToken,
+      userId: user.id,
+      expiresAt,
+    });
+
     const verificationToken = user.generateEmailVerificationToken();
     await user.save();
 
@@ -59,7 +69,11 @@ export const register = async (
       console.error("Failed to send verification email:", emailError);
     }
 
-    const authResponse: AuthResponse = { user: user.toJSON(), token };
+    const authResponse: AuthResponse = { 
+      user: user.toJSON(), 
+      token,
+      refreshToken: rawRefreshToken
+    };
 
     sendSuccess(res, 201, "User registered succesfully", authResponse);
   } catch (error: any) {
@@ -104,9 +118,18 @@ export const login = async (
       role: user.role,
     });
 
+    const rawRefreshToken = generateRefreshToken();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    await RefreshToken.create({
+      token: rawRefreshToken,
+      userId: user.id,
+      expiresAt,
+    });
+
     const authResponse: AuthResponse = {
       user: user.toJSON(),
       token,
+      refreshToken: rawRefreshToken,
     };
 
     sendSuccess(res, 201, "User logged in succesfully", authResponse);
@@ -222,5 +245,67 @@ export const resetPassword = async (
   } catch (error) {
     console.error("Reset password error:", error);
     sendError(res, 500, "Could not reset password");
+  }
+};
+
+export const refresh = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken: clientToken } = req.body;
+
+    if (!clientToken) {
+      sendError(res, 400, "Refresh token is required");
+      return;
+    }
+
+    const storedToken = await RefreshToken.findOne({
+      where: { token: clientToken, isRevoked: false },
+      include: [User],
+    });
+
+    if (!storedToken) {
+      sendError(res, 401, "Invalid refresh token");
+      return;
+    }
+
+    if (storedToken.expiresAt < new Date()) {
+      // Mark it as revoked since it is expired
+      await storedToken.update({ isRevoked: true });
+      sendError(res, 401, "Expired refresh token");
+      return;
+    }
+
+    const user = storedToken.user;
+    if (!user || !user.isActive) {
+      sendError(res, 401, "User is inactive or not found");
+      return;
+    }
+
+    // Generate new tokens
+    const newAccessToken = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    });
+
+    const newRawRefreshToken = generateRefreshToken();
+    const nextExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    // Revoke the old refresh token
+    await storedToken.update({ isRevoked: true });
+
+    // Create the new rotated refresh token
+    await RefreshToken.create({
+      token: newRawRefreshToken,
+      userId: user.id,
+      expiresAt: nextExpiry,
+    });
+
+    sendSuccess(res, 200, "Token refreshed successfully", {
+      token: newAccessToken,
+      refreshToken: newRawRefreshToken,
+    });
+  } catch (error) {
+    console.error("Token refresh error:", error);
+    sendError(res, 500, "Could not refresh token");
   }
 };

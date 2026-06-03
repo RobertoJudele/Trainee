@@ -103,4 +103,21 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_transactions_provider_tx_id 
     ON billing_transactions (provider, transaction_id);
   `);
+
+  // Create refresh_tokens table if not exists
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS refresh_tokens (
+      id SERIAL PRIMARY KEY,
+      token VARCHAR(255) NOT NULL UNIQUE,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      is_revoked BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    );
+  `);
+
+  await sequelize.query(`
+    CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens (token);
+  `);
 };
