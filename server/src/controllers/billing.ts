@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { stripe } from "../config/stripe";
 import { Trainer } from "../models/trainer";
 import { BillingWebhookEvent } from "../models/billingWebhookEvent";
+import { BillingTransaction } from "../models/billingTransaction";
 import { BillingProvider, subStatus } from "../types/trainer";
 import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
@@ -34,6 +35,8 @@ interface RevenueCatSubscriberSubscription {
     expires_date?: string | null;
     store?: string | null;
     original_transaction_id?: string | null;
+    store_transaction_id?: string | null;
+    purchase_date?: string | null;
 }
 
 interface RevenueCatSubscriberPayload {
@@ -644,6 +647,39 @@ export const validateIapSubscription = async (req: AuthenticatedRequest, res: Re
 
         await trainer.save();
 
+        const subscriptions = payload.subscriber?.subscriptions || {};
+        for (const [productId, subDetails] of Object.entries(subscriptions)) {
+            const txId = subDetails.store_transaction_id || subDetails.original_transaction_id;
+            if (!txId) {
+                continue;
+            }
+
+            const storeNormalized = String(subDetails.store || "").trim().toLowerCase();
+            const providerName = storeNormalized === "app_store" ? "apple" : (storeNormalized === "play_store" ? "google" : "none");
+            const paidAt = subDetails.purchase_date ? new Date(subDetails.purchase_date) : new Date();
+
+            // Default amount to 100.00 RON
+            const amount = 100.00;
+            const currency = "RON";
+
+            await BillingTransaction.findOrCreate({
+                where: {
+                    provider: providerName,
+                    transactionId: txId,
+                },
+                defaults: {
+                    trainerId: trainer.id,
+                    amount,
+                    currency,
+                    status: "paid",
+                    provider: providerName,
+                    transactionId: txId,
+                    productId,
+                    paidAt,
+                },
+            });
+        }
+
         const entitlement = resolveTrainerEntitlement(trainer);
         sendSuccess(res, 200, "IAP purchase validated", {
             entitlement,
@@ -701,6 +737,31 @@ const syncTrainerFromRevenueCatWebhookEvent = async (
     });
 
     await trainer.save();
+
+    const eventType = String(event.type).toUpperCase();
+    if ((eventType === "INITIAL_PURCHASE" || eventType === "RENEWAL") && event.transaction_id) {
+        const providerName = platform === "ios" ? "apple" : (platform === "android" ? "google" : "none");
+        const rawEvent = event as any;
+        const amount = Number(rawEvent.price_in_purchased_currency ?? rawEvent.price ?? 100.00);
+        const currency = String(rawEvent.currency || "RON");
+
+        await BillingTransaction.findOrCreate({
+            where: {
+                provider: providerName,
+                transactionId: event.transaction_id,
+            },
+            defaults: {
+                trainerId: trainer.id,
+                amount,
+                currency,
+                status: "paid",
+                provider: providerName,
+                transactionId: event.transaction_id,
+                productId: event.product_id || "unknown",
+                paidAt: event.event_timestamp_ms ? new Date(event.event_timestamp_ms) : new Date(),
+            },
+        });
+    }
 
     return { skipped: false as const, reason: "updated" as const };
 };
@@ -901,5 +962,31 @@ export const stripeWebhook = async (req: Request, res: Response) => {
     } catch (error) {
         console.error("Stripe webhook handling failed:", error);
         res.status(400).send("Webhook signature verification failed");
+    }
+};
+
+export const getBillingTransactions = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const user = req.user;
+        if (!user) {
+            sendError(res, 401, "User is not authenticated");
+            return;
+        }
+
+        const trainer = await Trainer.findOne({ where: { userId: user.id } });
+        if (!trainer) {
+            sendError(res, 403, "You are not a trainer");
+            return;
+        }
+
+        const transactions = await BillingTransaction.findAll({
+            where: { trainerId: trainer.id },
+            order: [["paidAt", "DESC"]],
+        });
+
+        sendSuccess(res, 200, "Billing transactions retrieved", transactions);
+    } catch (error) {
+        console.error("Failed to retrieve billing transactions:", error);
+        sendError(res, 500, "Could not retrieve billing transactions");
     }
 };

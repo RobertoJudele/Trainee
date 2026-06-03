@@ -5,6 +5,7 @@ import {
 	createSubscription,
 	getBillingEntitlement,
 	validateIapSubscription,
+	getBillingTransactions,
 } from "../controllers/billing";
 import { authenticate } from "../middleware/auth";
 import { checkoutRateLimit } from "../middleware/rateLimitProfiles";
@@ -19,6 +20,7 @@ const router=express.Router();
 
 router.post("/subscribe", authenticate, createSubscription);
 router.get("/entitlement", authenticate, getBillingEntitlement);
+router.get("/transactions", authenticate, getBillingTransactions);
 router.post(
 	"/iap/validate",
 	authenticate,

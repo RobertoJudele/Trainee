@@ -81,4 +81,26 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
   await sequelize.query(
     "CREATE INDEX IF NOT EXISTS idx_users_last_name_trgm ON users USING GIN (last_name gin_trgm_ops);"
   );
+
+  // Create billing_transactions table if not exists
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS billing_transactions (
+      id SERIAL PRIMARY KEY,
+      trainer_id INTEGER NOT NULL REFERENCES trainer_profiles(id) ON DELETE CASCADE,
+      amount DECIMAL(10, 2) NOT NULL,
+      currency VARCHAR(10) NOT NULL,
+      status VARCHAR(32) NOT NULL,
+      provider VARCHAR(32) NOT NULL,
+      transaction_id VARCHAR(120) NOT NULL,
+      product_id VARCHAR(120) NOT NULL,
+      paid_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    );
+  `);
+
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_billing_transactions_provider_tx_id 
+    ON billing_transactions (provider, transaction_id);
+  `);
 };

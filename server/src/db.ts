@@ -14,6 +14,7 @@ import { TrainerScheduleSlot } from "./models/trainerScheduleSlot";
 import { ClientCheckInCode } from "./models/clientCheckInCode";
 import { BillingWebhookEvent } from "./models/billingWebhookEvent";
 import { ProfileViewEvent } from "./models/profileViewEvent";
+import { BillingTransaction } from "./models/billingTransaction";
 dotenv.config();
 
 const sequelize = new Sequelize({
@@ -38,6 +39,7 @@ const sequelize = new Sequelize({
     ClientCheckInCode,
     BillingWebhookEvent,
     ProfileViewEvent,
+    BillingTransaction,
   ],
   logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {
