@@ -17,6 +17,7 @@
     "@react-navigation/native-stack": "^7.3.16",
     "@reduxjs/toolkit": "^2.9.0",
     "@stripe/stripe-react-native": "^0.66.0",
+    "async-mutex": "^0.5.0",
     "axios": "^1.12.2",
     "expo": "~54.0.10",
     "expo-constants": "~18.0.9",
