@@ -6,6 +6,11 @@ export const ensureDatabaseExtensions = async (): Promise<void> => {
 };
 
 export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
+  // Drop erroneous old unique constraint on working hours
+  await sequelize.query(
+    "ALTER TABLE trainer_working_hours DROP CONSTRAINT IF EXISTS trainer_working_hours_day_of_week_key;"
+  ).catch((err) => console.warn("Could not drop constraint, it may not exist:", err.message));
+
   // Spatial columns
   await sequelize.query(
     "ALTER TABLE gyms ADD COLUMN IF NOT EXISTS location geometry(Point, 4326);"
