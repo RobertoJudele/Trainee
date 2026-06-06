@@ -145,6 +145,9 @@ export default function SignUp() {
               <TouchableOpacity
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
               >
                 <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color={theme.colors.textSecondary} />
               </TouchableOpacity>
@@ -155,6 +158,9 @@ export default function SignUp() {
             style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
             onPress={handleSignup}
             disabled={isLoading}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Sign Up"
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
@@ -172,6 +178,9 @@ export default function SignUp() {
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push('/(auth)/login')}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Already have an account? Sign In"
           >
             <Text style={styles.secondaryButtonText}>Already have an account? Sign In</Text>
           </TouchableOpacity>
@@ -179,6 +188,9 @@ export default function SignUp() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Welcome"
           >
             <Text style={styles.backButtonText}>← Back to Welcome</Text>
           </TouchableOpacity>

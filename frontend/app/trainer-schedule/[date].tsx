@@ -443,6 +443,9 @@ export default function TrainerDayScheduleScreen() {
                 >
                   <Pressable
                     onPress={() => setSelectedSlotId(slot.id)}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Available slot from ${shortTime(slot.startsAt)} to ${shortTime(slot.endsAt)}`}
                     style={[
                       styles.slotCard,
                       { borderColor: scheduleStatusColor(slot.status) },
@@ -480,7 +483,14 @@ export default function TrainerDayScheduleScreen() {
                 <Text style={styles.assignedClientText}>
                   {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
                 </Text>
-                <Pressable style={styles.unassignBtn} onPress={() => onUnassign(slot.id)} disabled={unassigning}>
+                <Pressable
+                style={styles.unassignBtn}
+                onPress={() => onUnassign(slot.id)}
+                disabled={unassigning}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Unassign client from slot at ${shortTime(slot.startsAt)}`}
+              >
                   <Text style={styles.unassignBtnText}>{unassigning ? "Removing..." : "Unassign"}</Text>
                 </Pressable>
               </View>

@@ -114,6 +114,9 @@ export default function MyGymsScreen() {
         <TouchableOpacity
           style={styles.primaryBtn}
           onPress={() => router.push("/create-trainer")}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Become a Trainer"
         >
           <Text style={styles.primaryBtnText}>Become a Trainer</Text>
         </TouchableOpacity>
@@ -172,6 +175,9 @@ export default function MyGymsScreen() {
         style={styles.leaveBtn}
         onPress={() => handleLeave(item.id, item.name)}
         disabled={leaving}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Leave ${item.name}`}
       >
         <Text style={styles.leaveBtnText}>Leave gym</Text>
       </TouchableOpacity>
@@ -202,6 +208,9 @@ export default function MyGymsScreen() {
             style={[styles.joinBtn, joining && styles.joinBtnDisabled]}
             onPress={() => handleJoin(gym.id, gym.name)}
             disabled={joining}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={`Join ${gym.name}`}
           >
             <Text style={styles.joinBtnText}>{joining ? "..." : "Join"}</Text>
           </TouchableOpacity>
@@ -218,6 +227,9 @@ export default function MyGymsScreen() {
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => setShowBrowser(true)}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Add Gym"
         >
           <Text style={styles.addBtnText}>+ Add Gym</Text>
         </TouchableOpacity>
@@ -237,6 +249,9 @@ export default function MyGymsScreen() {
           <TouchableOpacity
             style={styles.primaryBtn}
             onPress={() => setShowBrowser(true)}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Browse Gyms"
           >
             <Text style={styles.primaryBtnText}>Browse Gyms</Text>
           </TouchableOpacity>
@@ -261,7 +276,12 @@ export default function MyGymsScreen() {
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Find a Gym</Text>
-            <TouchableOpacity onPress={() => setShowBrowser(false)}>
+            <TouchableOpacity
+              onPress={() => setShowBrowser(false)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Close gym browser"
+            >
               <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>

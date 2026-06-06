@@ -114,6 +114,9 @@ const ProductDisplay = ({
 			style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
 			onPress={onCheckout}
 			disabled={loading}
+			accessible={true}
+			accessibilityRole="button"
+			accessibilityLabel={actionLabel}
 		>
 			{loading ? (
 				<ActivityIndicator color="#ffffff" />
@@ -130,6 +133,9 @@ const ProductDisplay = ({
 				]}
 				onPress={onRestore}
 				disabled={Boolean(restoreLoading)}
+				accessible={true}
+				accessibilityRole="button"
+				accessibilityLabel={restoreLabel || "Restore Purchases"}
 			>
 				{restoreLoading ? (
 					<ActivityIndicator color={theme.colors.primary} />
@@ -162,6 +168,9 @@ const SuccessDisplay = ({
 				style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
 				onPress={onManageBilling}
 				disabled={loading}
+				accessible={true}
+				accessibilityRole="button"
+				accessibilityLabel="Manage Billing Information"
 			>
 				{loading ? (
 					<ActivityIndicator color="#ffffff" />
@@ -762,6 +771,9 @@ export default function CheckoutScreen() {
 						<Pressable
 							style={({ pressed }) => [styles.button, { marginTop: 16 }, pressed && styles.buttonPressed]}
 							onPress={handleManageSubscription}
+							accessible={true}
+							accessibilityRole="button"
+							accessibilityLabel="Manage Subscription"
 						>
 							<Ionicons name="open-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
 							<Text style={styles.buttonText}>Manage Subscription</Text>
@@ -774,6 +786,9 @@ export default function CheckoutScreen() {
 							]}
 							onPress={restorePurchases}
 							disabled={isRestoring}
+							accessible={true}
+							accessibilityRole="button"
+							accessibilityLabel="Restore Purchases"
 						>
 							{isRestoring ? (
 								<ActivityIndicator color={theme.colors.primary} />
@@ -851,6 +866,9 @@ export default function CheckoutScreen() {
 								</Text>
 								<Pressable
 									style={({ pressed }) => [styles.secondaryButton, { width: "100%" }, pressed && styles.buttonPressed]}
+									accessible={true}
+									accessibilityRole="button"
+									accessibilityLabel="Try Again"
 									onPress={() => {
 										setMessage("");
 										setFetchingOfferings(true);
@@ -883,6 +901,9 @@ export default function CheckoutScreen() {
 															isSelected && styles.packageItemSelected,
 														]}
 														onPress={() => setSelectedPackage(pkg)}
+														accessible={true}
+														accessibilityRole="button"
+														accessibilityLabel={`Select ${pkg.product?.title || pkg.identifier || "subscription plan"}`}
 													>
 														<View style={{ flexDirection: "row", alignItems: "center", flex: 1 }}>
 															<View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
@@ -910,6 +931,9 @@ export default function CheckoutScreen() {
 										style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
 										onPress={startCheckout}
 										disabled={loading || fetchingOfferings || packages.length === 0}
+										accessible={true}
+										accessibilityRole="button"
+										accessibilityLabel="Subscribe Now"
 									>
 										{loading ? (
 											<ActivityIndicator color="#ffffff" />
@@ -925,6 +949,9 @@ export default function CheckoutScreen() {
 										]}
 										onPress={restorePurchases}
 										disabled={isRestoring}
+										accessible={true}
+										accessibilityRole="button"
+										accessibilityLabel="Restore Purchases"
 									>
 										{isRestoring ? (
 											<ActivityIndicator color={theme.colors.primary} />

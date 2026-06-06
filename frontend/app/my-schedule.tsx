@@ -33,7 +33,13 @@ export default function MyScheduleScreen() {
       <View style={styles.centered}>
         <Text style={styles.title}>Client access required</Text>
         <Text style={styles.emptyText}>This page shows sessions assigned to clients.</Text>
-        <Pressable style={styles.primaryBtn} onPress={() => router.replace("/")}>
+        <Pressable
+        style={styles.primaryBtn}
+        onPress={() => router.replace("/")}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Go to Home"
+      >
           <Text style={styles.primaryBtnText}>Go to Home</Text>
         </Pressable>
       </View>
@@ -75,6 +81,9 @@ export default function MyScheduleScreen() {
             style={[styles.primaryBtn, isGeneratingCode && styles.primaryBtnDisabled]}
             onPress={onGenerateCode}
             disabled={isGeneratingCode}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Generate Check-in Code"
           >
             <Text style={styles.primaryBtnText}>{isGeneratingCode ? "Generating..." : "Generate Check-in Code"}</Text>
           </Pressable>

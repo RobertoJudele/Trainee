@@ -684,7 +684,13 @@ export default function TrainerScheduleScreen() {
                             <Text style={styles.title}>Trainer Schedule</Text>
                         </View>
                         <View style={styles.heroActions}>
-                            <Pressable style={styles.iconBtn} onPress={() => setShowSettingsSheet(true)}>
+                            <Pressable
+                                style={styles.iconBtn}
+                                onPress={() => setShowSettingsSheet(true)}
+                                accessible={true}
+                                accessibilityRole="button"
+                                accessibilityLabel="Open settings"
+                            >
                                 <Ionicons name="settings-outline" size={18} color={theme.colors.text} />
                             </Pressable>
                             <OutlineButton
@@ -732,6 +738,9 @@ export default function TrainerScheduleScreen() {
                                     params: { date: selectedDateKey },
                                 })
                             }
+                            accessible={true}
+                            accessibilityRole="button"
+                            accessibilityLabel="Open day view"
                         >
                             <Text style={styles.openDayBtnText}>Open Day</Text>
                         </Pressable>
@@ -764,6 +773,9 @@ export default function TrainerScheduleScreen() {
                                             if (!isAvailable) return;
                                             setSelectedSlotId(slot.id);
                                         }}
+                                        accessible={true}
+                                        accessibilityRole="button"
+                                        accessibilityLabel={`${slot.status} slot from ${shortTime(slot.startsAt)} to ${shortTime(slot.endsAt)}`}
                                         style={[
                                             styles.slotCard,
                                             { borderColor: scheduleStatusColor(slot.status) },
@@ -874,6 +886,9 @@ export default function TrainerScheduleScreen() {
                             setShowSettingsSheet(false);
                             setShowTemplateSheet(true);
                         }}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel="Working Day Template"
                     >
                         <Ionicons name="calendar-outline" size={18} color={theme.colors.text} />
                         <Text style={styles.settingsMenuText}>Working Day Template</Text>
@@ -885,6 +900,9 @@ export default function TrainerScheduleScreen() {
                             setShowSettingsSheet(false);
                             router.push("/legal");
                         }}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel="Legal & Policies"
                     >
                         <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
                         <Text style={styles.settingsMenuText}>Legal & Policies</Text>

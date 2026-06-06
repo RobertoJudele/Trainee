@@ -59,6 +59,13 @@ export default function Home() {
       roles: [UserRole.TRAINER],
     },
     {
+      icon: "person",
+      title: "My Profile",
+      desc: "View your account",
+      route: "/UserProfile" as const,
+      roles: [UserRole.CLIENT],
+    },
+    {
       icon: "map",
       title: "Gym Map",
       desc: "Find gyms near you",
@@ -149,6 +156,9 @@ export default function Home() {
     <TouchableOpacity
       style={styles.trainerCard}
       activeOpacity={0.85}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
       onPress={() =>
         router.push({
           pathname: "/trainers/[id]",
@@ -233,7 +243,15 @@ export default function Home() {
               {user?.firstName ? `${user.firstName}!` : "Welcome!"}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.push(user ? "/TrainerProfile" : "/login")}>
+          <TouchableOpacity
+            onPress={() => {
+              if (!user) { router.push("/login"); return; }
+              router.push(user.role === UserRole.TRAINER ? "/TrainerProfile" : "/UserProfile");
+            }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={user ? "View my profile" : "Sign in"}
+          >
             <View style={styles.profileAvatar}>
               <Text style={styles.profileInitials}>{user?.firstName?.[0] ?? "U"}</Text>
             </View>
@@ -247,6 +265,9 @@ export default function Home() {
           style={styles.searchBarTouchable}
           onPress={() => router.push("/search")}
           activeOpacity={0.8}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Search trainers"
         >
           <View style={styles.searchBar}>
             <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
@@ -270,6 +291,9 @@ export default function Home() {
                   }
                 }}
                 activeOpacity={0.8}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={action.title}
               >
                 <View style={styles.actionIconWrap}>
                   {/* @ts-ignore */}
@@ -286,7 +310,12 @@ export default function Home() {
         <View style={styles.trainersSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Top Rated Trainers</Text>
-            <TouchableOpacity onPress={() => router.push("/search")}>
+            <TouchableOpacity
+              onPress={() => router.push("/search")}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="See all trainers"
+            >
               <Text style={styles.seeAllButton}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -300,7 +329,13 @@ export default function Home() {
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={48} color={theme.colors.error} />
               <Text style={styles.errorText}>Unable to load trainers</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => refetch()}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Try Again"
+              >
                 <Text style={styles.retryButtonText}>Try Again</Text>
               </TouchableOpacity>
             </View>

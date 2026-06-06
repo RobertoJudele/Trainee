@@ -109,6 +109,9 @@ export default function ResetPasswordScreen() {
           style={[styles.primaryButton, isLoading && styles.disabled]}
           onPress={onSubmit}
           disabled={isLoading}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Update Password"
         >
           {isLoading ? (
             <ActivityIndicator color="#fff" />
@@ -117,7 +120,13 @@ export default function ResetPasswordScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.backButton} onPress={() => router.replace("/(auth)/login")}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.replace("/(auth)/login")}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Back to login"
+        >
           <Text style={styles.backButtonText}>Back to login</Text>
         </TouchableOpacity>
       </View>

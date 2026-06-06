@@ -248,7 +248,13 @@ export default function TrainerDetailsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Invalid trainer selected.</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => router.back()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Text style={styles.primaryButtonText}>Go back</Text>
         </TouchableOpacity>
       </View>
@@ -268,7 +274,13 @@ export default function TrainerDetailsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Could not load trainer details.</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => refetch()}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => refetch()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Try again"
+        >
           <Text style={styles.primaryButtonText}>Try again</Text>
         </TouchableOpacity>
       </View>
@@ -353,12 +365,24 @@ export default function TrainerDetailsScreen() {
         )}
       </View>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => router.back()}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Back to map"
+      >
         <Text style={styles.primaryButtonText}>Back to map</Text>
       </TouchableOpacity>
 
       {contactOptions.length > 0 && (
-        <TouchableOpacity style={styles.contactButton} onPress={handleContactPress}>
+        <TouchableOpacity
+          style={styles.contactButton}
+          onPress={handleContactPress}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Contact trainer"
+        >
           <Text style={styles.contactButtonText}>Contact</Text>
         </TouchableOpacity>
       )}
@@ -375,6 +399,9 @@ export default function TrainerDetailsScreen() {
             },
           })
         }
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Report Issue"
       >
         <Text style={styles.secondaryButtonText}>Report Issue</Text>
       </TouchableOpacity>

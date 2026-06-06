@@ -70,7 +70,13 @@ export default function AdminIssuesScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.emptyText}>Could not load issues.</Text>
-        <Pressable style={styles.retryButton} onPress={() => refetch()}>
+        <Pressable
+          style={styles.retryButton}
+          onPress={() => refetch()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Retry loading issues"
+        >
           <Text style={styles.retryText}>Retry</Text>
         </Pressable>
       </View>
@@ -108,6 +114,9 @@ export default function AdminIssuesScreen() {
                 ]}
                 onPress={() => handleStatusChange(item.id, status)}
                 disabled={isUpdating}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={`Set issue status to ${status}`}
               >
                 <Text
                   style={[

@@ -111,7 +111,13 @@ export default function TrainerAnalyticsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Trainer analytics is available only for trainer accounts.</Text>
-        <Pressable style={styles.primaryButton} onPress={() => router.back()}>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => router.back()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Text style={styles.primaryButtonText}>Go back</Text>
         </Pressable>
       </View>
@@ -131,7 +137,13 @@ export default function TrainerAnalyticsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Could not load trainer analytics.</Text>
-        <Pressable style={styles.primaryButton} onPress={() => refetch()}>
+        <Pressable
+          style={styles.primaryButton}
+          onPress={() => refetch()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Try again"
+        >
           <Text style={styles.primaryButtonText}>Try again</Text>
         </Pressable>
       </View>

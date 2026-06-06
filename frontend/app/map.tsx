@@ -668,6 +668,9 @@ export default function MapScreen() {
       key={idx}
       style={styles.trainerRow}
       activeOpacity={0.85}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`View trainer ${trainer.user?.firstName ?? ""} ${trainer.user?.lastName ?? ""}`}
       onPress={() =>
         router.push({
           pathname: "/trainers/[id]",
@@ -739,10 +742,13 @@ export default function MapScreen() {
   // ── Render ────────────────────────────────────────────────
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={[styles.backButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]} 
+      <TouchableOpacity
+        style={[styles.backButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]}
         onPress={() => router.back()}
         activeOpacity={0.8}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
       >
         <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
       </TouchableOpacity>
@@ -861,14 +867,26 @@ export default function MapScreen() {
                   {gymDetail.city}{gymDetail.state ? `, ${gymDetail.state}` : ""}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.closeBtn} onPress={closeSheet}>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={closeSheet}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Close gym details"
+              >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetGymName}>Loading…</Text>
-              <TouchableOpacity style={styles.closeBtn} onPress={closeSheet}>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={closeSheet}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Close gym details"
+              >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
             </View>

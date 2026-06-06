@@ -33,6 +33,9 @@ export default function Welcome() {
             style={[styles.button, styles.primaryButton]}
             onPress={() => router.push('/(auth)/signup')}
             activeOpacity={0.9}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Get Started"
           >
             <Text style={styles.primaryButtonText}>Get Started</Text>
             <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
@@ -42,6 +45,9 @@ export default function Welcome() {
             style={[styles.button, styles.secondaryButton]}
             onPress={() => router.push('/(auth)/login')}
             activeOpacity={0.8}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Sign In"
           >
             <Text style={styles.secondaryButtonText}>Sign In</Text>
           </TouchableOpacity>

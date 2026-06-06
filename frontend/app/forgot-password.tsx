@@ -79,6 +79,9 @@ export default function ForgotPasswordScreen() {
           style={[styles.primaryButton, isLoading && styles.disabled]}
           onPress={onSubmit}
           disabled={isLoading}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Send Reset Link"
         >
           {isLoading ? (
             <ActivityIndicator color="#fff" />
@@ -87,7 +90,13 @@ export default function ForgotPasswordScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Back to login"
+        >
           <Text style={styles.backButtonText}>Back to login</Text>
         </TouchableOpacity>
       </View>

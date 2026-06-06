@@ -126,6 +126,9 @@ export default function SearchScreen() {
     <TouchableOpacity
       style={styles.card}
       activeOpacity={0.85}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
       onPress={() =>
         router.push({
           pathname: "/trainers/[id]",
@@ -231,7 +234,13 @@ export default function SearchScreen() {
         <Ionicons name="sad-outline" size={48} color={theme.colors.textSecondary} style={{ marginBottom: theme.spacing.md }} />
         <Text style={styles.emptyTitle}>No trainers found</Text>
         <Text style={styles.emptyDesc}>Try adjusting your filters</Text>
-        <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
+        <TouchableOpacity
+          style={styles.clearBtn}
+          onPress={handleClear}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Clear Filters"
+        >
           <Text style={styles.clearBtnText}>Clear Filters</Text>
         </TouchableOpacity>
       </View>
@@ -255,7 +264,12 @@ export default function SearchScreen() {
               returnKeyType="search"
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery("")}>
+              <TouchableOpacity
+                onPress={() => setQuery("")}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+              >
                 <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             )}
@@ -263,6 +277,9 @@ export default function SearchScreen() {
           <TouchableOpacity
             style={[styles.filterToggle, showFilters && styles.filterToggleActive]}
             onPress={toggleFilters}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={showFilters ? "Hide filters" : "Show filters"}
           >
             <Ionicons name="options" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
           </TouchableOpacity>
@@ -318,6 +335,9 @@ export default function SearchScreen() {
                     key={s.id}
                     style={[styles.specPill, active && styles.specPillActive]}
                     onPress={() => toggleSpec(s.id)}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${active ? "Remove" : "Add"} specialization ${s.label}`}
                   >
                     <Text style={[styles.specPillText, active && styles.specPillTextActive]}>
                       {s.label}
@@ -334,6 +354,9 @@ export default function SearchScreen() {
                   key={opt.value}
                   style={[styles.sortChip, sortBy === opt.value && styles.sortChipActive]}
                   onPress={() => setSortBy(opt.value as SearchParams["sortBy"])}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sort by ${opt.label}`}
                 >
                   <Text style={[styles.sortChipText, sortBy === opt.value && styles.sortChipTextActive]}>
                     {opt.label}
@@ -343,10 +366,22 @@ export default function SearchScreen() {
             </ScrollView>
 
             <View style={styles.filterActions}>
-              <TouchableOpacity style={styles.clearFilterBtn} onPress={handleClear}>
+              <TouchableOpacity
+                style={styles.clearFilterBtn}
+                onPress={handleClear}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Clear All filters"
+              >
                 <Text style={styles.clearFilterText}>Clear All</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.applyBtn} onPress={() => { handleSearch(); toggleFilters(); }}>
+              <TouchableOpacity
+                style={styles.applyBtn}
+                onPress={() => { handleSearch(); toggleFilters(); }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Apply Filters"
+              >
                 <Text style={styles.applyBtnText}>Apply Filters</Text>
               </TouchableOpacity>
             </View>
@@ -403,6 +438,9 @@ export default function SearchScreen() {
                   setPage(nextPage);
                   setActiveParams(p => ({ ...p, page: nextPage }));
                 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Load More trainers"
               >
                 <Text style={styles.loadMoreText}>Load More</Text>
               </TouchableOpacity>
@@ -418,7 +456,12 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
   return (
     <View style={styles.activeChip}>
       <Text style={styles.activeChipText}>{label}</Text>
-      <TouchableOpacity onPress={onRemove}>
+      <TouchableOpacity
+        onPress={onRemove}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove filter ${label}`}
+      >
         <Ionicons name="close" size={14} color={theme.colors.primary} style={{marginLeft: 2}}/>
       </TouchableOpacity>
     </View>

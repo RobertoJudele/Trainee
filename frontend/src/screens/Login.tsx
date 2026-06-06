@@ -142,6 +142,9 @@ export default function Login() {
               <TouchableOpacity
                 style={styles.eyeIcon}
                 onPress={() => setShowPassword(!showPassword)}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
               >
                 <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color={theme.colors.textSecondary} />
               </TouchableOpacity>
@@ -152,6 +155,9 @@ export default function Login() {
           <TouchableOpacity
             style={styles.forgotPassword}
             onPress={() => router.push('/forgot-password')}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot Password"
           >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
@@ -160,6 +166,9 @@ export default function Login() {
             style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={isLoading}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Sign In"
           >
             {isLoading ? (
               <ActivityIndicator color="#FFFFFF" />
@@ -177,6 +186,9 @@ export default function Login() {
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push('/(auth)/signup')}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Create New Account"
           >
             <Text style={styles.secondaryButtonText}>Create New Account</Text>
           </TouchableOpacity>
@@ -184,6 +196,9 @@ export default function Login() {
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Back to Welcome"
           >
             <Text style={styles.backButtonText}>← Back to Welcome</Text>
           </TouchableOpacity>

@@ -95,6 +95,9 @@ export function OutlineButton({ label, onPress, disabled }: OutlineButtonProps) 
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlineBtnPressed, disabled && styles.btnDisabled]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <Text style={styles.outlineBtnText}>{label}</Text>
     </Pressable>
@@ -113,6 +116,9 @@ export function GradientActionButton({ label, onPress, disabled }: GradientActio
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [styles.gradientBtnWrap, pressed && styles.gradientPressed, disabled && styles.btnDisabled]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <LinearGradient
         colors={[theme.colors.secondary, theme.colors.primary]}
@@ -134,7 +140,13 @@ type DayPillProps = {
 
 export function DayPill({ label, active, onPress }: DayPillProps) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.dayPill, active && styles.dayPillActive, pressed && styles.dayPillPressed]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.dayPill, active && styles.dayPillActive, pressed && styles.dayPillPressed]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <Text style={[styles.dayPillText, active && styles.dayPillTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -165,7 +177,13 @@ export function BottomSheet({ visible, title, subtitle, onClose, children, foote
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.sheetRoot}>
-        <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+        <Pressable
+          style={styles.sheetBackdrop}
+          onPress={onClose}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Close sheet"
+        />
         <View style={styles.sheetPanel}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetTitleWrap}>

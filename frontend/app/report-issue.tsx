@@ -136,6 +136,9 @@ export default function ReportIssueScreen() {
                 key={item.value}
                 style={[styles.chip, active && styles.chipActive]}
                 onPress={() => setCategory(item.value)}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
               >
                 <Text style={[styles.chipText, active && styles.chipTextActive]}>
                   {item.label}
@@ -172,6 +175,9 @@ export default function ReportIssueScreen() {
         style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
         onPress={onSubmit}
         disabled={isLoading}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Submit Report"
       >
         <Text style={styles.submitText}>{isLoading ? "Submitting..." : "Submit Report"}</Text>
       </Pressable>

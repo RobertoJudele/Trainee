@@ -102,7 +102,13 @@ export default function LegalScreen() {
     >
       <View style={styles.headerCard}>
         <View style={styles.headerRow}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
             <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
           </Pressable>
           <View style={styles.headerTextWrap}>
@@ -123,6 +129,9 @@ export default function LegalScreen() {
               key={item.id}
               onPress={() => setSelectedDocument(item.id)}
               style={[styles.segmentButton, active && styles.segmentButtonActive]}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={item.title}
             >
               <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{item.title}</Text>
             </Pressable>
