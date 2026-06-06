@@ -51,7 +51,8 @@ interface ApiResp<T> {
   data: T;
 }
 
-export const scheduleApiSlice = apiSlice.injectEndpoints({
+export const scheduleApiSlice = apiSlice.injectEndpoints(
+  {
   endpoints: (builder) => ({
     upsertWorkingHour: builder.mutation<
       ApiResp<WorkingHour>,
@@ -81,6 +82,8 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body,
       }),
+      // After generating slots the trainer's slot list must refresh
+      invalidatesTags: ["TrainerSlots"],
     }),
     getTrainerSlots: builder.query<ApiResp<ScheduleSlot[]>, { from?: string; to?: string } | void>({
       query: (params) => {
@@ -94,6 +97,8 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         const qs = queryParams.toString();
         return `/trainer-schedule/slots${qs ? `?${qs}` : ""}`;
       },
+      // Tag this data so mutations can invalidate it
+      providesTags: ["TrainerSlots"],
     }),
     searchClients: builder.query<ApiResp<PublicClient[]>, string>({
       query: (q) => `/trainer-schedule/clients/search?q=${encodeURIComponent(q)}`,
@@ -107,12 +112,15 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body,
       }),
+      // Refresh both the trainer's view AND the client's schedule
+      invalidatesTags: ["TrainerSlots", "MySchedule"],
     }),
     unassignClientFromSlot: builder.mutation<ApiResp<{ slot: ScheduleSlot }>, { slotId: number }>({
       query: ({ slotId }) => ({
         url: `/trainer-schedule/slots/${slotId}/unassign-client`,
         method: "POST",
       }),
+      invalidatesTags: ["TrainerSlots", "MySchedule"],
     }),
     trainerCheckInSlot: builder.mutation<ApiResp<ScheduleSlot>, { slotId: number; code: string }>({
       query: ({ slotId, code }) => ({
@@ -120,6 +128,7 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body: { code },
       }),
+      invalidatesTags: ["TrainerSlots", "MySchedule"],
     }),
     assignSlotByClientCode: builder.mutation<
       ApiResp<{ slot: ScheduleSlot }>,
@@ -130,9 +139,12 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body,
       }),
+      // This is the drag-and-drop one — refresh both sides!
+      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes"],
     }),
     getPendingClientCodes: builder.query<ApiResp<PendingClientCode[]>, void>({
       query: () => "/trainer-schedule/client-codes/pending",
+      providesTags: ["PendingClientCodes"],
     }),
     resolveClientCode: builder.mutation<ApiResp<PendingClientCode>, { code: string }>({
       query: (body) => ({
@@ -150,6 +162,8 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body,
       }),
+      // Also the drag-and-drop variant — refresh both sides!
+      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes"],
     }),
     getMySchedule: builder.query<ApiResp<ScheduleSlot[]>, { from?: string; to?: string } | void>({
       query: (params) => {
@@ -163,6 +177,8 @@ export const scheduleApiSlice = apiSlice.injectEndpoints({
         const qs = queryParams.toString();
         return `/trainer-schedule/my-schedule${qs ? `?${qs}` : ""}`;
       },
+      // Tag this data so assignment mutations can invalidate it
+      providesTags: ["MySchedule"],
     }),
     generateMyCheckInCode: builder.mutation<ApiResp<GeneratedCheckInCode>, void>({
       query: () => ({
