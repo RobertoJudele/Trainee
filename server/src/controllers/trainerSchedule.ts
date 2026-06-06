@@ -380,14 +380,8 @@ export const unassignClientFromSlot = async (
 ): Promise<void> => {
   try {
     const user = req.user;
-    if (!user || user.role !== "trainer") {
-      sendError(res, 403, "Trainer access required");
-      return;
-    }
-
-    const trainer = await getTrainerByUserId(user.id);
-    if (!trainer) {
-      sendError(res, 404, "Trainer profile not found");
+    if (!user) {
+      sendError(res, 401, "Authentication required");
       return;
     }
 
@@ -397,7 +391,23 @@ export const unassignClientFromSlot = async (
       return;
     }
 
-    const slot = await TrainerScheduleSlot.findOne({ where: { id: slotId, trainerId: trainer.id } });
+    let slot: TrainerScheduleSlot | null = null;
+
+    if (user.role === "trainer") {
+      const trainer = await getTrainerByUserId(user.id);
+      if (!trainer) {
+        sendError(res, 404, "Trainer profile not found");
+        return;
+      }
+      slot = await TrainerScheduleSlot.findOne({ where: { id: slotId, trainerId: trainer.id } });
+    } else if (user.role === "client") {
+      // Clients can cancel only their own assigned slot
+      slot = await TrainerScheduleSlot.findOne({ where: { id: slotId, clientId: user.id } });
+    } else {
+      sendError(res, 403, "Access denied");
+      return;
+    }
+
     if (!slot) {
       sendError(res, 404, "Slot not found");
       return;
@@ -405,6 +415,11 @@ export const unassignClientFromSlot = async (
 
     if (slot.status === SlotStatus.AVAILABLE) {
       sendSuccess(res, 200, "Slot is already available", { slot });
+      return;
+    }
+
+    if (slot.status === SlotStatus.COMPLETED) {
+      sendError(res, 400, "Cannot cancel a completed session");
       return;
     }
 

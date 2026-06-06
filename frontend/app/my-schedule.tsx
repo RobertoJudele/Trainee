@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from "react-native";
-import { useGenerateMyCheckInCodeMutation, useGetMyScheduleQuery } from "../features/schedule/scheduleApiSlice";
+import { useGenerateMyCheckInCodeMutation, useGetMyScheduleQuery, useUnassignClientFromSlotMutation } from "../features/schedule/scheduleApiSlice";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
@@ -13,6 +13,8 @@ export default function MyScheduleScreen() {
   const user = useSelector(selectCurrentUser);
   const { data, isLoading, isError, refetch, isFetching } = useGetMyScheduleQuery();
   const [generateCode, { isLoading: isGeneratingCode }] = useGenerateMyCheckInCodeMutation();
+  const [unassignSlot] = useUnassignClientFromSlotMutation();
+  const [cancellingSlotId, setCancellingSlotId] = useState<number | null>(null);
   const [generatedCode, setGeneratedCode] = useState<{ code: string; expiresAt: string } | null>(null);
   const slots = data?.data || [];
 
@@ -27,6 +29,31 @@ export default function MyScheduleScreen() {
       Alert.alert("Error", error?.data?.message || "Could not generate check-in code.");
     }
   };
+
+  const handleCancelBooking = useCallback((slotId: number, startsAt: string) => {
+    const dateStr = new Date(startsAt).toLocaleString();
+    Alert.alert(
+      "Cancel Booking",
+      `Are you sure you want to cancel your session on ${dateStr}? This cannot be undone.`,
+      [
+        { text: "Keep Booking", style: "cancel" },
+        {
+          text: "Cancel Booking",
+          style: "destructive",
+          onPress: async () => {
+            setCancellingSlotId(slotId);
+            try {
+              await unassignSlot({ slotId }).unwrap();
+            } catch (err: any) {
+              Alert.alert("Error", err?.data?.message || "Could not cancel booking. Please try again.");
+            } finally {
+              setCancellingSlotId(null);
+            }
+          },
+        },
+      ]
+    );
+  }, [unassignSlot]);
 
   if (user?.role !== UserRole.CLIENT) {
     return (
@@ -108,6 +135,21 @@ export default function MyScheduleScreen() {
           <View style={styles.statusBadge}>
             <Text style={styles.statusText}>{item.status}</Text>
           </View>
+          {item.status === "assigned" && (
+            <Pressable
+              style={[styles.cancelBtn, cancellingSlotId === item.id && styles.cancelBtnDisabled]}
+              onPress={() => handleCancelBooking(item.id, item.startsAt)}
+              disabled={cancellingSlotId === item.id}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel this booking"
+            >
+              <Ionicons name="close-circle-outline" size={16} color={theme.colors.error} style={{marginRight: 6}} />
+              <Text style={styles.cancelBtnText}>
+                {cancellingSlotId === item.id ? "Cancelling..." : "Cancel Booking"}
+              </Text>
+            </Pressable>
+          )}
         </View>
       )}
     />
@@ -164,4 +206,17 @@ const styles = StyleSheet.create({
   codeLabel: { ...typography.caption, color: theme.colors.textSecondary },
   codeText: { ...typography.h3, color: theme.colors.primary, fontWeight: "800", letterSpacing: 2 },
   codeExpiry: { ...typography.caption, color: theme.colors.textSecondary },
+  cancelBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: theme.roundness,
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+    alignSelf: "flex-start",
+  },
+  cancelBtnDisabled: { opacity: 0.5 },
+  cancelBtnText: { ...typography.caption, color: theme.colors.error, fontWeight: "700" },
 });

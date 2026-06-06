@@ -1,6 +1,7 @@
 import express from "express";
 import {
   createReview,
+  getReviews,
   updateReview,
   deleteReview,
 } from "../controllers/review";
@@ -22,7 +23,7 @@ router.post(
   handleValidationErrors,
   createReview
 ); // Create review for trainer
-// router.get("/:trainerId", getReviews); // Get all reviews for trainer
+router.get("/:trainerId", getReviews); // Get all reviews for trainer
 router.put(
   "/:reviewId",
   authenticate,
