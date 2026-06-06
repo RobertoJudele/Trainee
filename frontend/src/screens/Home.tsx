@@ -17,9 +17,8 @@ import {
 import { useRouter } from "expo-router";
 import { useSearchTrainersQuery, TrainerSearchItem } from "../../features/trainer/trainerApiSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { selectCurrentUser, logOut } from "../../features/auth/authSlice";
+import { selectCurrentUser } from "../../features/auth/authSlice";
 import { apiSlice } from "../api/apiSlice";
-import Purchases from "react-native-purchases";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../lib/theme";
 import { Ionicons } from '@expo/vector-icons';
@@ -72,15 +71,6 @@ export default function Home() {
       route: "/map" as const,
     },
     {
-      icon: "flag",
-      title: "Report Issue",
-      desc: "Send app feedback",
-      route: {
-        pathname: "/report-issue" as const,
-        params: { targetType: "app" as const },
-      },
-    },
-    {
       icon: "calendar",
       title: "Trainer Schedule",
       desc: "Set hours and assign clients",
@@ -100,13 +90,6 @@ export default function Home() {
       desc: "Review reports",
       route: "/admin-issues" as const,
       roles: [UserRole.ADMIN],
-    },
-    {
-      icon: "log-out",
-      title: "Sign Out",
-      desc: "Securely log out",
-      isLogout: true,
-      requiresAuth: true,
     },
   ].filter((action) => {
     if (action.hiddenIfRole && userRole === action.hiddenIfRole) return false;
@@ -137,20 +120,7 @@ export default function Home() {
     return "Good Evening";
   };
 
-  const dispatch = useDispatch();
 
-  const handleLogout = async () => {
-    dispatch(logOut());
-    dispatch(apiSlice.util.resetApiState());
-    try {
-      if (Platform.OS === "ios" || Platform.OS === "android") {
-        await Purchases.logOut();
-      }
-    } catch (error) {
-      console.log('RevenueCat logout error:', error);
-    }
-    router.replace("/(auth)/Welcome");
-  };
 
   const renderTrainerCard = ({ item }: { item: TrainerSearchItem }) => (
     <TouchableOpacity
@@ -284,9 +254,7 @@ export default function Home() {
                 key={action.title}
                 style={styles.actionCard}
                 onPress={() => {
-                  if (action.isLogout) {
-                    handleLogout();
-                  } else if (action.route) {
+                  if (action.route) {
                     router.push(action.route as never);
                   }
                 }}

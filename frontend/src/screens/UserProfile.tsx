@@ -165,6 +165,17 @@ export default function UserProfile() {
               <Text style={styles.dropdownItemText}>Legal & Policies</Text>
             </Pressable>
 
+            <Pressable
+              style={styles.dropdownItem}
+              onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Report an issue"
+            >
+              <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
+              <Text style={styles.dropdownItemText}>Report Issue</Text>
+            </Pressable>
+
             <View style={styles.dropdownDivider} />
 
             <Pressable

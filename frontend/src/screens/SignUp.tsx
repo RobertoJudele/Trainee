@@ -13,12 +13,15 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSignupMutation, UserRole } from '../../features/auth/authApiSlice';
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function SignUp() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   
   const [firstName, setFirstName] = useState('');
@@ -52,8 +55,12 @@ export default function SignUp() {
       
       console.log('✅ Signup successful:', result);
       
-      // Navigate to login or home
-      router.replace('/(auth)/login');
+      if (result.data) {
+        dispatch(setCredentials(result.data));
+      }
+      
+      // Navigate to home
+      router.replace('/');
       
     } catch (error: any) {
       console.error('❌ Signup failed:', error);

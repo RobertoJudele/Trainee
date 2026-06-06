@@ -829,6 +829,11 @@ function TrainerProfile() {
             <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
             <Text style={styles.dropdownItemText}>Legal & Policies</Text>
           </Pressable>
+
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}>
+            <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>Report Issue</Text>
+          </Pressable>
           
           <View style={styles.dropdownDivider} />
           

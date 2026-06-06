@@ -988,6 +988,21 @@ export const searchTrainers = async (
 
       const combinedIds = [...new Set([...trainerIdsByName, ...trainerIdsByBio])];
 
+      // No matches for the text query — return empty immediately
+      if (combinedIds.length === 0) {
+        return sendSuccess(res, 200, "Search result successful", {
+          trainers: [],
+          pagination: {
+            total: 0,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: 0,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          },
+        });
+      }
+
       // Merge with specialization filter if active
       if (specializationTrainerIds !== null) {
         const specSet = new Set(specializationTrainerIds);

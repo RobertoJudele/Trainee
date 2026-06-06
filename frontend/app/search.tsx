@@ -14,7 +14,7 @@ import {
   UIManager,
   Image,
 } from "react-native";
-import { useSearchTrainersQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
+import { useSearchTrainersQuery, useGetSpecializationsQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
@@ -24,16 +24,6 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const SPECIALIZATION_OPTIONS = [
-  { id: "1", label: "Yoga" },
-  { id: "2", label: "CrossFit" },
-  { id: "3", label: "Personal Training" },
-  { id: "4", label: "Pilates" },
-  { id: "5", label: "Nutrition" },
-  { id: "6", label: "Strength" },
-  { id: "7", label: "Cardio" },
-  { id: "8", label: "Martial Arts" },
-];
 
 const SORT_OPTIONS = [
   { value: "totalRating", label: "Top Rated" },
@@ -60,6 +50,12 @@ export default function SearchScreen() {
 
   // Committed search params (only update when user taps Search)
   const [activeParams, setActiveParams] = useState<SearchParams>({});
+
+  const { data: specializationsData } = useGetSpecializationsQuery();
+  const specializationOptions = (specializationsData?.data ?? []).map((s) => ({
+    id: String(s.id),
+    label: s.name,
+  }));
 
   const { data, isLoading, isFetching, isError } = useSearchTrainersQuery(
     Object.keys(activeParams).length > 0 ? activeParams : undefined
@@ -328,7 +324,7 @@ export default function SearchScreen() {
 
             <Text style={styles.filterSection}>Specializations</Text>
             <View style={styles.specGrid}>
-              {SPECIALIZATION_OPTIONS.map((s) => {
+              {specializationOptions.map((s) => {
                 const active = selectedSpecs.includes(s.id);
                 return (
                   <TouchableOpacity
