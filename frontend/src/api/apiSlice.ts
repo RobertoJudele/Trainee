@@ -60,7 +60,7 @@ const baseQueryWithReauth: BaseQueryFn<
 
           const refreshResponse = refreshResult.data as RefreshResponse;
 
-          if (refreshResponse && refreshResponse.success && refreshResponse.data) {
+          if (refreshResponse?.success && refreshResponse.data) {
             const user = (api.getState() as RootState).auth.user;
             // Store the new access token and rotated refresh token
             api.dispatch(
@@ -72,11 +72,19 @@ const baseQueryWithReauth: BaseQueryFn<
             );
             // Retry original query with new JWT
             result = await baseQuery(args, api, extraOptions);
-          } else {
+          } else if (
+            refreshResult.error &&
+            (refreshResult.error.status === 401 || refreshResult.error.status === 400)
+          ) {
+            // Server explicitly rejected the refresh token — it's invalid or expired.
+            // Safe to log out.
             api.dispatch(logOut());
             api.dispatch(apiSlice.util.resetApiState());
           }
+          // Network error or 5xx: don't log out. The original 401 is returned to
+          // the caller so the user sees an error and can retry manually.
         } else {
+          // No refresh token stored at all — definitely not authenticated.
           api.dispatch(logOut());
           api.dispatch(apiSlice.util.resetApiState());
         }
@@ -84,7 +92,8 @@ const baseQueryWithReauth: BaseQueryFn<
         release();
       }
     } else {
-      // Wait until the mutex is available without locking it
+      // Another request is already refreshing — wait for it to finish,
+      // then retry with whatever token is now in state.
       await mutex.waitForUnlock();
       result = await baseQuery(args, api, extraOptions);
     }

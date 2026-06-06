@@ -895,12 +895,13 @@ export const searchTrainers = async (
 
     applyGeoFilters(trainerWhere);
 
-    // Text search — bio on trainer, name on user
+    // Text search — bio on trainer, name on user.
+    // NOTE: publicId is a UUID column; Postgres has no ILIKE operator for uuid
+    // (operator does not exist: uuid ~~*), so we must NOT match it with iLike.
     if (q) {
       const normalizedQuery = String(q).trim();
       trainerWhere[Op.or] = [
         { bio: { [Op.iLike]: `%${normalizedQuery}%` } },
-        { publicId: { [Op.iLike]: `%${normalizedQuery}%` } },
       ];
       userWhere[Op.or] = [
         { firstName: { [Op.iLike]: `%${normalizedQuery}%` } },

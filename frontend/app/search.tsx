@@ -1,5 +1,5 @@
 // frontend/app/search.tsx  (or frontend/src/screens/Search.tsx)
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -64,7 +64,7 @@ export default function SearchScreen() {
   const trainers = data?.data?.trainers ?? [];
   const pagination = data?.data?.pagination;
 
-  const handleSearch = useCallback(() => {
+  const buildParams = useCallback((): SearchParams => {
     const params: SearchParams = {};
     if (query.trim()) params.q = query.trim();
     if (city.trim()) params.city = city.trim();
@@ -76,9 +76,23 @@ export default function SearchScreen() {
     params.sortOrder = sortOrder;
     params.page = 1;
     params.limit = 20;
-    setPage(1);
-    setActiveParams(params);
+    return params;
   }, [query, city, state, minPrice, maxPrice, selectedSpecs, sortBy, sortOrder]);
+
+  const handleSearch = useCallback(() => {
+    setPage(1);
+    setActiveParams(buildParams());
+  }, [buildParams]);
+
+  // Live search: debounce committed params so results update as the user
+  // types or adjusts filters, instead of only on keyboard submit / Apply.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setPage(1);
+      setActiveParams(buildParams());
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [buildParams]);
 
   const handleClear = useCallback(() => {
     setQuery("");
