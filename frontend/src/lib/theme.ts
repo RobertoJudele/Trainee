@@ -48,7 +48,21 @@ export const theme = {
       shadowRadius: 24,
       elevation: 8,
     },
-  }
+  },
+  // Gradient palettes used across the app for a cohesive, premium feel.
+  gradients: {
+    primary: ['#10B981', '#059669'] as const,
+    brand: ['#10B981', '#0D9488'] as const,
+    surface: ['#FFFFFF', '#F8FAFC'] as const,
+  },
+  // Motion tokens — keep transitions consistent and snappy across screens.
+  motion: {
+    fast: 160,
+    base: 240,
+    slow: 380,
+    // Per-item delay for staggered entrance animations.
+    stagger: 70,
+  },
 };
 
 export const typography = {

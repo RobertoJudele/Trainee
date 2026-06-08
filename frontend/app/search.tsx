@@ -19,6 +19,7 @@ import { useRouter } from "expo-router";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { FadeInUp, PressableScale } from "../src/components/ui";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -132,10 +133,11 @@ export default function SearchScreen() {
     ));
   };
 
-  const renderTrainerCard = ({ item }: { item: TrainerSearchItem }) => (
-    <TouchableOpacity
+  const renderTrainerCard = ({ item, index }: { item: TrainerSearchItem; index: number }) => (
+    <FadeInUp delay={Math.min(index, 8) * theme.motion.stagger}>
+    <PressableScale
       style={styles.card}
-      activeOpacity={0.85}
+      scaleTo={0.98}
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
@@ -225,7 +227,8 @@ export default function SearchScreen() {
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </PressableScale>
+    </FadeInUp>
   );
 
   const renderEmpty = () => {

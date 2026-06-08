@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
+import { FadeInUp, PressableScale } from '../../src/components/ui';
 
 const { width, height } = Dimensions.get('window');
 
@@ -18,7 +19,7 @@ export default function Welcome() {
       style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
     >
       <View style={styles.content}>
-        <View style={styles.header}>
+        <FadeInUp delay={80} duration={theme.motion.slow} style={styles.header}>
           <View style={styles.iconContainer}>
             <Ionicons name="barbell" size={64} color="#FFFFFF" />
           </View>
@@ -26,36 +27,36 @@ export default function Welcome() {
           <Text style={styles.subtitle}>
             Find your perfect fitness trainer and achieve your goals
           </Text>
-        </View>
+        </FadeInUp>
 
         <View style={styles.buttonContainer}>
-          <TouchableOpacity
-            style={[styles.button, styles.primaryButton]}
-            onPress={() => router.push('/(auth)/signup')}
-            activeOpacity={0.9}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Get Started"
-          >
-            <Text style={styles.primaryButtonText}>Get Started</Text>
-            <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 3}>
+            <PressableScale
+              style={[styles.button, styles.primaryButton]}
+              onPress={() => router.push('/(auth)/signup')}
+              accessibilityRole="button"
+              accessibilityLabel="Get Started"
+            >
+              <Text style={styles.primaryButtonText}>Get Started</Text>
+              <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
+            </PressableScale>
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={[styles.button, styles.secondaryButton]}
-            onPress={() => router.push('/(auth)/login')}
-            activeOpacity={0.8}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Sign In"
-          >
-            <Text style={styles.secondaryButtonText}>Sign In</Text>
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 4}>
+            <PressableScale
+              style={[styles.button, styles.secondaryButton]}
+              onPress={() => router.push('/(auth)/login')}
+              accessibilityRole="button"
+              accessibilityLabel="Sign In"
+            >
+              <Text style={styles.secondaryButtonText}>Sign In</Text>
+            </PressableScale>
+          </FadeInUp>
 
           <View style={styles.features}>
-            <FeatureItem icon="checkmark-circle" text="Certified Trainers" />
-            <FeatureItem icon="checkmark-circle" text="Personalized Programs" />
-            <FeatureItem icon="checkmark-circle" text="Track Your Progress" />
+            <FeatureItem icon="checkmark-circle" text="Certified Trainers" delay={theme.motion.stagger * 5} />
+            <FeatureItem icon="checkmark-circle" text="Personalized Programs" delay={theme.motion.stagger * 6} />
+            <FeatureItem icon="checkmark-circle" text="Track Your Progress" delay={theme.motion.stagger * 7} />
           </View>
         </View>
       </View>
@@ -63,12 +64,12 @@ export default function Welcome() {
   );
 }
 
-function FeatureItem({ icon, text }: { icon: any; text: string }) {
+function FeatureItem({ icon, text, delay }: { icon: any; text: string; delay: number }) {
   return (
-    <View style={styles.featureItem}>
+    <FadeInUp delay={delay} style={styles.featureItem}>
       <Ionicons name={icon} size={22} color="#FFFFFF" />
       <Text style={styles.featureText}>{text}</Text>
-    </View>
+    </FadeInUp>
   );
 }
 

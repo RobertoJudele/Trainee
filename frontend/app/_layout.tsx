@@ -108,6 +108,9 @@ export default function RootLayout() {
             headerTintColor: "#fff",
             headerTitleStyle: { fontWeight: "bold" },
             headerShadowVisible: false,
+            animation: "slide_from_right",
+            animationDuration: 280,
+            contentStyle: { backgroundColor: theme.colors.background },
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />

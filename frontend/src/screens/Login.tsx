@@ -3,14 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
   Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
@@ -18,6 +17,7 @@ import { setCredentials } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
 
 export default function Login() {
   const router = useRouter();
@@ -25,10 +25,9 @@ export default function Login() {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  
+
   const [login, { isLoading }] = useLoginMutation();
 
   const validateEmail = (email: string) => {
@@ -37,11 +36,9 @@ export default function Login() {
   };
 
   const handleLogin = async () => {
-    // Reset errors
     setEmailError('');
     setPasswordError('');
 
-    // Validation
     let hasError = false;
 
     if (!email) {
@@ -64,20 +61,14 @@ export default function Login() {
 
     try {
       const result = await login({ email, password }).unwrap();
-      console.log('✅ Login successful:', result);
-      
-      // Store credentials in Redux
-      dispatch(setCredentials({
-        user: result.data.user,
-        token: result.data.token,
-      }));
-
-      // Navigate to home
+      dispatch(
+        setCredentials({
+          user: result.data.user,
+          token: result.data.token,
+        })
+      );
       router.replace('/');
-      
     } catch (error: any) {
-      console.error('❌ Login failed:', error);
-      
       const errorMessage = error?.data?.message || 'Login failed. Please try again.';
       Alert.alert('Login Failed', errorMessage);
     }
@@ -88,25 +79,37 @@ export default function Login() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.header, { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) }]}>
-          <View style={styles.iconContainer}>
+        <FadeInUp
+          delay={0}
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) },
+          ]}
+        >
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
             <Ionicons name="barbell" size={40} color="#FFFFFF" />
-          </View>
+          </LinearGradient>
           <Text style={styles.title}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
-        </View>
+        </FadeInUp>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={[styles.input, emailError ? styles.inputError : null]}
+          <FadeInUp delay={theme.motion.stagger}>
+            <Field
+              label="Email Address"
               placeholder="your.email@example.com"
               value={email}
+              error={emailError}
               onChangeText={(text) => {
                 setEmail(text);
                 setEmailError('');
@@ -114,94 +117,68 @@ export default function Login() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              placeholderTextColor={theme.colors.textSecondary}
             />
-            {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-          </View>
+          </FadeInUp>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={[
-                  styles.input, 
-                  styles.passwordInput,
-                  passwordError ? styles.inputError : null
-                ]}
-                placeholder="Enter your password"
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setPasswordError('');
-                }}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                placeholderTextColor={theme.colors.textSecondary}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={showPassword ? "Hide password" : "Show password"}
-              >
-                <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-            {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-          </View>
+          <FadeInUp delay={theme.motion.stagger * 2}>
+            <Field
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              error={passwordError}
+              secure
+              onChangeText={(text) => {
+                setPassword(text);
+                setPasswordError('');
+              }}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={styles.forgotPassword}
-            onPress={() => router.push('/forgot-password')}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Forgot Password"
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 3}>
+            <TouchableOpacity
+              style={styles.forgotPassword}
+              onPress={() => router.push('/forgot-password')}
+              accessibilityRole="button"
+              accessibilityLabel="Forgot Password"
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={isLoading}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Sign In"
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Sign In</Text>
-            )}
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 4}>
+            <GradientButton
+              title="Sign In"
+              onPress={handleLogin}
+              loading={isLoading}
+              iconRight="arrow-forward"
+            />
+          </FadeInUp>
 
-          <View style={styles.divider}>
+          <FadeInUp delay={theme.motion.stagger * 5} style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
-          </View>
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.push('/(auth)/signup')}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Create New Account"
-          >
-            <Text style={styles.secondaryButtonText}>Create New Account</Text>
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 6}>
+            <OutlineButton
+              title="Create New Account"
+              onPress={() => router.push('/(auth)/signup')}
+            />
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel="Back to Welcome"
-          >
-            <Text style={styles.backButtonText}>← Back to Welcome</Text>
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 7}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Back to Welcome"
+            >
+              <Text style={styles.backButtonText}>← Back to Welcome</Text>
+            </TouchableOpacity>
+          </FadeInUp>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -216,21 +193,20 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: theme.spacing.lg,
-    paddingTop: theme.spacing.xl * 2,
+    paddingTop: theme.spacing.xl,
   },
   header: {
     alignItems: 'center',
     marginBottom: theme.spacing.xl,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-    ...theme.shadows.medium,
+    ...theme.shadows.large,
   },
   title: {
     ...typography.h1,
@@ -245,43 +221,6 @@ const styles = StyleSheet.create({
   form: {
     gap: theme.spacing.md,
   },
-  inputContainer: {
-    gap: theme.spacing.xs,
-  },
-  label: {
-    ...typography.body2,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  input: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
-    padding: theme.spacing.md,
-    ...typography.body1,
-    color: theme.colors.text,
-  },
-  inputError: {
-    borderColor: theme.colors.error,
-  },
-  errorText: {
-    ...typography.caption,
-    color: theme.colors.error,
-    marginTop: theme.spacing.xs,
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    paddingRight: 50,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: theme.spacing.md,
-    top: theme.spacing.md,
-    padding: theme.spacing.xs,
-  },
   forgotPassword: {
     alignSelf: 'flex-end',
   },
@@ -290,30 +229,10 @@ const styles = StyleSheet.create({
     color: theme.colors.primary,
     fontWeight: '600',
   },
-  primaryButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.roundness,
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    ...typography.h3,
-    color: '#FFFFFF',
-    fontWeight: '600',
-  },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: theme.spacing.md,
+    marginVertical: theme.spacing.sm,
   },
   dividerLine: {
     flex: 1,
@@ -325,22 +244,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginHorizontal: theme.spacing.sm,
   },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.roundness,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    ...typography.h3,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
   backButton: {
     alignItems: 'center',
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   backButtonText: {
     ...typography.body2,

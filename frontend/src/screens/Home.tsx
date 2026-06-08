@@ -24,6 +24,7 @@ import { theme, typography } from "../lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FadeInUp, PressableScale } from "../components/ui";
 
 const { width } = Dimensions.get("window");
 
@@ -122,10 +123,10 @@ export default function Home() {
 
 
 
-  const renderTrainerCard = ({ item }: { item: TrainerSearchItem }) => (
-    <TouchableOpacity
+  const renderTrainerCard = ({ item, index }: { item: TrainerSearchItem; index: number }) => (
+    <FadeInUp delay={index * theme.motion.stagger}>
+    <PressableScale
       style={styles.trainerCard}
-      activeOpacity={0.85}
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
@@ -196,7 +197,8 @@ export default function Home() {
               : ""}
         </Text>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
+    </FadeInUp>
   );
 
   return (
@@ -231,45 +233,52 @@ export default function Home() {
 
       <View style={styles.contentWrap}>
         {/* Search bar */}
-        <TouchableOpacity
-          style={styles.searchBarTouchable}
-          onPress={() => router.push("/search")}
-          activeOpacity={0.8}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel="Search trainers"
-        >
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
-            <Text style={styles.searchPlaceholder}>Search trainers, specializations...</Text>
-          </View>
-        </TouchableOpacity>
+        <FadeInUp delay={theme.motion.stagger} style={styles.searchBarTouchable}>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={() => router.push("/search")}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Search trainers"
+          >
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.searchIcon} />
+              <Text style={styles.searchPlaceholder}>Search trainers, specializations...</Text>
+            </View>
+          </PressableScale>
+        </FadeInUp>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <FadeInUp delay={theme.motion.stagger * 2}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+          </FadeInUp>
           <View style={styles.actionGrid}>
-            {quickActions.map((action) => (
-              <TouchableOpacity
+            {quickActions.map((action, index) => (
+              <FadeInUp
                 key={action.title}
-                style={styles.actionCard}
-                onPress={() => {
-                  if (action.route) {
-                    router.push(action.route as never);
-                  }
-                }}
-                activeOpacity={0.8}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={action.title}
+                delay={theme.motion.stagger * (3 + index)}
+                style={styles.actionCardWrap}
               >
-                <View style={styles.actionIconWrap}>
-                  {/* @ts-ignore */}
-                  <Ionicons name={action.icon} size={28} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.actionTitle}>{action.title}</Text>
-                <Text style={styles.actionDesc}>{action.desc}</Text>
-              </TouchableOpacity>
+                <PressableScale
+                  style={styles.actionCard}
+                  onPress={() => {
+                    if (action.route) {
+                      router.push(action.route as never);
+                    }
+                  }}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.title}
+                >
+                  <View style={styles.actionIconWrap}>
+                    {/* @ts-ignore */}
+                    <Ionicons name={action.icon} size={28} color={theme.colors.primary} />
+                  </View>
+                  <Text style={styles.actionTitle}>{action.title}</Text>
+                  <Text style={styles.actionDesc}>{action.desc}</Text>
+                </PressableScale>
+              </FadeInUp>
             ))}
           </View>
         </View>
@@ -381,8 +390,10 @@ const styles = StyleSheet.create({
   quickActions: { paddingHorizontal: theme.spacing.lg, marginBottom: theme.spacing.xl },
   sectionTitle: { ...typography.h2, color: theme.colors.text, marginBottom: theme.spacing.md },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.md },
-  actionCard: {
+  actionCardWrap: {
     width: (width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
+  },
+  actionCard: {
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     borderRadius: theme.roundness,
