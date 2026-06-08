@@ -38,6 +38,7 @@ import {
 } from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import {
+  BottomSheet,
   OutlineButton,
   ScheduleCard,
   StatusBadge,
@@ -198,6 +199,7 @@ export default function TrainerDayScheduleScreen() {
   const isBlocked = (blockedResp?.data?.length ?? 0) > 0;
 
   // Day-control form state.
+  const [showControls, setShowControls] = useState(false);
   const [regenStart, setRegenStart] = useState("");
   const [regenEnd, setRegenEnd] = useState("");
   const [regenDuration, setRegenDuration] = useState("");
@@ -419,15 +421,31 @@ export default function TrainerDayScheduleScreen() {
     setHoveredSlotId(overId);
   };
 
+  const assignClient = async (slotId: number, clientId: number) => {
+    try {
+      await assignClientToSlot({
+        slotId,
+        clientId,
+        note: assignNote.trim() || undefined,
+      }).unwrap();
+      setSelectedSlotId(null);
+      setSelectedClientId(null);
+      setAssignNote("");
+      await Promise.all([refetchSlots(), refetchPending()]);
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not assign client."));
+    }
+  };
+
   const onDragEnd = (clientId: number, pageX: number, pageY: number, moved: boolean) => {
     const dropSlotId = moved ? hitTestSlot(pageX, pageY) : null;
-    if (moved && dropSlotId) {
-      setSelectedSlotId(dropSlotId);
-      setSelectedClientId(clientId);
-    }
     setDragInProgress(false);
     setDraggingClientId(null);
     setHoveredSlotId(null);
+    if (moved && dropSlotId) {
+      // Drop onto an available slot assigns the client immediately.
+      void assignClient(dropSlotId, clientId);
+    }
   };
 
   const onAddClientCode = async () => {
@@ -453,7 +471,7 @@ export default function TrainerDayScheduleScreen() {
 
   const onAssign = async () => {
     if (!selectedSlotId) {
-      Alert.alert("Validation", "Select or drop onto an available slot first.");
+      Alert.alert("Validation", "Select or drop onto an open slot first.");
       return;
     }
 
@@ -462,20 +480,7 @@ export default function TrainerDayScheduleScreen() {
       return;
     }
 
-    try {
-      await assignClientToSlot({
-        slotId: selectedSlotId,
-        clientId: selectedClientId,
-        note: assignNote.trim() || undefined,
-      }).unwrap();
-
-      Alert.alert("Assigned", "Client assigned to slot.");
-      setSelectedSlotId(null);
-      setAssignNote("");
-      await Promise.all([refetchSlots(), refetchPending()]);
-    } catch (error: unknown) {
-      Alert.alert("Error", getErrorMessage(error, "Could not assign client."));
-    }
+    await assignClient(selectedSlotId, selectedClientId);
   };
 
   const onUnassign = async (slotId: number) => {
@@ -512,7 +517,15 @@ export default function TrainerDayScheduleScreen() {
       >
         <View style={styles.heroCard}>
           <View style={styles.heroTopRow}>
-            <OutlineButton label="Back" onPress={() => router.back()} />
+            <Pressable
+              style={styles.kebabBtn}
+              onPress={() => setShowControls(true)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Open day controls"
+            >
+              <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.text} />
+            </Pressable>
             <View style={styles.heroTitleWrap}>
               <Text style={styles.heroEyebrow}>Daily Planner</Text>
               <Text style={styles.heroTitle}>{routeDate}</Text>
@@ -521,7 +534,7 @@ export default function TrainerDayScheduleScreen() {
 
           <View style={styles.heroStatsRow}>
             <View style={styles.statChip}>
-              <Text style={styles.statLabel}>Available</Text>
+              <Text style={styles.statLabel}>Open</Text>
               <Text style={styles.statValue}>{availableSlots.length}</Text>
             </View>
             <View style={styles.statChip}>
@@ -531,9 +544,11 @@ export default function TrainerDayScheduleScreen() {
           </View>
         </View>
 
-        <ScheduleCard
+        <BottomSheet
+          visible={showControls}
           title="Day controls"
-          subtitle="Block this day, regenerate it from your template, or add a one-off slot."
+          subtitle={routeDate}
+          onClose={() => setShowControls(false)}
         >
           {isBlocked ? (
             <View style={{ gap: 8 }}>
@@ -625,94 +640,98 @@ export default function TrainerDayScheduleScreen() {
               </Pressable>
             </View>
           )}
-        </ScheduleCard>
+        </BottomSheet>
+
+        {isBlocked ? (
+          <View style={styles.blockedBanner}>
+            <Text style={styles.blockedBannerText}>
+              This day is blocked. Tap the dots (top-left) to unblock it.
+            </Text>
+          </View>
+        ) : null}
 
         <ScheduleCard
-          title="Available Slots"
-          subtitle="Drop a client card on a slot, or tap a slot to select it for assignment."
+          title="Slots"
+          subtitle="Drag a client onto an open slot to assign. Tap the ⋮ menu (top-left) for day options."
         >
           {slotsLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
 
-          {availableSlots.length === 0 ? (
-            <Text style={styles.emptyText}>No available slots for this day.</Text>
+          {daySlots.length === 0 ? (
+            <Text style={styles.emptyText}>No slots for this day.</Text>
           ) : (
-            availableSlots.map((slot) => {
+            daySlots.map((slot) => {
               const selected = selectedSlotId === slot.id;
               const hovered = hoveredSlotId === slot.id;
 
-              return (
-                <View
-                  key={slot.id}
-                  ref={(node) => {
-                    slotRefs.current[slot.id] = node;
-                  }}
-                  collapsable={false}
-                  onLayout={refreshSlotRects}
-                >
-                  <Pressable
-                    onPress={() => setSelectedSlotId(slot.id)}
-                    accessible={true}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Available slot from ${shortTime(slot.startsAt)} to ${shortTime(slot.endsAt)}`}
-                    style={[
-                      styles.slotCard,
-                      { borderColor: scheduleStatusColor(slot.status) },
-                      selected && styles.slotCardSelected,
-                      hovered && styles.slotCardHovered,
-                    ]}
+              if (slot.status === "available") {
+                return (
+                  <View
+                    key={slot.id}
+                    ref={(node) => {
+                      slotRefs.current[slot.id] = node;
+                    }}
+                    collapsable={false}
+                    onLayout={refreshSlotRects}
                   >
-                    <View style={styles.slotTopRow}>
-                      <Text style={styles.slotTimeText}>
-                        {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
-                      </Text>
-                      <View style={styles.slotActions}>
-                        <StatusBadge status={slot.status} />
-                        <Pressable
-                          onPress={() => onDeleteSlot(slot.id)}
-                          hitSlop={8}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Delete slot at ${shortTime(slot.startsAt)}`}
-                        >
-                          <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
-                        </Pressable>
+                    <Pressable
+                      onPress={() => setSelectedSlotId(slot.id)}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open slot from ${shortTime(slot.startsAt)} to ${shortTime(slot.endsAt)}`}
+                      style={[
+                        styles.slotCard,
+                        { borderColor: scheduleStatusColor(slot.status) },
+                        selected && styles.slotCardSelected,
+                        hovered && styles.slotCardHovered,
+                      ]}
+                    >
+                      <View style={styles.slotTopRow}>
+                        <Text style={styles.slotTimeText}>
+                          {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
+                        </Text>
+                        <View style={styles.slotActions}>
+                          <StatusBadge status={slot.status} />
+                          <Pressable
+                            onPress={() => onDeleteSlot(slot.id)}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete slot at ${shortTime(slot.startsAt)}`}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                          </Pressable>
+                        </View>
                       </View>
-                    </View>
-                  </Pressable>
+                    </Pressable>
+                  </View>
+                );
+              }
+
+              return (
+                <View key={slot.id} style={[styles.slotCard, { borderColor: scheduleStatusColor(slot.status) }]}>
+                  <View style={styles.slotTopRow}>
+                    <Text style={styles.slotTimeText}>
+                      {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
+                    </Text>
+                    <StatusBadge status={slot.status} />
+                  </View>
+                  <Text style={styles.assignedClientText}>
+                    {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
+                  </Text>
+                  {slot.status === "assigned" ? (
+                    <Pressable
+                      style={styles.unassignBtn}
+                      onPress={() => onUnassign(slot.id)}
+                      disabled={unassigning}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Unassign client from slot at ${shortTime(slot.startsAt)}`}
+                    >
+                      <Text style={styles.unassignBtnText}>{unassigning ? "Removing..." : "Unassign"}</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               );
             })
-          )}
-        </ScheduleCard>
-
-      
-
-        <ScheduleCard title="Assigned / Completed" subtitle="Manage existing assignments for this day.">
-          {assignedSlots.length === 0 ? (
-            <Text style={styles.emptyText}>No assigned slots yet.</Text>
-          ) : (
-            assignedSlots.map((slot) => (
-              <View key={slot.id} style={[styles.slotCard, { borderColor: scheduleStatusColor(slot.status) }]}>
-                <View style={styles.slotTopRow}>
-                  <Text style={styles.slotTimeText}>
-                    {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
-                  </Text>
-                  <StatusBadge status={slot.status} />
-                </View>
-                <Text style={styles.assignedClientText}>
-                  {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
-                </Text>
-                <Pressable
-                style={styles.unassignBtn}
-                onPress={() => onUnassign(slot.id)}
-                disabled={unassigning}
-                accessible={true}
-                accessibilityRole="button"
-                accessibilityLabel={`Unassign client from slot at ${shortTime(slot.startsAt)}`}
-              >
-                  <Text style={styles.unassignBtnText}>{unassigning ? "Removing..." : "Unassign"}</Text>
-                </Pressable>
-              </View>
-            ))
           )}
         </ScheduleCard>
 
@@ -814,6 +833,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  kebabBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#CED7E3",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   heroTitleWrap: {
     flex: 1,
