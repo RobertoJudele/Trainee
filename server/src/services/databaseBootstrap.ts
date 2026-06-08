@@ -125,4 +125,21 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
   await sequelize.query(`
     CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens (token);
   `);
+
+  // Create trainer_blocked_dates table if not exists
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS trainer_blocked_dates (
+      id SERIAL PRIMARY KEY,
+      trainer_id INTEGER NOT NULL REFERENCES trainer_profiles(id) ON DELETE CASCADE,
+      date DATE NOT NULL,
+      reason VARCHAR(255),
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    );
+  `);
+
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_trainer_blocked_dates_trainer_date
+    ON trainer_blocked_dates (trainer_id, date);
+  `);
 };

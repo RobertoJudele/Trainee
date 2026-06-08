@@ -16,17 +16,25 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
 import {
   PublicClient,
+  deviceTimeZone,
   useAssignClientToSlotMutation,
+  useBlockDateMutation,
+  useCreateOneOffSlotMutation,
+  useDeleteSlotMutation,
+  useGetBlockedDatesQuery,
   useGetPendingClientCodesQuery,
   useGetTrainerSlotsQuery,
+  useRegenerateDayMutation,
   useResolveClientCodeMutation,
   useUnassignClientFromSlotMutation,
+  useUnblockDateMutation,
 } from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import {
@@ -179,6 +187,110 @@ export default function TrainerDayScheduleScreen() {
   const [resolveClientCode, { isLoading: resolvingCode }] = useResolveClientCodeMutation();
   const [assignClientToSlot, { isLoading: assigning }] = useAssignClientToSlotMutation();
   const [unassignClientFromSlot, { isLoading: unassigning }] = useUnassignClientFromSlotMutation();
+
+  const { data: blockedResp } = useGetBlockedDatesQuery({ from: routeDate, to: routeDate });
+  const [regenerateDay, { isLoading: regenerating }] = useRegenerateDayMutation();
+  const [createOneOffSlot, { isLoading: creatingSlot }] = useCreateOneOffSlotMutation();
+  const [deleteSlot] = useDeleteSlotMutation();
+  const [blockDate, { isLoading: blocking }] = useBlockDateMutation();
+  const [unblockDate, { isLoading: unblocking }] = useUnblockDateMutation();
+
+  const isBlocked = (blockedResp?.data?.length ?? 0) > 0;
+
+  // Day-control form state.
+  const [regenStart, setRegenStart] = useState("");
+  const [regenEnd, setRegenEnd] = useState("");
+  const [regenDuration, setRegenDuration] = useState("");
+  const [newSlotStart, setNewSlotStart] = useState("");
+  const [newSlotEnd, setNewSlotEnd] = useState("");
+
+  const onRegenerateDay = async () => {
+    const hasCustom = regenStart.trim() !== "" || regenEnd.trim() !== "";
+    if (hasCustom && !(/^([01]\d|2[0-3]):([0-5]\d)$/.test(regenStart) && /^([01]\d|2[0-3]):([0-5]\d)$/.test(regenEnd))) {
+      Alert.alert("Validation", "Provide both start and end as HH:mm, or leave both empty to use your template.");
+      return;
+    }
+    try {
+      const res = await regenerateDay({
+        date: routeDate,
+        startTime: hasCustom ? regenStart : undefined,
+        endTime: hasCustom ? regenEnd : undefined,
+        slotDurationMin: regenDuration ? Number(regenDuration) : undefined,
+        timeZone: deviceTimeZone,
+      }).unwrap();
+      setRegenStart("");
+      setRegenEnd("");
+      setRegenDuration("");
+      Alert.alert(
+        "Day regenerated",
+        `Added ${res.data.created}, removed ${res.data.removed}, kept ${res.data.preserved} assigned.`
+      );
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not regenerate this day."));
+    }
+  };
+
+  const onAddOneOffSlot = async () => {
+    if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(newSlotStart) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(newSlotEnd)) {
+      Alert.alert("Validation", "Enter start and end as HH:mm.");
+      return;
+    }
+    try {
+      await createOneOffSlot({
+        date: routeDate,
+        startTime: newSlotStart,
+        endTime: newSlotEnd,
+        timeZone: deviceTimeZone,
+      }).unwrap();
+      setNewSlotStart("");
+      setNewSlotEnd("");
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not add the slot."));
+    }
+  };
+
+  const onDeleteSlot = (slotId: number) => {
+    Alert.alert("Delete slot", "Remove this available slot?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteSlot({ slotId }).unwrap();
+          } catch (error: unknown) {
+            Alert.alert("Error", getErrorMessage(error, "Could not delete the slot."));
+          }
+        },
+      },
+    ]);
+  };
+
+  const onBlockDay = async () => {
+    try {
+      await blockDate({ date: routeDate, timeZone: deviceTimeZone }).unwrap();
+    } catch (error: unknown) {
+      const conflicts = (error as any)?.data?.conflicts as
+        | { client?: { firstName: string; lastName: string } | null }[]
+        | undefined;
+      if (conflicts && conflicts.length > 0) {
+        const names = conflicts
+          .map((c) => (c.client ? `${c.client.firstName} ${c.client.lastName}` : "a client"))
+          .join(", ");
+        Alert.alert("Cannot block day", `Unassign these first: ${names}`);
+        return;
+      }
+      Alert.alert("Error", getErrorMessage(error, "Could not block this day."));
+    }
+  };
+
+  const onUnblockDay = async () => {
+    try {
+      await unblockDate({ date: routeDate }).unwrap();
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not unblock this day."));
+    }
+  };
 
   useEffect(() => {
     const loadSavedClients = async () => {
@@ -420,6 +532,102 @@ export default function TrainerDayScheduleScreen() {
         </View>
 
         <ScheduleCard
+          title="Day controls"
+          subtitle="Block this day, regenerate it from your template, or add a one-off slot."
+        >
+          {isBlocked ? (
+            <View style={{ gap: 8 }}>
+              <View style={styles.blockedBanner}>
+                <Text style={styles.blockedBannerText}>
+                  This day is blocked. No slots can be generated until you unblock it.
+                </Text>
+              </View>
+              <GradientActionButton
+                label={unblocking ? "Unblocking..." : "Unblock this day"}
+                onPress={onUnblockDay}
+                disabled={unblocking}
+              />
+              <Text style={styles.controlHint}>
+                Unblocking does not recreate slots — regenerate the day afterwards.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              <Text style={styles.controlLabel}>Regenerate this day</Text>
+              <View style={styles.controlRow}>
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={regenStart}
+                  onChangeText={setRegenStart}
+                  placeholder="Start"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={regenEnd}
+                  onChangeText={setRegenEnd}
+                  placeholder="End"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.input, styles.controlFieldNarrow]}
+                  value={regenDuration}
+                  onChangeText={setRegenDuration}
+                  placeholder="Min"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <OutlineButton
+                label={regenerating ? "Regenerating..." : "Regenerate day"}
+                onPress={onRegenerateDay}
+                disabled={regenerating}
+              />
+              <Text style={styles.controlHint}>
+                Leave times empty to use your saved template. Assigned slots are always kept.
+              </Text>
+
+              <Text style={styles.controlLabel}>Add a one-off slot</Text>
+              <View style={styles.controlRow}>
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={newSlotStart}
+                  onChangeText={setNewSlotStart}
+                  placeholder="Start 14:00"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={newSlotEnd}
+                  onChangeText={setNewSlotEnd}
+                  placeholder="End 15:00"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+              </View>
+              <OutlineButton
+                label={creatingSlot ? "Adding..." : "Add slot"}
+                onPress={onAddOneOffSlot}
+                disabled={creatingSlot}
+              />
+
+              <Pressable
+                style={styles.blockBtn}
+                onPress={onBlockDay}
+                disabled={blocking}
+                accessibilityRole="button"
+                accessibilityLabel="Block this day"
+              >
+                <Text style={styles.blockBtnText}>{blocking ? "Blocking..." : "Block this day"}</Text>
+              </Pressable>
+            </View>
+          )}
+        </ScheduleCard>
+
+        <ScheduleCard
           title="Available Slots"
           subtitle="Drop a client card on a slot, or tap a slot to select it for assignment."
         >
@@ -457,7 +665,17 @@ export default function TrainerDayScheduleScreen() {
                       <Text style={styles.slotTimeText}>
                         {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
                       </Text>
-                      <StatusBadge status={slot.status} />
+                      <View style={styles.slotActions}>
+                        <StatusBadge status={slot.status} />
+                        <Pressable
+                          onPress={() => onDeleteSlot(slot.id)}
+                          hitSlop={8}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Delete slot at ${shortTime(slot.startsAt)}`}
+                        >
+                          <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                        </Pressable>
+                      </View>
                     </View>
                   </Pressable>
                 </View>
@@ -655,6 +873,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+  },
+  slotActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  controlLabel: {
+    ...typography.body2,
+    color: theme.colors.text,
+    fontWeight: "700",
+  },
+  controlRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  controlField: {
+    flex: 1,
+  },
+  controlFieldNarrow: {
+    width: 70,
+  },
+  controlHint: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    textTransform: "none",
+  },
+  blockedBanner: {
+    borderRadius: 12,
+    backgroundColor: `${theme.colors.warning}18`,
+    borderWidth: 1,
+    borderColor: `${theme.colors.warning}55`,
+    padding: 10,
+  },
+  blockedBannerText: {
+    ...typography.body2,
+    color: "#92400E",
+  },
+  blockBtn: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  blockBtnText: {
+    ...typography.caption,
+    color: theme.colors.error,
+    textTransform: "none",
+    fontWeight: "700",
   },
   slotTimeText: {
     ...typography.body2,

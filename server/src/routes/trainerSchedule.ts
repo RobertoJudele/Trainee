@@ -4,30 +4,41 @@ import {
   assignSlotByCodeId,
   assignSlotByClientCode,
   assignClientToSlot,
+  blockDate,
+  createOneOffSlot,
+  deleteSlot,
   generateClientCheckInCode,
   generateSlots,
+  getBlockedDates,
   getPendingClientCodes,
   getClientSchedule,
   getTrainerSlots,
   getWorkingHours,
+  regenerateDay,
   resolveClientCode,
   searchClientsForTrainer,
   trainerCheckInSlot,
   unassignClientFromSlot,
+  unblockDate,
   upsertWorkingHour,
 } from "../controllers/trainerSchedule";
 import {
   assignClientToSlotValidation,
   assignSlotByCodeIdValidation,
   assignSlotByCodeValidation,
+  blockDateValidation,
+  blockedDatesQueryValidation,
   clientScheduleQueryValidation,
+  createOneOffSlotValidation,
   generateSlotsValidation,
   handleValidationErrors,
+  regenerateDayValidation,
   resolveClientCodeValidation,
   searchClientsQueryValidation,
   slotIdParamValidation,
   trainerCheckInValidation,
   trainerSlotsQueryValidation,
+  unblockDateValidation,
   upsertWorkingHourValidation,
 } from "../middleware/validation";
 
@@ -49,6 +60,14 @@ router.post(
   generateSlots
 );
 router.get("/slots", trainerSlotsQueryValidation, handleValidationErrors, getTrainerSlots);
+
+// Day-level editing + blocked dates
+router.get("/blocked-dates", blockedDatesQueryValidation, handleValidationErrors, getBlockedDates);
+router.post("/blocked-dates", blockDateValidation, handleValidationErrors, blockDate);
+router.delete("/blocked-dates/:date", unblockDateValidation, handleValidationErrors, unblockDate);
+router.post("/days/:date/regenerate", regenerateDayValidation, handleValidationErrors, regenerateDay);
+router.post("/slots", createOneOffSlotValidation, handleValidationErrors, createOneOffSlot);
+router.delete("/slots/:slotId", slotIdParamValidation, handleValidationErrors, deleteSlot);
 router.get(
   "/clients/search",
   searchClientsQueryValidation,

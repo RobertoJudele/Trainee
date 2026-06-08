@@ -5,10 +5,25 @@ import { ClientCheckInCode } from "../models/clientCheckInCode";
 import { Trainer } from "../models/trainer";
 import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
 import { TrainerWorkingHour } from "../models/trainerWorkingHour";
+import { TrainerBlockedDate } from "../models/trainerBlockedDate";
 import { User } from "../models/user";
-import { SlotStatus } from "../types/schedule";
+import { SlotStatus, TrainerScheduleSlotCreationAttributes } from "../types/schedule";
 import { sendError, sendSuccess } from "../utils/response";
 import { getRequiredEnv } from "../config/env";
+import {
+  addDaysToKey,
+  dateKeyWeekday,
+  dayDiff,
+  extractDateKey,
+  isDateKey,
+  parseTimeToMinutes as parseTimeToMinutesTz,
+  resolveTimeZone,
+  zonedDayBoundsUtc,
+  zonedWallClockToUtc,
+} from "../utils/scheduleTime";
+
+// Maximum span (in days) a single generate request may cover.
+const MAX_GENERATE_RANGE_DAYS = 62;
 
 const parseTimeToMinutes = (time: string): number => {
   const [h, m] = time.split(":").map(Number);
@@ -199,12 +214,23 @@ export const generateSlots = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const { fromDate, toDate } = req.body as { fromDate: string; toDate: string };
-    const from = new Date(fromDate);
-    const to = new Date(toDate);
+    const { fromDate, toDate, timeZone } = req.body as {
+      fromDate: string;
+      toDate: string;
+      timeZone?: string;
+    };
 
-    if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+    const tz = resolveTimeZone(timeZone);
+    const fromKey = extractDateKey(String(fromDate), tz);
+    const toKey = extractDateKey(String(toDate), tz);
+
+    if (!fromKey || !toKey || dayDiff(fromKey, toKey) < 0) {
       sendError(res, 400, "Invalid date range");
+      return;
+    }
+
+    if (dayDiff(fromKey, toKey) > MAX_GENERATE_RANGE_DAYS) {
+      sendError(res, 400, `Date range too large (max ${MAX_GENERATE_RANGE_DAYS} days)`);
       return;
     }
 
@@ -217,46 +243,69 @@ export const generateSlots = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const created: TrainerScheduleSlot[] = [];
-    const cursor = new Date(from);
-    cursor.setHours(0, 0, 0, 0);
-    to.setHours(23, 59, 59, 999);
+    // Blocked days in range — skip these entirely.
+    const blockedRows = await TrainerBlockedDate.findAll({
+      where: { trainerId: trainer.id, date: { [Op.between]: [fromKey, toKey] } },
+      attributes: ["date"],
+    });
+    const blockedKeys = new Set(blockedRows.map((r) => r.date));
 
-    while (cursor <= to) {
-      const day = cursor.getDay();
-      const dayTemplates = templates.filter((t) => t.dayOfWeek === day);
+    // Existing slots in the range — dedup on startsAt without N+1 queries.
+    const rangeStart = zonedDayBoundsUtc(fromKey, tz).start;
+    const rangeEnd = zonedDayBoundsUtc(toKey, tz).end;
+    const existingSlots = await TrainerScheduleSlot.findAll({
+      where: {
+        trainerId: trainer.id,
+        startsAt: { [Op.between]: [rangeStart, rangeEnd] },
+      },
+      attributes: ["startsAt"],
+    });
+    const existingStartEpochs = new Set(
+      existingSlots.map((s) => new Date(s.startsAt).getTime())
+    );
+
+    const toCreate: Array<{
+      trainerId: number;
+      workingHourId: number;
+      startsAt: Date;
+      endsAt: Date;
+      status: SlotStatus;
+    }> = [];
+
+    for (let dayKey = fromKey; dayDiff(dayKey, toKey) >= 0; dayKey = addDaysToKey(dayKey, 1)) {
+      if (blockedKeys.has(dayKey)) {
+        continue;
+      }
+
+      const weekday = dateKeyWeekday(dayKey);
+      const dayTemplates = templates.filter((t) => t.dayOfWeek === weekday);
 
       for (const template of dayTemplates) {
-        const startMin = parseTimeToMinutes(template.startTime);
-        const endMin = parseTimeToMinutes(template.endTime);
+        const startMin = parseTimeToMinutesTz(template.startTime);
+        const endMin = parseTimeToMinutesTz(template.endTime);
         const duration = template.slotDurationMin;
 
         for (let minute = startMin; minute + duration <= endMin; minute += duration) {
-          const startsAt = toDateAtMinutes(cursor, minute);
-          const endsAt = toDateAtMinutes(cursor, minute + duration);
-
-          const exists = await TrainerScheduleSlot.findOne({
-            where: {
-              trainerId: trainer.id,
-              startsAt,
-            },
-          });
-
-          if (!exists) {
-            const slot = await TrainerScheduleSlot.create({
-              trainerId: trainer.id,
-              workingHourId: template.id,
-              startsAt,
-              endsAt,
-              status: SlotStatus.AVAILABLE,
-            });
-            created.push(slot);
+          const startsAt = zonedWallClockToUtc(dayKey, minute, tz);
+          if (existingStartEpochs.has(startsAt.getTime())) {
+            continue;
           }
+          existingStartEpochs.add(startsAt.getTime());
+
+          toCreate.push({
+            trainerId: trainer.id,
+            workingHourId: template.id,
+            startsAt,
+            endsAt: zonedWallClockToUtc(dayKey, minute + duration, tz),
+            status: SlotStatus.AVAILABLE,
+          });
         }
       }
-
-      cursor.setDate(cursor.getDate() + 1);
     }
+
+    const created = toCreate.length
+      ? await TrainerScheduleSlot.bulkCreate(toCreate)
+      : [];
 
     sendSuccess(res, 201, "Slots generated", { count: created.length, slots: created });
   } catch (error) {
@@ -898,5 +947,355 @@ export const searchClientsForTrainer = async (req: Request, res: Response): Prom
   } catch (error) {
     console.error("Failed to search clients:", error);
     sendError(res, 500, "Could not search clients");
+  }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Day-level editing + blocked dates
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Statuses that must never be destroyed by regenerate/block operations.
+const PROTECTED_SLOT_STATUSES = [
+  SlotStatus.ASSIGNED,
+  SlotStatus.COMPLETED,
+  SlotStatus.CANCELED,
+  SlotStatus.NO_SHOW,
+];
+
+const requireTrainer = async (
+  req: Request,
+  res: Response
+): Promise<Trainer | null> => {
+  const user = req.user;
+  if (!user || user.role !== "trainer") {
+    sendError(res, 403, "Trainer access required");
+    return null;
+  }
+  const trainer = await getTrainerByUserId(user.id);
+  if (!trainer) {
+    sendError(res, 404, "Trainer profile not found");
+    return null;
+  }
+  return trainer;
+};
+
+export const getBlockedDates = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const trainer = await requireTrainer(req, res);
+    if (!trainer) return;
+
+    const where: any = { trainerId: trainer.id };
+    const tz = resolveTimeZone(req.query.timeZone as string | undefined);
+    const fromKey = req.query.from ? extractDateKey(String(req.query.from), tz) : null;
+    const toKey = req.query.to ? extractDateKey(String(req.query.to), tz) : null;
+    if (fromKey && toKey) {
+      where.date = { [Op.between]: [fromKey, toKey] };
+    }
+
+    const rows = await TrainerBlockedDate.findAll({ where, order: [["date", "ASC"]] });
+    sendSuccess(res, 200, "Blocked dates retrieved", rows);
+  } catch (error) {
+    console.error("Failed to get blocked dates:", error);
+    sendError(res, 500, "Could not retrieve blocked dates");
+  }
+};
+
+export const regenerateDay = async (
+  req: Request<{ date: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const trainer = await requireTrainer(req, res);
+    if (!trainer) return;
+
+    const dateKey = String(req.params.date);
+    if (!isDateKey(dateKey)) {
+      sendError(res, 400, "date must be YYYY-MM-DD");
+      return;
+    }
+
+    const { startTime, endTime, slotDurationMin, timeZone } = req.body as {
+      startTime?: string;
+      endTime?: string;
+      slotDurationMin?: number;
+      timeZone?: string;
+    };
+    const tz = resolveTimeZone(timeZone);
+
+    // Reject regeneration of a blocked day.
+    const blocked = await TrainerBlockedDate.findOne({
+      where: { trainerId: trainer.id, date: dateKey },
+    });
+    if (blocked) {
+      sendError(res, 409, "Day is blocked; unblock before regenerating");
+      return;
+    }
+
+    // Resolve the hours for this day: custom override or the saved template.
+    let startMin: number;
+    let endMin: number;
+    let duration: number;
+    let workingHourId: number | null = null;
+
+    if (startTime && endTime) {
+      startMin = parseTimeToMinutesTz(startTime);
+      endMin = parseTimeToMinutesTz(endTime);
+      duration = slotDurationMin && slotDurationMin > 0 ? slotDurationMin : 60;
+    } else {
+      const weekday = dateKeyWeekday(dateKey);
+      const template = await TrainerWorkingHour.findOne({
+        where: { trainerId: trainer.id, dayOfWeek: weekday, isActive: true },
+      });
+      if (!template) {
+        sendError(res, 400, "No active template for this weekday; provide custom hours");
+        return;
+      }
+      startMin = parseTimeToMinutesTz(template.startTime);
+      endMin = parseTimeToMinutesTz(template.endTime);
+      duration = slotDurationMin && slotDurationMin > 0 ? slotDurationMin : template.slotDurationMin;
+      workingHourId = template.id;
+    }
+
+    if (endMin <= startMin) {
+      sendError(res, 400, "endTime must be after startTime");
+      return;
+    }
+
+    const { start, end } = zonedDayBoundsUtc(dateKey, tz);
+    const existing = await TrainerScheduleSlot.findAll({
+      where: { trainerId: trainer.id, startsAt: { [Op.between]: [start, end] } },
+    });
+
+    // Preserve protected slots; only replace AVAILABLE ones.
+    const protectedSlots = existing.filter((s) => PROTECTED_SLOT_STATUSES.includes(s.status));
+    const availableSlots = existing.filter((s) => s.status === SlotStatus.AVAILABLE);
+    const occupiedEpochs = new Set(protectedSlots.map((s) => new Date(s.startsAt).getTime()));
+
+    let removed = 0;
+    for (const slot of availableSlots) {
+      await slot.destroy();
+      removed += 1;
+    }
+
+    const toCreate: TrainerScheduleSlotCreationAttributes[] = [];
+    for (let minute = startMin; minute + duration <= endMin; minute += duration) {
+      const startsAt = zonedWallClockToUtc(dateKey, minute, tz);
+      if (occupiedEpochs.has(startsAt.getTime())) {
+        continue; // a protected slot already occupies this time
+      }
+      occupiedEpochs.add(startsAt.getTime());
+      toCreate.push({
+        trainerId: trainer.id,
+        workingHourId: workingHourId ?? undefined,
+        startsAt,
+        endsAt: zonedWallClockToUtc(dateKey, minute + duration, tz),
+        status: SlotStatus.AVAILABLE,
+      });
+    }
+
+    const created = toCreate.length ? await TrainerScheduleSlot.bulkCreate(toCreate) : [];
+
+    sendSuccess(res, 200, "Day regenerated", {
+      created: created.length,
+      removed,
+      preserved: protectedSlots.length,
+      slots: created,
+    });
+  } catch (error) {
+    console.error("Failed to regenerate day:", error);
+    sendError(res, 500, "Could not regenerate day");
+  }
+};
+
+export const createOneOffSlot = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const trainer = await requireTrainer(req, res);
+    if (!trainer) return;
+
+    const { date, startTime, endTime, note, timeZone } = req.body as {
+      date: string;
+      startTime: string;
+      endTime: string;
+      note?: string;
+      timeZone?: string;
+    };
+
+    if (!isDateKey(String(date))) {
+      sendError(res, 400, "date must be YYYY-MM-DD");
+      return;
+    }
+    const tz = resolveTimeZone(timeZone);
+    const startMin = parseTimeToMinutesTz(startTime);
+    const endMin = parseTimeToMinutesTz(endTime);
+    if (endMin <= startMin) {
+      sendError(res, 400, "endTime must be after startTime");
+      return;
+    }
+
+    const blocked = await TrainerBlockedDate.findOne({
+      where: { trainerId: trainer.id, date },
+    });
+    if (blocked) {
+      sendError(res, 409, "Day is blocked; unblock before adding slots");
+      return;
+    }
+
+    const startsAt = zonedWallClockToUtc(date, startMin, tz);
+    const endsAt = zonedWallClockToUtc(date, endMin, tz);
+
+    // Overlap guard: existing.start < new.end AND existing.end > new.start
+    const overlap = await TrainerScheduleSlot.findOne({
+      where: {
+        trainerId: trainer.id,
+        startsAt: { [Op.lt]: endsAt },
+        endsAt: { [Op.gt]: startsAt },
+      },
+    });
+    if (overlap) {
+      sendError(res, 409, "Overlaps an existing slot");
+      return;
+    }
+
+    const slot = await TrainerScheduleSlot.create({
+      trainerId: trainer.id,
+      startsAt,
+      endsAt,
+      note,
+      status: SlotStatus.AVAILABLE,
+    });
+
+    sendSuccess(res, 201, "Slot created", { slot });
+  } catch (error) {
+    console.error("Failed to create one-off slot:", error);
+    sendError(res, 500, "Could not create slot");
+  }
+};
+
+export const deleteSlot = async (
+  req: Request<{ slotId: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const trainer = await requireTrainer(req, res);
+    if (!trainer) return;
+
+    const slotId = Number(req.params.slotId);
+    if (!Number.isFinite(slotId) || slotId <= 0) {
+      sendError(res, 400, "Invalid slot id");
+      return;
+    }
+
+    const slot = await TrainerScheduleSlot.findOne({
+      where: { id: slotId, trainerId: trainer.id },
+    });
+    if (!slot) {
+      sendError(res, 404, "Slot not found");
+      return;
+    }
+
+    if (slot.status !== SlotStatus.AVAILABLE) {
+      sendError(res, 409, "Cannot delete a slot with an assignment; unassign first");
+      return;
+    }
+
+    await slot.destroy();
+    sendSuccess(res, 200, "Slot deleted", { slotId });
+  } catch (error) {
+    console.error("Failed to delete slot:", error);
+    sendError(res, 500, "Could not delete slot");
+  }
+};
+
+export const blockDate = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const trainer = await requireTrainer(req, res);
+    if (!trainer) return;
+
+    const { date, reason, timeZone } = req.body as {
+      date: string;
+      reason?: string;
+      timeZone?: string;
+    };
+    if (!isDateKey(String(date))) {
+      sendError(res, 400, "date must be YYYY-MM-DD");
+      return;
+    }
+    const tz = resolveTimeZone(timeZone);
+    const { start, end } = zonedDayBoundsUtc(date, tz);
+
+    // Conflict check: do not block a day that has assigned/completed sessions.
+    const conflictSlots = await TrainerScheduleSlot.findAll({
+      where: {
+        trainerId: trainer.id,
+        startsAt: { [Op.between]: [start, end] },
+        status: { [Op.in]: [SlotStatus.ASSIGNED, SlotStatus.COMPLETED] },
+      },
+      include: [{ model: User, as: "client", attributes: ["id", "firstName", "lastName"] }],
+    });
+
+    if (conflictSlots.length > 0) {
+      res.status(409).json({
+        success: false,
+        message: "Day has assigned sessions; unassign them before blocking",
+        conflicts: conflictSlots.map((s) => ({
+          slotId: s.id,
+          startsAt: s.startsAt,
+          client: s.client
+            ? { id: s.client.id, firstName: s.client.firstName, lastName: s.client.lastName }
+            : null,
+        })),
+      });
+      return;
+    }
+
+    // Clear remaining AVAILABLE slots that day.
+    const removedAvailable = await TrainerScheduleSlot.destroy({
+      where: {
+        trainerId: trainer.id,
+        startsAt: { [Op.between]: [start, end] },
+        status: SlotStatus.AVAILABLE,
+      },
+    });
+
+    const [blockedDate] = await TrainerBlockedDate.findOrCreate({
+      where: { trainerId: trainer.id, date },
+      defaults: { trainerId: trainer.id, date, reason: reason ?? null },
+    });
+
+    if (reason !== undefined && blockedDate.reason !== reason) {
+      blockedDate.reason = reason ?? null;
+      await blockedDate.save();
+    }
+
+    sendSuccess(res, 200, "Day blocked", { blockedDate, removedAvailable });
+  } catch (error) {
+    console.error("Failed to block date:", error);
+    sendError(res, 500, "Could not block date");
+  }
+};
+
+export const unblockDate = async (
+  req: Request<{ date: string }>,
+  res: Response
+): Promise<void> => {
+  try {
+    const trainer = await requireTrainer(req, res);
+    if (!trainer) return;
+
+    const dateKey = String(req.params.date);
+    if (!isDateKey(dateKey)) {
+      sendError(res, 400, "date must be YYYY-MM-DD");
+      return;
+    }
+
+    await TrainerBlockedDate.destroy({
+      where: { trainerId: trainer.id, date: dateKey },
+    });
+
+    // Note: unblocking does NOT recreate slots — the trainer must regenerate.
+    sendSuccess(res, 200, "Day unblocked", { date: dateKey });
+  } catch (error) {
+    console.error("Failed to unblock date:", error);
+    sendError(res, 500, "Could not unblock date");
   }
 };

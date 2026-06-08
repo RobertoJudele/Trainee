@@ -4,7 +4,11 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSelector } from "react-redux";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
-import { ScheduleSlot, useGetTrainerSlotsQuery } from "../../features/schedule/scheduleApiSlice";
+import {
+  ScheduleSlot,
+  useGetBlockedDatesQuery,
+  useGetTrainerSlotsQuery,
+} from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import {
   OutlineButton,
@@ -46,6 +50,12 @@ export default function TrainerWeekSnapshotScreen() {
     from: weekFrom,
     to: weekTo,
   });
+
+  const { data: blockedData } = useGetBlockedDatesQuery({ from: weekFrom, to: weekTo });
+  const blockedKeys = useMemo(
+    () => new Set((blockedData?.data || []).map((b) => b.date)),
+    [blockedData?.data]
+  );
 
   const slots = useMemo(
     () => [...(slotData?.data || [])].sort((a, b) => +new Date(a.startsAt) - +new Date(b.startsAt)),
@@ -139,14 +149,24 @@ export default function TrainerWeekSnapshotScreen() {
       {weekDays.map((day) => {
         const dayKey = toDateKey(day);
         const daySlots = slotsByDay[dayKey] || [];
+        const blocked = blockedKeys.has(dayKey);
 
         return (
           <ScheduleCard
             key={dayKey}
             title={`${scheduleDayLabels[day.getDay()]} ${day.getDate()}`}
-            subtitle={daySlots.length === 0 ? "No slots" : `${daySlots.length} slots`}
+            subtitle={blocked ? "Blocked day" : daySlots.length === 0 ? "No slots" : `${daySlots.length} slots`}
+            rightSlot={
+              blocked ? (
+                <View style={styles.blockedBadge}>
+                  <Text style={styles.blockedBadgeText}>Blocked</Text>
+                </View>
+              ) : undefined
+            }
           >
-            {daySlots.length === 0 ? (
+            {blocked ? (
+              <Text style={styles.emptyText}>This day is blocked off.</Text>
+            ) : daySlots.length === 0 ? (
               <Text style={styles.emptyText}>No slots created for this day.</Text>
             ) : (
               daySlots.map((slot) => (
@@ -302,5 +322,17 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
+  },
+  blockedBadge: {
+    borderRadius: 999,
+    backgroundColor: "#94A3B818",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  blockedBadgeText: {
+    ...typography.caption,
+    color: "#475569",
+    fontWeight: "700",
+    textTransform: "none",
   },
 });

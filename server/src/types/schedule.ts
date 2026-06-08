@@ -57,3 +57,18 @@ export interface TrainerScheduleSlotCreationAttributes {
   checkInAttempts?: number;
   checkedInAt?: Date | null;
 }
+
+export interface TrainerBlockedDateAttributes {
+  id: number;
+  trainerId: number;
+  date: string; // "YYYY-MM-DD"
+  reason?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TrainerBlockedDateCreationAttributes {
+  trainerId: number;
+  date: string;
+  reason?: string | null;
+}
