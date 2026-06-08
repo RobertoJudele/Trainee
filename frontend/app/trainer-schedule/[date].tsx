@@ -78,7 +78,15 @@ type DraggableClientCardProps = {
   selected: boolean;
   dragging: boolean;
   onSelect: (clientId: number) => void;
-  onDragStart: (clientId: number) => void;
+  onDragStart: (
+    client: PublicClient,
+    pageX: number,
+    pageY: number,
+    cardX: number,
+    cardY: number,
+    width: number,
+    height: number
+  ) => void;
   onDragMove: (pageX: number, pageY: number) => void;
   onDragEnd: (clientId: number, pageX: number, pageY: number, moved: boolean) => void;
 };
@@ -92,18 +100,22 @@ function DraggableClientCard({
   onDragMove,
   onDragEnd,
 }: DraggableClientCardProps) {
-  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const ref = useRef<View | null>(null);
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
-          onDragStart(client.id);
+        // Claim a vertical drag (to a slot above); leave horizontal swipes to the list scroll.
+        onMoveShouldSetPanResponder: (_, g) =>
+          Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        onPanResponderGrant: (event) => {
+          const { pageX, pageY } = event.nativeEvent;
+          ref.current?.measureInWindow((x, y, width, height) => {
+            onDragStart(client, pageX, pageY, x, y, width, height);
+          });
         },
         onPanResponderMove: (_, gesture) => {
-          pan.setValue({ x: gesture.dx, y: gesture.dy });
           onDragMove(gesture.moveX, gesture.moveY);
         },
         onPanResponderRelease: (_, gesture) => {
@@ -112,30 +124,24 @@ function DraggableClientCard({
             onSelect(client.id);
           }
           onDragEnd(client.id, gesture.moveX, gesture.moveY, moved);
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }).start();
         },
         onPanResponderTerminate: () => {
           onDragEnd(client.id, -1, -1, false);
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }).start();
         },
       }),
-    [client.id, onDragEnd, onDragMove, onDragStart, onSelect, pan]
+    [client, onDragEnd, onDragMove, onDragStart, onSelect]
   );
 
   return (
-    <Animated.View
+    <View
+      ref={ref}
+      collapsable={false}
       {...panResponder.panHandlers}
       style={[
         styles.clientCard,
         selected && styles.clientCardSelected,
         dragging && styles.clientCardDragging,
-        { transform: pan.getTranslateTransform() },
+        dragging && { opacity: 0.3 },
       ]}
     >
       <Text style={styles.clientName}>
@@ -144,7 +150,7 @@ function DraggableClientCard({
       <Text numberOfLines={1} style={styles.clientSub}>
         {client.email}
       </Text>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -158,6 +164,15 @@ export default function TrainerDayScheduleScreen() {
   const slotRefs = useRef<Record<number, View | null>>({});
   const slotRectsRef = useRef<Record<number, SlotRect>>({});
   const scrollRef = useRef<ScrollView | null>(null);
+
+  // Floating drag preview rendered at the screen root so it isn't clipped by
+  // the scroll containers around the client list.
+  const dragLayerRef = useRef<View | null>(null);
+  const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const dragTouchOffset = useRef({ x: 0, y: 0 });
+  const dragLayerOffset = useRef({ x: 0, y: 0 });
+  const [activeDragClient, setActiveDragClient] = useState<PublicClient | null>(null);
+  const [dragCardWidth, setDragCardWidth] = useState(210);
 
   const [clientCodeInput, setClientCodeInput] = useState("");
   const [assignNote, setAssignNote] = useState("");
@@ -409,16 +424,36 @@ export default function TrainerDayScheduleScreen() {
     return found?.id || null;
   };
 
-  const onDragStart = (clientId: number) => {
+  const onDragStart = (
+    client: PublicClient,
+    pageX: number,
+    pageY: number,
+    cardX: number,
+    cardY: number,
+    width: number,
+    height: number
+  ) => {
+    dragTouchOffset.current = { x: pageX - cardX, y: pageY - cardY };
+    setDragCardWidth(width);
+    setDraggingClientId(client.id);
+    setActiveDragClient(client);
     setDragInProgress(true);
-    setDraggingClientId(clientId);
     setHoveredSlotId(null);
     refreshSlotRects();
+
+    // Measure the overlay layer's window offset so page coords map into it.
+    dragLayerRef.current?.measureInWindow((lx, ly) => {
+      dragLayerOffset.current = { x: lx, y: ly };
+      dragPos.setValue({ x: cardX - lx, y: cardY - ly });
+    });
   };
 
   const onDragMove = (pageX: number, pageY: number) => {
-    const overId = hitTestSlot(pageX, pageY);
-    setHoveredSlotId(overId);
+    dragPos.setValue({
+      x: pageX - dragTouchOffset.current.x - dragLayerOffset.current.x,
+      y: pageY - dragTouchOffset.current.y - dragLayerOffset.current.y,
+    });
+    setHoveredSlotId(hitTestSlot(pageX, pageY));
   };
 
   const assignClient = async (slotId: number, clientId: number) => {
@@ -441,9 +476,10 @@ export default function TrainerDayScheduleScreen() {
     const dropSlotId = moved ? hitTestSlot(pageX, pageY) : null;
     setDragInProgress(false);
     setDraggingClientId(null);
+    setActiveDragClient(null);
     setHoveredSlotId(null);
     if (moved && dropSlotId) {
-      // Drop onto an available slot assigns the client immediately.
+      // Drop onto an open slot assigns the client immediately.
       void assignClient(dropSlotId, clientId);
     }
   };
@@ -785,6 +821,25 @@ export default function TrainerDayScheduleScreen() {
           </ScrollView>
         </View>
       </ScrollView>
+
+      {/* Floating drag preview — lives at the screen root so it isn't clipped by the scroll views. */}
+      <View ref={dragLayerRef} style={StyleSheet.absoluteFill} pointerEvents="none" collapsable={false}>
+        {activeDragClient ? (
+          <Animated.View
+            style={[
+              styles.dragOverlayCard,
+              { width: dragCardWidth, transform: dragPos.getTranslateTransform() },
+            ]}
+          >
+            <Text style={styles.clientName}>
+              {activeDragClient.firstName} {activeDragClient.lastName}
+            </Text>
+            <Text numberOfLines={1} style={styles.clientSub}>
+              {activeDragClient.email}
+            </Text>
+          </Animated.View>
+        ) : null}
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -1040,6 +1095,20 @@ const styles = StyleSheet.create({
     borderColor: "#D97706",
     backgroundColor: "#FFF7ED",
     ...theme.shadows.large,
+  },
+  dragOverlayCard: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    borderRadius: 12,
+    padding: 10,
+    backgroundColor: "#FFFFFF",
+    gap: 3,
+    ...theme.shadows.large,
+    zIndex: 9999,
+    elevation: 12,
   },
   clientName: {
     ...typography.body2,
