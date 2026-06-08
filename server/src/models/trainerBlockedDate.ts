@@ -5,7 +5,6 @@ import {
   CreatedAt,
   DataType,
   ForeignKey,
-  Index,
   Model,
   Table,
   UpdatedAt,
@@ -26,13 +25,13 @@ export class TrainerBlockedDate extends Model<
 
   @ForeignKey(() => Trainer)
   @AllowNull(false)
-  @Index({ name: "trainer_blocked_date_unique", unique: true })
   @Column({ type: DataType.INTEGER, field: "trainer_id" })
   trainerId!: number;
 
   // Calendar day only (no time / timezone ambiguity), serialized as "YYYY-MM-DD".
+  // The composite unique index (trainer_id, date) is created in databaseBootstrap.ts
+  // with the correct snake_case column names.
   @AllowNull(false)
-  @Index({ name: "trainer_blocked_date_unique", unique: true })
   @Column({ type: DataType.DATEONLY })
   date!: string;
 
