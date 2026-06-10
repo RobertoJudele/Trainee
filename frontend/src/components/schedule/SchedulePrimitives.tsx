@@ -1,6 +1,16 @@
 import React from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { Modal, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
+} from "react-native";
 import { theme, typography } from "../../lib/theme";
 
 export const scheduleDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -176,7 +186,10 @@ type BottomSheetProps = {
 export function BottomSheet({ visible, title, subtitle, onClose, children, footer }: BottomSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.sheetRoot}>
+      <KeyboardAvoidingView
+        style={styles.sheetRoot}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <Pressable
           style={styles.sheetBackdrop}
           onPress={onClose}
@@ -193,7 +206,7 @@ export function BottomSheet({ visible, title, subtitle, onClose, children, foote
           <View style={styles.sheetBody}>{children}</View>
           {footer ? <View style={styles.sheetFooter}>{footer}</View> : null}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

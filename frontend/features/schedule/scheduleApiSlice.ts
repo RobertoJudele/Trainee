@@ -86,7 +86,7 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
       query: () => "/trainer-schedule/working-hours",
     }),
     generateSlots: builder.mutation<
-      ApiResp<{ count: number; slots: ScheduleSlot[] }>,
+      ApiResp<{ count: number; removed: number; slots: ScheduleSlot[] }>,
       { fromDate: string; toDate: string; timeZone?: string }
     >({
       query: (body) => ({

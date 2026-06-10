@@ -18,12 +18,29 @@ import {
   isDateKey,
   parseTimeToMinutes as parseTimeToMinutesTz,
   resolveTimeZone,
+  utcInstantToDateKey,
   zonedDayBoundsUtc,
   zonedWallClockToUtc,
 } from "../utils/scheduleTime";
 
 // Maximum span (in days) a single generate request may cover.
 const MAX_GENERATE_RANGE_DAYS = 62;
+
+// Statuses that must never be destroyed by generate/regenerate/block operations.
+const PROTECTED_SLOT_STATUSES = [
+  SlotStatus.ASSIGNED,
+  SlotStatus.COMPLETED,
+  SlotStatus.CANCELED,
+  SlotStatus.NO_SHOW,
+];
+
+// Two [start, end) ranges overlap if each starts before the other ends.
+const rangesOverlap = (
+  aStart: Date,
+  aEnd: Date,
+  bStart: Date,
+  bEnd: Date
+): boolean => aStart < bEnd && aEnd > bStart;
 
 const parseTimeToMinutes = (time: string): number => {
   const [h, m] = time.split(":").map(Number);
@@ -243,6 +260,8 @@ export const generateSlots = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    const templatedWeekdays = new Set(templates.map((t) => t.dayOfWeek));
+
     // Blocked days in range — skip these entirely.
     const blockedRows = await TrainerBlockedDate.findAll({
       where: { trainerId: trainer.id, date: { [Op.between]: [fromKey, toKey] } },
@@ -250,7 +269,7 @@ export const generateSlots = async (req: Request, res: Response): Promise<void> 
     });
     const blockedKeys = new Set(blockedRows.map((r) => r.date));
 
-    // Existing slots in the range — dedup on startsAt without N+1 queries.
+    // Existing slots in the range.
     const rangeStart = zonedDayBoundsUtc(fromKey, tz).start;
     const rangeEnd = zonedDayBoundsUtc(toKey, tz).end;
     const existingSlots = await TrainerScheduleSlot.findAll({
@@ -258,11 +277,27 @@ export const generateSlots = async (req: Request, res: Response): Promise<void> 
         trainerId: trainer.id,
         startsAt: { [Op.between]: [rangeStart, rangeEnd] },
       },
-      attributes: ["startsAt"],
     });
-    const existingStartEpochs = new Set(
-      existingSlots.map((s) => new Date(s.startsAt).getTime())
-    );
+
+    const protectedSlots = existingSlots.filter((s) => PROTECTED_SLOT_STATUSES.includes(s.status));
+    const availableSlots = existingSlots.filter((s) => s.status === SlotStatus.AVAILABLE);
+
+    // Replace available slots on days the templates cover, so a changed slot
+    // duration regenerates that day instead of leaving stale, overlapping slots.
+    let removed = 0;
+    for (const slot of availableSlots) {
+      const slotDateKey = utcInstantToDateKey(slot.startsAt, tz);
+      if (blockedKeys.has(slotDateKey)) continue;
+      if (!templatedWeekdays.has(dateKeyWeekday(slotDateKey))) continue;
+      await slot.destroy();
+      removed += 1;
+    }
+
+    // Assigned/completed/etc. slots are kept; new slots must be generated around them.
+    const occupiedRanges = protectedSlots.map((s) => ({
+      start: new Date(s.startsAt),
+      end: new Date(s.endsAt),
+    }));
 
     const toCreate: Array<{
       trainerId: number;
@@ -287,16 +322,18 @@ export const generateSlots = async (req: Request, res: Response): Promise<void> 
 
         for (let minute = startMin; minute + duration <= endMin; minute += duration) {
           const startsAt = zonedWallClockToUtc(dayKey, minute, tz);
-          if (existingStartEpochs.has(startsAt.getTime())) {
+          const endsAt = zonedWallClockToUtc(dayKey, minute + duration, tz);
+
+          if (occupiedRanges.some((r) => rangesOverlap(startsAt, endsAt, r.start, r.end))) {
             continue;
           }
-          existingStartEpochs.add(startsAt.getTime());
+          occupiedRanges.push({ start: startsAt, end: endsAt });
 
           toCreate.push({
             trainerId: trainer.id,
             workingHourId: template.id,
             startsAt,
-            endsAt: zonedWallClockToUtc(dayKey, minute + duration, tz),
+            endsAt,
             status: SlotStatus.AVAILABLE,
           });
         }
@@ -307,7 +344,7 @@ export const generateSlots = async (req: Request, res: Response): Promise<void> 
       ? await TrainerScheduleSlot.bulkCreate(toCreate)
       : [];
 
-    sendSuccess(res, 201, "Slots generated", { count: created.length, slots: created });
+    sendSuccess(res, 201, "Slots generated", { count: created.length, removed, slots: created });
   } catch (error) {
     console.error("Failed to generate slots:", error);
     sendError(res, 500, "Could not generate slots");
@@ -953,14 +990,6 @@ export const searchClientsForTrainer = async (req: Request, res: Response): Prom
 // ─────────────────────────────────────────────────────────────────────────────
 // Day-level editing + blocked dates
 // ─────────────────────────────────────────────────────────────────────────────
-
-// Statuses that must never be destroyed by regenerate/block operations.
-const PROTECTED_SLOT_STATUSES = [
-  SlotStatus.ASSIGNED,
-  SlotStatus.COMPLETED,
-  SlotStatus.CANCELED,
-  SlotStatus.NO_SHOW,
-];
 
 const requireTrainer = async (
   req: Request,

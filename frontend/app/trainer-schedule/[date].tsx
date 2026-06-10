@@ -188,6 +188,11 @@ export default function TrainerDayScheduleScreen() {
   const [draggingClientId, setDraggingClientId] = useState<number | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<number | null>(null);
   const [dragInProgress, setDragInProgress] = useState(false);
+
+  // Feedback flash shown over a slot after a drop: green pulse on success,
+  // red shake when the slot can't accept the client.
+  const [dropFeedback, setDropFeedback] = useState<{ type: "success" | "error"; rect: SlotRect } | null>(null);
+  const dropFeedbackAnim = useRef(new Animated.Value(0)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [clientInputY, setClientInputY] = useState(0);
 
@@ -283,6 +288,23 @@ export default function TrainerDayScheduleScreen() {
             await deleteSlot({ slotId }).unwrap();
           } catch (error: unknown) {
             Alert.alert("Error", getErrorMessage(error, "Could not delete the slot."));
+          }
+        },
+      },
+    ]);
+  };
+
+  const onBlockSlot = (slotId: number, startsAt: string, endsAt: string) => {
+    Alert.alert(`${shortTime(startsAt)} - ${shortTime(endsAt)}`, "Block this open slot?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Block",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteSlot({ slotId }).unwrap();
+          } catch (error: unknown) {
+            Alert.alert("Error", getErrorMessage(error, "Could not block this slot."));
           }
         },
       },
@@ -412,7 +434,7 @@ export default function TrainerDayScheduleScreen() {
   };
 
   const refreshSlotRects = () => {
-    for (const slot of availableSlots) {
+    for (const slot of daySlots) {
       const node = slotRefs.current[slot.id];
       if (!node) continue;
       node.measureInWindow((x, y, width, height) => {
@@ -428,6 +450,35 @@ export default function TrainerDayScheduleScreen() {
       return pageX >= rect.x && pageX <= rect.x + rect.width && pageY >= rect.y && pageY <= rect.y + rect.height;
     });
     return found?.id || null;
+  };
+
+  const hitTestAnySlot = (pageX: number, pageY: number) => {
+    return daySlots.find((slot) => {
+      const rect = slotRectsRef.current[slot.id];
+      if (!rect) return false;
+      return pageX >= rect.x && pageX <= rect.x + rect.width && pageY >= rect.y && pageY <= rect.y + rect.height;
+    });
+  };
+
+  const showDropFeedback = (type: "success" | "error", slotId: number) => {
+    const rect = slotRectsRef.current[slotId];
+    if (!rect) return;
+    setDropFeedback({ type, rect });
+    dropFeedbackAnim.setValue(0);
+    if (type === "success") {
+      Animated.sequence([
+        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.delay(250),
+        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => setDropFeedback(null));
+    } else {
+      Animated.sequence([
+        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+        Animated.timing(dropFeedbackAnim, { toValue: -1, duration: 60, useNativeDriver: true }),
+        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start(() => setDropFeedback(null));
+    }
   };
 
   const onDragStart = (
@@ -472,22 +523,30 @@ export default function TrainerDayScheduleScreen() {
       setSelectedSlotId(null);
       setSelectedClientId(null);
       setAssignNote("");
+      showDropFeedback("success", slotId);
       await Promise.all([refetchSlots(), refetchPending()]);
     } catch (error: unknown) {
+      showDropFeedback("error", slotId);
       Alert.alert("Error", getErrorMessage(error, "Could not assign client."));
     }
   };
 
   const onDragEnd = (clientId: number, pageX: number, pageY: number, moved: boolean) => {
-    const dropSlotId = moved ? hitTestSlot(pageX, pageY) : null;
+    const dropSlot = moved ? hitTestAnySlot(pageX, pageY) : undefined;
     setDragInProgress(false);
     setDraggingClientId(null);
     setActiveDragClient(null);
     setHoveredSlotId(null);
-    if (moved && dropSlotId) {
-      // Drop onto an open slot assigns the client immediately.
-      void assignClient(dropSlotId, clientId);
+
+    if (!dropSlot) return;
+
+    if (dropSlot.status !== "available") {
+      // Dropped onto a slot that's already taken — flash it as not available.
+      showDropFeedback("error", dropSlot.id);
+      return;
     }
+
+    void assignClient(dropSlot.id, clientId);
   };
 
   const onAddClientCode = async () => {
@@ -716,10 +775,10 @@ export default function TrainerDayScheduleScreen() {
                     onLayout={refreshSlotRects}
                   >
                     <Pressable
-                      onPress={() => setSelectedSlotId(slot.id)}
+                      onPress={() => onBlockSlot(slot.id, slot.startsAt, slot.endsAt)}
                       accessible={true}
                       accessibilityRole="button"
-                      accessibilityLabel={`Open slot from ${shortTime(slot.startsAt)} to ${shortTime(slot.endsAt)}`}
+                      accessibilityLabel={`Open slot from ${shortTime(slot.startsAt)} to ${shortTime(slot.endsAt)}, tap to block`}
                       style={[
                         styles.slotCard,
                         { borderColor: scheduleStatusColor(slot.status) },
@@ -749,7 +808,15 @@ export default function TrainerDayScheduleScreen() {
               }
 
               return (
-                <View key={slot.id} style={[styles.slotCard, { borderColor: scheduleStatusColor(slot.status) }]}>
+                <View
+                  key={slot.id}
+                  ref={(node) => {
+                    slotRefs.current[slot.id] = node;
+                  }}
+                  collapsable={false}
+                  onLayout={refreshSlotRects}
+                  style={[styles.slotCard, { borderColor: scheduleStatusColor(slot.status) }]}
+                >
                   <View style={styles.slotTopRow}>
                     <Text style={styles.slotTimeText}>
                       {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
@@ -844,6 +911,46 @@ export default function TrainerDayScheduleScreen() {
               {activeDragClient.email}
             </Text>
           </Animated.View>
+        ) : null}
+
+        {dropFeedback ? (
+          <Animated.View
+            style={[
+              styles.dropFeedbackOverlay,
+              {
+                left: dropFeedback.rect.x - dragLayerOffset.current.x,
+                top: dropFeedback.rect.y - dragLayerOffset.current.y,
+                width: dropFeedback.rect.width,
+                height: dropFeedback.rect.height,
+              },
+              dropFeedback.type === "success"
+                ? {
+                    borderColor: theme.colors.success,
+                    backgroundColor: `${theme.colors.success}33`,
+                    opacity: dropFeedbackAnim,
+                    transform: [
+                      {
+                        scale: dropFeedbackAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.9, 1.05],
+                        }),
+                      },
+                    ],
+                  }
+                : {
+                    borderColor: theme.colors.error,
+                    backgroundColor: `${theme.colors.error}33`,
+                    transform: [
+                      {
+                        translateX: dropFeedbackAnim.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: [-8, 8],
+                        }),
+                      },
+                    ],
+                  },
+            ]}
+          />
         ) : null}
       </View>
     </KeyboardAvoidingView>
@@ -1115,6 +1222,13 @@ const styles = StyleSheet.create({
     ...theme.shadows.large,
     zIndex: 9999,
     elevation: 12,
+  },
+  dropFeedbackOverlay: {
+    position: "absolute",
+    borderWidth: 2,
+    borderRadius: 12,
+    zIndex: 9998,
+    elevation: 11,
   },
   clientName: {
     ...typography.body2,

@@ -128,11 +128,18 @@ export default function TrainerScheduleScreen() {
         toDate: toKey,
         timeZone: deviceTimeZone,
       }).unwrap();
+      const parts: string[] = [];
+      if (res.data.count > 0) {
+        parts.push(`Created ${res.data.count} new slot${res.data.count === 1 ? "" : "s"}`);
+      }
+      if (res.data.removed > 0) {
+        parts.push(`replaced ${res.data.removed} outdated open slot${res.data.removed === 1 ? "" : "s"}`);
+      }
       Alert.alert(
         "Slots generated",
-        res.data.count > 0
-          ? `Created ${res.data.count} new slot${res.data.count === 1 ? "" : "s"} for this month.`
-          : "No new slots — this month is already filled from your template."
+        parts.length > 0
+          ? `${parts.join(", ")} for this month.`
+          : "No changes — this month is already filled from your template."
       );
     } catch (err: any) {
       Alert.alert("Error", err?.data?.message || "Could not generate slots.");
