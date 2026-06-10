@@ -109,6 +109,12 @@ function DraggableClientCard({
         // Claim a vertical drag (to a slot above); leave horizontal swipes to the list scroll.
         onMoveShouldSetPanResponder: (_, g) =>
           Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        // Claim it before parent ScrollViews get a chance to steal it.
+        onMoveShouldSetPanResponderCapture: (_, g) =>
+          Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        // Once dragging vertically, don't let a parent ScrollView take over mid-gesture.
+        onPanResponderTerminationRequest: (_, g) => Math.abs(g.dx) > Math.abs(g.dy),
+        onShouldBlockNativeResponder: () => true,
         onPanResponderGrant: (event) => {
           const { pageX, pageY } = event.nativeEvent;
           ref.current?.measureInWindow((x, y, width, height) => {
