@@ -20,7 +20,6 @@ import {
   useGetGymByIdQuery,
   GymMarker,
   GymTrainer,
-  GetAllGymsParams,
 } from "../features/gym/gymApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
@@ -294,25 +293,11 @@ export default function MapScreen() {
     return true;
   }, []);
 
-  const nearbyGymsQueryArgs = useMemo<GetAllGymsParams>(
-    () => ({
-      lat: Number(mapRegion.latitude.toFixed(6)),
-      lng: Number(mapRegion.longitude.toFixed(6)),
-      radiusKm: Number(getRadiusKmForRegion(mapRegion).toFixed(2)),
-    }),
-    [
-      mapRegion.latitude,
-      mapRegion.longitude,
-      mapRegion.latitudeDelta,
-      mapRegion.longitudeDelta,
-    ]
-  );
-
   const {
     data: gymsResponse,
     isLoading: gymsLoading,
     isFetching: gymsFetching,
-  } = useGetAllGymsQuery(nearbyGymsQueryArgs);
+  } = useGetAllGymsQuery();
 
   useEffect(() => {
     if (Array.isArray(gymsResponse?.data)) {
@@ -833,8 +818,8 @@ export default function MapScreen() {
         <View style={styles.mapStatusPill} pointerEvents="none">
           <Text style={styles.mapStatusText}>
             {gymsFetching
-              ? "Updating nearby gyms..."
-              : `Showing ${gymsForClustering.length}/${gyms.length} nearby gyms (${nearbyGymsQueryArgs.radiusKm} km radius)`}
+              ? "Loading gyms..."
+              : `Showing ${gymsForClustering.length}/${gyms.length} gyms in view`}
           </Text>
         </View>
       )}

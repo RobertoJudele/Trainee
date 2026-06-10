@@ -13,6 +13,13 @@ import {
   toFiniteNumber,
 } from "../utils/geo";
 
+const GYM_CACHE_TTL_MS = 30_000;
+let gymBulkCache: { data: any[]; expiresAt: number } | null = null;
+
+export function invalidateGymCache(): void {
+  gymBulkCache = null;
+}
+
 // ─────────────────────────────────────────────
 // GET /gyms  — all active gyms (map markers)
 // Returns minimal data needed to render markers
@@ -36,6 +43,12 @@ export const getAllGyms = async (req: Request, res: Response) => {
 
     const hasRadiusFilter =
       hasGeoReference && radiusKm !== undefined && Number.isFinite(radiusKm) && radiusKm > 0;
+
+    if (!hasGeoReference && gymBulkCache && gymBulkCache.expiresAt > Date.now()) {
+      res.set("Cache-Control", "public, max-age=30");
+      sendSuccess(res, 200, "Gyms retrieved successfully", gymBulkCache.data);
+      return;
+    }
 
     const where: Record<string | symbol, unknown> = { isActive: true };
     const attributes: any[] = [
@@ -114,6 +127,11 @@ export const getAllGyms = async (req: Request, res: Response) => {
             : undefined,
       };
     });
+
+    if (!hasGeoReference) {
+      gymBulkCache = { data, expiresAt: Date.now() + GYM_CACHE_TTL_MS };
+      res.set("Cache-Control", "public, max-age=30");
+    }
 
     sendSuccess(res, 200, "Gyms retrieved successfully", data);
   } catch (error) {
@@ -262,6 +280,7 @@ export const joinGym = async (req: AuthenticatedRequest, res: Response) => {
       isAvailable: true,
     });
 
+    invalidateGymCache();
     sendSuccess(res, 201, "Successfully joined gym", trainerGym);
   } catch (error) {
     console.error("joinGym error:", error);
@@ -308,6 +327,7 @@ export const setGymAvailability = async (
 
     await trainerGym.update({ isAvailable });
 
+    invalidateGymCache();
     sendSuccess(res, 200, `Availability set to ${isAvailable}`, trainerGym);
   } catch (error) {
     console.error("setGymAvailability error:", error);
@@ -345,6 +365,7 @@ export const leaveGym = async (req: AuthenticatedRequest, res: Response) => {
 
     await trainerGym.destroy();
 
+    invalidateGymCache();
     sendSuccess(res, 200, "Successfully left gym");
   } catch (error) {
     console.error("leaveGym error:", error);
@@ -390,6 +411,7 @@ export const createGym = async (req: Request, res: Response) => {
       phone, openingHours, imageUrl,
     });
 
+    invalidateGymCache();
     sendSuccess(res, 201, "Gym created successfully", gym);
   } catch (error) {
     console.error("createGym error:", error);
