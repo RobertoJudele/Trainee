@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSearchTrainersQuery, TrainerSearchItem } from "../../features/trainer/trainerApiSlice";
+import { useGetSuggestedTrainersQuery, SuggestedTrainer } from "../../features/recommendations/recommendationApiSlice";
 import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { apiSlice } from "../api/apiSlice";
@@ -34,6 +35,7 @@ export default function Home() {
   const user = useSelector(selectCurrentUser);
   const [refreshing, setRefreshing] = useState(false);
   const userRole = user?.role;
+  const isClient = userRole === UserRole.CLIENT;
 
   const quickActions = [
     {
@@ -99,18 +101,35 @@ export default function Home() {
     return true;
   });
 
-  const { data, isLoading, isError, refetch } = useSearchTrainersQuery({
-    sortBy: "totalRating",
-    sortOrder: "desc",
-    limit: 5,
-  });
+  const { data, isLoading, isError, refetch } = useSearchTrainersQuery(
+    {
+      sortBy: "totalRating",
+      sortOrder: "desc",
+      limit: 5,
+    },
+    { skip: isClient }
+  );
 
   const trainers = data?.data?.trainers ?? [];
   const topRatedTrainers = trainers.slice(0, 5);
 
+  const {
+    data: suggestedData,
+    isLoading: suggestedLoading,
+    isError: suggestedError,
+    refetch: refetchSuggested,
+  } = useGetSuggestedTrainersQuery({ limit: 5 }, { skip: !isClient });
+
+  const suggestedTrainers = suggestedData?.data?.trainers ?? [];
+  const hasPreferences = suggestedData?.data?.hasPreferences ?? true;
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await refetch();
+    if (isClient) {
+      await refetchSuggested();
+    } else {
+      await refetch();
+    }
     setRefreshing(false);
   };
 
@@ -185,6 +204,98 @@ export default function Home() {
                 {[item.locationCity, item.locationState].filter(Boolean).join(", ")}
               </Text>
             </View>
+          )}
+        </View>
+      </View>
+      <View style={styles.priceTag}>
+        <Text style={styles.hourlyRate}>
+          {item.hourlyRate
+            ? `$${item.hourlyRate}/hr`
+            : item.sessionRate
+              ? `$${item.sessionRate}/ses`
+              : ""}
+        </Text>
+      </View>
+    </PressableScale>
+    </FadeInUp>
+  );
+
+  const renderSuggestedTrainerCard = ({ item, index }: { item: SuggestedTrainer; index: number }) => (
+    <FadeInUp delay={index * theme.motion.stagger}>
+    <PressableScale
+      style={styles.trainerCard}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
+      onPress={() =>
+        router.push({
+          pathname: "/trainers/[id]",
+          params: {
+            id: String(item.internalId),
+            firstName: item.user?.firstName ?? "",
+            lastName: item.user?.lastName ?? "",
+            profileImageUrl: item.user?.profileImageUrl ?? "",
+            bio: item.bio ?? "",
+            totalRating: String(Number(item.totalRating ?? 0)),
+            reviewCount: String(item.reviewCount ?? 0),
+            experienceYears: String(item.experienceYears ?? 0),
+            hourlyRate: String(item.hourlyRate ?? 0),
+            sessionRate: String(item.sessionRate ?? 0),
+            isAvailableAtGym: item.isAvailable ? "1" : "0",
+          },
+        })
+      }
+    >
+      {item.user?.profileImageUrl ? (
+        <Image source={{ uri: item.user.profileImageUrl }} style={styles.trainerAvatar} />
+      ) : (
+        <View style={styles.trainerAvatarPlaceholder}>
+          <Text style={styles.trainerInitials}>
+            {item.user?.firstName?.[0]}
+            {item.user?.lastName?.[0]}
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.trainerInfo}>
+        <View style={styles.suggestedNameRow}>
+          <Text style={[styles.trainerName, styles.suggestedNameText]} numberOfLines={1}>
+            {item.user?.firstName} {item.user?.lastName}
+          </Text>
+          <View style={styles.matchBadge}>
+            <Text style={styles.matchBadgeText}>{item.matchPercent}%</Text>
+          </View>
+        </View>
+        <Text style={styles.trainerBio} numberOfLines={1}>
+          {item.bio || "Professional fitness trainer"}
+        </Text>
+        {item.specializations?.length > 0 && (
+          <Text style={styles.trainerSpec} numberOfLines={1}>
+            {item.specializations.map((s) => s.name).join(" · ")}
+          </Text>
+        )}
+        <View style={styles.trainerMeta}>
+          <View style={styles.metaBadge}>
+            <Ionicons name="star" size={12} color="#F59E0B" />
+            <Text style={styles.rating}>{Number(item.totalRating ?? 0).toFixed(1)}</Text>
+            <Text style={styles.reviewCount}>({item.reviewCount})</Text>
+          </View>
+          {item.worksAtPreferredGym ? (
+            <View style={[styles.metaBadge, { marginLeft: 8 }]}>
+              <Ionicons name="business" size={12} color={theme.colors.primary} />
+              <Text style={[styles.location, { color: theme.colors.primary, fontWeight: "700" }]}>
+                Works at your gym
+              </Text>
+            </View>
+          ) : (
+            (item.locationCity || item.locationState) && (
+              <View style={[styles.metaBadge, { marginLeft: 8 }]}>
+                <Ionicons name="location" size={12} color={theme.colors.textSecondary} />
+                <Text style={styles.location}>
+                  {[item.locationCity, item.locationState].filter(Boolean).join(", ")}
+                </Text>
+              </View>
+            )
           )}
         </View>
       </View>
@@ -283,54 +394,126 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Top Rated Trainers */}
-        <View style={styles.trainersSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Top Rated Trainers</Text>
-            <TouchableOpacity
-              onPress={() => router.push("/search")}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel="See all trainers"
-            >
-              <Text style={styles.seeAllButton}>See All</Text>
-            </TouchableOpacity>
-          </View>
-
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
-              <Text style={styles.loadingText}>Finding trainers...</Text>
-            </View>
-          ) : isError ? (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={48} color={theme.colors.error} />
-              <Text style={styles.errorText}>Unable to load trainers</Text>
+        {/* Suggested for You (clients only) */}
+        {isClient && (
+          <View style={styles.trainersSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Suggested for You</Text>
               <TouchableOpacity
-                style={styles.retryButton}
-                onPress={() => refetch()}
+                onPress={() => router.push("/preferences")}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Try Again"
+                accessibilityLabel="Edit preferences"
               >
-                <Text style={styles.retryButtonText}>Try Again</Text>
+                <Text style={styles.seeAllButton}>Edit preferences</Text>
               </TouchableOpacity>
             </View>
-          ) : topRatedTrainers.length > 0 ? (
-            <FlatList
-              data={topRatedTrainers}
-              renderItem={renderTrainerCard}
-              keyExtractor={(item) => String(item.id)}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: theme.spacing.md }} />}
-            />
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="barbell" size={48} color={theme.colors.textSecondary} />
-              <Text style={styles.emptyText}>No trainers yet</Text>
+
+            {!hasPreferences && (
+              <PressableScale
+                style={styles.preferencesPrompt}
+                onPress={() => router.push("/preferences")}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Set your preferences"
+              >
+                <Ionicons name="sparkles" size={24} color={theme.colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.preferencesPromptTitle}>Get personalized matches</Text>
+                  <Text style={styles.preferencesPromptText}>
+                    Tell us your goals, budget and preferred gym to see trainers picked for you.
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+              </PressableScale>
+            )}
+
+            {suggestedLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={styles.loadingText}>Finding your matches...</Text>
+              </View>
+            ) : suggestedError ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={48} color={theme.colors.error} />
+                <Text style={styles.errorText}>Unable to load suggestions</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={() => refetchSuggested()}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Try Again"
+                >
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            ) : suggestedTrainers.length > 0 ? (
+              <FlatList
+                data={suggestedTrainers}
+                renderItem={renderSuggestedTrainerCard}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={{ height: theme.spacing.md }} />}
+              />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="barbell" size={48} color={theme.colors.textSecondary} />
+                <Text style={styles.emptyText}>No trainers yet</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Top Rated Trainers */}
+        {!isClient && (
+          <View style={styles.trainersSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Top Rated Trainers</Text>
+              <TouchableOpacity
+                onPress={() => router.push("/search")}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="See all trainers"
+              >
+                <Text style={styles.seeAllButton}>See All</Text>
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
+
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={styles.loadingText}>Finding trainers...</Text>
+              </View>
+            ) : isError ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={48} color={theme.colors.error} />
+                <Text style={styles.errorText}>Unable to load trainers</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={() => refetch()}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel="Try Again"
+                >
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            ) : topRatedTrainers.length > 0 ? (
+              <FlatList
+                data={topRatedTrainers}
+                renderItem={renderTrainerCard}
+                keyExtractor={(item) => String(item.id)}
+                scrollEnabled={false}
+                ItemSeparatorComponent={() => <View style={{ height: theme.spacing.md }} />}
+              />
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Ionicons name="barbell" size={48} color={theme.colors.textSecondary} />
+                <Text style={styles.emptyText}>No trainers yet</Text>
+              </View>
+            )}
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -438,6 +621,30 @@ const styles = StyleSheet.create({
   trainerInitials: { ...typography.h3, color: theme.colors.primary, fontWeight: "700" },
   trainerInfo: { flex: 1, justifyContent: "center" },
   trainerName: { ...typography.h3, color: theme.colors.text, marginBottom: 2 },
+  suggestedNameRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
+  suggestedNameText: { flexShrink: 1, marginBottom: 0 },
+  matchBadge: {
+    flexShrink: 0,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  matchBadgeText: { ...typography.caption, color: "#fff", fontWeight: "700", textTransform: "none" },
+  preferencesPrompt: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    ...theme.shadows.small,
+  },
+  preferencesPromptTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text },
+  preferencesPromptText: { ...typography.body2, color: theme.colors.textSecondary },
   trainerBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 4 },
   trainerSpec: { ...typography.caption, color: theme.colors.primary, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
   trainerMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },

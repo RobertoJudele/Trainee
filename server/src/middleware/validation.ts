@@ -1133,6 +1133,75 @@ export const clientScheduleQueryValidation = [
   strictSchema({ query: ["from", "to"] }),
 ];
 
+export const upsertClientPreferencesValidation = [
+  body("preferredSpecializationIds")
+    .optional()
+    .isArray({ max: 50 })
+    .withMessage("preferredSpecializationIds must be an array."),
+  body("preferredSpecializationIds.*")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Each specialization id must be a positive integer."),
+  body("goals")
+    .optional()
+    .isArray({ max: 20 })
+    .withMessage("goals must be an array."),
+  body("goals.*")
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage("Each goal must be between 1 and 50 characters."),
+  body("fitnessLevel")
+    .optional({ values: "null" })
+    .isIn(["beginner", "intermediate", "expert"])
+    .withMessage("fitnessLevel must be beginner, intermediate or expert."),
+  body("budgetMin")
+    .optional({ values: "null" })
+    .isFloat({ min: 0, max: 999.99 })
+    .withMessage("budgetMin must be between 0 and 999.99."),
+  body("budgetMax")
+    .optional({ values: "null" })
+    .isFloat({ min: 0, max: 999.99 })
+    .withMessage("budgetMax must be between 0 and 999.99."),
+  body("preferredRateType")
+    .optional()
+    .isIn(["hourly", "session"])
+    .withMessage("preferredRateType must be hourly or session."),
+  body("maxDistanceKm")
+    .optional({ values: "null" })
+    .isFloat({ min: 0, max: 500 })
+    .withMessage("maxDistanceKm must be between 0 and 500."),
+  body("preferredGymId")
+    .optional({ values: "null" })
+    .isInt({ min: 1 })
+    .withMessage("preferredGymId must be a positive integer."),
+  strictSchema({
+    body: [
+      "preferredSpecializationIds",
+      "goals",
+      "fitnessLevel",
+      "budgetMin",
+      "budgetMax",
+      "preferredRateType",
+      "maxDistanceKm",
+      "preferredGymId",
+    ],
+  }),
+];
+
+export const suggestTrainersValidation = [
+  query("page")
+    .optional({ values: "falsy" })
+    .isInt({ min: 1 })
+    .withMessage("page must be a positive integer."),
+  query("limit")
+    .optional({ values: "falsy" })
+    .isInt({ min: 1, max: 50 })
+    .withMessage("limit must be between 1 and 50."),
+  strictSchema({ query: ["page", "limit"] }),
+];
+
 export const handleValidationErrors = (
   req: Request,
   res: Response,
