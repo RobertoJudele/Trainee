@@ -11,6 +11,7 @@
     "lint": "npm run typecheck",
     "test": "jest --passWithNoTests",
     "seed:gyms": "ts-node src/seeds/gymSeed.ts",
+    "seed:gyms:prod": "node dist/seeds/gymSeed.js",
     "seed:specializations": "ts-node src/seeds/specializationSeed.ts",
     "seed:trainer-specializations": "ts-node src/seeds/trainerSpecializationSeed.ts"
   },

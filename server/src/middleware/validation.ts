@@ -4,6 +4,7 @@ import { securityConfig } from "../config/security";
 import { UserRole } from "../types/common";
 import { IssueCategory, IssueStatus, IssueTargetType } from "../types/issue";
 import { sendError } from "../utils/response";
+import { BILLING_PLAN_IDS } from "../config/billingPlans";
 
 type SchemaLocation = "body" | "query" | "params";
 
@@ -793,6 +794,11 @@ export const createTrainerSpecializationValidation = [
 ];
 
 export const createCheckoutSessionValidation = [
+  body("plan")
+    .optional({ values: "falsy" })
+    .trim()
+    .isIn(BILLING_PLAN_IDS)
+    .withMessage(`plan must be one of: ${BILLING_PLAN_IDS.join(", ")}.`),
   body("lookup_key")
     .optional({ values: "falsy" })
     .trim()
@@ -803,7 +809,16 @@ export const createCheckoutSessionValidation = [
     .trim()
     .isLength({ min: 2, max: 255 })
     .withMessage("priceId must be between 2 and 255 characters."),
-  strictSchema({ body: ["lookup_key", "priceId"] }),
+  strictSchema({ body: ["plan", "lookup_key", "priceId"] }),
+];
+
+export const createSubscriptionValidation = [
+  body("plan")
+    .optional({ values: "falsy" })
+    .trim()
+    .isIn(BILLING_PLAN_IDS)
+    .withMessage(`plan must be one of: ${BILLING_PLAN_IDS.join(", ")}.`),
+  strictSchema({ body: ["plan"] }),
 ];
 
 export const createPortalSessionValidation = [

@@ -12,13 +12,20 @@ import { checkoutRateLimit } from "../middleware/rateLimitProfiles";
 import {
 	createCheckoutSessionValidation,
 	createPortalSessionValidation,
+	createSubscriptionValidation,
 	handleValidationErrors,
 	validateIapSubscriptionValidation,
 } from "../middleware/validation";
 
 const router=express.Router();
 
-router.post("/subscribe", authenticate, createSubscription);
+router.post(
+	"/subscribe",
+	authenticate,
+	createSubscriptionValidation,
+	handleValidationErrors,
+	createSubscription
+);
 router.get("/entitlement", authenticate, getBillingEntitlement);
 router.get("/transactions", authenticate, getBillingTransactions);
 router.post(

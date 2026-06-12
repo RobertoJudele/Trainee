@@ -9,6 +9,7 @@ import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
 import { resolveTrainerEntitlement } from "../services/entitlement";
 import { isStripeRuntimeEnabled } from "../config/billingMode";
+import { BillingPlan, getBillingPlan, isBillingPlanId } from "../config/billingPlans";
 
 const DEFAULT_WEB_SUCCESS_URL = "http://localhost:8081/checkout?success=true&session_id={CHECKOUT_SESSION_ID}";
 const DEFAULT_WEB_CANCEL_URL = "http://localhost:8081/checkout?canceled=true";
@@ -379,6 +380,30 @@ const resolveTrialEndsAt = (subscription: any): Date | undefined => {
     return undefined;
 };
 
+// Resolve a plan (1m/3m/6m/12m) to a Stripe price id: explicit env override first,
+// otherwise look it up by the plan's Stripe `lookup_key`.
+const resolvePlanPriceId = async (plan: BillingPlan): Promise<string> => {
+    const explicit = process.env[plan.envPriceIdVar]?.trim();
+    if (explicit) {
+        return explicit;
+    }
+
+    const prices = await stripe.prices.list({
+        lookup_keys: [plan.lookupKey],
+        active: true,
+        limit: 1,
+    });
+
+    const priceId = prices.data[0]?.id;
+    if (!priceId) {
+        throw new Error(
+            `No active Stripe price for plan ${plan.id} (set ${plan.envPriceIdVar} or a price with lookup_key "${plan.lookupKey}")`
+        );
+    }
+
+    return priceId;
+};
+
 const getCheckoutPriceId = async (lookupKey?: string, explicitPriceId?: string) => {
     if (explicitPriceId) {
         return explicitPriceId;
@@ -493,9 +518,21 @@ export const createSubscription = async (req: AuthenticatedRequest, res: Respons
             return;
         }
 
-        const priceId = process.env.STRIPE_SUBSCRIPTION_PRICE_ID || process.env.STRIPE_PRICE_ID;
+        const requestedPlan = (req.body as { plan?: string } | undefined)?.plan;
+        let priceId: string | undefined;
+
+        if (requestedPlan) {
+            if (!isBillingPlanId(requestedPlan)) {
+                sendError(res, 400, "Invalid plan. Must be one of: 1m, 3m, 6m, 12m");
+                return;
+            }
+            priceId = await resolvePlanPriceId(getBillingPlan(requestedPlan));
+        } else {
+            priceId = process.env.STRIPE_SUBSCRIPTION_PRICE_ID || process.env.STRIPE_PRICE_ID;
+        }
+
         if (!priceId) {
-            sendError(res, 500, "Missing STRIPE_SUBSCRIPTION_PRICE_ID or STRIPE_PRICE_ID");
+            sendError(res, 500, "No plan provided and no default STRIPE_SUBSCRIPTION_PRICE_ID / STRIPE_PRICE_ID configured");
             return;
         }
 
@@ -834,8 +871,18 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             return;
         }
 
-        const body = req.body as { lookup_key?: string; priceId?: string };
-        const priceId = await getCheckoutPriceId(body?.lookup_key, body?.priceId);
+        const body = req.body as { lookup_key?: string; priceId?: string; plan?: string };
+
+        let priceId: string | undefined;
+        if (body?.plan) {
+            if (!isBillingPlanId(body.plan)) {
+                sendError(res, 400, "Invalid plan. Must be one of: 1m, 3m, 6m, 12m");
+                return;
+            }
+            priceId = await resolvePlanPriceId(getBillingPlan(body.plan));
+        } else {
+            priceId = await getCheckoutPriceId(body?.lookup_key, body?.priceId);
+        }
 
         if (!priceId) {
             sendError(res, 400, "No Stripe price id configured or provided");
