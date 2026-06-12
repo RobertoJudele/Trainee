@@ -18,7 +18,7 @@ compose="docker compose"
 echo "### Downloading recommended TLS parameters ..."
 $compose run --rm --entrypoint "\
   sh -c 'mkdir -p /etc/letsencrypt && \
-  wget -O /etc/letsencrypt/options-ssl-nginx.conf https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/src/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf && \
+  wget -O /etc/letsencrypt/options-ssl-nginx.conf https://raw.githubusercontent.com/certbot/certbot/master/certbot-nginx/certbot_nginx/_internal/tls_configs/options-ssl-nginx.conf && \
   wget -O /etc/letsencrypt/ssl-dhparams.pem https://raw.githubusercontent.com/certbot/certbot/master/certbot/certbot/ssl-dhparams.pem'" certbot
 
 echo "### Creating a dummy certificate so nginx can boot ..."
