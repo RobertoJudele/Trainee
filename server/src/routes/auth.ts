@@ -5,6 +5,7 @@ import {
   login,
   register,
   resetPassword,
+  refresh,
 } from "../controllers/auth";
 import { authenticate } from "../middleware/auth";
 import {
@@ -16,6 +17,7 @@ import {
 } from "../middleware/validation";
 import { authRateLimit } from "../middleware/rateLimitProfiles";
 const router = express.Router();
+router.post("/refresh", refresh);
 router.post(
   "/register",
   authRateLimit,

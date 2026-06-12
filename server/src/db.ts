@@ -11,9 +11,12 @@ import { TrainerGym } from "./models/trainerGym";
 import { Issue } from "./models/issue";
 import { TrainerWorkingHour } from "./models/trainerWorkingHour";
 import { TrainerScheduleSlot } from "./models/trainerScheduleSlot";
+import { TrainerBlockedDate } from "./models/trainerBlockedDate";
 import { ClientCheckInCode } from "./models/clientCheckInCode";
 import { BillingWebhookEvent } from "./models/billingWebhookEvent";
 import { ProfileViewEvent } from "./models/profileViewEvent";
+import { BillingTransaction } from "./models/billingTransaction";
+import { RefreshToken } from "./models/refreshToken";
 dotenv.config();
 
 const sequelize = new Sequelize({
@@ -35,9 +38,12 @@ const sequelize = new Sequelize({
     Issue,
     TrainerWorkingHour,
     TrainerScheduleSlot,
+    TrainerBlockedDate,
     ClientCheckInCode,
     BillingWebhookEvent,
     ProfileViewEvent,
+    BillingTransaction,
+    RefreshToken,
   ],
   logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {

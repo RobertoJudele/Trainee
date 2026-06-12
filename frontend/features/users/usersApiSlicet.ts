@@ -31,7 +31,7 @@ export const usersApiSlice = apiSlice.injectEndpoints({
         return response;
       },
     }),
-    deleteProfile: builder.mutation({
+    deleteProfile: builder.mutation<void, void>({
       query: () => {
         console.log("Mutation deleting user");
         return { url: "/users", method: "DELETE" };

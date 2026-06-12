@@ -16,20 +16,29 @@ import {
   View,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
 import {
   PublicClient,
+  deviceTimeZone,
   useAssignClientToSlotMutation,
+  useBlockDateMutation,
+  useCreateOneOffSlotMutation,
+  useDeleteSlotMutation,
+  useGetBlockedDatesQuery,
   useGetPendingClientCodesQuery,
   useGetTrainerSlotsQuery,
+  useRegenerateDayMutation,
   useResolveClientCodeMutation,
   useUnassignClientFromSlotMutation,
+  useUnblockDateMutation,
 } from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import {
+  BottomSheet,
   OutlineButton,
   ScheduleCard,
   StatusBadge,
@@ -69,7 +78,15 @@ type DraggableClientCardProps = {
   selected: boolean;
   dragging: boolean;
   onSelect: (clientId: number) => void;
-  onDragStart: (clientId: number) => void;
+  onDragStart: (
+    client: PublicClient,
+    pageX: number,
+    pageY: number,
+    cardX: number,
+    cardY: number,
+    width: number,
+    height: number
+  ) => void;
   onDragMove: (pageX: number, pageY: number) => void;
   onDragEnd: (clientId: number, pageX: number, pageY: number, moved: boolean) => void;
 };
@@ -83,18 +100,28 @@ function DraggableClientCard({
   onDragMove,
   onDragEnd,
 }: DraggableClientCardProps) {
-  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const ref = useRef<View | null>(null);
 
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: () => {
-          onDragStart(client.id);
+        // Claim a vertical drag (to a slot above); leave horizontal swipes to the list scroll.
+        onMoveShouldSetPanResponder: (_, g) =>
+          Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        // Claim it before parent ScrollViews get a chance to steal it.
+        onMoveShouldSetPanResponderCapture: (_, g) =>
+          Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        // Once dragging vertically, don't let a parent ScrollView take over mid-gesture.
+        onPanResponderTerminationRequest: (_, g) => Math.abs(g.dx) > Math.abs(g.dy),
+        onShouldBlockNativeResponder: () => true,
+        onPanResponderGrant: (event) => {
+          const { pageX, pageY } = event.nativeEvent;
+          ref.current?.measureInWindow((x, y, width, height) => {
+            onDragStart(client, pageX, pageY, x, y, width, height);
+          });
         },
         onPanResponderMove: (_, gesture) => {
-          pan.setValue({ x: gesture.dx, y: gesture.dy });
           onDragMove(gesture.moveX, gesture.moveY);
         },
         onPanResponderRelease: (_, gesture) => {
@@ -103,30 +130,24 @@ function DraggableClientCard({
             onSelect(client.id);
           }
           onDragEnd(client.id, gesture.moveX, gesture.moveY, moved);
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }).start();
         },
         onPanResponderTerminate: () => {
           onDragEnd(client.id, -1, -1, false);
-          Animated.spring(pan, {
-            toValue: { x: 0, y: 0 },
-            useNativeDriver: false,
-          }).start();
         },
       }),
-    [client.id, onDragEnd, onDragMove, onDragStart, onSelect, pan]
+    [client, onDragEnd, onDragMove, onDragStart, onSelect]
   );
 
   return (
-    <Animated.View
+    <View
+      ref={ref}
+      collapsable={false}
       {...panResponder.panHandlers}
       style={[
         styles.clientCard,
         selected && styles.clientCardSelected,
         dragging && styles.clientCardDragging,
-        { transform: pan.getTranslateTransform() },
+        dragging && { opacity: 0.3 },
       ]}
     >
       <Text style={styles.clientName}>
@@ -135,7 +156,7 @@ function DraggableClientCard({
       <Text numberOfLines={1} style={styles.clientSub}>
         {client.email}
       </Text>
-    </Animated.View>
+    </View>
   );
 }
 
@@ -150,6 +171,15 @@ export default function TrainerDayScheduleScreen() {
   const slotRectsRef = useRef<Record<number, SlotRect>>({});
   const scrollRef = useRef<ScrollView | null>(null);
 
+  // Floating drag preview rendered at the screen root so it isn't clipped by
+  // the scroll containers around the client list.
+  const dragLayerRef = useRef<View | null>(null);
+  const dragPos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const dragTouchOffset = useRef({ x: 0, y: 0 });
+  const dragLayerOffset = useRef({ x: 0, y: 0 });
+  const [activeDragClient, setActiveDragClient] = useState<PublicClient | null>(null);
+  const [dragCardWidth, setDragCardWidth] = useState(210);
+
   const [clientCodeInput, setClientCodeInput] = useState("");
   const [assignNote, setAssignNote] = useState("");
   const [selectedSlotId, setSelectedSlotId] = useState<number | null>(null);
@@ -158,6 +188,11 @@ export default function TrainerDayScheduleScreen() {
   const [draggingClientId, setDraggingClientId] = useState<number | null>(null);
   const [hoveredSlotId, setHoveredSlotId] = useState<number | null>(null);
   const [dragInProgress, setDragInProgress] = useState(false);
+
+  // Feedback flash shown over a slot after a drop: green pulse on success,
+  // red shake when the slot can't accept the client.
+  const [dropFeedback, setDropFeedback] = useState<{ type: "success" | "error"; rect: SlotRect } | null>(null);
+  const dropFeedbackAnim = useRef(new Animated.Value(0)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [clientInputY, setClientInputY] = useState(0);
 
@@ -179,6 +214,128 @@ export default function TrainerDayScheduleScreen() {
   const [resolveClientCode, { isLoading: resolvingCode }] = useResolveClientCodeMutation();
   const [assignClientToSlot, { isLoading: assigning }] = useAssignClientToSlotMutation();
   const [unassignClientFromSlot, { isLoading: unassigning }] = useUnassignClientFromSlotMutation();
+
+  const { data: blockedResp } = useGetBlockedDatesQuery({ from: routeDate, to: routeDate });
+  const [regenerateDay, { isLoading: regenerating }] = useRegenerateDayMutation();
+  const [createOneOffSlot, { isLoading: creatingSlot }] = useCreateOneOffSlotMutation();
+  const [deleteSlot] = useDeleteSlotMutation();
+  const [blockDate, { isLoading: blocking }] = useBlockDateMutation();
+  const [unblockDate, { isLoading: unblocking }] = useUnblockDateMutation();
+
+  const isBlocked = (blockedResp?.data?.length ?? 0) > 0;
+
+  // Day-control form state.
+  const [showControls, setShowControls] = useState(false);
+  const [regenStart, setRegenStart] = useState("");
+  const [regenEnd, setRegenEnd] = useState("");
+  const [regenDuration, setRegenDuration] = useState("");
+  const [newSlotStart, setNewSlotStart] = useState("");
+  const [newSlotEnd, setNewSlotEnd] = useState("");
+
+  const onRegenerateDay = async () => {
+    const hasCustom = regenStart.trim() !== "" || regenEnd.trim() !== "";
+    if (hasCustom && !(/^([01]\d|2[0-3]):([0-5]\d)$/.test(regenStart) && /^([01]\d|2[0-3]):([0-5]\d)$/.test(regenEnd))) {
+      Alert.alert("Validation", "Provide both start and end as HH:mm, or leave both empty to use your template.");
+      return;
+    }
+    try {
+      const res = await regenerateDay({
+        date: routeDate,
+        startTime: hasCustom ? regenStart : undefined,
+        endTime: hasCustom ? regenEnd : undefined,
+        slotDurationMin: regenDuration ? Number(regenDuration) : undefined,
+        timeZone: deviceTimeZone,
+      }).unwrap();
+      setRegenStart("");
+      setRegenEnd("");
+      setRegenDuration("");
+      Alert.alert(
+        "Day regenerated",
+        `Added ${res.data.created}, removed ${res.data.removed}, kept ${res.data.preserved} assigned.`
+      );
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not regenerate this day."));
+    }
+  };
+
+  const onAddOneOffSlot = async () => {
+    if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(newSlotStart) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(newSlotEnd)) {
+      Alert.alert("Validation", "Enter start and end as HH:mm.");
+      return;
+    }
+    try {
+      await createOneOffSlot({
+        date: routeDate,
+        startTime: newSlotStart,
+        endTime: newSlotEnd,
+        timeZone: deviceTimeZone,
+      }).unwrap();
+      setNewSlotStart("");
+      setNewSlotEnd("");
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not add the slot."));
+    }
+  };
+
+  const onDeleteSlot = (slotId: number) => {
+    Alert.alert("Delete slot", "Remove this available slot?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteSlot({ slotId }).unwrap();
+          } catch (error: unknown) {
+            Alert.alert("Error", getErrorMessage(error, "Could not delete the slot."));
+          }
+        },
+      },
+    ]);
+  };
+
+  const onBlockSlot = (slotId: number, startsAt: string, endsAt: string) => {
+    Alert.alert(`${shortTime(startsAt)} - ${shortTime(endsAt)}`, "Block this open slot?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Block",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteSlot({ slotId }).unwrap();
+          } catch (error: unknown) {
+            Alert.alert("Error", getErrorMessage(error, "Could not block this slot."));
+          }
+        },
+      },
+    ]);
+  };
+
+  const onBlockDay = async () => {
+    try {
+      await blockDate({ date: routeDate, timeZone: deviceTimeZone }).unwrap();
+    } catch (error: unknown) {
+      const conflicts = (error as any)?.data?.conflicts as
+        | { client?: { firstName: string; lastName: string } | null }[]
+        | undefined;
+      if (conflicts && conflicts.length > 0) {
+        const names = conflicts
+          .map((c) => (c.client ? `${c.client.firstName} ${c.client.lastName}` : "a client"))
+          .join(", ");
+        Alert.alert("Cannot block day", `Unassign these first: ${names}`);
+        return;
+      }
+      Alert.alert("Error", getErrorMessage(error, "Could not block this day."));
+    }
+  };
+
+  const onUnblockDay = async () => {
+    try {
+      await unblockDate({ date: routeDate }).unwrap();
+    } catch (error: unknown) {
+      Alert.alert("Error", getErrorMessage(error, "Could not unblock this day."));
+    }
+  };
 
   useEffect(() => {
     const loadSavedClients = async () => {
@@ -277,7 +434,7 @@ export default function TrainerDayScheduleScreen() {
   };
 
   const refreshSlotRects = () => {
-    for (const slot of availableSlots) {
+    for (const slot of daySlots) {
       const node = slotRefs.current[slot.id];
       if (!node) continue;
       node.measureInWindow((x, y, width, height) => {
@@ -295,27 +452,101 @@ export default function TrainerDayScheduleScreen() {
     return found?.id || null;
   };
 
-  const onDragStart = (clientId: number) => {
+  const hitTestAnySlot = (pageX: number, pageY: number) => {
+    return daySlots.find((slot) => {
+      const rect = slotRectsRef.current[slot.id];
+      if (!rect) return false;
+      return pageX >= rect.x && pageX <= rect.x + rect.width && pageY >= rect.y && pageY <= rect.y + rect.height;
+    });
+  };
+
+  const showDropFeedback = (type: "success" | "error", slotId: number) => {
+    const rect = slotRectsRef.current[slotId];
+    if (!rect) return;
+    setDropFeedback({ type, rect });
+    dropFeedbackAnim.setValue(0);
+    if (type === "success") {
+      Animated.sequence([
+        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
+        Animated.delay(250),
+        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+      ]).start(() => setDropFeedback(null));
+    } else {
+      Animated.sequence([
+        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+        Animated.timing(dropFeedbackAnim, { toValue: -1, duration: 60, useNativeDriver: true }),
+        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
+        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]).start(() => setDropFeedback(null));
+    }
+  };
+
+  const onDragStart = (
+    client: PublicClient,
+    pageX: number,
+    pageY: number,
+    cardX: number,
+    cardY: number,
+    width: number,
+    height: number
+  ) => {
+    dragTouchOffset.current = { x: pageX - cardX, y: pageY - cardY };
+    setDragCardWidth(width);
+    setDraggingClientId(client.id);
+    setActiveDragClient(client);
     setDragInProgress(true);
-    setDraggingClientId(clientId);
     setHoveredSlotId(null);
     refreshSlotRects();
+
+    // Measure the overlay layer's window offset so page coords map into it.
+    dragLayerRef.current?.measureInWindow((lx, ly) => {
+      dragLayerOffset.current = { x: lx, y: ly };
+      dragPos.setValue({ x: cardX - lx, y: cardY - ly });
+    });
   };
 
   const onDragMove = (pageX: number, pageY: number) => {
-    const overId = hitTestSlot(pageX, pageY);
-    setHoveredSlotId(overId);
+    dragPos.setValue({
+      x: pageX - dragTouchOffset.current.x - dragLayerOffset.current.x,
+      y: pageY - dragTouchOffset.current.y - dragLayerOffset.current.y,
+    });
+    setHoveredSlotId(hitTestSlot(pageX, pageY));
+  };
+
+  const assignClient = async (slotId: number, clientId: number) => {
+    try {
+      await assignClientToSlot({
+        slotId,
+        clientId,
+        note: assignNote.trim() || undefined,
+      }).unwrap();
+      setSelectedSlotId(null);
+      setSelectedClientId(null);
+      setAssignNote("");
+      showDropFeedback("success", slotId);
+      await Promise.all([refetchSlots(), refetchPending()]);
+    } catch (error: unknown) {
+      showDropFeedback("error", slotId);
+      Alert.alert("Error", getErrorMessage(error, "Could not assign client."));
+    }
   };
 
   const onDragEnd = (clientId: number, pageX: number, pageY: number, moved: boolean) => {
-    const dropSlotId = moved ? hitTestSlot(pageX, pageY) : null;
-    if (moved && dropSlotId) {
-      setSelectedSlotId(dropSlotId);
-      setSelectedClientId(clientId);
-    }
+    const dropSlot = moved ? hitTestAnySlot(pageX, pageY) : undefined;
     setDragInProgress(false);
     setDraggingClientId(null);
+    setActiveDragClient(null);
     setHoveredSlotId(null);
+
+    if (!dropSlot) return;
+
+    if (dropSlot.status !== "available") {
+      // Dropped onto a slot that's already taken — flash it as not available.
+      showDropFeedback("error", dropSlot.id);
+      return;
+    }
+
+    void assignClient(dropSlot.id, clientId);
   };
 
   const onAddClientCode = async () => {
@@ -341,7 +572,7 @@ export default function TrainerDayScheduleScreen() {
 
   const onAssign = async () => {
     if (!selectedSlotId) {
-      Alert.alert("Validation", "Select or drop onto an available slot first.");
+      Alert.alert("Validation", "Select or drop onto an open slot first.");
       return;
     }
 
@@ -350,20 +581,7 @@ export default function TrainerDayScheduleScreen() {
       return;
     }
 
-    try {
-      await assignClientToSlot({
-        slotId: selectedSlotId,
-        clientId: selectedClientId,
-        note: assignNote.trim() || undefined,
-      }).unwrap();
-
-      Alert.alert("Assigned", "Client assigned to slot.");
-      setSelectedSlotId(null);
-      setAssignNote("");
-      await Promise.all([refetchSlots(), refetchPending()]);
-    } catch (error: unknown) {
-      Alert.alert("Error", getErrorMessage(error, "Could not assign client."));
-    }
+    await assignClient(selectedSlotId, selectedClientId);
   };
 
   const onUnassign = async (slotId: number) => {
@@ -400,7 +618,15 @@ export default function TrainerDayScheduleScreen() {
       >
         <View style={styles.heroCard}>
           <View style={styles.heroTopRow}>
-            <OutlineButton label="Back" onPress={() => router.back()} />
+            <Pressable
+              style={styles.kebabBtn}
+              onPress={() => setShowControls(true)}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Open day controls"
+            >
+              <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.text} />
+            </Pressable>
             <View style={styles.heroTitleWrap}>
               <Text style={styles.heroEyebrow}>Daily Planner</Text>
               <Text style={styles.heroTitle}>{routeDate}</Text>
@@ -409,7 +635,7 @@ export default function TrainerDayScheduleScreen() {
 
           <View style={styles.heroStatsRow}>
             <View style={styles.statChip}>
-              <Text style={styles.statLabel}>Available</Text>
+              <Text style={styles.statLabel}>Open</Text>
               <Text style={styles.statValue}>{availableSlots.length}</Text>
             </View>
             <View style={styles.statChip}>
@@ -419,18 +645,167 @@ export default function TrainerDayScheduleScreen() {
           </View>
         </View>
 
+        <BottomSheet
+          visible={showControls}
+          title="Day controls"
+          subtitle={routeDate}
+          onClose={() => setShowControls(false)}
+        >
+          {isBlocked ? (
+            <View style={{ gap: 8 }}>
+              <View style={styles.blockedBanner}>
+                <Text style={styles.blockedBannerText}>
+                  This day is blocked. No slots can be generated until you unblock it.
+                </Text>
+              </View>
+              <GradientActionButton
+                label={unblocking ? "Unblocking..." : "Unblock this day"}
+                onPress={onUnblockDay}
+                disabled={unblocking}
+              />
+              <Text style={styles.controlHint}>
+                Unblocking does not recreate slots — regenerate the day afterwards.
+              </Text>
+            </View>
+          ) : (
+            <View style={{ gap: 10 }}>
+              <Text style={styles.controlLabel}>Regenerate this day</Text>
+              <View style={styles.controlRow}>
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={regenStart}
+                  onChangeText={setRegenStart}
+                  placeholder="Start"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={regenEnd}
+                  onChangeText={setRegenEnd}
+                  placeholder="End"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.input, styles.controlFieldNarrow]}
+                  value={regenDuration}
+                  onChangeText={setRegenDuration}
+                  placeholder="Min"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <OutlineButton
+                label={regenerating ? "Regenerating..." : "Regenerate day"}
+                onPress={onRegenerateDay}
+                disabled={regenerating}
+              />
+              <Text style={styles.controlHint}>
+                Leave times empty to use your saved template. Assigned slots are always kept.
+              </Text>
+
+              <Text style={styles.controlLabel}>Add a one-off slot</Text>
+              <View style={styles.controlRow}>
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={newSlotStart}
+                  onChangeText={setNewSlotStart}
+                  placeholder="Start 14:00"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+                <TextInput
+                  style={[styles.input, styles.controlField]}
+                  value={newSlotEnd}
+                  onChangeText={setNewSlotEnd}
+                  placeholder="End 15:00"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  autoCapitalize="none"
+                />
+              </View>
+              <OutlineButton
+                label={creatingSlot ? "Adding..." : "Add slot"}
+                onPress={onAddOneOffSlot}
+                disabled={creatingSlot}
+              />
+
+              <Pressable
+                style={styles.blockBtn}
+                onPress={onBlockDay}
+                disabled={blocking}
+                accessibilityRole="button"
+                accessibilityLabel="Block this day"
+              >
+                <Text style={styles.blockBtnText}>{blocking ? "Blocking..." : "Block this day"}</Text>
+              </Pressable>
+            </View>
+          )}
+        </BottomSheet>
+
+        {isBlocked ? (
+          <View style={styles.blockedBanner}>
+            <Text style={styles.blockedBannerText}>
+              This day is blocked. Tap the dots (top-left) to unblock it.
+            </Text>
+          </View>
+        ) : null}
+
         <ScheduleCard
-          title="Available Slots"
-          subtitle="Drop a client card on a slot, or tap a slot to select it for assignment."
+          title="Slots"
+          subtitle="Drag a client onto an open slot to assign. Tap the ⋮ menu (top-left) for day options."
         >
           {slotsLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
 
-          {availableSlots.length === 0 ? (
-            <Text style={styles.emptyText}>No available slots for this day.</Text>
+          {daySlots.length === 0 ? (
+            <Text style={styles.emptyText}>No slots for this day.</Text>
           ) : (
-            availableSlots.map((slot) => {
+            daySlots.map((slot) => {
               const selected = selectedSlotId === slot.id;
               const hovered = hoveredSlotId === slot.id;
+
+              if (slot.status === "available") {
+                return (
+                  <View
+                    key={slot.id}
+                    ref={(node) => {
+                      slotRefs.current[slot.id] = node;
+                    }}
+                    collapsable={false}
+                    onLayout={refreshSlotRects}
+                  >
+                    <Pressable
+                      onPress={() => onBlockSlot(slot.id, slot.startsAt, slot.endsAt)}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open slot from ${shortTime(slot.startsAt)} to ${shortTime(slot.endsAt)}, tap to block`}
+                      style={[
+                        styles.slotCard,
+                        { borderColor: scheduleStatusColor(slot.status) },
+                        selected && styles.slotCardSelected,
+                        hovered && styles.slotCardHovered,
+                      ]}
+                    >
+                      <View style={styles.slotTopRow}>
+                        <Text style={styles.slotTimeText}>
+                          {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
+                        </Text>
+                        <View style={styles.slotActions}>
+                          <StatusBadge status={slot.status} />
+                          <Pressable
+                            onPress={() => onDeleteSlot(slot.id)}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Delete slot at ${shortTime(slot.startsAt)}`}
+                          >
+                            <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+                          </Pressable>
+                        </View>
+                      </View>
+                    </Pressable>
+                  </View>
+                );
+              }
 
               return (
                 <View
@@ -440,51 +815,32 @@ export default function TrainerDayScheduleScreen() {
                   }}
                   collapsable={false}
                   onLayout={refreshSlotRects}
+                  style={[styles.slotCard, { borderColor: scheduleStatusColor(slot.status) }]}
                 >
-                  <Pressable
-                    onPress={() => setSelectedSlotId(slot.id)}
-                    style={[
-                      styles.slotCard,
-                      { borderColor: scheduleStatusColor(slot.status) },
-                      selected && styles.slotCardSelected,
-                      hovered && styles.slotCardHovered,
-                    ]}
-                  >
-                    <View style={styles.slotTopRow}>
-                      <Text style={styles.slotTimeText}>
-                        {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
-                      </Text>
-                      <StatusBadge status={slot.status} />
-                    </View>
-                  </Pressable>
+                  <View style={styles.slotTopRow}>
+                    <Text style={styles.slotTimeText}>
+                      {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
+                    </Text>
+                    <StatusBadge status={slot.status} />
+                  </View>
+                  <Text style={styles.assignedClientText}>
+                    {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
+                  </Text>
+                  {slot.status === "assigned" ? (
+                    <Pressable
+                      style={styles.unassignBtn}
+                      onPress={() => onUnassign(slot.id)}
+                      disabled={unassigning}
+                      accessible={true}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Unassign client from slot at ${shortTime(slot.startsAt)}`}
+                    >
+                      <Text style={styles.unassignBtnText}>{unassigning ? "Removing..." : "Unassign"}</Text>
+                    </Pressable>
+                  ) : null}
                 </View>
               );
             })
-          )}
-        </ScheduleCard>
-
-      
-
-        <ScheduleCard title="Assigned / Completed" subtitle="Manage existing assignments for this day.">
-          {assignedSlots.length === 0 ? (
-            <Text style={styles.emptyText}>No assigned slots yet.</Text>
-          ) : (
-            assignedSlots.map((slot) => (
-              <View key={slot.id} style={[styles.slotCard, { borderColor: scheduleStatusColor(slot.status) }]}>
-                <View style={styles.slotTopRow}>
-                  <Text style={styles.slotTimeText}>
-                    {shortTime(slot.startsAt)} - {shortTime(slot.endsAt)}
-                  </Text>
-                  <StatusBadge status={slot.status} />
-                </View>
-                <Text style={styles.assignedClientText}>
-                  {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
-                </Text>
-                <Pressable style={styles.unassignBtn} onPress={() => onUnassign(slot.id)} disabled={unassigning}>
-                  <Text style={styles.unassignBtnText}>{unassigning ? "Removing..." : "Unassign"}</Text>
-                </Pressable>
-              </View>
-            ))
           )}
         </ScheduleCard>
 
@@ -538,6 +894,65 @@ export default function TrainerDayScheduleScreen() {
           </ScrollView>
         </View>
       </ScrollView>
+
+      {/* Floating drag preview — lives at the screen root so it isn't clipped by the scroll views. */}
+      <View ref={dragLayerRef} style={StyleSheet.absoluteFill} pointerEvents="none" collapsable={false}>
+        {activeDragClient ? (
+          <Animated.View
+            style={[
+              styles.dragOverlayCard,
+              { width: dragCardWidth, transform: dragPos.getTranslateTransform() },
+            ]}
+          >
+            <Text style={styles.clientName}>
+              {activeDragClient.firstName} {activeDragClient.lastName}
+            </Text>
+            <Text numberOfLines={1} style={styles.clientSub}>
+              {activeDragClient.email}
+            </Text>
+          </Animated.View>
+        ) : null}
+
+        {dropFeedback ? (
+          <Animated.View
+            style={[
+              styles.dropFeedbackOverlay,
+              {
+                left: dropFeedback.rect.x - dragLayerOffset.current.x,
+                top: dropFeedback.rect.y - dragLayerOffset.current.y,
+                width: dropFeedback.rect.width,
+                height: dropFeedback.rect.height,
+              },
+              dropFeedback.type === "success"
+                ? {
+                    borderColor: theme.colors.success,
+                    backgroundColor: `${theme.colors.success}33`,
+                    opacity: dropFeedbackAnim,
+                    transform: [
+                      {
+                        scale: dropFeedbackAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.9, 1.05],
+                        }),
+                      },
+                    ],
+                  }
+                : {
+                    borderColor: theme.colors.error,
+                    backgroundColor: `${theme.colors.error}33`,
+                    transform: [
+                      {
+                        translateX: dropFeedbackAnim.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: [-8, 8],
+                        }),
+                      },
+                    ],
+                  },
+            ]}
+          />
+        ) : null}
+      </View>
     </KeyboardAvoidingView>
   );
 }
@@ -586,6 +1001,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
+  },
+  kebabBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#CED7E3",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
   },
   heroTitleWrap: {
     flex: 1,
@@ -645,6 +1070,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 8,
+  },
+  slotActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  controlLabel: {
+    ...typography.body2,
+    color: theme.colors.text,
+    fontWeight: "700",
+  },
+  controlRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  controlField: {
+    flex: 1,
+  },
+  controlFieldNarrow: {
+    width: 70,
+  },
+  controlHint: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    textTransform: "none",
+  },
+  blockedBanner: {
+    borderRadius: 12,
+    backgroundColor: `${theme.colors.warning}18`,
+    borderWidth: 1,
+    borderColor: `${theme.colors.warning}55`,
+    padding: 10,
+  },
+  blockedBannerText: {
+    ...typography.body2,
+    color: "#92400E",
+  },
+  blockBtn: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: theme.colors.error,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+  },
+  blockBtnText: {
+    ...typography.caption,
+    color: theme.colors.error,
+    textTransform: "none",
+    fontWeight: "700",
   },
   slotTimeText: {
     ...typography.body2,
@@ -733,6 +1208,27 @@ const styles = StyleSheet.create({
     borderColor: "#D97706",
     backgroundColor: "#FFF7ED",
     ...theme.shadows.large,
+  },
+  dragOverlayCard: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    borderWidth: 1.5,
+    borderColor: theme.colors.primary,
+    borderRadius: 12,
+    padding: 10,
+    backgroundColor: "#FFFFFF",
+    gap: 3,
+    ...theme.shadows.large,
+    zIndex: 9999,
+    elevation: 12,
+  },
+  dropFeedbackOverlay: {
+    position: "absolute",
+    borderWidth: 2,
+    borderRadius: 12,
+    zIndex: 9998,
+    elevation: 11,
   },
   clientName: {
     ...typography.body2,

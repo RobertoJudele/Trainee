@@ -90,6 +90,7 @@ export const gymApiSlice = apiSlice.injectEndpoints({
         return `/gyms${queryString ? `?${queryString}` : ""}`;
       },
       providesTags: ["Gyms"],
+      keepUnusedDataFor: 300,
     }),
 
     // Single gym with trainers

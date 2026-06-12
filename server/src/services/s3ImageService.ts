@@ -7,7 +7,6 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
-import { S3 } from "aws-sdk";
 import { Readable } from "stream";
 
 export interface S3UploadResult {

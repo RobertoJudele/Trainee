@@ -34,6 +34,7 @@ import {
   toFiniteNumber,
 } from "../utils/geo";
 import { get } from "http";
+import { resolveTrainerEntitlement } from "../services/entitlement";
 
 
 interface SearchQuery {
@@ -486,11 +487,14 @@ export const getTrainer = async (
       .map((entry) => (entry.gym as any)?.toJSON?.())
       .filter(Boolean);
 
+    const entitlement = resolveTrainerEntitlement(trainer);
     const payload = {
       ...(trainer.toJSON() as any),
       id: publicId,
       internalId: trainerNumericId,
       availableGyms,
+      isActive: entitlement.isActive,
+      entitlement,
     };
 
     res.json(payload);
@@ -747,7 +751,14 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
       return;
     }
 
-    sendSuccess(res, 200, "Trainer profile retrieved successfully", trainer);
+    const entitlement = resolveTrainerEntitlement(trainer);
+    const responsePayload = {
+      ...(trainer.toJSON() as any),
+      isActive: entitlement.isActive,
+      entitlement,
+    };
+
+    sendSuccess(res, 200, "Trainer profile retrieved successfully", responsePayload);
   } catch (error: any) {
     console.error("Error at  getting self trainer", error);
     if (error.name === "SequelizeValidationError") {
@@ -792,7 +803,13 @@ export const searchTrainers = async (
     } = req.query;
 
     const trainerWhere: any = {
-      subscriptionStatus: { [Op.in]: [subStatus.ACTIVE, subStatus.TRIAL] },
+      [Op.or]: [
+        { subscriptionStatus: subStatus.ACTIVE },
+        {
+          subscriptionStatus: subStatus.TRIAL,
+          trialEndsAt: { [Op.gt]: new Date() },
+        },
+      ],
     };
     const userWhere: any = {};
 
@@ -878,12 +895,13 @@ export const searchTrainers = async (
 
     applyGeoFilters(trainerWhere);
 
-    // Text search — bio on trainer, name on user
+    // Text search — bio on trainer, name on user.
+    // NOTE: publicId is a UUID column; Postgres has no ILIKE operator for uuid
+    // (operator does not exist: uuid ~~*), so we must NOT match it with iLike.
     if (q) {
       const normalizedQuery = String(q).trim();
       trainerWhere[Op.or] = [
         { bio: { [Op.iLike]: `%${normalizedQuery}%` } },
-        { publicId: { [Op.iLike]: `%${normalizedQuery}%` } },
       ];
       userWhere[Op.or] = [
         { firstName: { [Op.iLike]: `%${normalizedQuery}%` } },
@@ -971,6 +989,21 @@ export const searchTrainers = async (
 
       const combinedIds = [...new Set([...trainerIdsByName, ...trainerIdsByBio])];
 
+      // No matches for the text query — return empty immediately
+      if (combinedIds.length === 0) {
+        return sendSuccess(res, 200, "Search result successful", {
+          trainers: [],
+          pagination: {
+            total: 0,
+            page: parseInt(page),
+            limit: parseInt(limit),
+            totalPages: 0,
+            hasNextPage: false,
+            hasPreviousPage: false,
+          },
+        });
+      }
+
       // Merge with specialization filter if active
       if (specializationTrainerIds !== null) {
         const specSet = new Set(specializationTrainerIds);
@@ -980,9 +1013,13 @@ export const searchTrainers = async (
       }
 
       // Re-apply non-text filters
-      finalTrainerWhere.subscriptionStatus = {
-        [Op.in]: [subStatus.ACTIVE, subStatus.TRIAL],
-      };
+      finalTrainerWhere[Op.or] = [
+        { subscriptionStatus: subStatus.ACTIVE },
+        {
+          subscriptionStatus: subStatus.TRIAL,
+          trialEndsAt: { [Op.gt]: new Date() },
+        },
+      ];
       if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
       if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
       if (city) finalTrainerWhere.locationCity = { [Op.iLike]: `%${city}%` };

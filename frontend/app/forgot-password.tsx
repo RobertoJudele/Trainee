@@ -2,18 +2,18 @@ import React, { useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   StyleSheet,
   TouchableOpacity,
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useForgotPasswordMutation } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -53,43 +53,55 @@ export default function ForgotPasswordScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <View style={styles.content}>
-        <Ionicons name="lock-closed-outline" size={48} color={theme.colors.primary} style={{marginBottom: 8}} />
-        <Text style={styles.title}>Forgot Password</Text>
-        <Text style={styles.subtitle}>
-          Enter your email address and we will send a reset link.
-        </Text>
+        <FadeInUp delay={0} style={styles.header}>
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
+            <Ionicons name="lock-closed-outline" size={36} color="#FFFFFF" />
+          </LinearGradient>
+          <Text style={styles.title}>Forgot Password</Text>
+          <Text style={styles.subtitle}>
+            Enter your email address and we will send a reset link.
+          </Text>
+        </FadeInUp>
 
-        <TextInput
-          style={[styles.input, error ? styles.inputError : null]}
-          placeholder="you@example.com"
-          placeholderTextColor={theme.colors.textSecondary}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={email}
-          onChangeText={(text) => {
-            setEmail(text);
-            setError("");
-          }}
-        />
+        <FadeInUp delay={theme.motion.stagger}>
+          <Field
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            value={email}
+            error={error}
+            onChangeText={(text) => {
+              setEmail(text);
+              setError("");
+            }}
+          />
+        </FadeInUp>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+        <FadeInUp delay={theme.motion.stagger * 2}>
+          <GradientButton
+            title="Send Reset Link"
+            icon="mail-outline"
+            onPress={onSubmit}
+            loading={isLoading}
+          />
+        </FadeInUp>
 
-        <TouchableOpacity
-          style={[styles.primaryButton, isLoading && styles.disabled]}
-          onPress={onSubmit}
-          disabled={isLoading}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Send Reset Link</Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Back to login</Text>
-        </TouchableOpacity>
+        <FadeInUp delay={theme.motion.stagger * 3}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Back to login"
+          >
+            <Text style={styles.backButtonText}>Back to login</Text>
+          </TouchableOpacity>
+        </FadeInUp>
       </View>
     </KeyboardAvoidingView>
   );
@@ -103,28 +115,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: theme.spacing.md,
   },
-  title: { ...typography.h1, color: theme.colors.text },
-  subtitle: { ...typography.body2, color: theme.colors.textSecondary },
-  input: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
-    padding: theme.spacing.md,
-    ...typography.body1,
-    color: theme.colors.text,
-  },
-  inputError: { borderColor: theme.colors.error },
-  errorText: { ...typography.caption, color: theme.colors.error },
-  primaryButton: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: theme.spacing.md,
+  header: { alignItems: "center", marginBottom: theme.spacing.sm },
+  iconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: "center",
     alignItems: "center",
-    ...theme.shadows.medium,
+    marginBottom: theme.spacing.md,
+    ...theme.shadows.large,
   },
-  primaryButtonText: { ...typography.body1, color: "#fff", fontWeight: "700" },
-  disabled: { opacity: 0.7 },
+  title: { ...typography.h1, color: theme.colors.text, textAlign: "center" },
+  subtitle: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
   backButton: { alignItems: "center", marginTop: theme.spacing.sm },
   backButtonText: { ...typography.body2, color: theme.colors.textSecondary },
 });

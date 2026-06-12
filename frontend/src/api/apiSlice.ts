@@ -11,7 +11,11 @@ import { User } from "../types/user";
 import { API_URL } from "../constants/config";
 
 interface RefreshResponse {
-  token: string;
+  success: boolean;
+  data: {
+    token: string;
+    refreshToken: string;
+  };
 }
 
 const baseQuery = fetchBaseQuery({
@@ -25,27 +29,73 @@ const baseQuery = fetchBaseQuery({
   },
 });
 
+import { Mutex } from "async-mutex";
+
+const mutex = new Mutex();
+
 const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError
 > = async (args, api, extraOptions) => {
+  // Wait until the mutex is available without locking it
+  await mutex.waitForUnlock();
   let result = await baseQuery(args, api, extraOptions);
 
   if (result.error?.status === 401) {
-    const refreshResult = await baseQuery("/refresh", api, extraOptions);
+    if (!mutex.isLocked()) {
+      const release = await mutex.acquire();
+      try {
+        const refreshToken = (api.getState() as RootState).auth.refreshToken;
+        if (refreshToken) {
+          const refreshResult = await baseQuery(
+            {
+              url: "/auth/refresh",
+              method: "POST",
+              body: { refreshToken },
+            },
+            api,
+            extraOptions
+          );
 
-    const refreshData = refreshResult.data as RefreshResponse;
+          const refreshResponse = refreshResult.data as RefreshResponse;
 
-    if (refreshResult.data) {
-      const user = (api.getState() as RootState).auth.user;
-      //store the new token
-      api.dispatch(setCredentials({ ...refreshData, user }));
-      //retry original query with new JWT
-      result = await baseQuery(args, api, extraOptions);
+          if (refreshResponse?.success && refreshResponse.data) {
+            const user = (api.getState() as RootState).auth.user;
+            // Store the new access token and rotated refresh token
+            api.dispatch(
+              setCredentials({
+                token: refreshResponse.data.token,
+                refreshToken: refreshResponse.data.refreshToken,
+                user,
+              })
+            );
+            // Retry original query with new JWT
+            result = await baseQuery(args, api, extraOptions);
+          } else if (
+            refreshResult.error &&
+            (refreshResult.error.status === 401 || refreshResult.error.status === 400)
+          ) {
+            // Server explicitly rejected the refresh token — it's invalid or expired.
+            // Safe to log out.
+            api.dispatch(logOut());
+            api.dispatch(apiSlice.util.resetApiState());
+          }
+          // Network error or 5xx: don't log out. The original 401 is returned to
+          // the caller so the user sees an error and can retry manually.
+        } else {
+          // No refresh token stored at all — definitely not authenticated.
+          api.dispatch(logOut());
+          api.dispatch(apiSlice.util.resetApiState());
+        }
+      } finally {
+        release();
+      }
     } else {
-      api.dispatch(logOut());
-      api.dispatch(apiSlice.util.resetApiState());
+      // Another request is already refreshing — wait for it to finish,
+      // then retry with whatever token is now in state.
+      await mutex.waitForUnlock();
+      result = await baseQuery(args, api, extraOptions);
     }
   }
   return result;
@@ -53,6 +103,6 @@ const baseQueryWithReauth: BaseQueryFn<
 
 export const apiSlice = createApi({
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Gyms", "MyGyms"],  // ← add this line
+  tagTypes: ["Gyms", "MyGyms", "TrainerSlots", "MySchedule", "PendingClientCodes", "Reviews", "BlockedDates"],
   endpoints: (builder) => ({}),
 });

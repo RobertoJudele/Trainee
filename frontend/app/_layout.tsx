@@ -5,7 +5,8 @@ import { Provider } from "react-redux";
 import { useSelector } from "react-redux";
 import { StripeProvider } from "@stripe/stripe-react-native";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
-import { store } from "./store";
+import { store, persistor } from "./store";
+import { PersistGate } from "redux-persist/integration/react";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { theme } from "../src/lib/theme";
 import { StatusBar } from "expo-status-bar";
@@ -98,6 +99,7 @@ export default function RootLayout() {
       urlScheme="trainee"
     >
       <Provider store={store}>
+        <PersistGate loading={null} persistor={persistor}>
         <RevenueCatIdentityBridge />
         <StatusBar style="light" />
         <Stack
@@ -106,11 +108,15 @@ export default function RootLayout() {
             headerTintColor: "#fff",
             headerTitleStyle: { fontWeight: "bold" },
             headerShadowVisible: false,
+            animation: "slide_from_right",
+            animationDuration: 280,
+            contentStyle: { backgroundColor: theme.colors.background },
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           <Stack.Screen name="TrainerProfile" options={{ headerShown: false }} />
+          <Stack.Screen name="UserProfile" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
           <Stack.Screen name="search" options={{ title: "Find Trainers" }} />
@@ -129,6 +135,7 @@ export default function RootLayout() {
           <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
           <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />
         </Stack>
+        </PersistGate>
       </Provider>
     </StripeProvider>
   );

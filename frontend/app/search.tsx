@@ -1,5 +1,5 @@
 // frontend/app/search.tsx  (or frontend/src/screens/Search.tsx)
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -14,26 +14,17 @@ import {
   UIManager,
   Image,
 } from "react-native";
-import { useSearchTrainersQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
+import { useSearchTrainersQuery, useGetSpecializationsQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { FadeInUp, PressableScale } from "../src/components/ui";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const SPECIALIZATION_OPTIONS = [
-  { id: "1", label: "Yoga" },
-  { id: "2", label: "CrossFit" },
-  { id: "3", label: "Personal Training" },
-  { id: "4", label: "Pilates" },
-  { id: "5", label: "Nutrition" },
-  { id: "6", label: "Strength" },
-  { id: "7", label: "Cardio" },
-  { id: "8", label: "Martial Arts" },
-];
 
 const SORT_OPTIONS = [
   { value: "totalRating", label: "Top Rated" },
@@ -61,6 +52,12 @@ export default function SearchScreen() {
   // Committed search params (only update when user taps Search)
   const [activeParams, setActiveParams] = useState<SearchParams>({});
 
+  const { data: specializationsData } = useGetSpecializationsQuery();
+  const specializationOptions = (specializationsData?.data ?? []).map((s) => ({
+    id: String(s.id),
+    label: s.name,
+  }));
+
   const { data, isLoading, isFetching, isError } = useSearchTrainersQuery(
     Object.keys(activeParams).length > 0 ? activeParams : undefined
   );
@@ -68,7 +65,7 @@ export default function SearchScreen() {
   const trainers = data?.data?.trainers ?? [];
   const pagination = data?.data?.pagination;
 
-  const handleSearch = useCallback(() => {
+  const buildParams = useCallback((): SearchParams => {
     const params: SearchParams = {};
     if (query.trim()) params.q = query.trim();
     if (city.trim()) params.city = city.trim();
@@ -80,9 +77,23 @@ export default function SearchScreen() {
     params.sortOrder = sortOrder;
     params.page = 1;
     params.limit = 20;
-    setPage(1);
-    setActiveParams(params);
+    return params;
   }, [query, city, state, minPrice, maxPrice, selectedSpecs, sortBy, sortOrder]);
+
+  const handleSearch = useCallback(() => {
+    setPage(1);
+    setActiveParams(buildParams());
+  }, [buildParams]);
+
+  // Live search: debounce committed params so results update as the user
+  // types or adjusts filters, instead of only on keyboard submit / Apply.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setPage(1);
+      setActiveParams(buildParams());
+    }, 350);
+    return () => clearTimeout(handle);
+  }, [buildParams]);
 
   const handleClear = useCallback(() => {
     setQuery("");
@@ -122,10 +133,14 @@ export default function SearchScreen() {
     ));
   };
 
-  const renderTrainerCard = ({ item }: { item: TrainerSearchItem }) => (
-    <TouchableOpacity
+  const renderTrainerCard = ({ item, index }: { item: TrainerSearchItem; index: number }) => (
+    <FadeInUp delay={Math.min(index, 8) * theme.motion.stagger}>
+    <PressableScale
       style={styles.card}
-      activeOpacity={0.85}
+      scaleTo={0.98}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
       onPress={() =>
         router.push({
           pathname: "/trainers/[id]",
@@ -212,7 +227,8 @@ export default function SearchScreen() {
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </PressableScale>
+    </FadeInUp>
   );
 
   const renderEmpty = () => {
@@ -231,7 +247,13 @@ export default function SearchScreen() {
         <Ionicons name="sad-outline" size={48} color={theme.colors.textSecondary} style={{ marginBottom: theme.spacing.md }} />
         <Text style={styles.emptyTitle}>No trainers found</Text>
         <Text style={styles.emptyDesc}>Try adjusting your filters</Text>
-        <TouchableOpacity style={styles.clearBtn} onPress={handleClear}>
+        <TouchableOpacity
+          style={styles.clearBtn}
+          onPress={handleClear}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Clear Filters"
+        >
           <Text style={styles.clearBtnText}>Clear Filters</Text>
         </TouchableOpacity>
       </View>
@@ -255,7 +277,12 @@ export default function SearchScreen() {
               returnKeyType="search"
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery("")}>
+              <TouchableOpacity
+                onPress={() => setQuery("")}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+              >
                 <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             )}
@@ -263,6 +290,9 @@ export default function SearchScreen() {
           <TouchableOpacity
             style={[styles.filterToggle, showFilters && styles.filterToggleActive]}
             onPress={toggleFilters}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={showFilters ? "Hide filters" : "Show filters"}
           >
             <Ionicons name="options" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
           </TouchableOpacity>
@@ -311,13 +341,16 @@ export default function SearchScreen() {
 
             <Text style={styles.filterSection}>Specializations</Text>
             <View style={styles.specGrid}>
-              {SPECIALIZATION_OPTIONS.map((s) => {
+              {specializationOptions.map((s) => {
                 const active = selectedSpecs.includes(s.id);
                 return (
                   <TouchableOpacity
                     key={s.id}
                     style={[styles.specPill, active && styles.specPillActive]}
                     onPress={() => toggleSpec(s.id)}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${active ? "Remove" : "Add"} specialization ${s.label}`}
                   >
                     <Text style={[styles.specPillText, active && styles.specPillTextActive]}>
                       {s.label}
@@ -334,6 +367,9 @@ export default function SearchScreen() {
                   key={opt.value}
                   style={[styles.sortChip, sortBy === opt.value && styles.sortChipActive]}
                   onPress={() => setSortBy(opt.value as SearchParams["sortBy"])}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sort by ${opt.label}`}
                 >
                   <Text style={[styles.sortChipText, sortBy === opt.value && styles.sortChipTextActive]}>
                     {opt.label}
@@ -343,10 +379,22 @@ export default function SearchScreen() {
             </ScrollView>
 
             <View style={styles.filterActions}>
-              <TouchableOpacity style={styles.clearFilterBtn} onPress={handleClear}>
+              <TouchableOpacity
+                style={styles.clearFilterBtn}
+                onPress={handleClear}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Clear All filters"
+              >
                 <Text style={styles.clearFilterText}>Clear All</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.applyBtn} onPress={() => { handleSearch(); toggleFilters(); }}>
+              <TouchableOpacity
+                style={styles.applyBtn}
+                onPress={() => { handleSearch(); toggleFilters(); }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Apply Filters"
+              >
                 <Text style={styles.applyBtnText}>Apply Filters</Text>
               </TouchableOpacity>
             </View>
@@ -403,6 +451,9 @@ export default function SearchScreen() {
                   setPage(nextPage);
                   setActiveParams(p => ({ ...p, page: nextPage }));
                 }}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Load More trainers"
               >
                 <Text style={styles.loadMoreText}>Load More</Text>
               </TouchableOpacity>
@@ -418,7 +469,12 @@ function ActiveChip({ label, onRemove }: { label: string; onRemove: () => void }
   return (
     <View style={styles.activeChip}>
       <Text style={styles.activeChipText}>{label}</Text>
-      <TouchableOpacity onPress={onRemove}>
+      <TouchableOpacity
+        onPress={onRemove}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={`Remove filter ${label}`}
+      >
         <Ionicons name="close" size={14} color={theme.colors.primary} style={{marginLeft: 2}}/>
       </TouchableOpacity>
     </View>

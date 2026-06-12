@@ -50,6 +50,26 @@ interface ValidateIapSubscriptionResponse {
   };
 }
 
+export interface BillingTransaction {
+  id: number;
+  trainerId: number;
+  amount: string | number;
+  currency: string;
+  status: string;
+  provider: string;
+  transactionId: string;
+  productId: string;
+  paidAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface BillingTransactionsResponse {
+  success: boolean;
+  message: string;
+  data: BillingTransaction[];
+}
+
 export const billingApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     createSubscription: builder.mutation<CreateSubscriptionResponse, void>({
@@ -83,6 +103,13 @@ export const billingApiSlice = apiSlice.injectEndpoints({
         return response;
       },
     }),
+    getBillingTransactions: builder.query<BillingTransactionsResponse, void>({
+      query: () => "/billing/transactions",
+      transformErrorResponse: (response: any) => {
+        console.error("🔴 Transactions error:", response);
+        return response;
+      },
+    }),
   }),
 });
 
@@ -90,4 +117,5 @@ export const {
   useCreateSubscriptionMutation,
   useGetBillingEntitlementQuery,
   useValidateIapSubscriptionMutation,
+  useGetBillingTransactionsQuery,
 } = billingApiSlice;

@@ -1,0 +1,344 @@
+import React, { useCallback, useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  StyleSheet,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+  Platform,
+  Modal,
+} from "react-native";
+import { useSelector, useDispatch } from "react-redux";
+import { selectCurrentUser, logOut } from "../../features/auth/authSlice";
+import { useDeleteProfileMutation } from "../../features/users/usersApiSlicet";
+import { useRouter } from "expo-router";
+import { apiSlice } from "../api/apiSlice";
+import { theme, typography } from "../lib/theme";
+import { Ionicons } from "@expo/vector-icons";
+import Purchases from "react-native-purchases";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+
+export default function UserProfile() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const dispatch = useDispatch();
+  const user = useSelector(selectCurrentUser);
+
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [deleteProfile, { isLoading: isDeleting }] = useDeleteProfileMutation();
+
+  const handleLogout = useCallback(async () => {
+    dispatch(logOut());
+    dispatch(apiSlice.util.resetApiState());
+    try {
+      if (Platform.OS === "ios" || Platform.OS === "android") {
+        await Purchases.logOut();
+      }
+    } catch {
+      // RevenueCat logout is best-effort
+    }
+    router.replace("/(auth)/Welcome");
+  }, [dispatch, router]);
+
+  const handleDeleteAccount = useCallback(() => {
+    Alert.alert(
+      "Delete My Account",
+      "This will permanently delete your account and all associated data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: performDeleteAccount },
+      ]
+    );
+  }, []);
+
+  const performDeleteAccount = useCallback(async () => {
+    try {
+      await deleteProfile().unwrap();
+      dispatch(logOut());
+      dispatch(apiSlice.util.resetApiState());
+      try {
+        if (Platform.OS === "ios" || Platform.OS === "android") {
+          await Purchases.logOut();
+        }
+      } catch {
+        // best-effort
+      }
+      router.replace("/(auth)/Welcome");
+    } catch {
+      Alert.alert("Error", "Failed to delete account. Please try again.");
+    }
+  }, [deleteProfile, dispatch, router]);
+
+  const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "U";
+  const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    : null;
+
+  return (
+    <>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+        {/* Header */}
+        <LinearGradient
+          colors={[theme.colors.primary, theme.colors.tertiary]}
+          style={[styles.headerGradient, { paddingTop: Math.max(insets.top + 12, 48) }]}
+        >
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </Pressable>
+
+          <Pressable
+            style={styles.menuButton}
+            onPress={() => setMenuVisible(true)}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Open profile menu"
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
+          </Pressable>
+
+          <View style={styles.avatarWrap}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarInitials}>{initials}</Text>
+            </View>
+          </View>
+
+          <Text style={styles.name}>{fullName}</Text>
+          <View style={styles.roleBadge}>
+            <Text style={styles.roleBadgeText}>Member</Text>
+          </View>
+        </LinearGradient>
+
+        {/* Info Card */}
+        <View style={styles.card}>
+          <View style={styles.infoRow}>
+            <Ionicons name="mail-outline" size={20} color={theme.colors.textSecondary} />
+            <View style={styles.infoText}>
+              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoValue}>{user?.email ?? "—"}</Text>
+            </View>
+          </View>
+
+          {user?.phone ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="call-outline" size={20} color={theme.colors.textSecondary} />
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>Phone</Text>
+                <Text style={styles.infoValue}>{user.phone}</Text>
+              </View>
+            </View>
+          ) : null}
+
+          {memberSince ? (
+            <View style={styles.infoRow}>
+              <Ionicons name="calendar-outline" size={20} color={theme.colors.textSecondary} />
+              <View style={styles.infoText}>
+                <Text style={styles.infoLabel}>Member Since</Text>
+                <Text style={styles.infoValue}>{memberSince}</Text>
+              </View>
+            </View>
+          ) : null}
+        </View>
+      </ScrollView>
+
+      {/* Dropdown Menu */}
+      <Modal visible={menuVisible} transparent animationType="fade">
+        <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={styles.dropdownMenu}>
+            <Pressable
+              style={styles.dropdownItem}
+              onPress={() => { setMenuVisible(false); router.push("/legal"); }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Legal and Policies"
+            >
+              <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
+              <Text style={styles.dropdownItemText}>Legal & Policies</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.dropdownItem}
+              onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Report an issue"
+            >
+              <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
+              <Text style={styles.dropdownItemText}>Report Issue</Text>
+            </Pressable>
+
+            <View style={styles.dropdownDivider} />
+
+            <Pressable
+              style={styles.dropdownItem}
+              onPress={() => { setMenuVisible(false); void handleLogout(); }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Log out"
+            >
+              <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
+              <Text style={styles.dropdownItemText}>Log Out</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.dropdownItem}
+              onPress={() => { setMenuVisible(false); void handleDeleteAccount(); }}
+              disabled={isDeleting}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Delete my account"
+            >
+              {isDeleting ? (
+                <ActivityIndicator size="small" color={theme.colors.error} />
+              ) : (
+                <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
+              )}
+              <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
+                {isDeleting ? "Deleting..." : "Delete My Account"}
+              </Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+  content: {
+    paddingBottom: 40,
+  },
+  headerGradient: {
+    paddingBottom: 32,
+    paddingHorizontal: 20,
+    alignItems: "center",
+    position: "relative",
+  },
+  backButton: {
+    position: "absolute",
+    top: 0,
+    left: 16,
+    padding: 8,
+    marginTop: 48,
+  },
+  menuButton: {
+    position: "absolute",
+    top: 0,
+    right: 16,
+    padding: 8,
+    marginTop: 48,
+  },
+  avatarWrap: {
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: "rgba(255,255,255,0.25)",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.6)",
+  },
+  avatarInitials: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  name: {
+    ...typography.h2,
+    color: "#fff",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  roleBadge: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  roleBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  card: {
+    margin: 20,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+    ...theme.shadows.small,
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+  },
+  infoText: {
+    flex: 1,
+  },
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: theme.colors.textSecondary,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  infoValue: {
+    fontSize: 15,
+    color: theme.colors.text,
+    fontWeight: "400",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    justifyContent: "flex-start",
+    alignItems: "flex-end",
+    paddingTop: 80,
+    paddingRight: 16,
+  },
+  dropdownMenu: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: 12,
+    paddingVertical: 6,
+    minWidth: 200,
+    ...theme.shadows.medium,
+  },
+  dropdownItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 12,
+  },
+  dropdownItemText: {
+    fontSize: 15,
+    color: theme.colors.text,
+    fontWeight: "500",
+  },
+  dropdownDivider: {
+    height: 1,
+    backgroundColor: theme.colors.border,
+    marginVertical: 4,
+    marginHorizontal: 16,
+  },
+});

@@ -17,14 +17,14 @@ import {
 import { useRouter } from "expo-router";
 import { useSearchTrainersQuery, TrainerSearchItem } from "../../features/trainer/trainerApiSlice";
 import { useDispatch, useSelector } from "react-redux";
-import { selectCurrentUser, logOut } from "../../features/auth/authSlice";
+import { selectCurrentUser } from "../../features/auth/authSlice";
 import { apiSlice } from "../api/apiSlice";
-import Purchases from "react-native-purchases";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FadeInUp, PressableScale } from "../components/ui";
 
 const { width } = Dimensions.get("window");
 
@@ -59,19 +59,17 @@ export default function Home() {
       roles: [UserRole.TRAINER],
     },
     {
+      icon: "person",
+      title: "My Profile",
+      desc: "View your account",
+      route: "/UserProfile" as const,
+      roles: [UserRole.CLIENT],
+    },
+    {
       icon: "map",
       title: "Gym Map",
       desc: "Find gyms near you",
       route: "/map" as const,
-    },
-    {
-      icon: "flag",
-      title: "Report Issue",
-      desc: "Send app feedback",
-      route: {
-        pathname: "/report-issue" as const,
-        params: { targetType: "app" as const },
-      },
     },
     {
       icon: "calendar",
@@ -93,13 +91,6 @@ export default function Home() {
       desc: "Review reports",
       route: "/admin-issues" as const,
       roles: [UserRole.ADMIN],
-    },
-    {
-      icon: "log-out",
-      title: "Sign Out",
-      desc: "Securely log out",
-      isLogout: true,
-      requiresAuth: true,
     },
   ].filter((action) => {
     if (action.hiddenIfRole && userRole === action.hiddenIfRole) return false;
@@ -130,25 +121,15 @@ export default function Home() {
     return "Good Evening";
   };
 
-  const dispatch = useDispatch();
 
-  const handleLogout = async () => {
-    dispatch(logOut());
-    dispatch(apiSlice.util.resetApiState());
-    try {
-      if (Platform.OS === "ios" || Platform.OS === "android") {
-        await Purchases.logOut();
-      }
-    } catch (error) {
-      console.log('RevenueCat logout error:', error);
-    }
-    router.replace("/(auth)/Welcome");
-  };
 
-  const renderTrainerCard = ({ item }: { item: TrainerSearchItem }) => (
-    <TouchableOpacity
+  const renderTrainerCard = ({ item, index }: { item: TrainerSearchItem; index: number }) => (
+    <FadeInUp delay={index * theme.motion.stagger}>
+    <PressableScale
       style={styles.trainerCard}
-      activeOpacity={0.85}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
       onPress={() =>
         router.push({
           pathname: "/trainers/[id]",
@@ -216,7 +197,8 @@ export default function Home() {
               : ""}
         </Text>
       </View>
-    </TouchableOpacity>
+    </PressableScale>
+    </FadeInUp>
   );
 
   return (
@@ -233,7 +215,15 @@ export default function Home() {
               {user?.firstName ? `${user.firstName}!` : "Welcome!"}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => router.push(user ? "/TrainerProfile" : "/login")}>
+          <TouchableOpacity
+            onPress={() => {
+              if (!user) { router.push("/login"); return; }
+              router.push(user.role === UserRole.TRAINER ? "/TrainerProfile" : "/UserProfile");
+            }}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel={user ? "View my profile" : "Sign in"}
+          >
             <View style={styles.profileAvatar}>
               <Text style={styles.profileInitials}>{user?.firstName?.[0] ?? "U"}</Text>
             </View>
@@ -243,41 +233,52 @@ export default function Home() {
 
       <View style={styles.contentWrap}>
         {/* Search bar */}
-        <TouchableOpacity
-          style={styles.searchBarTouchable}
-          onPress={() => router.push("/search")}
-          activeOpacity={0.8}
-        >
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
-            <Text style={styles.searchPlaceholder}>Search trainers, specializations...</Text>
-          </View>
-        </TouchableOpacity>
+        <FadeInUp delay={theme.motion.stagger} style={styles.searchBarTouchable}>
+          <PressableScale
+            scaleTo={0.98}
+            onPress={() => router.push("/search")}
+            accessible={true}
+            accessibilityRole="button"
+            accessibilityLabel="Search trainers"
+          >
+            <View style={styles.searchBar}>
+              <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.searchIcon} />
+              <Text style={styles.searchPlaceholder}>Search trainers, specializations...</Text>
+            </View>
+          </PressableScale>
+        </FadeInUp>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <FadeInUp delay={theme.motion.stagger * 2}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+          </FadeInUp>
           <View style={styles.actionGrid}>
-            {quickActions.map((action) => (
-              <TouchableOpacity
+            {quickActions.map((action, index) => (
+              <FadeInUp
                 key={action.title}
-                style={styles.actionCard}
-                onPress={() => {
-                  if (action.isLogout) {
-                    handleLogout();
-                  } else if (action.route) {
-                    router.push(action.route as never);
-                  }
-                }}
-                activeOpacity={0.8}
+                delay={theme.motion.stagger * (3 + index)}
+                style={styles.actionCardWrap}
               >
-                <View style={styles.actionIconWrap}>
-                  {/* @ts-ignore */}
-                  <Ionicons name={action.icon} size={28} color={theme.colors.primary} />
-                </View>
-                <Text style={styles.actionTitle}>{action.title}</Text>
-                <Text style={styles.actionDesc}>{action.desc}</Text>
-              </TouchableOpacity>
+                <PressableScale
+                  style={styles.actionCard}
+                  onPress={() => {
+                    if (action.route) {
+                      router.push(action.route as never);
+                    }
+                  }}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={action.title}
+                >
+                  <View style={styles.actionIconWrap}>
+                    {/* @ts-ignore */}
+                    <Ionicons name={action.icon} size={28} color={theme.colors.primary} />
+                  </View>
+                  <Text style={styles.actionTitle}>{action.title}</Text>
+                  <Text style={styles.actionDesc}>{action.desc}</Text>
+                </PressableScale>
+              </FadeInUp>
             ))}
           </View>
         </View>
@@ -286,7 +287,12 @@ export default function Home() {
         <View style={styles.trainersSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Top Rated Trainers</Text>
-            <TouchableOpacity onPress={() => router.push("/search")}>
+            <TouchableOpacity
+              onPress={() => router.push("/search")}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel="See all trainers"
+            >
               <Text style={styles.seeAllButton}>See All</Text>
             </TouchableOpacity>
           </View>
@@ -300,7 +306,13 @@ export default function Home() {
             <View style={styles.errorContainer}>
               <Ionicons name="alert-circle" size={48} color={theme.colors.error} />
               <Text style={styles.errorText}>Unable to load trainers</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={() => refetch()}>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => refetch()}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Try Again"
+              >
                 <Text style={styles.retryButtonText}>Try Again</Text>
               </TouchableOpacity>
             </View>
@@ -378,8 +390,10 @@ const styles = StyleSheet.create({
   quickActions: { paddingHorizontal: theme.spacing.lg, marginBottom: theme.spacing.xl },
   sectionTitle: { ...typography.h2, color: theme.colors.text, marginBottom: theme.spacing.md },
   actionGrid: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.md },
-  actionCard: {
+  actionCardWrap: {
     width: (width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
+  },
+  actionCard: {
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.md,
     borderRadius: theme.roundness,

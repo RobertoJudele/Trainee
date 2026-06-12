@@ -5,6 +5,42 @@ import { Trainer } from "../models/trainer";
 import { Review } from "../models/review";
 import { User } from "../models/user";
 
+export const getReviews = async (
+  req: Request<{ trainerId: string }>,
+  res: Response
+) => {
+  try {
+    const trainerId = parseInt(req.params.trainerId);
+    if (isNaN(trainerId) || trainerId <= 0) {
+      sendError(res, 400, "Invalid trainer ID");
+      return;
+    }
+
+    const trainer = await Trainer.findByPk(trainerId);
+    if (!trainer) {
+      sendError(res, 404, "Trainer not found");
+      return;
+    }
+
+    const reviews = await Review.findAll({
+      where: { trainerId },
+      include: [
+        {
+          model: User,
+          as: "client",
+          attributes: ["id", "firstName", "lastName"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+    });
+
+    sendSuccess(res, 200, "Reviews fetched successfully", reviews);
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    sendError(res, 500, "Error fetching reviews");
+  }
+};
+
 export const createReview = async (
   req: Request<{ trainerId: string }, {}, ReviewRequest>,
   res: Response

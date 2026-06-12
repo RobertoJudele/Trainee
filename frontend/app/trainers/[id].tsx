@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useState } from "react";
 import {
   View,
   Text,
@@ -9,9 +9,21 @@ import {
   Image,
   Alert,
   Linking,
+  TextInput,
+  Pressable,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useSelector } from "react-redux";
 import { useGetTrainerByIdQuery } from "../../features/trainer/trainerApiSlice";
+import {
+  useGetTrainerReviewsQuery,
+  useCreateReviewMutation,
+  useUpdateReviewMutation,
+  useDeleteReviewMutation,
+  Review,
+} from "../../features/review/reviewApiSlice";
+import { selectCurrentUser } from "../../features/auth/authSlice";
+import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 
@@ -136,9 +148,12 @@ const getWhatsAppContactUrls = (
   };
 };
 
+type ReviewFormMode = "idle" | "write" | "edit";
+
 export default function TrainerDetailsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<TrainerRouteParams>();
+  const currentUser = useSelector(selectCurrentUser);
 
   const trainerPublicId = typeof params.id === "string" ? params.id.trim() : "";
   const hasValidTrainerId = trainerPublicId.length > 0;
@@ -153,6 +168,98 @@ export default function TrainerDetailsScreen() {
     skip: !hasValidTrainerId,
     refetchOnMountOrArgChange: true,
   });
+
+  const trainerInternalId = trainer?.internalId;
+
+  const { data: reviewsData } = useGetTrainerReviewsQuery(trainerInternalId!, {
+    skip: !trainerInternalId,
+  });
+  const reviews = reviewsData?.data ?? [];
+
+  const [createReview, { isLoading: isCreating }] = useCreateReviewMutation();
+  const [updateReview, { isLoading: isUpdating }] = useUpdateReviewMutation();
+  const [deleteReview, { isLoading: isDeleting }] = useDeleteReviewMutation();
+
+  const [reviewMode, setReviewMode] = useState<ReviewFormMode>("idle");
+  const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+  const [formRating, setFormRating] = useState(5);
+  const [formText, setFormText] = useState("");
+
+  const myReview = reviews.find((r) => r.client?.id === currentUser?.id);
+  const canWriteReview =
+    currentUser?.role === UserRole.CLIENT &&
+    !myReview &&
+    reviewMode === "idle";
+
+  const openWriteForm = useCallback(() => {
+    setFormRating(5);
+    setFormText("");
+    setEditingReviewId(null);
+    setReviewMode("write");
+  }, []);
+
+  const openEditForm = useCallback((review: Review) => {
+    setFormRating(review.rating);
+    setFormText(review.reviewText ?? "");
+    setEditingReviewId(review.id);
+    setReviewMode("edit");
+  }, []);
+
+  const cancelForm = useCallback(() => {
+    setReviewMode("idle");
+    setEditingReviewId(null);
+  }, []);
+
+  const submitReview = useCallback(async () => {
+    if (!trainerInternalId) return;
+    const text = formText.trim();
+    if (text && text.length < 10) {
+      Alert.alert("Too short", "Review text must be at least 10 characters.");
+      return;
+    }
+    if (text && text.length > 100) {
+      Alert.alert("Too long", "Review text must be under 100 characters.");
+      return;
+    }
+    try {
+      if (reviewMode === "write") {
+        await createReview({
+          trainerId: trainerInternalId,
+          rating: formRating,
+          reviewText: text || undefined,
+        }).unwrap();
+      } else if (reviewMode === "edit" && editingReviewId) {
+        await updateReview({
+          reviewId: editingReviewId,
+          trainerId: trainerInternalId,
+          rating: formRating,
+          reviewText: text || undefined,
+        }).unwrap();
+      }
+      setReviewMode("idle");
+      setEditingReviewId(null);
+    } catch (err: any) {
+      Alert.alert("Error", err?.data?.message || "Could not save review.");
+    }
+  }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview]);
+
+  const handleDeleteReview = useCallback((reviewId: number) => {
+    if (!trainerInternalId) return;
+    Alert.alert("Delete Review", "Are you sure you want to delete your review?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deleteReview({ reviewId, trainerId: trainerInternalId }).unwrap();
+          } catch (err: any) {
+            Alert.alert("Error", err?.data?.message || "Could not delete review.");
+          }
+        },
+      },
+    ]);
+  }, [trainerInternalId, deleteReview]);
 
   const fullName =
     [trainer?.user?.firstName ?? params.firstName, trainer?.user?.lastName ?? params.lastName]
@@ -248,7 +355,13 @@ export default function TrainerDetailsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Invalid trainer selected.</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => router.back()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Text style={styles.primaryButtonText}>Go back</Text>
         </TouchableOpacity>
       </View>
@@ -268,7 +381,13 @@ export default function TrainerDetailsScreen() {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>Could not load trainer details.</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => refetch()}>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={() => refetch()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Try again"
+        >
           <Text style={styles.primaryButtonText}>Try again</Text>
         </TouchableOpacity>
       </View>
@@ -353,12 +472,164 @@ export default function TrainerDetailsScreen() {
         )}
       </View>
 
-      <TouchableOpacity style={styles.primaryButton} onPress={() => router.back()}>
+      {/* ── Reviews ── */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
+
+        {reviews.length === 0 && reviewMode === "idle" && (
+          <Text style={styles.sectionText}>No reviews yet. Be the first!</Text>
+        )}
+
+        {reviews.map((review) => {
+          const isOwn = review.client?.id === currentUser?.id;
+          return (
+            <View key={review.id} style={styles.reviewCard}>
+              <View style={styles.reviewHeader}>
+                <View style={styles.reviewerAvatar}>
+                  <Text style={styles.reviewerInitial}>
+                    {review.client?.firstName?.[0] ?? "?"}
+                  </Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.reviewerName}>
+                    {review.client
+                      ? `${review.client.firstName} ${review.client.lastName}`
+                      : "Anonymous"}
+                  </Text>
+                  <View style={styles.starsRow}>
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <Ionicons
+                        key={s}
+                        name={s <= review.rating ? "star" : "star-outline"}
+                        size={13}
+                        color="#F59E0B"
+                      />
+                    ))}
+                  </View>
+                </View>
+                {isOwn && (
+                  <View style={styles.reviewActions}>
+                    <Pressable
+                      onPress={() => openEditForm(review)}
+                      accessible
+                      accessibilityRole="button"
+                      accessibilityLabel="Edit review"
+                      style={styles.reviewActionBtn}
+                    >
+                      <Ionicons name="pencil-outline" size={16} color={theme.colors.primary} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleDeleteReview(review.id)}
+                      disabled={isDeleting}
+                      accessible
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete review"
+                      style={styles.reviewActionBtn}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={theme.colors.error} />
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+              {review.reviewText ? (
+                <Text style={styles.reviewText}>{review.reviewText}</Text>
+              ) : null}
+            </View>
+          );
+        })}
+
+        {/* Write / Edit form */}
+        {(reviewMode === "write" || reviewMode === "edit") && (
+          <View style={styles.reviewForm}>
+            <Text style={styles.reviewFormTitle}>
+              {reviewMode === "edit" ? "Edit your review" : "Write a review"}
+            </Text>
+            <View style={styles.starSelector}>
+              {[1, 2, 3, 4, 5].map((s) => (
+                <Pressable
+                  key={s}
+                  onPress={() => setFormRating(s)}
+                  accessible
+                  accessibilityRole="button"
+                  accessibilityLabel={`Rate ${s} star${s !== 1 ? "s" : ""}`}
+                >
+                  <Ionicons
+                    name={s <= formRating ? "star" : "star-outline"}
+                    size={30}
+                    color="#F59E0B"
+                    style={{ marginHorizontal: 4 }}
+                  />
+                </Pressable>
+              ))}
+            </View>
+            <TextInput
+              style={styles.reviewInput}
+              placeholder="Add a comment (optional, 10–100 chars)"
+              placeholderTextColor={theme.colors.textSecondary}
+              value={formText}
+              onChangeText={setFormText}
+              multiline
+              maxLength={100}
+            />
+            <Text style={styles.charCount}>{formText.length}/100</Text>
+            <View style={styles.reviewFormActions}>
+              <Pressable
+                style={styles.cancelFormBtn}
+                onPress={cancelForm}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Cancel"
+              >
+                <Text style={styles.cancelFormBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.submitFormBtn, (isCreating || isUpdating) && { opacity: 0.6 }]}
+                onPress={submitReview}
+                disabled={isCreating || isUpdating}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="Submit review"
+              >
+                <Text style={styles.submitFormBtnText}>
+                  {isCreating || isUpdating ? "Saving…" : "Submit"}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+
+        {canWriteReview && (
+          <Pressable
+            style={styles.writeReviewBtn}
+            onPress={openWriteForm}
+            accessible
+            accessibilityRole="button"
+            accessibilityLabel="Write a review"
+          >
+            <Ionicons name="star-outline" size={16} color={theme.colors.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+          </Pressable>
+        )}
+      </View>
+
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={() => router.back()}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Back to map"
+      >
         <Text style={styles.primaryButtonText}>Back to map</Text>
       </TouchableOpacity>
 
       {contactOptions.length > 0 && (
-        <TouchableOpacity style={styles.contactButton} onPress={handleContactPress}>
+        <TouchableOpacity
+          style={styles.contactButton}
+          onPress={handleContactPress}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Contact trainer"
+        >
           <Text style={styles.contactButtonText}>Contact</Text>
         </TouchableOpacity>
       )}
@@ -375,6 +646,9 @@ export default function TrainerDetailsScreen() {
             },
           })
         }
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Report Issue"
       >
         <Text style={styles.secondaryButtonText}>Report Issue</Text>
       </TouchableOpacity>
@@ -576,6 +850,129 @@ const styles = StyleSheet.create({
   },
   contactButtonText: {
     ...typography.body1,
+    color: "#fff",
+    fontWeight: "700",
+  },
+  reviewCard: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingTop: 12,
+    gap: 6,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  reviewerAvatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: theme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reviewerInitial: {
+    ...typography.caption,
+    color: "#fff",
+    fontWeight: "800",
+  },
+  reviewerName: {
+    ...typography.body2,
+    color: theme.colors.text,
+    fontWeight: "700",
+  },
+  starsRow: {
+    flexDirection: "row",
+    gap: 2,
+    marginTop: 2,
+  },
+  reviewActions: {
+    flexDirection: "row",
+    gap: 8,
+    marginLeft: "auto",
+  },
+  reviewActionBtn: {
+    padding: 4,
+  },
+  reviewText: {
+    ...typography.body2,
+    color: theme.colors.textSecondary,
+    lineHeight: 20,
+    marginLeft: 44,
+  },
+  writeReviewBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: theme.roundness,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    alignSelf: "flex-start",
+  },
+  writeReviewBtnText: {
+    ...typography.body2,
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
+  reviewForm: {
+    marginTop: 8,
+    gap: 10,
+  },
+  reviewFormTitle: {
+    ...typography.body1,
+    color: theme.colors.text,
+    fontWeight: "700",
+  },
+  starSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.roundness,
+    padding: 12,
+    minHeight: 80,
+    textAlignVertical: "top",
+    ...typography.body2,
+    color: theme.colors.text,
+    backgroundColor: theme.colors.background,
+  },
+  charCount: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    alignSelf: "flex-end",
+  },
+  reviewFormActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  cancelFormBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: theme.roundness,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+  },
+  cancelFormBtnText: {
+    ...typography.body2,
+    color: theme.colors.textSecondary,
+    fontWeight: "700",
+  },
+  submitFormBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: theme.roundness,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+    ...theme.shadows.small,
+  },
+  submitFormBtnText: {
+    ...typography.body2,
     color: "#fff",
     fontWeight: "700",
   },

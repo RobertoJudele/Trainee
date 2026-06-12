@@ -1,6 +1,16 @@
 import React from "react";
 import { LinearGradient } from "expo-linear-gradient";
-import { Modal, Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  StyleProp,
+  StyleSheet,
+  Text,
+  View,
+  ViewStyle,
+} from "react-native";
 import { theme, typography } from "../../lib/theme";
 
 export const scheduleDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -95,6 +105,9 @@ export function OutlineButton({ label, onPress, disabled }: OutlineButtonProps) 
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlineBtnPressed, disabled && styles.btnDisabled]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <Text style={styles.outlineBtnText}>{label}</Text>
     </Pressable>
@@ -113,6 +126,9 @@ export function GradientActionButton({ label, onPress, disabled }: GradientActio
       onPress={onPress}
       disabled={disabled}
       style={({ pressed }) => [styles.gradientBtnWrap, pressed && styles.gradientPressed, disabled && styles.btnDisabled]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
     >
       <LinearGradient
         colors={[theme.colors.secondary, theme.colors.primary]}
@@ -134,7 +150,13 @@ type DayPillProps = {
 
 export function DayPill({ label, active, onPress }: DayPillProps) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.dayPill, active && styles.dayPillActive, pressed && styles.dayPillPressed]}>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [styles.dayPill, active && styles.dayPillActive, pressed && styles.dayPillPressed]}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
       <Text style={[styles.dayPillText, active && styles.dayPillTextActive]}>{label}</Text>
     </Pressable>
   );
@@ -164,8 +186,17 @@ type BottomSheetProps = {
 export function BottomSheet({ visible, title, subtitle, onClose, children, footer }: BottomSheetProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.sheetRoot}>
-        <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+      <KeyboardAvoidingView
+        style={styles.sheetRoot}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <Pressable
+          style={styles.sheetBackdrop}
+          onPress={onClose}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel="Close sheet"
+        />
         <View style={styles.sheetPanel}>
           <View style={styles.sheetHandle} />
           <View style={styles.sheetTitleWrap}>
@@ -175,7 +206,7 @@ export function BottomSheet({ visible, title, subtitle, onClose, children, foote
           <View style={styles.sheetBody}>{children}</View>
           {footer ? <View style={styles.sheetFooter}>{footer}</View> : null}
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

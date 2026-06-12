@@ -13,11 +13,17 @@ export interface PasswordResetPayload {
 const JWT_SECRET = getRequiredEnv('JWT_SECRET');
 const JWT_RESET_SECRET = getOptionalEnv('JWT_RESET_SECRET') || JWT_SECRET;
 
+import crypto from 'crypto';
+
 export const generateToken = ( payload:Omit<JWTPayload,'iat'|'exp'> ):string => {
   return jwt.sign(payload, JWT_SECRET, {
-    expiresIn: '7d'
+    expiresIn: '15m'
   });
 }
+
+export const generateRefreshToken = (): string => {
+  return crypto.randomBytes(40).toString('hex');
+};
 
 export const verifyToken=(token:string ): JWTPayload =>{
   return jwt.verify(token,JWT_SECRET) as JWTPayload

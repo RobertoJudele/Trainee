@@ -28,6 +28,7 @@ export class TrainerWorkingHour extends Model<
 
   @ForeignKey(() => Trainer)
   @AllowNull(false)
+  @Unique("trainer_day_unique")
   @Column({ type: DataType.INTEGER, field: "trainer_id" })
   trainerId!: number;
 

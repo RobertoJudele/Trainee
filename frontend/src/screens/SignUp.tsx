@@ -1,35 +1,36 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSignupMutation, UserRole } from '../../features/auth/authApiSlice';
+import { useDispatch } from 'react-redux';
+import { setCredentials } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
 
 export default function SignUp() {
   const router = useRouter();
+  const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
-  
+
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  
+
   const [errMsg, setErrMsg] = useState('');
-  
+
   const [signup, { isLoading }] = useSignupMutation();
 
   const handleSignup = async () => {
@@ -49,14 +50,13 @@ export default function SignUp() {
         lastName,
         role: UserRole.CLIENT,
       }).unwrap();
-      
-      console.log('✅ Signup successful:', result);
-      
-      // Navigate to login or home
-      router.replace('/(auth)/login');
-      
+
+      if (result.data) {
+        dispatch(setCredentials(result.data));
+      }
+
+      router.replace('/');
     } catch (error: any) {
-      console.error('❌ Signup failed:', error);
       const errorMessage = error?.data?.message || 'Signup failed. Please try again.';
       setErrMsg(errorMessage);
     }
@@ -67,121 +67,121 @@ export default function SignUp() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.header, { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) }]}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="person-add" size={40} color="#FFFFFF" />
-          </View>
+        <FadeInUp
+          delay={0}
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) },
+          ]}
+        >
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.iconContainer}
+          >
+            <Ionicons name="person-add" size={38} color="#FFFFFF" />
+          </LinearGradient>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Start your fitness journey today</Text>
-        </View>
+        </FadeInUp>
 
-        {errMsg ? <Text style={styles.mainErrorText}>{errMsg}</Text> : null}
+        {errMsg ? (
+          <FadeInUp>
+            <View style={styles.errorBanner}>
+              <Ionicons name="alert-circle" size={18} color={theme.colors.error} />
+              <Text style={styles.mainErrorText}>{errMsg}</Text>
+            </View>
+          </FadeInUp>
+        ) : null}
 
         <View style={styles.form}>
-          <View style={styles.row}>
-            <View style={[styles.inputContainer, { flex: 1 }]}>
-              <Text style={styles.label}>First Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="John"
-                value={firstName}
-                onChangeText={setFirstName}
-                placeholderTextColor={theme.colors.textSecondary}
-              />
-            </View>
-            <View style={[styles.inputContainer, { flex: 1 }]}>
-              <Text style={styles.label}>Last Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="Doe"
-                value={lastName}
-                onChangeText={setLastName}
-                placeholderTextColor={theme.colors.textSecondary}
-              />
-            </View>
-          </View>
+          <FadeInUp delay={theme.motion.stagger} style={styles.row}>
+            <Field
+              label="First Name"
+              placeholder="John"
+              value={firstName}
+              onChangeText={setFirstName}
+              containerStyle={{ flex: 1 }}
+            />
+            <Field
+              label="Last Name"
+              placeholder="Doe"
+              value={lastName}
+              onChangeText={setLastName}
+              containerStyle={{ flex: 1 }}
+            />
+          </FadeInUp>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={styles.input}
+          <FadeInUp delay={theme.motion.stagger * 2}>
+            <Field
+              label="Email Address"
               placeholder="your.email@example.com"
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
-              placeholderTextColor={theme.colors.textSecondary}
             />
-          </View>
+          </FadeInUp>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Phone Number</Text>
-            <TextInput
-              style={styles.input}
+          <FadeInUp delay={theme.motion.stagger * 3}>
+            <Field
+              label="Phone Number"
               placeholder="(555) 123-4567"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
-              placeholderTextColor={theme.colors.textSecondary}
             />
-          </View>
+          </FadeInUp>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={[styles.input, styles.passwordInput]}
-                placeholder="Create a strong password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                placeholderTextColor={theme.colors.textSecondary}
-              />
-              <TouchableOpacity
-                style={styles.eyeIcon}
-                onPress={() => setShowPassword(!showPassword)}
-              >
-                <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={24} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          </View>
+          <FadeInUp delay={theme.motion.stagger * 4}>
+            <Field
+              label="Password"
+              placeholder="Create a strong password"
+              value={password}
+              onChangeText={setPassword}
+              secure
+              autoCapitalize="none"
+            />
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
-            onPress={handleSignup}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Sign Up</Text>
-            )}
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 5}>
+            <GradientButton
+              title="Sign Up"
+              onPress={handleSignup}
+              loading={isLoading}
+              iconRight="arrow-forward"
+            />
+          </FadeInUp>
 
-          <View style={styles.divider}>
+          <FadeInUp delay={theme.motion.stagger * 6} style={styles.divider}>
             <View style={styles.dividerLine} />
             <Text style={styles.dividerText}>or</Text>
             <View style={styles.dividerLine} />
-          </View>
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.push('/(auth)/login')}
-          >
-            <Text style={styles.secondaryButtonText}>Already have an account? Sign In</Text>
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 7}>
+            <OutlineButton
+              title="Already have an account? Sign In"
+              onPress={() => router.push('/(auth)/login')}
+            />
+          </FadeInUp>
 
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
-            <Text style={styles.backButtonText}>← Back to Welcome</Text>
-          </TouchableOpacity>
+          <FadeInUp delay={theme.motion.stagger * 8}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Back to Welcome"
+            >
+              <Text style={styles.backButtonText}>← Back to Welcome</Text>
+            </TouchableOpacity>
+          </FadeInUp>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -196,22 +196,21 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: theme.spacing.lg,
-    paddingTop: theme.spacing.xl,
+    paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
   },
   header: {
     alignItems: 'center',
-    marginBottom: theme.spacing.xl,
+    marginBottom: theme.spacing.lg,
   },
   iconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: theme.spacing.md,
-    ...theme.shadows.medium,
+    ...theme.shadows.large,
   },
   title: {
     ...typography.h1,
@@ -230,61 +229,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: theme.spacing.md,
   },
-  inputContainer: {
-    gap: theme.spacing.xs,
-  },
-  label: {
-    ...typography.body2,
-    fontWeight: '600',
-    color: theme.colors.text,
-  },
-  input: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    backgroundColor: `${theme.colors.error}12`,
     borderRadius: theme.roundness,
     padding: theme.spacing.md,
-    ...typography.body1,
-    color: theme.colors.text,
+    marginBottom: theme.spacing.md,
   },
   mainErrorText: {
     ...typography.body2,
     color: theme.colors.error,
-    textAlign: 'center',
-    marginBottom: theme.spacing.md,
-  },
-  passwordContainer: {
-    position: 'relative',
-  },
-  passwordInput: {
-    paddingRight: 50,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: theme.spacing.md,
-    top: theme.spacing.md,
-    padding: theme.spacing.xs,
-  },
-  primaryButton: {
-    backgroundColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.roundness,
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-    ...theme.shadows.medium,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    ...typography.h3,
-    color: '#FFFFFF',
-    fontWeight: '600',
+    flex: 1,
   },
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: theme.spacing.md,
+    marginVertical: theme.spacing.sm,
   },
   dividerLine: {
     flex: 1,
@@ -296,22 +258,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginHorizontal: theme.spacing.sm,
   },
-  secondaryButton: {
-    backgroundColor: 'transparent',
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    padding: theme.spacing.md,
-    borderRadius: theme.roundness,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    ...typography.h3,
-    color: theme.colors.primary,
-    fontWeight: '600',
-  },
   backButton: {
     alignItems: 'center',
-    marginTop: theme.spacing.md,
+    marginTop: theme.spacing.sm,
   },
   backButtonText: {
     ...typography.body2,

@@ -915,6 +915,21 @@ export const upsertWorkingHourValidation = [
   }),
 ];
 
+const timeZoneValidator = (value: unknown): boolean => {
+  if (typeof value !== "string" || !value.trim()) {
+    return false;
+  }
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const HHMM_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
+const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
 export const generateSlotsValidation = [
   body("fromDate")
     .isISO8601()
@@ -922,7 +937,91 @@ export const generateSlotsValidation = [
   body("toDate")
     .isISO8601()
     .withMessage("toDate must be a valid ISO date."),
-  strictSchema({ body: ["fromDate", "toDate"] }),
+  body("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ body: ["fromDate", "toDate", "timeZone"] }),
+];
+
+export const regenerateDayValidation = [
+  param("date").matches(DATE_KEY_RE).withMessage("date must be YYYY-MM-DD."),
+  body("startTime")
+    .optional({ values: "falsy" })
+    .matches(HHMM_RE)
+    .withMessage("startTime must be HH:mm."),
+  body("endTime")
+    .optional({ values: "falsy" })
+    .matches(HHMM_RE)
+    .withMessage("endTime must be HH:mm."),
+  body("slotDurationMin")
+    .optional()
+    .isInt({ min: 5, max: 360 })
+    .withMessage("slotDurationMin must be between 5 and 360 minutes."),
+  body("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  body().custom((value: any) => {
+    const hasStart = typeof value?.startTime === "string" && value.startTime.trim().length > 0;
+    const hasEnd = typeof value?.endTime === "string" && value.endTime.trim().length > 0;
+    if (hasStart !== hasEnd) {
+      throw new Error("Provide both startTime and endTime, or neither.");
+    }
+    return true;
+  }),
+  strictSchema({ params: ["date"], body: ["startTime", "endTime", "slotDurationMin", "timeZone"] }),
+];
+
+export const createOneOffSlotValidation = [
+  body("date").matches(DATE_KEY_RE).withMessage("date must be YYYY-MM-DD."),
+  body("startTime").matches(HHMM_RE).withMessage("startTime must be HH:mm."),
+  body("endTime").matches(HHMM_RE).withMessage("endTime must be HH:mm."),
+  body("note")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("note must be at most 500 characters."),
+  body("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ body: ["date", "startTime", "endTime", "note", "timeZone"] }),
+];
+
+export const blockDateValidation = [
+  body("date").matches(DATE_KEY_RE).withMessage("date must be YYYY-MM-DD."),
+  body("reason")
+    .optional({ values: "falsy" })
+    .trim()
+    .isLength({ max: 255 })
+    .withMessage("reason must be at most 255 characters."),
+  body("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ body: ["date", "reason", "timeZone"] }),
+];
+
+export const unblockDateValidation = [
+  param("date").matches(DATE_KEY_RE).withMessage("date must be YYYY-MM-DD."),
+  strictSchema({ params: ["date"], body: [], query: [] }),
+];
+
+export const blockedDatesQueryValidation = [
+  query("from")
+    .optional({ values: "falsy" })
+    .isISO8601()
+    .withMessage("from must be a valid ISO date."),
+  query("to")
+    .optional({ values: "falsy" })
+    .isISO8601()
+    .withMessage("to must be a valid ISO date."),
+  query("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
 export const trainerSlotsQueryValidation = [

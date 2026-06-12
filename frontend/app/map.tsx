@@ -20,7 +20,6 @@ import {
   useGetGymByIdQuery,
   GymMarker,
   GymTrainer,
-  GetAllGymsParams,
 } from "../features/gym/gymApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
@@ -294,25 +293,11 @@ export default function MapScreen() {
     return true;
   }, []);
 
-  const nearbyGymsQueryArgs = useMemo<GetAllGymsParams>(
-    () => ({
-      lat: Number(mapRegion.latitude.toFixed(6)),
-      lng: Number(mapRegion.longitude.toFixed(6)),
-      radiusKm: Number(getRadiusKmForRegion(mapRegion).toFixed(2)),
-    }),
-    [
-      mapRegion.latitude,
-      mapRegion.longitude,
-      mapRegion.latitudeDelta,
-      mapRegion.longitudeDelta,
-    ]
-  );
-
   const {
     data: gymsResponse,
     isLoading: gymsLoading,
     isFetching: gymsFetching,
-  } = useGetAllGymsQuery(nearbyGymsQueryArgs);
+  } = useGetAllGymsQuery();
 
   useEffect(() => {
     if (Array.isArray(gymsResponse?.data)) {
@@ -427,6 +412,35 @@ export default function MapScreen() {
   }, [mapItems, mapRegion.latitude, mapRegion.longitude]);
   const hiddenMapItemCount = Math.max(0, mapItems.length - mapItemsToRender.length);
   const hiddenGymsCount = Math.max(0, gyms.length - gymsForClustering.length);
+
+  // ── Deferred marker rendering (Fabric interop crash fix) ──
+  // react-native-maps runs through RCTLegacyViewManagerInteropComponentView
+  // under New Architecture. Rapid child-list mutations cause an
+  // NSMutableArray out-of-bounds crash. We clear → wait one frame → re-set
+  // so the native view never receives conflicting insert instructions.
+  const [deferredMarkers, setDeferredMarkers] = useState<MapItem[]>([]);
+  const deferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    // Clear markers immediately so native view removes all children first
+    setDeferredMarkers([]);
+
+    if (deferTimerRef.current) {
+      clearTimeout(deferTimerRef.current);
+    }
+
+    // Re-add the new set on the next frame after the clear has flushed
+    deferTimerRef.current = setTimeout(() => {
+      setDeferredMarkers(mapItemsToRender);
+      deferTimerRef.current = null;
+    }, 80);
+
+    return () => {
+      if (deferTimerRef.current) {
+        clearTimeout(deferTimerRef.current);
+      }
+    };
+  }, [mapItemsToRender]);
 
   const gymDetailQueryArg = selectedGymId ?? skipToken;
   const { data: gymDetailResponse, isFetching: detailFetching } =
@@ -639,6 +653,9 @@ export default function MapScreen() {
       key={idx}
       style={styles.trainerRow}
       activeOpacity={0.85}
+      accessible={true}
+      accessibilityRole="button"
+      accessibilityLabel={`View trainer ${trainer.user?.firstName ?? ""} ${trainer.user?.lastName ?? ""}`}
       onPress={() =>
         router.push({
           pathname: "/trainers/[id]",
@@ -710,10 +727,13 @@ export default function MapScreen() {
   // ── Render ────────────────────────────────────────────────
   return (
     <View style={styles.container}>
-      <TouchableOpacity 
-        style={[styles.backButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]} 
+      <TouchableOpacity
+        style={[styles.backButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]}
         onPress={() => router.back()}
         activeOpacity={0.8}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
       >
         <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
       </TouchableOpacity>
@@ -733,7 +753,7 @@ export default function MapScreen() {
           showsUserLocation
           showsMyLocationButton
         >
-          {mapItemsToRender.map((item) => {
+          {deferredMarkers.map((item) => {
             if (item.type === "cluster") {
               const pointCount = item.gyms.length;
               const clusterSize = getClusterSize(pointCount);
@@ -798,8 +818,8 @@ export default function MapScreen() {
         <View style={styles.mapStatusPill} pointerEvents="none">
           <Text style={styles.mapStatusText}>
             {gymsFetching
-              ? "Updating nearby gyms..."
-              : `Showing ${gymsForClustering.length}/${gyms.length} nearby gyms (${nearbyGymsQueryArgs.radiusKm} km radius)`}
+              ? "Loading gyms..."
+              : `Showing ${gymsForClustering.length}/${gyms.length} gyms in view`}
           </Text>
         </View>
       )}
@@ -832,14 +852,26 @@ export default function MapScreen() {
                   {gymDetail.city}{gymDetail.state ? `, ${gymDetail.state}` : ""}
                 </Text>
               </View>
-              <TouchableOpacity style={styles.closeBtn} onPress={closeSheet}>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={closeSheet}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Close gym details"
+              >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetGymName}>Loading…</Text>
-              <TouchableOpacity style={styles.closeBtn} onPress={closeSheet}>
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={closeSheet}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel="Close gym details"
+              >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
             </View>

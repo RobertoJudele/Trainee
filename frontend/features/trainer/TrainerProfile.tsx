@@ -27,6 +27,7 @@ import {
   useGetSpecializationsQuery,
   useUpdateTrainerProfileMutation,
 } from "./trainerApiSlice";
+import { useDeleteProfileMutation } from "../users/usersApiSlicet";
 import { router, useRouter } from "expo-router";
 import { apiSlice } from "../../src/api/apiSlice";
 import { theme, typography } from "../../src/lib/theme";
@@ -154,6 +155,8 @@ function TrainerProfile() {
 
   const [deleteTrainerProfile, { isLoading: isDeleting }] =
     useDeleteTrainerProfileMutation();
+  const [deleteAccount, { isLoading: isDeletingAccount }] =
+    useDeleteProfileMutation();
   const [updateTrainerProfile, { isLoading: isUpdating }] =
     useUpdateTrainerProfileMutation();
 
@@ -236,6 +239,35 @@ function TrainerProfile() {
       Alert.alert("Error", "Failed to delete trainer profile");
     }
   }, [deleteTrainerProfile, dispatch, user, token]);
+
+  const handleDeleteAccount = useCallback(() => {
+    Alert.alert(
+      "Delete Account",
+      "This will permanently delete your entire account and all associated data. This action cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Delete", style: "destructive", onPress: performDeleteAccount },
+      ]
+    );
+  }, []);
+
+  const performDeleteAccount = useCallback(async () => {
+    try {
+      await deleteAccount().unwrap();
+      dispatch(logOut());
+      dispatch(apiSlice.util.resetApiState());
+      try {
+        if (Platform.OS === "ios" || Platform.OS === "android") {
+          await Purchases.logOut();
+        }
+      } catch {
+        // best-effort
+      }
+      router.replace("/(auth)/Welcome");
+    } catch {
+      Alert.alert("Error", "Failed to delete account. Please try again.");
+    }
+  }, [deleteAccount, dispatch]);
 
   const handleSubscribe = useCallback(async () => {
     setIsSubscribing(true);
@@ -797,6 +829,11 @@ function TrainerProfile() {
             <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
             <Text style={styles.dropdownItemText}>Legal & Policies</Text>
           </Pressable>
+
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}>
+            <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>Report Issue</Text>
+          </Pressable>
           
           <View style={styles.dropdownDivider} />
           
@@ -809,6 +846,13 @@ function TrainerProfile() {
             <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
             <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
               {isDeleting ? "Deleting..." : "Delete Profile"}
+            </Text>
+          </Pressable>
+
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleDeleteAccount(); }} disabled={isDeletingAccount} accessible accessibilityRole="button" accessibilityLabel="Delete my account">
+            <Ionicons name="person-remove-outline" size={18} color={theme.colors.error} />
+            <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
+              {isDeletingAccount ? "Deleting..." : "Delete Account"}
             </Text>
           </Pressable>
         </View>
