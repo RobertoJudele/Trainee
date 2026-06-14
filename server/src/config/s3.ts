@@ -38,6 +38,10 @@ export const s3 = new S3Client({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID as string,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
   },
+  // Required for Cloudflare R2: keeps the bucket name in the URL path instead
+  // of moving it to a virtual-hosted subdomain that R2 doesn't serve at the
+  // S3 API endpoint (e.g. prevents trainee.<accountid>.r2.cloudflarestorage.com).
+  forcePathStyle: true,
 });
 
 export const S3_CONFIG = {
