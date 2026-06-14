@@ -65,7 +65,7 @@ export const uploadProfilePicture = [
         return;
       }
 
-      const { buffer, contentType } = await processProfileImage(file.buffer);
+      const { buffer, contentType } = await processProfileImage(file.buffer, file.mimetype);
       const key = generateS3key(req, file, "profile-picture", "jpg");
       const uploadResult = await S3ImageService.uploadImage(buffer, key, contentType);
 

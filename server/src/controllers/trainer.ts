@@ -446,11 +446,14 @@ export const getTrainer = async (
         },
         {
           model: TrainerImage,
+          as: "images",
           attributes: ["id", "imageUrl", "category", "displayOrder", "createdAt"],
           required: false,
         },
       ],
-      order: [[TrainerImage, "displayOrder", "ASC"]],
+      // { model, as } form is required when the association has an alias;
+      // the bare model reference causes "Unable to find a valid association".
+      order: [[{ model: TrainerImage, as: "images" }, "displayOrder", "ASC"]],
     });
 
     if (!trainer) {

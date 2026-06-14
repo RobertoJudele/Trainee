@@ -56,9 +56,13 @@ export const getTrainerImages = async (
 // Shared handler for the two multi-upload categories. Enforces the per-category
 // cap, resizes each file with the supplied processor, uploads to S3, and records
 // a TrainerImage row.
+//
+// Uses Promise.allSettled so a single bad file (HEIC without libheif, corrupt
+// data, oversized) doesn't abort the entire batch. The response lists which files
+// succeeded and which failed so the client can surface useful feedback.
 async function handleCategoryUpload(
   category: TrainerImageCategory,
-  process: (input: Buffer) => Promise<ProcessedImage>,
+  process: (input: Buffer, mimetype: string) => Promise<ProcessedImage>,
   req: AuthenticatedRequest,
   res: Response
 ): Promise<void> {
@@ -87,27 +91,65 @@ async function handleCategoryUpload(
       return;
     }
 
-    const created: any[] = [];
-    for (const file of files) {
-      const { buffer, contentType } = await process(file.buffer);
-      const key = generateS3key(req, file, `trainer-${category}`, "jpg");
-      const uploadResult = await S3ImageService.uploadImage(buffer, key, contentType);
-      const row = await TrainerImage.create({
-        trainerId: trainer.id,
-        imageUrl: uploadResult.url,
-        category,
-        isPrimary: false,
-        displayOrder: existing + created.length,
-      });
-      created.push(row.toJSON());
-    }
+    // Process + upload every file independently; a single failure must not abort
+    // the rest of the batch.
+    const results = await Promise.allSettled(
+      files.map(async (file, idx) => {
+        const { buffer, contentType } = await process(
+          file.buffer,
+          file.mimetype
+        );
+        const key = generateS3key(req, file, `trainer-${category}`, "jpg");
+        const uploadResult = await S3ImageService.uploadImage(
+          buffer,
+          key,
+          contentType
+        );
+        const row = await TrainerImage.create({
+          trainerId: trainer.id,
+          imageUrl: uploadResult.url,
+          category,
+          isPrimary: false,
+          displayOrder: existing + idx,
+        });
+        return row.toJSON();
+      })
+    );
 
-    sendSuccess(res, 201, "Images uploaded successfully", { images: created });
+    const succeeded: object[] = [];
+    const failed: { originalName: string; reason: string }[] = [];
+
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        succeeded.push(result.value);
+      } else {
+        const reason =
+          result.reason instanceof Error
+            ? result.reason.message
+            : String(result.reason);
+        console.error(
+          `Upload ${category} image failed [${files[idx].originalname}]:`,
+          result.reason
+        );
+        failed.push({ originalName: files[idx].originalname, reason });
+      }
+    });
+
+    const allFailed = succeeded.length === 0 && failed.length > 0;
+    sendSuccess(
+      res,
+      allFailed ? 422 : 201,
+      allFailed
+        ? "All uploads failed"
+        : `${succeeded.length} image(s) uploaded${failed.length ? `, ${failed.length} skipped` : " successfully"}`,
+      { images: succeeded, ...(failed.length ? { failed } : {}) }
+    );
   } catch (error) {
     console.error(`Upload ${category} images error:`, error);
     sendError(res, 500, "Failed to upload images");
   }
 }
+
 
 // POST /trainer-images/gallery  (field: "images", up to 5)
 export const uploadGalleryImages = (
