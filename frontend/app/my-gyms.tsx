@@ -1,5 +1,5 @@
 // frontend/app/my-gyms.tsx
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Switch,
   TextInput,
   Modal,
+  ScrollView,
 } from "react-native";
 import {
   useGetMyGymsQuery,
@@ -35,15 +36,6 @@ export default function MyGymsScreen() {
 
   const [showBrowser, setShowBrowser] = useState(false);
   const [gymSearch, setGymSearch] = useState("");
-  // Debounced copy of the search term: the TextInput stays bound to gymSearch for
-  // instant typing, while the (heavier) filtering runs off debouncedSearch so it
-  // doesn't re-run on every keystroke and block the JS thread.
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-
-  useEffect(() => {
-    const handle = setTimeout(() => setDebouncedSearch(gymSearch), 250);
-    return () => clearTimeout(handle);
-  }, [gymSearch]);
 
   const { data: myGymsRes, isLoading: myLoading, refetch } = useGetMyGymsQuery(undefined, { skip: !isTrainer });
   const { data: allGymsRes, isLoading: allLoading } = useGetAllGymsQuery();
@@ -52,21 +44,15 @@ export default function MyGymsScreen() {
   const [setAvailability] = useSetGymAvailabilityMutation();
   const [leaveGym, { isLoading: leaving }] = useLeaveGymMutation();
 
-  const myGyms: MyGym[] = useMemo(() => myGymsRes?.data ?? [], [myGymsRes]);
-  const allGyms: GymMarker[] = useMemo(() => allGymsRes?.data ?? [], [allGymsRes]);
-  const myGymIds = useMemo(() => new Set(myGyms.map((g) => g.id)), [myGyms]);
+  const myGyms: MyGym[] = myGymsRes?.data ?? [];
+  const allGyms: GymMarker[] = allGymsRes?.data ?? [];
+  const myGymIds = new Set(myGyms.map((g) => g.id));
 
-  const filteredAllGyms = useMemo(() => {
-    const query = debouncedSearch.trim().toLowerCase();
-    if (!query) {
-      return allGyms;
-    }
-    return allGyms.filter(
-      (g) =>
-        g.name.toLowerCase().includes(query) ||
-        g.city.toLowerCase().includes(query)
-    );
-  }, [allGyms, debouncedSearch]);
+  const filteredAllGyms = allGyms.filter(
+    (g) =>
+      g.name.toLowerCase().includes(gymSearch.toLowerCase()) ||
+      g.city.toLowerCase().includes(gymSearch.toLowerCase())
+  );
 
   const handleJoin = useCallback(
     async (gymId: number, gymName: string) => {
@@ -317,19 +303,13 @@ export default function MyGymsScreen() {
               color={theme.colors.primary}
             />
           ) : (
-            <FlatList
-              data={filteredAllGyms}
-              keyExtractor={(item) => String(item.id)}
-              renderItem={({ item }) => renderBrowserGym(item)}
-              style={{ flex: 1 }}
-              contentContainerStyle={styles.browserList}
-              keyboardShouldPersistTaps="handled"
-              keyboardDismissMode="on-drag"
-              initialNumToRender={12}
-              maxToRenderPerBatch={12}
-              windowSize={11}
-              ListEmptyComponent={<Text style={styles.noResults}>No gyms found</Text>}
-            />
+            <ScrollView contentContainerStyle={styles.browserList}>
+              {filteredAllGyms.length === 0 ? (
+                <Text style={styles.noResults}>No gyms found</Text>
+              ) : (
+                filteredAllGyms.map(renderBrowserGym)
+              )}
+            </ScrollView>
           )}
         </View>
       </Modal>
