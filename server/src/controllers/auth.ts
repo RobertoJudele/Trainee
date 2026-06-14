@@ -59,15 +59,14 @@ export const register = async (
     const verificationToken = user.generateEmailVerificationToken();
     await user.save();
 
-    try {
-      await emailService.sendVerificationEmail(
-        email,
-        `${firstName} ${lastName}`,
-        verificationToken
-      );
-    } catch (emailError) {
-      console.error("Failed to send verification email:", emailError);
-    }
+    // Send the verification email without blocking the signup response. Gmail SMTP
+    // can be slow or hang, and awaiting it here caused the client/gateway to time out
+    // and report "Signup failed" even though the account was already created above.
+    void emailService
+      .sendVerificationEmail(email, `${firstName} ${lastName}`, verificationToken)
+      .catch((emailError) => {
+        console.error("Failed to send verification email:", emailError);
+      });
 
     const authResponse: AuthResponse = { 
       user: user.toJSON(), 
@@ -172,15 +171,12 @@ export const forgotPassword = async (
         purpose: "password_reset",
       });
 
-      try {
-        await emailService.sendPasswordResetEmail(
-          user.email,
-          `${user.firstName} ${user.lastName}`,
-          token
-        );
-      } catch (emailError) {
-        console.error("Failed to send password reset email:", emailError);
-      }
+      // Fire-and-forget so a slow/hanging Gmail SMTP send can't stall the response.
+      void emailService
+        .sendPasswordResetEmail(user.email, `${user.firstName} ${user.lastName}`, token)
+        .catch((emailError) => {
+          console.error("Failed to send password reset email:", emailError);
+        });
     }
 
     // Always return the same message to prevent email enumeration.
@@ -232,14 +228,12 @@ export const resetPassword = async (
     user.password = newPassword;
     await user.save();
 
-    try {
-      await emailService.sendPasswordResetSuccessEmail(
-        user.email,
-        `${user.firstName} ${user.lastName}`
-      );
-    } catch (emailError) {
-      console.error("Failed to send password reset success email:", emailError);
-    }
+    // Fire-and-forget so a slow/hanging Gmail SMTP send can't stall the response.
+    void emailService
+      .sendPasswordResetSuccessEmail(user.email, `${user.firstName} ${user.lastName}`)
+      .catch((emailError) => {
+        console.error("Failed to send password reset success email:", emailError);
+      });
 
     sendSuccess(res, 200, "Password reset successful");
   } catch (error) {
