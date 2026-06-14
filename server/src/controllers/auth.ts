@@ -59,15 +59,15 @@ export const register = async (
     const verificationToken = user.generateEmailVerificationToken();
     await user.save();
 
-    // Fire-and-forget: don't block the signup response on email delivery.
-    // If SMTP is slow/unreachable the request would otherwise hang until the
-    // connection times out, causing the client to report a failed signup even
-    // though the account was already created.
-    emailService
-      .sendVerificationEmail(email, `${firstName} ${lastName}`, verificationToken)
-      .catch((emailError) => {
-        console.error("Failed to send verification email:", emailError);
-      });
+    try {
+      await emailService.sendVerificationEmail(
+        email,
+        `${firstName} ${lastName}`,
+        verificationToken
+      );
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+    }
 
     const authResponse: AuthResponse = { 
       user: user.toJSON(), 

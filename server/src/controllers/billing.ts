@@ -67,6 +67,8 @@ interface RevenueCatWebhookEnvelope {
         original_transaction_id?: string | null;
         transaction_id?: string | null;
         store?: string | null;
+        transferred_from?: string[] | null;
+        transferred_to?: string[] | null;
     };
 }
 
@@ -803,6 +805,81 @@ const syncTrainerFromRevenueCatWebhookEvent = async (
     return { skipped: false as const, reason: "updated" as const };
 };
 
+// A TRANSFER moves a store receipt from one App User ID to another. The account it
+// moved away from must lose its entitlement, otherwise a single payment could leave
+// multiple trainers visible (the old account keeps its stale ACTIVE row until expiry).
+const revokeTrainerEntitlement = async (appUserId: string, eventTimestampMs?: number) => {
+    const numericUserId = Number(appUserId);
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+        return;
+    }
+
+    const trainer = await Trainer.findOne({ where: { userId: numericUserId } });
+    if (!trainer) {
+        return;
+    }
+
+    if (shouldIgnoreStaleRevenueCatEvent(trainer, eventTimestampMs)) {
+        return;
+    }
+
+    const revokedAt = typeof eventTimestampMs === "number" ? new Date(eventTimestampMs) : new Date();
+
+    // PAST drops the trainer out of listings (which filter on subscriptionStatus=ACTIVE)
+    // and makes resolveTrainerEntitlement() report isActive:false. Expiring the period
+    // fields is belt-and-suspenders for any date-based gate.
+    trainer.subscriptionStatus = subStatus.PAST;
+    trainer.iapExpiresAt = revokedAt;
+    trainer.currentPeriodEndsAt = revokedAt;
+    trainer.iapLastVerifiedAt = revokedAt;
+    await trainer.save();
+};
+
+// Re-pull the live entitlement for an account the receipt moved to, so it reflects the
+// now-active subscription even before the client calls validateIapSubscription.
+const refreshTrainerFromRevenueCat = async (appUserId: string, eventTimestampMs?: number) => {
+    const numericUserId = Number(appUserId);
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+        return;
+    }
+
+    const trainer = await Trainer.findOne({ where: { userId: numericUserId } });
+    if (!trainer) {
+        return;
+    }
+
+    if (shouldIgnoreStaleRevenueCatEvent(trainer, eventTimestampMs)) {
+        return;
+    }
+
+    const payload = await fetchRevenueCatSubscriber(String(numericUserId));
+    const snapshot = resolveRevenueCatSnapshot({ payload });
+    applyRevenueCatSnapshotToTrainer({
+        trainer,
+        snapshot,
+        verifiedAt: typeof eventTimestampMs === "number" ? new Date(eventTimestampMs) : new Date(),
+    });
+    await trainer.save();
+};
+
+const handleRevenueCatTransfer = async (
+    event: NonNullable<RevenueCatWebhookEnvelope["event"]>
+) => {
+    const eventTimestampMs = typeof event.event_timestamp_ms === "number"
+        ? event.event_timestamp_ms
+        : undefined;
+    const transferredFrom = Array.isArray(event.transferred_from) ? event.transferred_from : [];
+    const transferredTo = Array.isArray(event.transferred_to) ? event.transferred_to : [];
+
+    for (const appUserId of transferredFrom) {
+        await revokeTrainerEntitlement(String(appUserId), eventTimestampMs);
+    }
+
+    for (const appUserId of transferredTo) {
+        await refreshTrainerFromRevenueCat(String(appUserId), eventTimestampMs);
+    }
+};
+
 export const revenueCatWebhook = async (req: Request, res: Response) => {
     try {
         if (!isRevenueCatWebhookAuthorized(req)) {
@@ -853,7 +930,11 @@ export const revenueCatWebhook = async (req: Request, res: Response) => {
             : webhookEvent.eventTimestampMs;
         webhookEvent.payload = event as unknown as Record<string, unknown>;
 
-        await syncTrainerFromRevenueCatWebhookEvent(event);
+        if (String(event.type || "").toUpperCase() === "TRANSFER") {
+            await handleRevenueCatTransfer(event);
+        } else {
+            await syncTrainerFromRevenueCatWebhookEvent(event);
+        }
 
         webhookEvent.processedAt = new Date();
         await webhookEvent.save();
