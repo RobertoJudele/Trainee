@@ -20,6 +20,8 @@ import { Ionicons } from "@expo/vector-icons";
 import Purchases from "react-native-purchases";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import EditableAvatar from "../components/EditableAvatar";
+import { useProfilePictureUpload } from "../lib/useProfilePictureUpload";
 
 export default function UserProfile() {
   const router = useRouter();
@@ -29,6 +31,7 @@ export default function UserProfile() {
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleteProfile, { isLoading: isDeleting }] = useDeleteProfileMutation();
+  const { pickAndUpload, isUploading } = useProfilePictureUpload();
 
   const handleLogout = useCallback(async () => {
     dispatch(logOut());
@@ -107,9 +110,14 @@ export default function UserProfile() {
           </Pressable>
 
           <View style={styles.avatarWrap}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            </View>
+            <EditableAvatar
+              imageUrl={user?.profileImageUrl}
+              initials={initials}
+              size={80}
+              editable
+              uploading={isUploading}
+              onPress={pickAndUpload}
+            />
           </View>
 
           <Text style={styles.name}>{fullName}</Text>

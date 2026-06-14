@@ -63,15 +63,31 @@ const fileFilter = (
 export const generateS3key = (
   req: Request,
   file: Express.Multer.File,
-  folder: string
+  folder: string,
+  ext?: string
 ): string => {
   const userId = req.user.id;
   const timestamp = Date.now();
   const uuid = uuidv4().substring(0, 8);
-  const extension = file.originalname.split(".").pop()?.toLowerCase();
+  // Callers that re-encode the image (e.g. to JPEG via sharp) pass `ext` so the
+  // stored key matches the actual bytes instead of the original upload extension.
+  const extension = ext ?? file.originalname.split(".").pop()?.toLowerCase();
 
   return `${folder}/${userId}/${timestamp}-${uuid}.${extension}`;
 };
+
+// Memory-storage multer used by every upload that runs through sharp before being
+// written to S3 (profile pictures, trainer gallery, certifications & awards).
+// Files live in RAM as `file.buffer`; we cap raw uploads generously since sharp
+// shrinks them afterwards. `files: 5` matches the per-request gallery limit.
+export const uploadImageMemory = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: {
+    fileSize: 12 * 1024 * 1024, // 12MB per raw upload (pre-resize)
+    files: 5,
+  },
+});
 
 export const uploadProfilePicture = multer({
   storage: multerS3({

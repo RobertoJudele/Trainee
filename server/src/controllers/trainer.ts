@@ -7,7 +7,6 @@ import { Specialization } from "../models/specialization";
 import { Op } from "sequelize";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
-import { deleteTrainerProfilePicture } from "./trainerImages";
 import { S3ImageService } from "../services/s3ImageService";
 import { Sequelize } from "sequelize";
 import "../utils/helper";
@@ -445,7 +444,13 @@ export const getTrainer = async (
           model: User,
           attributes: ["firstName", "lastName", "profileImageUrl"],
         },
+        {
+          model: TrainerImage,
+          attributes: ["id", "imageUrl", "category", "displayOrder", "createdAt"],
+          required: false,
+        },
       ],
+      order: [[TrainerImage, "displayOrder", "ASC"]],
     });
 
     if (!trainer) {
@@ -488,11 +493,21 @@ export const getTrainer = async (
       .filter(Boolean);
 
     const entitlement = resolveTrainerEntitlement(trainer);
+    const trainerJson = trainer.toJSON() as any;
+    // Split the included images into the two public-facing buckets and drop the
+    // raw `images` array so clients consume a stable, category-shaped response.
+    const allImages: any[] = trainerJson.images ?? [];
+    const galleryImages = allImages.filter((i) => i.category === "gallery");
+    const credentialImages = allImages.filter((i) => i.category === "credential");
+    delete trainerJson.images;
+
     const payload = {
-      ...(trainer.toJSON() as any),
+      ...trainerJson,
       id: publicId,
       internalId: trainerNumericId,
       availableGyms,
+      galleryImages,
+      credentialImages,
       isActive: entitlement.isActive,
       entitlement,
     };

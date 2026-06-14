@@ -14,6 +14,7 @@ import { Trainer } from "./trainer";
 import {
   TrainerImageAttributes,
   TrainerImageCreationAttributes,
+  TrainerImageCategory,
 } from "../types/trainerImage";
 
 @Table({
@@ -41,6 +42,17 @@ export class TrainerImage extends Model<
   @AllowNull(false)
   @Column(DataType.STRING(500))
   imageUrl!: string;
+
+  // Stored as VARCHAR (not a pg ENUM) so the column can be added with a plain
+  // `ALTER TABLE ... ADD COLUMN` migration — the app boots with sync({alter:false})
+  // and has no migration framework. Allowed values are guarded here.
+  @AllowNull(false)
+  @Default("gallery")
+  @Column({
+    type: DataType.STRING(20),
+    validate: { isIn: [["gallery", "credential"]] },
+  })
+  category!: TrainerImageCategory;
 
   @Column(DataType.STRING(200))
   altText?: string;

@@ -1,125 +1,164 @@
-import { url } from "inspector";
-import { upload, uploadProfilePicture, generateS3key } from "../config/s3";
+import { Response } from "express";
+import { generateS3key } from "../config/s3";
 import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
-import { Response } from "express";
-import { User } from "../models/user";
-import { S3ImageService } from "../services/s3ImageService";
-import { TrainerImage } from "../models/trainerImage";
 import { Trainer } from "../models/trainer";
+import { TrainerImage } from "../models/trainerImage";
+import { TrainerImageCategory } from "../types/trainerImage";
+import { S3ImageService } from "../services/s3ImageService";
+import {
+  processGalleryImage,
+  processCredentialImage,
+  ProcessedImage,
+} from "../services/imageProcessor";
 
-interface S3File extends Express.Multer.File {
-  key: string;
-  bucket: string;
-  acl: string;
-  contentType: string;
-  contentDisposition: string;
-  storageClass: string;
-  metadata: any;
-  location: string;
-  etag: string;
+// Max images a trainer may keep per category (gallery / credential).
+const MAX_PER_CATEGORY = 5;
+
+async function getTrainerForUser(userId: number) {
+  return Trainer.findOne({ where: { userId } });
 }
 
-export const deleteTrainerProfilePicture = async (
+// GET /trainer-images — the authenticated trainer's own images, grouped by category.
+export const getTrainerImages = async (
   req: AuthenticatedRequest,
   res: Response
-) => {
+): Promise<void> => {
   try {
-    const userId = req.user!.id;
-    const user = await User.findByPk(userId);
-
-    if (!user) {
-      sendError(res, 404, "User not found");
-      return;
-    }
-    const imageUrl = user.profileImageUrl;
-    if (!imageUrl) {
-      sendError(res, 400, "No image uploaded first");
+    const trainer = await getTrainerForUser(req.user!.id);
+    if (!trainer) {
+      sendError(res, 403, "Only trainers have images");
       return;
     }
 
-    const s3Key = S3ImageService.extractKeyFromUrl(imageUrl);
-    if (!s3Key) {
-      sendError(res, 400, "Couldnt extract the key");
+    const images = await TrainerImage.findAll({
+      where: { trainerId: trainer.id },
+      order: [
+        ["displayOrder", "ASC"],
+        ["createdAt", "ASC"],
+      ],
+    });
 
-      return;
-    }
-    const result = await S3ImageService.deleteImage(s3Key);
+    const gallery = images
+      .filter((i) => i.category === "gallery")
+      .map((i) => i.toJSON());
+    const credential = images
+      .filter((i) => i.category === "credential")
+      .map((i) => i.toJSON());
 
-    await user.update({ profileImageUrl: null });
-
-    sendSuccess(res, 204, "Profile picture deleted succesfully");
-  } catch (error: any) {
-    console.error("Delete profile picture error: ", error);
-    sendError(res, 500, "Failed to delete profile picture");
+    sendSuccess(res, 200, "Trainer images retrieved", { gallery, credential });
+  } catch (error) {
+    console.error("Get trainer images error:", error);
+    sendError(res, 500, "Failed to retrieve trainer images");
   }
 };
 
-export const uploadTrainerProfilePicture = [
-  upload.single("profileImage"),
-  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    try {
-      const userId = req.user!.id;
-      const file = req.file as S3File;
-
-      if (!file) {
-        sendError(res, 400, "No file uploaded");
-        return;
-      }
-
-      const user = await User.findByPk(userId);
-      if (!user) {
-        // Added proper null check
-        sendError(res, 404, "User not found");
-        return;
-      }
-
-      if (user.profileImageUrl) {
-        const oldKey = S3ImageService.extractKeyFromUrl(user.profileImageUrl);
-        if (oldKey) {
-          try {
-            await S3ImageService.deleteImage(oldKey);
-          } catch (error) {
-            console.warn("Failed to delete old profile picture", error);
-          }
-        }
-      }
-
-      const s3Key = generateS3key(req, file, "profilePicture");
-
-      const uploadResult = await S3ImageService.uploadImage(
-        file.buffer,
-        s3Key,
-        file.mimetype
-      );
-
-      //image variants for better performance soon to be implemented
-
-      await user.update({ profileImageUrl: uploadResult.url });
-
-      const trainer = await Trainer.findOne({ where: { userId: user.id } });
-
-      if (!trainer) {
-        sendError(res, 404, "No trainer found for this user");
-        return;
-      }
-
-      const profilePicture = await TrainerImage.create({
-        trainerId: trainer?.id,
-        imageUrl: uploadResult.url,
-        altText: "Profile picture",
-        isPrimary: true,
-        displayOrder: 0,
-      });
-
-      sendSuccess(res, 200, "Profile picture uploaded succesfully", {
-        user: user?.toJSON(),
-        s3key: file.key,
-        imageUrl: file.location,
-      });
-    } catch (error) {
-      console.error(res, 400, "Profile picture upload error: ", error);
-      sendError(res, 500, "Failed to upload profile picture");
+// Shared handler for the two multi-upload categories. Enforces the per-category
+// cap, resizes each file with the supplied processor, uploads to S3, and records
+// a TrainerImage row.
+async function handleCategoryUpload(
+  category: TrainerImageCategory,
+  process: (input: Buffer) => Promise<ProcessedImage>,
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> {
+  try {
+    const trainer = await getTrainerForUser(req.user!.id);
+    if (!trainer) {
+      sendError(res, 403, "Only trainers can upload these images");
+      return;
     }
-  },
-];
+
+    const files = (req.files as Express.Multer.File[]) || [];
+    if (files.length === 0) {
+      sendError(res, 400, "No files uploaded");
+      return;
+    }
+
+    const existing = await TrainerImage.count({
+      where: { trainerId: trainer.id, category },
+    });
+    if (existing + files.length > MAX_PER_CATEGORY) {
+      sendError(
+        res,
+        422,
+        `You can have at most ${MAX_PER_CATEGORY} ${category} images (you currently have ${existing}).`
+      );
+      return;
+    }
+
+    const created: any[] = [];
+    for (const file of files) {
+      const { buffer, contentType } = await process(file.buffer);
+      const key = generateS3key(req, file, `trainer-${category}`, "jpg");
+      const uploadResult = await S3ImageService.uploadImage(buffer, key, contentType);
+      const row = await TrainerImage.create({
+        trainerId: trainer.id,
+        imageUrl: uploadResult.url,
+        category,
+        isPrimary: false,
+        displayOrder: existing + created.length,
+      });
+      created.push(row.toJSON());
+    }
+
+    sendSuccess(res, 201, "Images uploaded successfully", { images: created });
+  } catch (error) {
+    console.error(`Upload ${category} images error:`, error);
+    sendError(res, 500, "Failed to upload images");
+  }
+}
+
+// POST /trainer-images/gallery  (field: "images", up to 5)
+export const uploadGalleryImages = (
+  req: AuthenticatedRequest,
+  res: Response
+) => handleCategoryUpload("gallery", processGalleryImage, req, res);
+
+// POST /trainer-images/credential  (field: "images", up to 5)
+export const uploadCredentialImages = (
+  req: AuthenticatedRequest,
+  res: Response
+) => handleCategoryUpload("credential", processCredentialImage, req, res);
+
+// DELETE /trainer-images/:id — removes one gallery/credential image (own only).
+export const deleteTrainerImage = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    const trainer = await getTrainerForUser(req.user!.id);
+    if (!trainer) {
+      sendError(res, 403, "Only trainers can delete these images");
+      return;
+    }
+
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id)) {
+      sendError(res, 400, "Invalid image id");
+      return;
+    }
+
+    const image = await TrainerImage.findByPk(id);
+    if (!image || image.trainerId !== trainer.id) {
+      sendError(res, 404, "Image not found");
+      return;
+    }
+
+    const key = S3ImageService.extractKeyFromUrl(image.imageUrl);
+    if (key) {
+      try {
+        await S3ImageService.deleteImage(key);
+      } catch (error) {
+        // Don't block the DB delete if the object is already gone from S3.
+        console.warn("Failed to delete trainer image from S3:", error);
+      }
+    }
+
+    await image.destroy();
+    sendSuccess(res, 200, "Image deleted successfully");
+  } catch (error) {
+    console.error("Delete trainer image error:", error);
+    sendError(res, 500, "Failed to delete image");
+  }
+};

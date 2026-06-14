@@ -26,6 +26,10 @@ import {
   useGetTrainerProfileQuery,
   useGetSpecializationsQuery,
   useUpdateTrainerProfileMutation,
+  useGetTrainerImagesQuery,
+  useUploadGalleryImagesMutation,
+  useUploadCredentialImagesMutation,
+  useDeleteTrainerImageMutation,
 } from "./trainerApiSlice";
 import { useDeleteProfileMutation } from "../users/usersApiSlicet";
 import { router, useRouter } from "expo-router";
@@ -34,6 +38,12 @@ import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import Purchases from "react-native-purchases";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import EditableAvatar from "../../src/components/EditableAvatar";
+import TrainerImageSection from "../../src/components/TrainerImageSection";
+import { useProfilePictureUpload } from "../../src/lib/useProfilePictureUpload";
+import { pickImages, toImageFormData } from "../../src/lib/imageUpload";
+
+const MAX_TRAINER_IMAGES = 5;
 
 const normalizeSocialUrlForSave = (value: string): string | null | "INVALID" => {
   const trimmed = value.trim();
@@ -159,6 +169,53 @@ function TrainerProfile() {
     useDeleteProfileMutation();
   const [updateTrainerProfile, { isLoading: isUpdating }] =
     useUpdateTrainerProfileMutation();
+
+  // ── Profile picture + image galleries ──
+  const { pickAndUpload, isUploading: isUploadingAvatar } = useProfilePictureUpload();
+  const { data: imagesResp } = useGetTrainerImagesQuery(undefined, {
+    skip: user?.role !== UserRole.TRAINER,
+  });
+  const galleryImages = imagesResp?.data?.gallery ?? [];
+  const credentialImages = imagesResp?.data?.credential ?? [];
+  const [uploadGallery, { isLoading: isUploadingGallery }] =
+    useUploadGalleryImagesMutation();
+  const [uploadCredential, { isLoading: isUploadingCredential }] =
+    useUploadCredentialImagesMutation();
+  const [deleteTrainerImage] = useDeleteTrainerImageMutation();
+  const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
+
+  const trainerInitials =
+    `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "T";
+
+  const addImages = useCallback(
+    async (category: "gallery" | "credential") => {
+      const current = category === "gallery" ? galleryImages.length : credentialImages.length;
+      const picked = await pickImages(MAX_TRAINER_IMAGES - current);
+      if (picked.length === 0) return;
+      const form = toImageFormData("images", picked);
+      try {
+        if (category === "gallery") await uploadGallery(form).unwrap();
+        else await uploadCredential(form).unwrap();
+      } catch (err: any) {
+        Alert.alert("Upload failed", err?.data?.message || "Could not upload images.");
+      }
+    },
+    [galleryImages.length, credentialImages.length, uploadGallery, uploadCredential]
+  );
+
+  const removeImage = useCallback(
+    async (id: number) => {
+      setDeletingImageId(id);
+      try {
+        await deleteTrainerImage(id).unwrap();
+      } catch (err: any) {
+        Alert.alert("Error", err?.data?.message || "Could not delete image.");
+      } finally {
+        setDeletingImageId(null);
+      }
+    },
+    [deleteTrainerImage]
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [bio, setBio] = useState("");
@@ -458,6 +515,16 @@ function TrainerProfile() {
             </Pressable>
           )}
         </View>
+        <View style={styles.avatarRow}>
+          <EditableAvatar
+            imageUrl={user?.profileImageUrl}
+            initials={trainerInitials}
+            size={92}
+            editable
+            uploading={isUploadingAvatar}
+            onPress={pickAndUpload}
+          />
+        </View>
         <View style={[styles.statusBadge, trainer.isAvailable ? styles.available : styles.unavailable]}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="ellipse" size={10} color={trainer.isAvailable ? theme.colors.success : theme.colors.error} style={{marginRight: 4}} />
@@ -491,6 +558,28 @@ function TrainerProfile() {
           <Text style={styles.bioText}>{trainer.bio || "No bio available"}</Text>
         )}
       </View>
+
+      {/* ── Gallery & credentials ── */}
+      <TrainerImageSection
+        title="Gallery"
+        subtitle="Showcase photos clients see on your profile."
+        images={galleryImages}
+        max={MAX_TRAINER_IMAGES}
+        uploading={isUploadingGallery}
+        deletingId={deletingImageId}
+        onAdd={() => addImages("gallery")}
+        onDelete={removeImage}
+      />
+      <TrainerImageSection
+        title="Certifications & Awards"
+        subtitle="Upload your certificates and contest awards."
+        images={credentialImages}
+        max={MAX_TRAINER_IMAGES}
+        uploading={isUploadingCredential}
+        deletingId={deletingImageId}
+        onAdd={() => addImages("credential")}
+        onDelete={removeImage}
+      />
 
       {/* ── Experience & Rates ── */}
       <View style={styles.section}>
@@ -887,6 +976,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     position: "relative",
     marginBottom: 15,
+  },
+  avatarRow: {
+    alignItems: "center",
+    marginBottom: 12,
   },
   title: {
     ...typography.h2,

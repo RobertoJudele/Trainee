@@ -1,15 +1,20 @@
 import Express from "express";
 import { authenticate } from "../middleware/auth";
+import { uploadImageMemory } from "../config/s3";
 import {
-  deleteTrainerProfilePicture,
-  uploadTrainerProfilePicture,
+  getTrainerImages,
+  uploadGalleryImages,
+  uploadCredentialImages,
+  deleteTrainerImage,
 } from "../controllers/trainerImages";
 
 const router = Express.Router();
 
 router.use(authenticate);
 
-router.post("/profile-picture", uploadTrainerProfilePicture);
-router.delete("/profile-picture", deleteTrainerProfilePicture);
+router.get("/", getTrainerImages);
+router.post("/gallery", uploadImageMemory.array("images", 5), uploadGalleryImages);
+router.post("/credential", uploadImageMemory.array("images", 5), uploadCredentialImages);
+router.delete("/:id", deleteTrainerImage);
 
 export default router;

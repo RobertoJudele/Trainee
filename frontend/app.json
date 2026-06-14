@@ -119,7 +119,14 @@
           "enableGooglePay": true
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Your app needs access to your photo library to upload profile pictures and workout photos.",
+          "cameraPermission": "Your app needs access to the camera to take profile pictures and workout photos."
+        }
+      ]
     ],
     "extra": {
       "router": {},
