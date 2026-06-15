@@ -26,6 +26,7 @@ import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
+import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
@@ -473,25 +474,15 @@ export default function TrainerDetailsScreen() {
       </View>
 
       {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gallery</Text>
-          <View style={styles.imageGrid}>
-            {trainer.galleryImages.map((img) => (
-              <Image key={img.id} source={{ uri: img.imageUrl }} style={styles.galleryImage} />
-            ))}
-          </View>
-        </View>
+        <TrainerImageCarousel title="Gallery" images={trainer.galleryImages} />
       )}
 
       {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Certifications & Awards</Text>
-          <View style={styles.imageGrid}>
-            {trainer.credentialImages.map((img) => (
-              <Image key={img.id} source={{ uri: img.imageUrl }} style={styles.galleryImage} />
-            ))}
-          </View>
-        </View>
+        <TrainerImageCarousel
+          title="Certifications & Awards"
+          images={trainer.credentialImages}
+          resizeMode="contain"
+        />
       )}
 
       {/* ── Reviews ── */}
@@ -793,18 +784,6 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: theme.colors.textSecondary,
     lineHeight: 22,
-  },
-  imageGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 4,
-  },
-  galleryImage: {
-    width: 104,
-    height: 104,
-    borderRadius: theme.roundness,
-    backgroundColor: theme.colors.border,
   },
   infoRow: {
     flexDirection: "row",
