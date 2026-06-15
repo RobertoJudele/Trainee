@@ -47,6 +47,7 @@ import {
   shortTime,
   toDateKey,
 } from "../../src/components/schedule/SchedulePrimitives";
+import { useTourTarget } from "../../src/components/onboarding/TourContext";
 
 type SlotRect = {
   x: number;
@@ -176,6 +177,9 @@ export default function TrainerDayScheduleScreen() {
   const user = useSelector(selectCurrentUser);
 
   const routeDate = typeof params.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : toDateKey(new Date());
+
+  // Onboarding tour target.
+  const slotsTourRef = useTourTarget("trainer-day-slots");
 
   const slotRefs = useRef<Record<number, View | null>>({});
   const slotRectsRef = useRef<Record<number, SlotRect>>({});
@@ -784,6 +788,7 @@ export default function TrainerDayScheduleScreen() {
           </View>
         ) : null}
 
+        <View ref={slotsTourRef} collapsable={false}>
         <ScheduleCard
           title="Slots"
           subtitle="Drag a client onto an open slot to assign. Tap the ⋮ menu (top-left) for day options."
@@ -876,6 +881,7 @@ export default function TrainerDayScheduleScreen() {
             })
           )}
         </ScheduleCard>
+        </View>
 
         <View style={styles.clientPool}>
           <View style={styles.clientPoolHeader}>

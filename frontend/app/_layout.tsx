@@ -10,6 +10,9 @@ import { PersistGate } from "redux-persist/integration/react";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { theme } from "../src/lib/theme";
 import { StatusBar } from "expo-status-bar";
+import { TourProvider } from "../src/components/onboarding/TourContext";
+import CoachMark from "../src/components/onboarding/CoachMark";
+import TourGate from "../src/components/onboarding/TourGate";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -100,6 +103,7 @@ export default function RootLayout() {
     >
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
+        <TourProvider>
         <RevenueCatIdentityBridge />
         <StatusBar style="light" />
         <Stack
@@ -136,6 +140,9 @@ export default function RootLayout() {
           <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
           <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />
         </Stack>
+        <CoachMark />
+        <TourGate />
+        </TourProvider>
         </PersistGate>
       </Provider>
     </StripeProvider>

@@ -23,7 +23,7 @@ export interface UserAttributes {
 }
 
 interface SignupResponse {
-  data: { token: string; user: UserAttributes };
+  data: { token: string; refreshToken: string; user: UserAttributes };
   message: string;
   succes: boolean;
 }
@@ -43,7 +43,7 @@ interface LoginRequest {
 }
 
 interface LoginResponse {
-  data: { token: string; user: UserAttributes };
+  data: { token: string; refreshToken: string; user: UserAttributes };
   message: string;
   succes: boolean;
 }

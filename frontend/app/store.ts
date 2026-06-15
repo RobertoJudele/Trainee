@@ -1,6 +1,7 @@
 import { Action, ThunkAction, configureStore } from "@reduxjs/toolkit";
 import { apiSlice } from "../src/api/apiSlice";
 import authReducer from "../features/auth/authSlice";
+import onboardingReducer from "../features/onboarding/onboardingSlice";
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from "redux-persist";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -10,12 +11,19 @@ const authPersistConfig = {
   // persist all fields: user, token, trainer
 };
 
+const onboardingPersistConfig = {
+  key: "onboarding",
+  storage: AsyncStorage,
+};
+
 const persistedAuthReducer = persistReducer(authPersistConfig, authReducer);
+const persistedOnboardingReducer = persistReducer(onboardingPersistConfig, onboardingReducer);
 
 export const store = configureStore({
   reducer: {
     [apiSlice.reducerPath]: apiSlice.reducer,
     auth: persistedAuthReducer,
+    onboarding: persistedOnboardingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

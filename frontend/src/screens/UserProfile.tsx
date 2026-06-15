@@ -22,6 +22,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import EditableAvatar from "../components/EditableAvatar";
 import { useProfilePictureUpload } from "../lib/useProfilePictureUpload";
+import { useTour } from "../components/onboarding/TourContext";
+import { clientTour } from "../components/onboarding/clientTour";
 
 export default function UserProfile() {
   const router = useRouter();
@@ -32,6 +34,7 @@ export default function UserProfile() {
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleteProfile, { isLoading: isDeleting }] = useDeleteProfileMutation();
   const { pickAndUpload, isUploading } = useProfilePictureUpload();
+  const { startTour } = useTour();
 
   const handleLogout = useCallback(async () => {
     dispatch(logOut());
@@ -182,6 +185,17 @@ export default function UserProfile() {
             >
               <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
               <Text style={styles.dropdownItemText}>Report Issue</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.dropdownItem}
+              onPress={() => { setMenuVisible(false); startTour(clientTour); }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="Show tutorial again"
+            >
+              <Ionicons name="help-circle-outline" size={18} color={theme.colors.text} />
+              <Text style={styles.dropdownItemText}>Show tutorial again</Text>
             </Pressable>
 
             <View style={styles.dropdownDivider} />

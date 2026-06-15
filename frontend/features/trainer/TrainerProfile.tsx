@@ -35,6 +35,8 @@ import { useDeleteProfileMutation } from "../users/usersApiSlicet";
 import { router, useRouter } from "expo-router";
 import { apiSlice } from "../../src/api/apiSlice";
 import { theme, typography } from "../../src/lib/theme";
+import { useTour } from "../../src/components/onboarding/TourContext";
+import { trainerTour } from "../../src/components/onboarding/trainerTour";
 import { Ionicons } from "@expo/vector-icons";
 import Purchases from "react-native-purchases";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -133,6 +135,7 @@ function TrainerProfile() {
   const user = useSelector(selectCurrentUser);
   const token = useSelector(selectCurrentToken);
   const dispatch = useDispatch();
+  const { startTour } = useTour();
   const insets = useSafeAreaInsets();
   const {
     data: trainerResponse,
@@ -923,7 +926,12 @@ function TrainerProfile() {
             <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
             <Text style={styles.dropdownItemText}>Report Issue</Text>
           </Pressable>
-          
+
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); startTour(trainerTour); }} accessible accessibilityRole="button" accessibilityLabel="Show tutorial again">
+            <Ionicons name="help-circle-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>Show tutorial again</Text>
+          </Pressable>
+
           <View style={styles.dropdownDivider} />
           
           <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleLogout(); }}>

@@ -8,6 +8,7 @@ import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, GradientButton, PressableScale } from "../src/components/ui";
+import { useTourTarget } from "../src/components/onboarding/TourContext";
 
 export default function MyScheduleScreen() {
   const router = useRouter();
@@ -18,6 +19,10 @@ export default function MyScheduleScreen() {
   const [cancellingSlotId, setCancellingSlotId] = useState<number | null>(null);
   const [generatedCode, setGeneratedCode] = useState<{ code: string; expiresAt: string } | null>(null);
   const slots = data?.data || [];
+
+  // Onboarding tour targets.
+  const codeCardTourRef = useTourTarget("client-code-card");
+  const scheduleListTourRef = useTourTarget("client-schedule-list");
 
   const onGenerateCode = async () => {
     try {
@@ -108,6 +113,7 @@ export default function MyScheduleScreen() {
       onRefresh={refetch}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
+        <View ref={codeCardTourRef} collapsable={false}>
         <FadeInUp style={styles.codeCard}>
           <View style={styles.codeCardHeader}>
             <View style={styles.codeIconWrap}>
@@ -133,6 +139,7 @@ export default function MyScheduleScreen() {
             </FadeInUp>
           )}
         </FadeInUp>
+        </View>
       }
       ListEmptyComponent={
         <FadeInUp delay={theme.motion.stagger} style={styles.emptyState}>
@@ -153,7 +160,11 @@ export default function MyScheduleScreen() {
               : theme.colors.primary;
         return (
           <FadeInUp delay={index * theme.motion.stagger}>
-            <View style={styles.card}>
+            <View
+              ref={index === 0 ? scheduleListTourRef : undefined}
+              collapsable={false}
+              style={styles.card}
+            >
               <View style={styles.cardHeader}>
                 <View style={styles.sessionIconWrap}>
                   <Ionicons name="calendar" size={16} color={theme.colors.primary} />

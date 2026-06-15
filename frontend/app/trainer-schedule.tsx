@@ -28,6 +28,7 @@ import { theme, typography } from "../src/lib/theme";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { DayPill, ScheduleCard, scheduleDayLabels } from "../src/components/schedule/SchedulePrimitives";
 import { MonthCalendar } from "../src/components/schedule/MonthCalendar";
+import { useTourTarget } from "../src/components/onboarding/TourContext";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const monthStartKey = (year: number, month1: number) => `${year}-${pad(month1)}-01`;
@@ -58,6 +59,11 @@ export default function TrainerScheduleScreen() {
   const [isActive, setIsActive] = useState(true);
 
   const isTrainer = user?.role === UserRole.TRAINER;
+
+  // Onboarding tour targets.
+  const heroTourRef = useTourTarget("trainer-hero");
+  const templateTourRef = useTourTarget("trainer-template");
+  const generateTourRef = useTourTarget("trainer-generate");
 
   const { data: slotsData } = useGetTrainerSlotsQuery(
     { from: fromKey, to: toKey },
@@ -170,17 +176,19 @@ export default function TrainerScheduleScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <LinearGradient
-          colors={theme.gradients.primary}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[styles.hero, { paddingTop: Math.max(insets.top + theme.spacing.sm, theme.spacing.xl) }]}
-        >
-          <Text style={styles.heroTitle}>Schedule</Text>
-          <Text style={styles.heroSubtitle}>
-            Set your weekly hours, generate a month, then tap any day to fine-tune it.
-          </Text>
-        </LinearGradient>
+        <View ref={heroTourRef} collapsable={false}>
+          <LinearGradient
+            colors={theme.gradients.primary}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[styles.hero, { paddingTop: Math.max(insets.top + theme.spacing.sm, theme.spacing.xl) }]}
+          >
+            <Text style={styles.heroTitle}>Schedule</Text>
+            <Text style={styles.heroSubtitle}>
+              Set your weekly hours, generate a month, then tap any day to fine-tune it.
+            </Text>
+          </LinearGradient>
+        </View>
 
         <View style={styles.body}>
           <FadeInUp>
@@ -200,15 +208,18 @@ export default function TrainerScheduleScreen() {
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger * 2}>
-            <GradientButton
-              title={`Generate ${new Date(vy, vm - 1, 1).toLocaleString(undefined, { month: "long" })}`}
-              icon="sparkles-outline"
-              onPress={onGenerateMonth}
-              loading={generating}
-            />
+            <View ref={generateTourRef} collapsable={false}>
+              <GradientButton
+                title={`Generate ${new Date(vy, vm - 1, 1).toLocaleString(undefined, { month: "long" })}`}
+                icon="sparkles-outline"
+                onPress={onGenerateMonth}
+                loading={generating}
+              />
+            </View>
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger * 3}>
+            <View ref={templateTourRef} collapsable={false}>
             <ScheduleCard
               title="Working hours template"
               subtitle="Your reusable weekly availability — used when generating slots."
@@ -285,6 +296,7 @@ export default function TrainerScheduleScreen() {
                 </View>
               )}
             </ScheduleCard>
+            </View>
           </FadeInUp>
         </View>
       </ScrollView>

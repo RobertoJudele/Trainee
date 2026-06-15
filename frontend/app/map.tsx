@@ -296,7 +296,6 @@ export default function MapScreen() {
   const {
     data: gymsResponse,
     isLoading: gymsLoading,
-    isFetching: gymsFetching,
   } = useGetAllGymsQuery();
 
   useEffect(() => {
@@ -814,16 +813,6 @@ export default function MapScreen() {
         </MapView>
       )}
 
-      {!gymsLoading && (
-        <View style={styles.mapStatusPill} pointerEvents="none">
-          <Text style={styles.mapStatusText}>
-            {gymsFetching
-              ? "Loading gyms..."
-              : `Showing ${gymsForClustering.length}/${gyms.length} gyms in view`}
-          </Text>
-        </View>
-      )}
-
       {(hiddenMapItemCount > 0 || hiddenGymsCount > 0) && (
         <View style={styles.mapWarningPill} pointerEvents="none">
           <Text style={styles.mapWarningText}>
@@ -978,23 +967,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   mapLoadingText: { ...typography.body2, color: theme.colors.textSecondary },
-  mapStatusPill: {
-    position: "absolute",
-    top: 48,
-    left: 16,
-    right: 16,
-    alignSelf: "center",
-    backgroundColor: "rgba(17,24,39,0.88)",
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  mapStatusText: {
-    ...typography.caption,
-    color: "#FFFFFF",
-    textAlign: "center",
-    fontWeight: "600",
-  },
   mapWarningPill: {
     position: "absolute",
     top: 90,
