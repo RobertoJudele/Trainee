@@ -1,17 +1,63 @@
-version: '3.8'
-
 services:
   db:
     image: postgis/postgis:16-3.4
     container_name: trainee_db
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER:-postgres}
       POSTGRES_PASSWORD: ${DB_PASS:-change_me}
       POSTGRES_DB: ${DB_NAME:-trainee}
-    ports:
-      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-trainee}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # NOTE: no published ports — Postgres stays private on the internal network.
+
+  app:
+    build: .
+    container_name: trainee_api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      # Talk to the db container by its service name, not localhost.
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    # NOTE: not published to the host — nginx is the only public entrypoint.
+    expose:
+      - "8000"
+
+  nginx:
+    image: nginx:1.27
+    container_name: trainee_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      - app
+    # Reload every 6h so renewed certs get picked up without a restart.
+    command: "/bin/sh -c 'while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"
+
+  certbot:
+    image: certbot/certbot
+    container_name: trainee_certbot
+    volumes:
+      - certbot_www:/var/www/certbot:rw
+      - certbot_conf:/etc/letsencrypt:rw
+    # Attempt renewal every 12h; the bootstrap is done by init-letsencrypt.sh.
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
 
 volumes:
   postgres_data:
+  certbot_www:
+  certbot_conf:

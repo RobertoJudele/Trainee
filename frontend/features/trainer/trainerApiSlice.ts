@@ -62,6 +62,25 @@ export interface PublicTrainerUser {
   profileImageUrl?: string | null;
 }
 
+export type TrainerImageCategory = "gallery" | "credential";
+
+export interface TrainerImageItem {
+  id: number;
+  imageUrl: string;
+  category?: TrainerImageCategory;
+  displayOrder?: number;
+  createdAt?: string;
+}
+
+export interface TrainerImagesResponse {
+  success: boolean;
+  message: string;
+  data: {
+    gallery: TrainerImageItem[];
+    credential: TrainerImageItem[];
+  };
+}
+
 export interface PublicTrainerProfile {
   id: string;
   internalId?: number;
@@ -87,6 +106,8 @@ export interface PublicTrainerProfile {
   updatedAt: string;
   user?: PublicTrainerUser;
   availableGyms?: PublicTrainerGym[];
+  galleryImages?: TrainerImageItem[];
+  credentialImages?: TrainerImageItem[];
 }
 
 export interface SearchParams {
@@ -305,6 +326,35 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
         return response;
       },
     }),
+
+    // The authenticated trainer's own gallery + credential images (for management).
+    getTrainerImages: builder.query<TrainerImagesResponse, void>({
+      query: () => "/trainer-images",
+      providesTags: ["TrainerImages"],
+    }),
+
+    uploadGalleryImages: builder.mutation<any, FormData>({
+      query: (formData) => ({
+        url: "/trainer-images/gallery",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["TrainerImages"],
+    }),
+
+    uploadCredentialImages: builder.mutation<any, FormData>({
+      query: (formData) => ({
+        url: "/trainer-images/credential",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["TrainerImages"],
+    }),
+
+    deleteTrainerImage: builder.mutation<any, number>({
+      query: (id) => ({ url: `/trainer-images/${id}`, method: "DELETE" }),
+      invalidatesTags: ["TrainerImages"],
+    }),
   }),
 });
 
@@ -316,4 +366,8 @@ export const {
   useDeleteTrainerProfileMutation,
   useUpdateTrainerProfileMutation,
   useSearchTrainersQuery,
+  useGetTrainerImagesQuery,
+  useUploadGalleryImagesMutation,
+  useUploadCredentialImagesMutation,
+  useDeleteTrainerImageMutation,
 } = trainerApiSlice;

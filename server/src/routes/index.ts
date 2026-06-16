@@ -11,6 +11,7 @@ import gymRouter from "./gym";
 import billingRouter from "./billing";
 import issueRouter from "./issue";
 import trainerScheduleRouter from "./trainerSchedule";
+import recommendationRouter from "./recommendation";
 import {
 	createCheckoutSession,
 	createPortalSession,
@@ -35,6 +36,7 @@ router.use("/trainer-specializations", trainerSpecializationRouter);
 router.use("/billing", billingRouter);
 router.use("/issues", issueRouter);
 router.use("/trainer-schedule", trainerScheduleRouter);
+router.use("/recommendations", recommendationRouter);
 
 // Backward-compatible paths used by the existing checkout screen.
 router.post(

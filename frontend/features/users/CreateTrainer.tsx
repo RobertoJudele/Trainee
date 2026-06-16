@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { useCreateTrainerMutation } from "./usersApiSlicet";
 import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentToken, selectCurrentTrainer, selectCurrentUser, setCredentials, setTrainerProfile } from "../../features/auth/authSlice";
+import { requestTrainerTour } from "../../features/onboarding/onboardingSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
 import {
@@ -139,6 +140,8 @@ export default function CreateTrainer() {
       if (responseData && user) {
         dispatch(setTrainerProfile(responseData));
         dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
+        // Queue the trainer onboarding tour for their first trainer-area visit.
+        dispatch(requestTrainerTour());
       }
 
       Alert.alert(

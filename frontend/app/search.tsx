@@ -20,6 +20,7 @@ import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FadeInUp, PressableScale } from "../src/components/ui";
+import { useTourTarget } from "../src/components/onboarding/TourContext";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -119,6 +120,10 @@ export default function SearchScreen() {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowFilters((v) => !v);
   }, []);
+
+  // Onboarding tour targets.
+  const searchBarTourRef = useTourTarget("client-search-bar");
+  const filtersTourRef = useTourTarget("client-filters");
 
   const renderStars = (rating: number) => {
     const full = Math.floor(rating);
@@ -265,7 +270,7 @@ export default function SearchScreen() {
       {/* ── Search bar ── */}
       <View style={styles.topBar}>
         <View style={styles.searchRow}>
-          <View style={styles.searchBox}>
+          <View ref={searchBarTourRef} collapsable={false} style={styles.searchBox}>
             <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
@@ -287,15 +292,17 @@ export default function SearchScreen() {
               </TouchableOpacity>
             )}
           </View>
-          <TouchableOpacity
-            style={[styles.filterToggle, showFilters && styles.filterToggleActive]}
-            onPress={toggleFilters}
-            accessible={true}
-            accessibilityRole="button"
-            accessibilityLabel={showFilters ? "Hide filters" : "Show filters"}
-          >
-            <Ionicons name="options" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
-          </TouchableOpacity>
+          <View ref={filtersTourRef} collapsable={false}>
+            <TouchableOpacity
+              style={[styles.filterToggle, showFilters && styles.filterToggleActive]}
+              onPress={toggleFilters}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={showFilters ? "Hide filters" : "Show filters"}
+            >
+              <Ionicons name="options" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* ── Filters panel ── */}

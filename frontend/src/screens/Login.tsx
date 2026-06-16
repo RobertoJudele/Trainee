@@ -65,6 +65,7 @@ export default function Login() {
         setCredentials({
           user: result.data.user,
           token: result.data.token,
+          refreshToken: result.data.refreshToken,
         })
       );
       router.replace('/');

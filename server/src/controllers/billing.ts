@@ -9,6 +9,7 @@ import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
 import { resolveTrainerEntitlement } from "../services/entitlement";
 import { isStripeRuntimeEnabled } from "../config/billingMode";
+import { BillingPlan, getBillingPlan, isBillingPlanId } from "../config/billingPlans";
 
 const DEFAULT_WEB_SUCCESS_URL = "http://localhost:8081/checkout?success=true&session_id={CHECKOUT_SESSION_ID}";
 const DEFAULT_WEB_CANCEL_URL = "http://localhost:8081/checkout?canceled=true";
@@ -66,6 +67,8 @@ interface RevenueCatWebhookEnvelope {
         original_transaction_id?: string | null;
         transaction_id?: string | null;
         store?: string | null;
+        transferred_from?: string[] | null;
+        transferred_to?: string[] | null;
     };
 }
 
@@ -379,6 +382,30 @@ const resolveTrialEndsAt = (subscription: any): Date | undefined => {
     return undefined;
 };
 
+// Resolve a plan (1m/3m/6m/12m) to a Stripe price id: explicit env override first,
+// otherwise look it up by the plan's Stripe `lookup_key`.
+const resolvePlanPriceId = async (plan: BillingPlan): Promise<string> => {
+    const explicit = process.env[plan.envPriceIdVar]?.trim();
+    if (explicit) {
+        return explicit;
+    }
+
+    const prices = await stripe.prices.list({
+        lookup_keys: [plan.lookupKey],
+        active: true,
+        limit: 1,
+    });
+
+    const priceId = prices.data[0]?.id;
+    if (!priceId) {
+        throw new Error(
+            `No active Stripe price for plan ${plan.id} (set ${plan.envPriceIdVar} or a price with lookup_key "${plan.lookupKey}")`
+        );
+    }
+
+    return priceId;
+};
+
 const getCheckoutPriceId = async (lookupKey?: string, explicitPriceId?: string) => {
     if (explicitPriceId) {
         return explicitPriceId;
@@ -493,9 +520,21 @@ export const createSubscription = async (req: AuthenticatedRequest, res: Respons
             return;
         }
 
-        const priceId = process.env.STRIPE_SUBSCRIPTION_PRICE_ID || process.env.STRIPE_PRICE_ID;
+        const requestedPlan = (req.body as { plan?: string } | undefined)?.plan;
+        let priceId: string | undefined;
+
+        if (requestedPlan) {
+            if (!isBillingPlanId(requestedPlan)) {
+                sendError(res, 400, "Invalid plan. Must be one of: 1m, 3m, 6m, 12m");
+                return;
+            }
+            priceId = await resolvePlanPriceId(getBillingPlan(requestedPlan));
+        } else {
+            priceId = process.env.STRIPE_SUBSCRIPTION_PRICE_ID || process.env.STRIPE_PRICE_ID;
+        }
+
         if (!priceId) {
-            sendError(res, 500, "Missing STRIPE_SUBSCRIPTION_PRICE_ID or STRIPE_PRICE_ID");
+            sendError(res, 500, "No plan provided and no default STRIPE_SUBSCRIPTION_PRICE_ID / STRIPE_PRICE_ID configured");
             return;
         }
 
@@ -766,6 +805,81 @@ const syncTrainerFromRevenueCatWebhookEvent = async (
     return { skipped: false as const, reason: "updated" as const };
 };
 
+// A TRANSFER moves a store receipt from one App User ID to another. The account it
+// moved away from must lose its entitlement, otherwise a single payment could leave
+// multiple trainers visible (the old account keeps its stale ACTIVE row until expiry).
+const revokeTrainerEntitlement = async (appUserId: string, eventTimestampMs?: number) => {
+    const numericUserId = Number(appUserId);
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+        return;
+    }
+
+    const trainer = await Trainer.findOne({ where: { userId: numericUserId } });
+    if (!trainer) {
+        return;
+    }
+
+    if (shouldIgnoreStaleRevenueCatEvent(trainer, eventTimestampMs)) {
+        return;
+    }
+
+    const revokedAt = typeof eventTimestampMs === "number" ? new Date(eventTimestampMs) : new Date();
+
+    // PAST drops the trainer out of listings (which filter on subscriptionStatus=ACTIVE)
+    // and makes resolveTrainerEntitlement() report isActive:false. Expiring the period
+    // fields is belt-and-suspenders for any date-based gate.
+    trainer.subscriptionStatus = subStatus.PAST;
+    trainer.iapExpiresAt = revokedAt;
+    trainer.currentPeriodEndsAt = revokedAt;
+    trainer.iapLastVerifiedAt = revokedAt;
+    await trainer.save();
+};
+
+// Re-pull the live entitlement for an account the receipt moved to, so it reflects the
+// now-active subscription even before the client calls validateIapSubscription.
+const refreshTrainerFromRevenueCat = async (appUserId: string, eventTimestampMs?: number) => {
+    const numericUserId = Number(appUserId);
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+        return;
+    }
+
+    const trainer = await Trainer.findOne({ where: { userId: numericUserId } });
+    if (!trainer) {
+        return;
+    }
+
+    if (shouldIgnoreStaleRevenueCatEvent(trainer, eventTimestampMs)) {
+        return;
+    }
+
+    const payload = await fetchRevenueCatSubscriber(String(numericUserId));
+    const snapshot = resolveRevenueCatSnapshot({ payload });
+    applyRevenueCatSnapshotToTrainer({
+        trainer,
+        snapshot,
+        verifiedAt: typeof eventTimestampMs === "number" ? new Date(eventTimestampMs) : new Date(),
+    });
+    await trainer.save();
+};
+
+const handleRevenueCatTransfer = async (
+    event: NonNullable<RevenueCatWebhookEnvelope["event"]>
+) => {
+    const eventTimestampMs = typeof event.event_timestamp_ms === "number"
+        ? event.event_timestamp_ms
+        : undefined;
+    const transferredFrom = Array.isArray(event.transferred_from) ? event.transferred_from : [];
+    const transferredTo = Array.isArray(event.transferred_to) ? event.transferred_to : [];
+
+    for (const appUserId of transferredFrom) {
+        await revokeTrainerEntitlement(String(appUserId), eventTimestampMs);
+    }
+
+    for (const appUserId of transferredTo) {
+        await refreshTrainerFromRevenueCat(String(appUserId), eventTimestampMs);
+    }
+};
+
 export const revenueCatWebhook = async (req: Request, res: Response) => {
     try {
         if (!isRevenueCatWebhookAuthorized(req)) {
@@ -816,7 +930,11 @@ export const revenueCatWebhook = async (req: Request, res: Response) => {
             : webhookEvent.eventTimestampMs;
         webhookEvent.payload = event as unknown as Record<string, unknown>;
 
-        await syncTrainerFromRevenueCatWebhookEvent(event);
+        if (String(event.type || "").toUpperCase() === "TRANSFER") {
+            await handleRevenueCatTransfer(event);
+        } else {
+            await syncTrainerFromRevenueCatWebhookEvent(event);
+        }
 
         webhookEvent.processedAt = new Date();
         await webhookEvent.save();
@@ -834,8 +952,18 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
             return;
         }
 
-        const body = req.body as { lookup_key?: string; priceId?: string };
-        const priceId = await getCheckoutPriceId(body?.lookup_key, body?.priceId);
+        const body = req.body as { lookup_key?: string; priceId?: string; plan?: string };
+
+        let priceId: string | undefined;
+        if (body?.plan) {
+            if (!isBillingPlanId(body.plan)) {
+                sendError(res, 400, "Invalid plan. Must be one of: 1m, 3m, 6m, 12m");
+                return;
+            }
+            priceId = await resolvePlanPriceId(getBillingPlan(body.plan));
+        } else {
+            priceId = await getCheckoutPriceId(body?.lookup_key, body?.priceId);
+        }
 
         if (!priceId) {
             sendError(res, 400, "No Stripe price id configured or provided");

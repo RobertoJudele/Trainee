@@ -17,6 +17,7 @@ import { BillingWebhookEvent } from "./models/billingWebhookEvent";
 import { ProfileViewEvent } from "./models/profileViewEvent";
 import { BillingTransaction } from "./models/billingTransaction";
 import { RefreshToken } from "./models/refreshToken";
+import { ClientPreference } from "./models/clientPreference";
 dotenv.config();
 
 const sequelize = new Sequelize({
@@ -44,6 +45,7 @@ const sequelize = new Sequelize({
     ProfileViewEvent,
     BillingTransaction,
     RefreshToken,
+    ClientPreference,
   ],
   logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {

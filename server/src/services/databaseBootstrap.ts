@@ -142,4 +142,16 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_trainer_blocked_dates_trainer_date
     ON trainer_blocked_dates (trainer_id, date);
   `);
+
+  // client_preferences: replace legacy lat/lng columns with a preferred gym reference
+  await sequelize.query(`
+    ALTER TABLE client_preferences
+    ADD COLUMN IF NOT EXISTS preferred_gym_id INTEGER REFERENCES gyms(id) ON DELETE SET NULL;
+  `);
+  await sequelize.query(
+    "ALTER TABLE client_preferences DROP COLUMN IF EXISTS latitude;"
+  );
+  await sequelize.query(
+    "ALTER TABLE client_preferences DROP COLUMN IF EXISTS longitude;"
+  );
 };

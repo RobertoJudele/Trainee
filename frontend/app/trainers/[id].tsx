@@ -26,6 +26,7 @@ import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
+import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
@@ -471,6 +472,18 @@ export default function TrainerDetailsScreen() {
           <Text style={styles.sectionText}>No currently available gyms.</Text>
         )}
       </View>
+
+      {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
+        <TrainerImageCarousel title="Gallery" images={trainer.galleryImages} />
+      )}
+
+      {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
+        <TrainerImageCarousel
+          title="Certifications & Awards"
+          images={trainer.credentialImages}
+          resizeMode="contain"
+        />
+      )}
 
       {/* ── Reviews ── */}
       <View style={styles.section}>

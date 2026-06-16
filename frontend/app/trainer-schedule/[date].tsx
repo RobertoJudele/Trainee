@@ -47,6 +47,7 @@ import {
   shortTime,
   toDateKey,
 } from "../../src/components/schedule/SchedulePrimitives";
+import { useTourTarget } from "../../src/components/onboarding/TourContext";
 
 type SlotRect = {
   x: number;
@@ -72,6 +73,16 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 const savedClientsStorageKey = (trainerUserId: number) => `trainer-saved-clients:${trainerUserId}`;
+
+const DROP_FEEDBACK_META: Record<
+  "success" | "error" | "unassign" | "delete",
+  { icon: keyof typeof Ionicons.glyphMap; color: string }
+> = {
+  success: { icon: "checkmark-circle", color: theme.colors.success },
+  error: { icon: "close-circle", color: theme.colors.error },
+  unassign: { icon: "person-remove", color: theme.colors.warning },
+  delete: { icon: "trash", color: theme.colors.error },
+};
 
 type DraggableClientCardProps = {
   client: PublicClient;
@@ -167,6 +178,9 @@ export default function TrainerDayScheduleScreen() {
 
   const routeDate = typeof params.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : toDateKey(new Date());
 
+  // Onboarding tour target.
+  const slotsTourRef = useTourTarget("trainer-day-slots");
+
   const slotRefs = useRef<Record<number, View | null>>({});
   const slotRectsRef = useRef<Record<number, SlotRect>>({});
   const scrollRef = useRef<ScrollView | null>(null);
@@ -189,10 +203,15 @@ export default function TrainerDayScheduleScreen() {
   const [hoveredSlotId, setHoveredSlotId] = useState<number | null>(null);
   const [dragInProgress, setDragInProgress] = useState(false);
 
-  // Feedback flash shown over a slot after a drop: green pulse on success,
-  // red shake when the slot can't accept the client.
-  const [dropFeedback, setDropFeedback] = useState<{ type: "success" | "error"; rect: SlotRect } | null>(null);
+  // Feedback flash shown over a slot after an action: green pop on
+  // assignment, red shake when a slot can't accept a client, amber pop on
+  // unassign, and a red pop on delete/block.
+  const [dropFeedback, setDropFeedback] = useState<{
+    type: "success" | "error" | "unassign" | "delete";
+    rect: SlotRect;
+  } | null>(null);
   const dropFeedbackAnim = useRef(new Animated.Value(0)).current;
+  const dropFeedbackShake = useRef(new Animated.Value(0)).current;
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [clientInputY, setClientInputY] = useState(0);
 
@@ -286,6 +305,7 @@ export default function TrainerDayScheduleScreen() {
         onPress: async () => {
           try {
             await deleteSlot({ slotId }).unwrap();
+            showDropFeedback("delete", slotId);
           } catch (error: unknown) {
             Alert.alert("Error", getErrorMessage(error, "Could not delete the slot."));
           }
@@ -303,6 +323,7 @@ export default function TrainerDayScheduleScreen() {
         onPress: async () => {
           try {
             await deleteSlot({ slotId }).unwrap();
+            showDropFeedback("delete", slotId);
           } catch (error: unknown) {
             Alert.alert("Error", getErrorMessage(error, "Could not block this slot."));
           }
@@ -460,23 +481,38 @@ export default function TrainerDayScheduleScreen() {
     });
   };
 
-  const showDropFeedback = (type: "success" | "error", slotId: number) => {
+  const showDropFeedback = (type: "success" | "error" | "unassign" | "delete", slotId: number) => {
     const rect = slotRectsRef.current[slotId];
     if (!rect) return;
     setDropFeedback({ type, rect });
     dropFeedbackAnim.setValue(0);
+    dropFeedbackShake.setValue(0);
+
     if (type === "success") {
       Animated.sequence([
-        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 150, useNativeDriver: true }),
-        Animated.delay(250),
-        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.spring(dropFeedbackAnim, { toValue: 1, friction: 5, tension: 140, useNativeDriver: true }),
+        Animated.delay(350),
+        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+      ]).start(() => setDropFeedback(null));
+    } else if (type === "error") {
+      Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 120, useNativeDriver: true }).start();
+      Animated.sequence([
+        Animated.timing(dropFeedbackShake, { toValue: 1, duration: 55, useNativeDriver: true }),
+        Animated.timing(dropFeedbackShake, { toValue: -1, duration: 55, useNativeDriver: true }),
+        Animated.timing(dropFeedbackShake, { toValue: 1, duration: 55, useNativeDriver: true }),
+        Animated.timing(dropFeedbackShake, { toValue: -1, duration: 55, useNativeDriver: true }),
+        Animated.timing(dropFeedbackShake, { toValue: 0, duration: 55, useNativeDriver: true }),
+      ]).start();
+      Animated.sequence([
+        Animated.delay(550),
+        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
       ]).start(() => setDropFeedback(null));
     } else {
+      // Unassign / delete — pop the icon in, hold briefly, then fade & shrink away.
       Animated.sequence([
-        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
-        Animated.timing(dropFeedbackAnim, { toValue: -1, duration: 60, useNativeDriver: true }),
-        Animated.timing(dropFeedbackAnim, { toValue: 1, duration: 60, useNativeDriver: true }),
-        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
+        Animated.spring(dropFeedbackAnim, { toValue: 1, friction: 5, tension: 140, useNativeDriver: true }),
+        Animated.delay(300),
+        Animated.timing(dropFeedbackAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
       ]).start(() => setDropFeedback(null));
     }
   };
@@ -587,6 +623,7 @@ export default function TrainerDayScheduleScreen() {
   const onUnassign = async (slotId: number) => {
     try {
       await unassignClientFromSlot({ slotId }).unwrap();
+      showDropFeedback("unassign", slotId);
       await refetchSlots();
     } catch (error: unknown) {
       Alert.alert("Error", getErrorMessage(error, "Could not remove assignment."));
@@ -751,6 +788,7 @@ export default function TrainerDayScheduleScreen() {
           </View>
         ) : null}
 
+        <View ref={slotsTourRef} collapsable={false}>
         <ScheduleCard
           title="Slots"
           subtitle="Drag a client onto an open slot to assign. Tap the ⋮ menu (top-left) for day options."
@@ -843,6 +881,7 @@ export default function TrainerDayScheduleScreen() {
             })
           )}
         </ScheduleCard>
+        </View>
 
         <View style={styles.clientPool}>
           <View style={styles.clientPoolHeader}>
@@ -896,7 +935,17 @@ export default function TrainerDayScheduleScreen() {
       </ScrollView>
 
       {/* Floating drag preview — lives at the screen root so it isn't clipped by the scroll views. */}
-      <View ref={dragLayerRef} style={StyleSheet.absoluteFill} pointerEvents="none" collapsable={false}>
+      <View
+        ref={dragLayerRef}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+        collapsable={false}
+        onLayout={() => {
+          dragLayerRef.current?.measureInWindow((lx, ly) => {
+            dragLayerOffset.current = { x: lx, y: ly };
+          });
+        }}
+      >
         {activeDragClient ? (
           <Animated.View
             style={[
@@ -913,45 +962,64 @@ export default function TrainerDayScheduleScreen() {
           </Animated.View>
         ) : null}
 
-        {dropFeedback ? (
-          <Animated.View
-            style={[
-              styles.dropFeedbackOverlay,
-              {
-                left: dropFeedback.rect.x - dragLayerOffset.current.x,
-                top: dropFeedback.rect.y - dragLayerOffset.current.y,
-                width: dropFeedback.rect.width,
-                height: dropFeedback.rect.height,
-              },
-              dropFeedback.type === "success"
-                ? {
-                    borderColor: theme.colors.success,
-                    backgroundColor: `${theme.colors.success}33`,
-                    opacity: dropFeedbackAnim,
-                    transform: [
+        {dropFeedback
+          ? (() => {
+              const meta = DROP_FEEDBACK_META[dropFeedback.type];
+              const isError = dropFeedback.type === "error";
+              return (
+                <Animated.View
+                  style={[
+                    styles.dropFeedbackOverlay,
+                    {
+                      left: dropFeedback.rect.x - dragLayerOffset.current.x,
+                      top: dropFeedback.rect.y - dragLayerOffset.current.y,
+                      width: dropFeedback.rect.width,
+                      height: dropFeedback.rect.height,
+                      borderColor: meta.color,
+                      backgroundColor: `${meta.color}33`,
+                      opacity: dropFeedbackAnim,
+                      transform: [
+                        {
+                          scale: dropFeedbackAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [0.9, 1],
+                          }),
+                        },
+                        {
+                          translateX: isError
+                            ? dropFeedbackShake.interpolate({
+                                inputRange: [-1, 1],
+                                outputRange: [-8, 8],
+                              })
+                            : 0,
+                        },
+                      ],
+                    },
+                  ]}
+                >
+                  <Animated.View
+                    style={[
+                      styles.dropFeedbackBadge,
                       {
-                        scale: dropFeedbackAnim.interpolate({
-                          inputRange: [0, 1],
-                          outputRange: [0.9, 1.05],
-                        }),
+                        backgroundColor: meta.color,
+                        opacity: dropFeedbackAnim,
+                        transform: [
+                          {
+                            scale: dropFeedbackAnim.interpolate({
+                              inputRange: [0, 0.6, 1],
+                              outputRange: [0.4, 1.2, 1],
+                            }),
+                          },
+                        ],
                       },
-                    ],
-                  }
-                : {
-                    borderColor: theme.colors.error,
-                    backgroundColor: `${theme.colors.error}33`,
-                    transform: [
-                      {
-                        translateX: dropFeedbackAnim.interpolate({
-                          inputRange: [-1, 1],
-                          outputRange: [-8, 8],
-                        }),
-                      },
-                    ],
-                  },
-            ]}
-          />
-        ) : null}
+                    ]}
+                  >
+                    <Ionicons name={meta.icon} size={20} color="#FFFFFF" />
+                  </Animated.View>
+                </Animated.View>
+              );
+            })()
+          : null}
       </View>
     </KeyboardAvoidingView>
   );
@@ -1229,6 +1297,16 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     zIndex: 9998,
     elevation: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dropFeedbackBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    ...theme.shadows.medium,
   },
   clientName: {
     ...typography.body2,
