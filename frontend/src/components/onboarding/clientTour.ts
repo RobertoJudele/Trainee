@@ -27,23 +27,26 @@ export const clientTour: Tour = {
       body: "Open filters to narrow by city, state, price range, and specializations, then sort by Top Rated, Most Reviewed, Price, Most Experienced, or Newest.",
     },
     {
-      // No anchor + no dimming → the map stays fully visible and interactive.
+      // Real map stays visible; a demo gym pin (not a real marker) is shown so
+      // the step always works regardless of what's loaded on the map.
       route: "/map",
       title: "Explore gyms on the map",
-      body: "Pinch and drag to move around. Green markers are gyms; a numbered circle is a cluster — tap it to zoom in. Tap a gym to see its trainers.",
+      body: "Pinch and drag to explore. Gyms appear as pins — tap the highlighted gym to see its trainers.",
       dim: false,
       interactive: true,
-      advanceOnEvent: "gym-pressed",
-      hint: "Tap a gym →",
+      demo: "gym",
+      tooltipAt: "top",
+      hint: "Tap the gym →",
     },
     {
       route: "/map",
       title: "See who trains there",
-      body: "These are the trainers available at this gym, with their ratings and rates. Tap one to open their full profile.",
+      body: "Tapping a trainer opens their full profile — bio, rates, reviews, and a Contact button.",
       dim: false,
       interactive: true,
-      advanceWhenRoute: "/trainers/",
-      hint: "Tap a trainer →",
+      demo: "trainer",
+      tooltipAt: "top",
+      hint: "Tap the trainer →",
     },
     {
       targetId: "client-schedule-list",

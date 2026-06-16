@@ -53,6 +53,8 @@ export interface TourStep {
   hint?: string;
   /** Force tooltip placement instead of auto-positioning near the target. */
   tooltipAt?: "top" | "bottom" | "auto";
+  /** Render a tappable demo element (instead of anchoring to a real UI target). */
+  demo?: "gym" | "trainer";
 }
 
 export interface Tour {

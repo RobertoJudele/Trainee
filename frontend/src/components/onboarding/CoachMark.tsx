@@ -23,10 +23,15 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../../lib/theme";
 import { useTour } from "./TourContext";
 
 const SPOTLIGHT_PAD = 6;
+
+// Demo content shown on the map onboarding steps (a self-contained gym + trainer
+// so the step works even when no real gyms are loaded on the map).
+const DEMO_TRAINER = { initials: "AP", name: "Alex P.", rating: 4.9, rate: 35 };
 
 export default function CoachMark() {
   const { isActive, currentStep, currentRect, stepIndex, totalSteps, next, back, skip } =
@@ -205,6 +210,55 @@ export default function CoachMark() {
         />
       )}
 
+      {/* Demo gym pin (looks like a real marker, but isn't on the map) */}
+      {currentStep.demo === "gym" && (
+        <View
+          pointerEvents="box-none"
+          style={[styles.demoGymWrap, { top: Math.round(frame.height * 0.38) }]}
+        >
+          <Pressable
+            onPress={next}
+            accessibilityRole="button"
+            accessibilityLabel="Demo gym, tap to see its trainers"
+            style={styles.demoGymPress}
+          >
+            <View style={styles.demoGymHighlight}>
+              <View style={styles.demoMarkerBubble}>
+                <Ionicons name="barbell" size={24} color={theme.colors.primary} />
+                <View style={styles.demoMarkerBadge}>
+                  <Text style={styles.demoMarkerBadgeText}>1</Text>
+                </View>
+              </View>
+              <View style={styles.demoMarkerTip} />
+            </View>
+            <Text style={styles.demoLabel}>FitZone Gym (demo)</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {/* Demo trainer card (bottom-sheet style) */}
+      {currentStep.demo === "trainer" && (
+        <Pressable
+          onPress={next}
+          accessibilityRole="button"
+          accessibilityLabel="Demo trainer, tap to continue"
+          style={[styles.demoTrainerCard, { bottom: insets.bottom + 16 }]}
+        >
+          <View style={styles.demoAvatar}>
+            <Text style={styles.demoAvatarText}>{DEMO_TRAINER.initials}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.demoTrainerName}>{DEMO_TRAINER.name} (demo)</Text>
+            <View style={styles.demoTrainerMeta}>
+              <Ionicons name="star" size={12} color="#F59E0B" />
+              <Text style={styles.demoTrainerMetaText}>
+                {`${DEMO_TRAINER.rating} · $${DEMO_TRAINER.rate}/hr · View ›`}
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+      )}
+
       {/* Tooltip card */}
       <Animated.View
         pointerEvents="auto"
@@ -270,6 +324,102 @@ const styles = StyleSheet.create({
     borderColor: "#FACC15",
     borderRadius: 12,
     backgroundColor: "transparent",
+  },
+
+  // ── Demo gym pin ──
+  demoGymWrap: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    alignItems: "center",
+  },
+  demoGymPress: { alignItems: "center" },
+  demoGymHighlight: {
+    alignItems: "center",
+    padding: 5,
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: "#FACC15",
+    backgroundColor: "rgba(250,204,21,0.14)",
+  },
+  demoMarkerBubble: {
+    backgroundColor: "#fff",
+    borderRadius: theme.roundness,
+    padding: 8,
+    borderWidth: 2.5,
+    borderColor: theme.colors.primary,
+    ...theme.shadows.medium,
+  },
+  demoMarkerBadge: {
+    position: "absolute",
+    top: -7,
+    right: -9,
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: "#fff",
+  },
+  demoMarkerBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  demoMarkerTip: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 9,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
+    borderTopColor: theme.colors.primary,
+    marginTop: -1,
+  },
+  demoLabel: {
+    marginTop: 8,
+    ...typography.caption,
+    color: theme.colors.text,
+    fontWeight: "700",
+    textTransform: "none",
+    backgroundColor: "#fff",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    overflow: "hidden",
+    ...theme.shadows.small,
+  },
+
+  // ── Demo trainer card ──
+  demoTrainerCard: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    padding: theme.spacing.md,
+    borderWidth: 2,
+    borderColor: "#FACC15",
+    ...theme.shadows.large,
+  },
+  demoAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: theme.colors.primary,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  demoAvatarText: { ...typography.body1, color: "#fff", fontWeight: "700" },
+  demoTrainerName: { fontSize: 15, fontWeight: "700", color: theme.colors.text },
+  demoTrainerMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
+  demoTrainerMetaText: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    textTransform: "none",
   },
   tooltip: {
     position: "absolute",

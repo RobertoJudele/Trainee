@@ -13,6 +13,7 @@ import {
   Image,
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
 import { skipToken } from "@reduxjs/toolkit/query";
 import {
@@ -24,7 +25,6 @@ import {
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useTour } from "../src/components/onboarding/TourContext";
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
@@ -259,7 +259,6 @@ const getSquaredDistance = (
 export default function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { notify: notifyTour } = useTour();
   const mapRef      = useRef<MapView>(null);
   const [selectedGymId, setSelectedGymId] = useState<number | null>(null);
   const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_REGION);
@@ -275,6 +274,7 @@ export default function MapScreen() {
   const pendingRegionRef = useRef<Region>(DEFAULT_REGION);
   const mapRegionRef = useRef<Region>(DEFAULT_REGION);
   const lastAppliedRegionAtRef = useRef(0);
+  const didCenterOnUserRef = useRef(false);
 
   const applyMapRegionSafely = useCallback((nextRegion: Region): boolean => {
     const currentRegion = mapRegionRef.current;
@@ -305,6 +305,39 @@ export default function MapScreen() {
       setStableGyms(gymsResponse.data);
     }
   }, [gymsResponse?.data]);
+
+  // On open, ask for location permission and center the map on the user (the
+  // blue dot comes from `showsUserLocation`). Falls back to the default region
+  // if permission is denied or the position can't be read.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (cancelled || status !== "granted") return;
+        const pos = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (cancelled || didCenterOnUserRef.current) return;
+        const region: Region = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        };
+        didCenterOnUserRef.current = true;
+        mapRegionRef.current = region;
+        pendingRegionRef.current = region;
+        setMapRegion(region);
+        mapRef.current?.animateToRegion(region, 650);
+      } catch {
+        // Ignore — the map stays on the default region.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(
     () => () => {
@@ -422,6 +455,14 @@ export default function MapScreen() {
   const [deferredMarkers, setDeferredMarkers] = useState<MapItem[]>([]);
   const deferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Android snapshots custom marker children to a bitmap. With
+  // tracksViewChanges=false it can capture the marker before the barbell icon
+  // glyph paints, leaving only the tip triangle visible. We track changes for a
+  // brief window after the marker set updates so the bubble + icon are captured,
+  // then freeze for performance.
+  const [markersTrackChanges, setMarkersTrackChanges] = useState(true);
+  const tracksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     // Clear markers immediately so native view removes all children first
     setDeferredMarkers([]);
@@ -433,12 +474,20 @@ export default function MapScreen() {
     // Re-add the new set on the next frame after the clear has flushed
     deferTimerRef.current = setTimeout(() => {
       setDeferredMarkers(mapItemsToRender);
+      setMarkersTrackChanges(true);
+      if (tracksTimerRef.current) {
+        clearTimeout(tracksTimerRef.current);
+      }
+      tracksTimerRef.current = setTimeout(() => setMarkersTrackChanges(false), 900);
       deferTimerRef.current = null;
     }, 80);
 
     return () => {
       if (deferTimerRef.current) {
         clearTimeout(deferTimerRef.current);
+      }
+      if (tracksTimerRef.current) {
+        clearTimeout(tracksTimerRef.current);
       }
     };
   }, [mapItemsToRender]);
@@ -520,9 +569,6 @@ export default function MapScreen() {
       }
       lastMarkerTapAtRef.current = now;
 
-      // Let the onboarding tour advance from the "tap a gym" step.
-      notifyTour("gym-pressed");
-
       if (selectedGymId === gym.id && currentSnap.current !== SNAP_CLOSED) {
         return;
       }
@@ -564,7 +610,7 @@ export default function MapScreen() {
 
       openSheet();
     },
-    [openSheet, selectedGymId, suppressRegionUpdatesFor, notifyTour]
+    [openSheet, selectedGymId, suppressRegionUpdatesFor]
   );
 
   const handleRegionChangeComplete = useCallback((region: Region) => {
@@ -767,7 +813,7 @@ export default function MapScreen() {
                   key={item.key}
                   coordinate={{ latitude: item.latitude, longitude: item.longitude }}
                   onPress={() => handleClusterPress(item)}
-                  tracksViewChanges={false}
+                  tracksViewChanges={markersTrackChanges}
                   stopPropagation
                 >
                   <View pointerEvents="none" style={styles.clusterWrap}>
