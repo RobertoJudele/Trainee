@@ -1,10 +1,17 @@
 // src/components/onboarding/TourContext.tsx
 //
 // Lightweight, dependency-free coach-mark engine. A "tour" is an ordered list
-// of steps; each step points at a UI element registered via `useTourTarget`.
-// The provider measures the active step's target (with retries, so it survives
-// cross-screen navigation), and exposes the current rect + nav actions to the
-// CoachMark overlay. No native modules — just measure-in-window + a Modal.
+// of steps; each step can point at a UI element registered via `useTourTarget`.
+//
+// Steps can be:
+//   • dimmed or not (`dim`) — non-dimmed steps keep the screen fully visible
+//     (e.g. the map), so the overlay only shows a tooltip.
+//   • interactive (`interactive`) — the user advances by tapping the real UI,
+//     which the overlay lets through; auto-advance is driven by either a route
+//     change (`advanceWhenRoute`) or an app event (`advanceOnEvent` + `notify`).
+//
+// The overlay is rendered as a pass-through root layer (NOT a Modal) so touches
+// can reach the real screen and so measured coordinates line up exactly.
 import React, {
   createContext,
   useCallback,
@@ -28,11 +35,24 @@ export interface TourRect {
 }
 
 export interface TourStep {
-  targetId: string;
+  /** Element to spotlight. Omit for steps with no anchor (e.g. the map). */
+  targetId?: string;
   title: string;
   body: string;
   /** Pathname to navigate to before showing this step (e.g. "/search"). */
   route?: string;
+  /** Darken the rest of the screen. Default true. Set false to keep it visible. */
+  dim?: boolean;
+  /** User advances by interacting with the real UI (no Next button). */
+  interactive?: boolean;
+  /** Auto-advance once the route becomes / starts with this (e.g. "/trainers/"). */
+  advanceWhenRoute?: string;
+  /** Auto-advance when `notify(name)` is called with this name. */
+  advanceOnEvent?: string;
+  /** Hint shown in place of Next on interactive steps. */
+  hint?: string;
+  /** Force tooltip placement instead of auto-positioning near the target. */
+  tooltipAt?: "top" | "bottom" | "auto";
 }
 
 export interface Tour {
@@ -52,6 +72,7 @@ interface TourContextValue {
   next: () => void;
   back: () => void;
   skip: () => void;
+  notify: (event: string) => void;
   registerTarget: (id: string, measure: MeasureFn) => void;
   unregisterTarget: (id: string) => void;
 }
@@ -68,6 +89,7 @@ const defaultValue: TourContextValue = {
   next: noop,
   back: noop,
   skip: noop,
+  notify: noop,
   registerTarget: noop,
   unregisterTarget: noop,
 };
@@ -77,6 +99,12 @@ const TourContext = createContext<TourContextValue>(defaultValue);
 export const useTour = () => useContext(TourContext);
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const sameRect = (a: TourRect, b: TourRect) =>
+  Math.abs(a.x - b.x) < 1 &&
+  Math.abs(a.y - b.y) < 1 &&
+  Math.abs(a.width - b.width) < 1 &&
+  Math.abs(a.height - b.height) < 1;
 
 export function TourProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -135,10 +163,33 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     setStepIndex((idx) => Math.max(0, idx - 1));
   }, []);
 
+  const notify = useCallback(
+    (event: string) => {
+      if (!activeTour) return;
+      const step = activeTour.steps[stepIndex];
+      if (step?.advanceOnEvent === event) {
+        next();
+      }
+    },
+    [activeTour, stepIndex, next]
+  );
+
+  // Auto-advance when the user navigates to the step's expected route.
+  useEffect(() => {
+    if (!activeTour) return;
+    const step = activeTour.steps[stepIndex];
+    const target = step?.advanceWhenRoute;
+    if (!target) return;
+    const matches = pathname === target || pathname.startsWith(target);
+    if (matches && pathname !== step.route) {
+      next();
+    }
+  }, [pathname, activeTour, stepIndex, next]);
+
   // Resolve the active step: navigate to its screen if needed, then measure the
-  // target with retries (the element may still be mounting after navigation).
-  // If it never measures, currentRect stays null and the overlay centers the
-  // tooltip — we teach the step rather than silently dropping it.
+  // target until the layout settles (the value stabilizes across reads). This
+  // avoids the "spotlight too high" bug where we'd latch an early measurement
+  // taken before the native header pushed the content down.
   useEffect(() => {
     if (!activeTour) {
       setCurrentRect(null);
@@ -147,34 +198,52 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
     const step = activeTour.steps[stepIndex];
     if (!step) return;
 
-    let cancelled = false;
-    setCurrentRect(null);
+    const cancelled = { current: false };
+    const navigating = !!(step.route && pathnameRef.current !== step.route);
+    // Keep the previous spotlight while we re-measure on the SAME screen so the
+    // highlight glides to the new target instead of flashing to centre and back.
+    // Only clear when we're changing screens or the step has no anchor.
+    if (navigating || !step.targetId) {
+      setCurrentRect(null);
+    }
 
     const run = async () => {
-      if (step.route && pathnameRef.current !== step.route) {
+      if (navigating) {
         try {
           router.push(step.route as never);
         } catch {
-          // Navigation may not be ready yet; the retry loop still measures.
+          // Navigation may not be ready yet; measurement still retries below.
         }
+        // Let the screen-transition animation finish before measuring, so we
+        // don't latch a position from mid-slide. (The first step looked wrong
+        // until you stepped away and back — that was a mid-transition reading.)
+        await wait(320);
       }
 
-      for (let attempt = 0; attempt < 16 && !cancelled; attempt++) {
+      if (!step.targetId) {
+        return; // No anchor → tooltip is shown centered / at the top.
+      }
+
+      // Keep measuring across the whole settle window and update whenever the
+      // position changes — this both tracks the scroll (so the highlight moves
+      // with the screen) and corrects any late layout shift. Never latch early.
+      let last: TourRect | null = null;
+      for (let attempt = 0; attempt < 30 && !cancelled.current; attempt++) {
         const measure = targetsRef.current.get(step.targetId);
-        if (measure) {
-          const rect = await measure();
-          if (rect && rect.width > 0 && rect.height > 0) {
-            if (!cancelled) setCurrentRect(rect);
-            return;
+        const rect = measure ? await measure() : null;
+        if (rect && rect.width > 0 && rect.height > 0) {
+          if (!last || !sameRect(last, rect)) {
+            if (!cancelled.current) setCurrentRect(rect);
+            last = rect;
           }
         }
-        await wait(130);
+        await wait(55);
       }
     };
 
     void run();
     return () => {
-      cancelled = true;
+      cancelled.current = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTour, stepIndex]);
@@ -190,10 +259,11 @@ export function TourProvider({ children }: { children: React.ReactNode }) {
       next,
       back,
       skip: finish,
+      notify,
       registerTarget,
       unregisterTarget,
     }),
-    [activeTour, stepIndex, currentRect, startTour, next, back, finish, registerTarget, unregisterTarget]
+    [activeTour, stepIndex, currentRect, startTour, next, back, finish, notify, registerTarget, unregisterTarget]
   );
 
   return <TourContext.Provider value={value}>{children}</TourContext.Provider>;

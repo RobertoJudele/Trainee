@@ -24,6 +24,7 @@ import {
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTour } from "../src/components/onboarding/TourContext";
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
@@ -258,6 +259,7 @@ const getSquaredDistance = (
 export default function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { notify: notifyTour } = useTour();
   const mapRef      = useRef<MapView>(null);
   const [selectedGymId, setSelectedGymId] = useState<number | null>(null);
   const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_REGION);
@@ -518,6 +520,9 @@ export default function MapScreen() {
       }
       lastMarkerTapAtRef.current = now;
 
+      // Let the onboarding tour advance from the "tap a gym" step.
+      notifyTour("gym-pressed");
+
       if (selectedGymId === gym.id && currentSnap.current !== SNAP_CLOSED) {
         return;
       }
@@ -559,7 +564,7 @@ export default function MapScreen() {
 
       openSheet();
     },
-    [openSheet, selectedGymId, suppressRegionUpdatesFor]
+    [openSheet, selectedGymId, suppressRegionUpdatesFor, notifyTour]
   );
 
   const handleRegionChangeComplete = useCallback((region: Region) => {

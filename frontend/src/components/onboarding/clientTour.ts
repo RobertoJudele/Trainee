@@ -5,6 +5,16 @@ export const clientTour: Tour = {
   id: "client",
   steps: [
     {
+      // Start on the home screen and make the user tap the real button.
+      targetId: "home-find-trainers",
+      route: "/",
+      title: "Start here",
+      body: 'Tap "Find Trainers" to start browsing.',
+      interactive: true,
+      advanceWhenRoute: "/search",
+      hint: "Tap the button →",
+    },
+    {
       targetId: "client-search-bar",
       route: "/search",
       title: "Find your trainer",
@@ -17,22 +27,30 @@ export const clientTour: Tour = {
       body: "Open filters to narrow by city, state, price range, and specializations, then sort by Top Rated, Most Reviewed, Price, Most Experienced, or Newest.",
     },
     {
-      targetId: "client-map",
+      // No anchor + no dimming → the map stays fully visible and interactive.
       route: "/map",
       title: "Explore gyms on the map",
-      body: "Pinch and drag to move around. Green markers are gyms; a numbered circle is a cluster of gyms — tap it to zoom in.",
+      body: "Pinch and drag to move around. Green markers are gyms; a numbered circle is a cluster — tap it to zoom in. Tap a gym to see its trainers.",
+      dim: false,
+      interactive: true,
+      advanceOnEvent: "gym-pressed",
+      hint: "Tap a gym →",
     },
     {
-      targetId: "client-map",
       route: "/map",
       title: "See who trains there",
-      body: "Tap any gym to open its card and see the trainers available there, with ratings and rates. Tap a trainer to view their full profile.",
+      body: "These are the trainers available at this gym, with their ratings and rates. Tap one to open their full profile.",
+      dim: false,
+      interactive: true,
+      advanceWhenRoute: "/trainers/",
+      hint: "Tap a trainer →",
     },
     {
       targetId: "client-schedule-list",
       route: "/my-schedule",
       title: "Your sessions live here",
       body: "Every session a trainer books for you shows up here with its date, time, and status. You can cancel an upcoming booking from its card.",
+      dim: false,
     },
     {
       targetId: "client-code-card",
