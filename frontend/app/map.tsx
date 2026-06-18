@@ -11,6 +11,7 @@ import {
   PanResponder,
   Dimensions,
   Image,
+  Platform,
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
@@ -256,6 +257,137 @@ const getSquaredDistance = (
   return dLat * dLat + dLon * dLon;
 };
 
+// react-native-maps 1.x on the New Architecture (Fabric) snapshots a custom
+// marker's children into a single bitmap. A global/shared `tracksViewChanges`
+// toggle is unreliable here: the bitmap is often captured once before the view
+// has laid out, so it freezes at the wrong size and the bubble renders as a
+// clipped wedge. Instead, each marker tracks changes on mount and only freezes
+// a couple of frames AFTER layout has *settled*.
+//
+// Critically, Android fires `onLayout` more than once (an early pass can report
+// a premature/zero-ish size before the final measure). If we freeze off the
+// first pass, the snapshot captures the wrong size — that's the wedge. So we
+// debounce: every `onLayout` re-enables tracking and restarts the freeze timer,
+// and we only stop tracking once layout has been quiet for the delay window,
+// guaranteeing the final snapshot is taken at the settled size.
+const MARKER_FREEZE_DELAY_MS = 150;
+
+const useMarkerRecapture = (): {
+  tracksViewChanges: boolean;
+  onLayout: () => void;
+} => {
+  const [tracksViewChanges, setTracksViewChanges] = useState(true);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const onLayout = useCallback(() => {
+    // Keep capturing while layout is still changing, then freeze once it stops.
+    setTracksViewChanges(true);
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(
+      () => setTracksViewChanges(false),
+      MARKER_FREEZE_DELAY_MS
+    );
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    },
+    []
+  );
+
+  return { tracksViewChanges, onLayout };
+};
+
+const ClusterMarkerView = React.memo(function ClusterMarkerView({
+  item,
+  onPress,
+}: {
+  item: GymClusterItem;
+  onPress: () => void;
+}) {
+  const pointCount = item.gyms.length;
+  const clusterSize = getClusterSize(pointCount);
+  const { tracksViewChanges, onLayout } = useMarkerRecapture();
+
+  // Android snapshots the marker into a bitmap sized to its width and clips the
+  // overflowing height (circle + tip is taller than it is wide), which lops the
+  // top off the bubble. A centered square wrapper keeps width >= height so the
+  // whole pin is captured. CLUSTER_TIP_HEIGHT + generous margin = +24.
+  const wrapSize = clusterSize + 24;
+
+  return (
+    <Marker
+      coordinate={{ latitude: item.latitude, longitude: item.longitude }}
+      onPress={onPress}
+      tracksViewChanges={tracksViewChanges}
+      stopPropagation
+    >
+      <View
+        pointerEvents="none"
+        collapsable={false}
+        style={[styles.clusterWrap, { width: wrapSize, height: wrapSize }]}
+        onLayout={onLayout}
+      >
+        <View
+          style={[
+            styles.clusterBubble,
+            {
+              width: clusterSize,
+              height: clusterSize,
+              borderRadius: clusterSize / 2,
+            },
+          ]}
+        >
+          <Text style={styles.clusterCount}>{pointCount}</Text>
+        </View>
+        <View style={styles.clusterTip} />
+      </View>
+    </Marker>
+  );
+});
+
+const GymMarkerView = React.memo(function GymMarkerView({
+  item,
+  onPress,
+}: {
+  item: GymSingleItem;
+  onPress: () => void;
+}) {
+  const { gym } = item;
+  const { tracksViewChanges, onLayout } = useMarkerRecapture();
+
+  return (
+    <Marker
+      coordinate={{ latitude: item.latitude, longitude: item.longitude }}
+      onPress={onPress}
+      tracksViewChanges={tracksViewChanges}
+      stopPropagation
+    >
+      <View
+        pointerEvents="none"
+        collapsable={false}
+        style={styles.markerWrap}
+        onLayout={onLayout}
+      >
+        <View style={styles.markerBubble}>
+          <Ionicons name="barbell" size={24} color={theme.colors.primary} />
+          {gym.availableTrainerCount > 0 && (
+            <View style={styles.markerBadge}>
+              <Text style={styles.markerBadgeText}>{gym.availableTrainerCount}</Text>
+            </View>
+          )}
+        </View>
+        <View style={styles.markerTip} />
+      </View>
+    </Marker>
+  );
+});
+
 export default function MapScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -459,14 +591,6 @@ export default function MapScreen() {
   const [deferredMarkers, setDeferredMarkers] = useState<MapItem[]>([]);
   const deferTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Android snapshots custom marker children to a bitmap. With
-  // tracksViewChanges=false it can capture the marker before the barbell icon
-  // glyph paints, leaving only the tip triangle visible. We track changes for a
-  // brief window after the marker set updates so the bubble + icon are captured,
-  // then freeze for performance.
-  const [markersTrackChanges, setMarkersTrackChanges] = useState(true);
-  const tracksTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     // Clear markers immediately so native view removes all children first
     setDeferredMarkers([]);
@@ -475,23 +599,18 @@ export default function MapScreen() {
       clearTimeout(deferTimerRef.current);
     }
 
-    // Re-add the new set on the next frame after the clear has flushed
+    // Re-add the new set on the next frame after the clear has flushed.
+    // Clearing first also unmounts every marker component, so each one
+    // remounts fresh and runs its own snapshot-recapture cycle (see
+    // ClusterMarkerView / GymMarkerView) at the correct, settled size.
     deferTimerRef.current = setTimeout(() => {
       setDeferredMarkers(mapItemsToRender);
-      setMarkersTrackChanges(true);
-      if (tracksTimerRef.current) {
-        clearTimeout(tracksTimerRef.current);
-      }
-      tracksTimerRef.current = setTimeout(() => setMarkersTrackChanges(false), 900);
       deferTimerRef.current = null;
     }, 80);
 
     return () => {
       if (deferTimerRef.current) {
         clearTimeout(deferTimerRef.current);
-      }
-      if (tracksTimerRef.current) {
-        clearTimeout(tracksTimerRef.current);
       }
     };
   }, [mapItemsToRender]);
@@ -807,64 +926,21 @@ export default function MapScreen() {
           showsUserLocation
           showsMyLocationButton
         >
-          {deferredMarkers.map((item) => {
-            if (item.type === "cluster") {
-              const pointCount = item.gyms.length;
-              const clusterSize = getClusterSize(pointCount);
-
-              return (
-                <Marker
-                  key={item.key}
-                  coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-                  onPress={() => handleClusterPress(item)}
-                  tracksViewChanges={markersTrackChanges}
-                  stopPropagation
-                >
-                  <View pointerEvents="none" style={styles.clusterWrap}>
-                    <View
-                      style={[
-                        styles.clusterBubble,
-                        {
-                          width: clusterSize,
-                          height: clusterSize,
-                          borderRadius: clusterSize / 2,
-                        },
-                      ]}
-                    >
-                      <Text style={styles.clusterCount}>{pointCount}</Text>
-                    </View>
-                    <View style={styles.clusterTip} />
-                  </View>
-                </Marker>
-              );
-            }
-
-            const gym = item.gym;
-
-            return (
-              <Marker
+          {deferredMarkers.map((item) =>
+            item.type === "cluster" ? (
+              <ClusterMarkerView
                 key={item.key}
-                coordinate={{ latitude: item.latitude, longitude: item.longitude }}
-                onPress={() => handleMarkerPress(gym)}
-                tracksViewChanges={false}
-                stopPropagation
-              >
-                <View pointerEvents="none" style={styles.markerWrap}>
-                  <View style={styles.markerBubble}>
-                    <Ionicons name="barbell" size={24} color={theme.colors.primary} />
-                    {gym.availableTrainerCount > 0 && (
-                      <View style={styles.markerBadge}>
-                        <Text style={styles.markerBadgeText}>
-                          {gym.availableTrainerCount}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                  <View style={styles.markerTip} />
-                </View>
-              </Marker>
-            );
-          })}
+                item={item}
+                onPress={() => handleClusterPress(item)}
+              />
+            ) : (
+              <GymMarkerView
+                key={item.key}
+                item={item}
+                onPress={() => handleMarkerPress(item.gym)}
+              />
+            )
+          )}
         </MapView>
       )}
 
@@ -1041,14 +1117,21 @@ const styles = StyleSheet.create({
   },
 
   // ── Marker ──────────────────────────────────────────────
-  markerWrap: { alignItems: "center" },
+  // Transparent padding gives Android's marker→bitmap snapshot room so the
+  // bubble (and its shadow) is never clipped at the capture edges. The badge is
+  // positioned at top:-7/right:-9 relative to the bubble, so the padding must be
+  // >= that to keep the badge inside the captured bitmap.
+  markerWrap: { alignItems: "center", padding: 12 },
   markerBubble: {
     backgroundColor: "#fff",
     borderRadius: theme.roundness,
     padding: 8,
     borderWidth: 2.5,
     borderColor: theme.colors.primary,
-    ...theme.shadows.medium,
+    // iOS shadow only. On Android, `elevation` installs a rounded-rect
+    // ViewOutlineProvider that clips the marker snapshot into a wedge
+    // (worse the larger the bubble), so we omit elevation there.
+    ...(Platform.OS === "ios" ? theme.shadows.medium : null),
   },
   markerEmoji: { fontSize: 28 },
   markerBadge: {
@@ -1077,14 +1160,15 @@ const styles = StyleSheet.create({
     borderTopColor: theme.colors.primary,
     marginTop: -1,
   },
-  clusterWrap: { alignItems: "center" },
+  clusterWrap: { alignItems: "center", justifyContent: "center" },
   clusterBubble: {
     backgroundColor: theme.colors.primary,
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2,
     borderColor: "#fff",
-    ...theme.shadows.medium,
+    // See markerBubble: Android elevation clips the snapshot, so iOS-only.
+    ...(Platform.OS === "ios" ? theme.shadows.medium : null),
   },
   clusterCount: { color: "#fff", fontSize: 13, fontWeight: "800" },
   clusterTip: {
