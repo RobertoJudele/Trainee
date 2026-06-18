@@ -326,9 +326,13 @@ export default function MapScreen() {
           longitudeDelta: 0.05,
         };
         didCenterOnUserRef.current = true;
-        mapRegionRef.current = region;
-        pendingRegionRef.current = region;
-        setMapRegion(region);
+        // Move the camera ONLY. Do NOT also setMapRegion here: that fires an
+        // immediate marker recompute while animateToRegion fires a second one
+        // via onRegionChangeComplete, and the two overlapping marker mutations
+        // crash react-native-maps' Fabric interop on open (see the deferred-
+        // marker note below). Letting onRegionChangeComplete drive the region
+        // through the debounced applyMapRegionSafely path keeps it to a single,
+        // interop-safe marker update.
         mapRef.current?.animateToRegion(region, 650);
       } catch {
         // Ignore — the map stays on the default region.
