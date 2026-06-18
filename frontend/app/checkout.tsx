@@ -10,7 +10,7 @@ import {
 	Text,
 	View,
 } from "react-native";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Linking from "expo-linking";
 import Purchases from "react-native-purchases";
 import { useSelector } from "react-redux";
@@ -215,6 +215,7 @@ export default function CheckoutScreen() {
 		session_id?: string;
 	}>();
 	const user = useSelector(selectCurrentUser);
+	const router = useRouter();
 	const [validateIapSubscription] = useValidateIapSubscriptionMutation();
 
 	const { data: entitlementResponse, isLoading: isLoadingEntitlement, refetch: refetchEntitlement } = useGetBillingEntitlementQuery();
@@ -312,6 +313,22 @@ export default function CheckoutScreen() {
 	const [selectedPackage, setSelectedPackage] = useState<RevenueCatPackage | null>(null);
 	const [fetchingOfferings, setFetchingOfferings] = useState(false);
 	const [debugErrorMessage, setDebugErrorMessage] = useState("");
+	const [priceDebug, setPriceDebug] = useState(""); // TEMP: pricing (USD/RON) diagnostic — remove after resolved
+
+	const monthlyPriceLabel = useMemo(() => {
+		const monthlyPkg =
+			packages.find((pkg) => pkg.product?.identifier === REVENUECAT_MONTHLY_PRODUCT_ID)
+			|| selectedPackage
+			|| packages[0];
+		if (monthlyPkg?.product?.priceString) {
+			return `${monthlyPkg.product.priceString} / month`;
+		}
+		const latestTx = transactions[0]; // best-effort fallback
+		if (latestTx) {
+			return `${Number(latestTx.amount).toFixed(2)} ${latestTx.currency} / month`;
+		}
+		return "—";
+	}, [packages, selectedPackage, transactions]);
 
 	const isNativeApp = Platform.OS === "ios" || Platform.OS === "android";
 	const canUseStripeWebCheckout = !isNativeApp && STRIPE_CHECKOUT_RUNTIME_ENABLED;
@@ -379,6 +396,26 @@ export default function CheckoutScreen() {
 						) || availablePackages[0];
 						setSelectedPackage(defaultPkg);
 						setMessage("");
+
+						// TEMP DIAGNOSTIC — remove after USD/RON pricing is resolved
+						try {
+							const lines = availablePackages.map((pkg) => {
+								const p = (pkg.product || {}) as any;
+								return `${p.identifier}: ${p.priceString} [${p.currencyCode}]`;
+							});
+							let storefront = "n/a";
+							try {
+								const sf = await (Purchases as any).getStorefront?.();
+								if (sf) {
+									storefront = sf.countryCode || sf.identifier || JSON.stringify(sf);
+								}
+							} catch {
+								storefront = "getStorefront unavailable";
+							}
+							setPriceDebug(`storefront=${storefront}\n${lines.join("\n")}`);
+						} catch {
+							// ignore diagnostic failures
+						}
 					} else if (attempt < 4) {
 						// SDK may not be fully configured yet — retry after a short delay
 						const delay = (attempt + 1) * 800;
@@ -748,7 +785,7 @@ export default function CheckoutScreen() {
 
 							<View style={styles.detailsRow}>
 								<Text style={styles.detailsLabel}>Billing Cycle</Text>
-								<Text style={styles.detailsValue}>RON 100.00 / month</Text>
+								<Text style={styles.detailsValue}>{monthlyPriceLabel}</Text>
 							</View>
 
 							<View style={styles.detailsRow}>
@@ -857,6 +894,13 @@ export default function CheckoutScreen() {
 									<Text style={styles.title}>Choose Your Plan</Text>
 									<Text style={styles.subtitle}>Select a subscription length that fits your needs.</Text>
 
+								{/* TEMP DIAGNOSTIC — remove after USD/RON pricing is resolved */}
+								{priceDebug !== "" && (
+									<View style={styles.priceDebugBox}>
+										<Text style={styles.priceDebugText}>{priceDebug}</Text>
+									</View>
+								)}
+
 									{fetchingOfferings ? (
 							<ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 32 }} />
 						) : message === "no_plans" ? (
@@ -959,10 +1003,37 @@ export default function CheckoutScreen() {
 											<Text style={styles.secondaryButtonText}>Restore Purchases</Text>
 										)}
 									</Pressable>
+
+									<Text style={styles.legalDisclaimer}>
+										Subscription automatically renews unless auto-renew is turned off at
+										least 24 hours before the end of the current period. Your account is
+										charged for renewal within 24 hours prior to the end of the current
+										period. You can manage or cancel your subscription in your App Store
+										account settings after purchase.
+									</Text>
+									<View style={styles.legalLinksRow}>
+										<Pressable
+											onPress={() => router.push("/legal")}
+											accessible={true}
+											accessibilityRole="link"
+											accessibilityLabel="Terms of Use"
+										>
+											<Text style={styles.legalLink}>Terms of Use (EULA)</Text>
+										</Pressable>
+										<Text style={styles.legalLinkSeparator}>•</Text>
+										<Pressable
+											onPress={() => router.push("/legal")}
+											accessible={true}
+											accessibilityRole="link"
+											accessibilityLabel="Privacy Policy"
+										>
+											<Text style={styles.legalLink}>Privacy Policy</Text>
+										</Pressable>
+									</View>
 								</View>
 							)}
 							{message !== "" && message !== "no_plans" && <Message message={message} />}
-							{debugErrorMessage !== "" && (
+							{__DEV__ && debugErrorMessage !== "" && (
 								<View style={[styles.section, styles.debugErrorContainer]}>
 									<Text style={styles.debugErrorTitle}>Debug Diagnostics</Text>
 									<Text style={styles.debugErrorText}>{debugErrorMessage}</Text>
@@ -1154,6 +1225,43 @@ const styles = StyleSheet.create({
 		height: 10,
 		borderRadius: 5,
 		backgroundColor: theme.colors.primary,
+	},
+	legalDisclaimer: {
+		...typography.caption,
+		color: theme.colors.textSecondary,
+		lineHeight: 16,
+		marginTop: 16,
+	},
+	legalLinksRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
+		marginTop: 10,
+	},
+	legalLink: {
+		...typography.caption,
+		color: theme.colors.primary,
+		fontWeight: "600",
+	},
+	legalLinkSeparator: {
+		...typography.caption,
+		color: theme.colors.textSecondary,
+		marginHorizontal: 8,
+	},
+	// TEMP DIAGNOSTIC styles — remove with the priceDebug block
+	priceDebugBox: {
+		marginTop: 12,
+		padding: 10,
+		borderRadius: 8,
+		backgroundColor: "#eef2ff",
+		borderWidth: 1,
+		borderColor: "#c7d2fe",
+	},
+	priceDebugText: {
+		...typography.caption,
+		color: "#3730a3",
+		fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+		lineHeight: 16,
 	},
 	debugErrorContainer: {
 		marginTop: 20,

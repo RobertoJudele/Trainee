@@ -68,7 +68,7 @@ const legalDocuments: LegalDocument[] = [
       {
         heading: "Sharing and transfers",
         body:
-          "We share data with service providers that help operate the app, such as hosting, email, billing, storage, and analytics vendors. Some processing may occur outside your home country with appropriate safeguards.",
+          "We share data with service providers that help operate the app, such as hosting, email, billing, and storage. Some processing may occur outside your home country with appropriate safeguards.",
       },
       {
         heading: "Security, retention, and rights",
