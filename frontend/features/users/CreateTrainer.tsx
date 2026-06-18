@@ -41,8 +41,12 @@ export default function CreateTrainer() {
   const [errMsg, setErrMsg] = useState("");
   const token = useSelector(selectCurrentToken);
   const [creatingTrainer, { isLoading }] = useCreateTrainerMutation();
-  const { data: specializationResponse, isLoading: specializationsLoading } =
-    useGetSpecializationsQuery();
+  const {
+    data: specializationResponse,
+    isLoading: specializationsLoading,
+    isFetching: specializationsFetching,
+    refetch: refetchSpecializations,
+  } = useGetSpecializationsQuery();
   const specializationOptions = specializationResponse?.data ?? [];
   const dispatch = useDispatch();
 
@@ -291,7 +295,7 @@ export default function CreateTrainer() {
                   <ActivityIndicator size="small" color="#3B82F6" />
                   <Text style={styles.specLoadingText}>Loading specializations...</Text>
                 </View>
-              ) : (
+              ) : specializationOptions.length > 0 ? (
                 <View style={styles.specGrid}>
                   {specializationOptions.map((spec: SpecializationItem) => {
                     const active = selectedSpecializationIds.includes(spec.id);
@@ -307,6 +311,26 @@ export default function CreateTrainer() {
                       </Pressable>
                     );
                   })}
+                </View>
+              ) : (
+                <View style={styles.specFallbackBox}>
+                  <Text style={styles.specFallbackText}>
+                    Couldn't load specializations. Check your connection and try again.
+                  </Text>
+                  <Pressable
+                    style={styles.specRetryButton}
+                    onPress={() => { void refetchSpecializations(); }}
+                    disabled={specializationsFetching}
+                    accessible={true}
+                    accessibilityRole="button"
+                    accessibilityLabel="Retry loading specializations"
+                  >
+                    {specializationsFetching ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <Text style={styles.specRetryText}>Retry</Text>
+                    )}
+                  </Pressable>
                 </View>
               )}
             </View>
@@ -541,6 +565,28 @@ const styles = StyleSheet.create({
   specLoadingText: {
     color: "#6B7280",
     fontSize: 14,
+  },
+  specFallbackBox: {
+    alignItems: "flex-start",
+    gap: 10,
+    paddingVertical: 8,
+  },
+  specFallbackText: {
+    color: "#6B7280",
+    fontSize: 14,
+  },
+  specRetryButton: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 84,
+    alignItems: "center",
+  },
+  specRetryText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
   },
   specGrid: {
     flexDirection: "row",
