@@ -313,7 +313,6 @@ export default function CheckoutScreen() {
 	const [selectedPackage, setSelectedPackage] = useState<RevenueCatPackage | null>(null);
 	const [fetchingOfferings, setFetchingOfferings] = useState(false);
 	const [debugErrorMessage, setDebugErrorMessage] = useState("");
-	const [priceDebug, setPriceDebug] = useState(""); // TEMP: pricing (USD/RON) diagnostic — remove after resolved
 
 	const monthlyPriceLabel = useMemo(() => {
 		const monthlyPkg =
@@ -396,26 +395,6 @@ export default function CheckoutScreen() {
 						) || availablePackages[0];
 						setSelectedPackage(defaultPkg);
 						setMessage("");
-
-						// TEMP DIAGNOSTIC — remove after USD/RON pricing is resolved
-						try {
-							const lines = availablePackages.map((pkg) => {
-								const p = (pkg.product || {}) as any;
-								return `${p.identifier}: ${p.priceString} [${p.currencyCode}]`;
-							});
-							let storefront = "n/a";
-							try {
-								const sf = await (Purchases as any).getStorefront?.();
-								if (sf) {
-									storefront = sf.countryCode || sf.identifier || JSON.stringify(sf);
-								}
-							} catch {
-								storefront = "getStorefront unavailable";
-							}
-							setPriceDebug(`storefront=${storefront}\n${lines.join("\n")}`);
-						} catch {
-							// ignore diagnostic failures
-						}
 					} else if (attempt < 4) {
 						// SDK may not be fully configured yet — retry after a short delay
 						const delay = (attempt + 1) * 800;
@@ -894,13 +873,6 @@ export default function CheckoutScreen() {
 									<Text style={styles.title}>Choose Your Plan</Text>
 									<Text style={styles.subtitle}>Select a subscription length that fits your needs.</Text>
 
-								{/* TEMP DIAGNOSTIC — remove after USD/RON pricing is resolved */}
-								{priceDebug !== "" && (
-									<View style={styles.priceDebugBox}>
-										<Text style={styles.priceDebugText}>{priceDebug}</Text>
-									</View>
-								)}
-
 									{fetchingOfferings ? (
 							<ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 32 }} />
 						) : message === "no_plans" ? (
@@ -1247,21 +1219,6 @@ const styles = StyleSheet.create({
 		...typography.caption,
 		color: theme.colors.textSecondary,
 		marginHorizontal: 8,
-	},
-	// TEMP DIAGNOSTIC styles — remove with the priceDebug block
-	priceDebugBox: {
-		marginTop: 12,
-		padding: 10,
-		borderRadius: 8,
-		backgroundColor: "#eef2ff",
-		borderWidth: 1,
-		borderColor: "#c7d2fe",
-	},
-	priceDebugText: {
-		...typography.caption,
-		color: "#3730a3",
-		fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
-		lineHeight: 16,
 	},
 	debugErrorContainer: {
 		marginTop: 20,

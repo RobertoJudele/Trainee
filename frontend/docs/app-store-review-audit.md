@@ -185,6 +185,16 @@ Single source of truth for what's still open. Code fixes from §1–§4 are alre
       Can't run on win32 — requires macOS/EAS simulator or device build.
 - [ ] 🟡 **§3 — Sandbox purchase must complete (operational).** Confirm offerings load reliably (the
       retry/"no_plans" path); a dead paywall = Guideline 2.1 rejection. Mostly App Store Connect config.
+- [x] 🟢 ~~**§3 — Paywall showed USD ($17.99) while Apple sheet billed 99,99 RON**~~ — **RESOLVED /
+      not a bug (2026-06-18).** On-device diagnostic showed `storefront=USA`. Root cause: **TestFlight
+      runs IAP in the sandbox environment, where the storefront/currency follows the *Sandbox Apple
+      Account* (Settings → Developer → Sandbox Apple Account), not the real Media & Purchases account.**
+      With no sandbox tester signed in, sandbox defaults to the **US** storefront → USD prices.
+      `priceString` was correct — it followed the sandbox storefront. **Production is unaffected:** real
+      users aren't in sandbox; each loads + buys under their own storefront, so paywall and sheet always
+      match. Code/RevenueCat config are fine.
+      **To test RON in sandbox:** create a Romania sandbox tester (ASC → Users and Access → Sandbox)
+      and sign into it on-device. **TEMP `priceDebug` diagnostic removed from `checkout.tsx` (2026-06-18).**
 
 ## B. Decided / deferred (no action now)
 - [ ] 🟡 **§2 — Stripe Apple Pay merchant ID** kept as placeholder for future Stripe work (dead config
