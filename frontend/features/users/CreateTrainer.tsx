@@ -149,12 +149,17 @@ export default function CreateTrainer() {
       }
 
       Alert.alert(
-        "Success! 🎉",
-        "Your trainer profile has been created successfully!",
+        "You're a trainer now! 🎉",
+        "Want to start your 1-month free trial? It's free for the first month, then RON 100/month — cancel anytime. You can also start it later from your profile.",
         [
           {
-            text: "Continue",
-            onPress: () => router.push("/"),
+            text: "Maybe later",
+            style: "cancel",
+            onPress: () => router.replace("/"),
+          },
+          {
+            text: "Start free trial",
+            onPress: () => router.replace("/checkout?onboarding=1"),
           },
         ]
       );

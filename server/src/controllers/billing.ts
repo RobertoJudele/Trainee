@@ -38,6 +38,7 @@ interface RevenueCatSubscriberSubscription {
     original_transaction_id?: string | null;
     store_transaction_id?: string | null;
     purchase_date?: string | null;
+    period_type?: string | null;
 }
 
 interface RevenueCatSubscriberPayload {
@@ -53,6 +54,7 @@ interface RevenueCatSnapshot {
     expiresAt?: Date;
     provider: BillingProvider;
     originalTransactionId?: string;
+    periodType?: string;
 }
 
 interface RevenueCatWebhookEnvelope {
@@ -301,6 +303,7 @@ const resolveRevenueCatSnapshot = (args: {
         expiresAt,
         provider,
         originalTransactionId: subscription?.original_transaction_id || fallbackOriginalTransactionId,
+        periodType: subscription?.period_type || undefined,
     };
 };
 
@@ -326,7 +329,21 @@ const applyRevenueCatSnapshotToTrainer = (args: {
         trainer.currentPeriodEndsAt = snapshot.expiresAt;
     }
 
-    trainer.subscriptionStatus = snapshot.isActive ? subStatus.ACTIVE : subStatus.PAST;
+    // RevenueCat reports a free trial as period_type "trial" (an active entitlement
+    // whose expires_date is the trial end). A paid intro offer is "intro" — the user
+    // is charged, so we treat that as a normal active subscription, not a trial.
+    const isFreeTrialPeriod = String(snapshot.periodType || "").trim().toLowerCase() === "trial";
+
+    if (!snapshot.isActive) {
+        trainer.subscriptionStatus = subStatus.PAST;
+    } else if (isFreeTrialPeriod) {
+        trainer.subscriptionStatus = subStatus.TRIAL;
+        if (snapshot.expiresAt) {
+            trainer.trialEndsAt = snapshot.expiresAt;
+        }
+    } else {
+        trainer.subscriptionStatus = subStatus.ACTIVE;
+    }
 
     if (resolvedProvider === BillingProvider.APPLE && snapshot.originalTransactionId) {
         trainer.appleOriginalTransactionId = snapshot.originalTransactionId;

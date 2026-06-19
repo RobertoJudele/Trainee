@@ -50,6 +50,26 @@ type RevenueCatCustomerInfo = {
 	};
 };
 
+// iOS exposes a single `introPrice` (price === 0 for a free trial). Android exposes
+// the free/intro phase via the default subscription option. We read both defensively.
+type RevenueCatIntroPrice = {
+	price?: number;
+	priceString?: string;
+	periodUnit?: string; // "DAY" | "WEEK" | "MONTH" | "YEAR"
+	periodNumberOfUnits?: number;
+	cycles?: number;
+};
+
+type RevenueCatPricingPhase = {
+	billingPeriod?: { unit?: string; value?: number } | null;
+	price?: { amountMicros?: number; formatted?: string } | null;
+};
+
+type RevenueCatSubscriptionOption = {
+	freePhase?: RevenueCatPricingPhase | null;
+	introPhase?: RevenueCatPricingPhase | null;
+};
+
 type RevenueCatPackage = {
 	identifier?: string;
 	packageType?: string;
@@ -59,6 +79,8 @@ type RevenueCatPackage = {
 		description?: string;
 		price?: number;
 		priceString?: string;
+		introPrice?: RevenueCatIntroPrice | null;
+		defaultOption?: RevenueCatSubscriptionOption | null;
 	};
 };
 
@@ -70,6 +92,42 @@ type RevenueCatOfferings = {
 
 type RevenueCatPurchaseResult = {
 	customerInfo?: RevenueCatCustomerInfo;
+};
+
+// Turns a store period (e.g. unit "MONTH", count 1) into "1 month" / "2 weeks".
+const describePeriod = (unit?: string, count?: number): string => {
+	const n = Number(count) > 0 ? Number(count) : 1;
+	const normalized = String(unit || "").trim().toUpperCase().replace(/^P/, "");
+	const word =
+		normalized.startsWith("DAY") || normalized === "D"
+			? "day"
+			: normalized.startsWith("WEEK") || normalized === "W"
+				? "week"
+				: normalized.startsWith("YEAR") || normalized === "Y"
+					? "year"
+					: "month";
+	return `${n} ${word}${n === 1 ? "" : "s"}`;
+};
+
+// Returns a free-trial label (e.g. "1 month free") if the package's product carries a
+// free introductory offer, otherwise null. Apple/Google decide actual eligibility.
+const getFreeTrialLabel = (pkg?: RevenueCatPackage | null): string | null => {
+	const product = pkg?.product;
+	if (!product) {
+		return null;
+	}
+
+	const intro = product.introPrice;
+	if (intro && Number(intro.price) === 0) {
+		return `${describePeriod(intro.periodUnit, intro.periodNumberOfUnits)} free`;
+	}
+
+	const freePhase = product.defaultOption?.freePhase;
+	if (freePhase?.billingPeriod) {
+		return `${describePeriod(freePhase.billingPeriod.unit ?? undefined, freePhase.billingPeriod.value ?? undefined)} free`;
+	}
+
+	return null;
 };
 
 type SuccessDisplayProps = {
@@ -213,6 +271,7 @@ export default function CheckoutScreen() {
 		success?: string;
 		canceled?: string;
 		session_id?: string;
+		onboarding?: string;
 	}>();
 	const user = useSelector(selectCurrentUser);
 	const router = useRouter();
@@ -328,6 +387,20 @@ export default function CheckoutScreen() {
 		}
 		return "—";
 	}, [packages, selectedPackage, transactions]);
+
+	const selectedTrialLabel = useMemo(
+		() => getFreeTrialLabel(selectedPackage || packages[0]),
+		[selectedPackage, packages]
+	);
+
+	const subscribeLabel = selectedTrialLabel ? "Start Free Trial" : "Subscribe Now";
+
+	const onboardingParam = Array.isArray(params.onboarding) ? params.onboarding[0] : params.onboarding;
+	const isOnboarding = onboardingParam === "1";
+
+	const skipOnboarding = () => {
+		router.replace("/");
+	};
 
 	const isNativeApp = Platform.OS === "ios" || Platform.OS === "android";
 	const canUseStripeWebCheckout = !isNativeApp && STRIPE_CHECKOUT_RUNTIME_ENABLED;
@@ -534,6 +607,7 @@ export default function CheckoutScreen() {
 
 				setSuccess(true);
 				setMessage("Subscription activated successfully.");
+				void refetchEntitlement();
 			} catch (error) {
 				const typedError = error as { userCancelled?: boolean; code?: string; message?: string };
 				const errorCode = String(typedError.code || "").toLowerCase();
@@ -678,6 +752,7 @@ export default function CheckoutScreen() {
 
 			setSuccess(true);
 			setMessage("Purchases restored successfully.");
+			void refetchEntitlement();
 		} catch (error) {
 			const typedError = error as { code?: string; message?: string };
 			const errorCode = String(typedError.code || "").toLowerCase();
@@ -943,18 +1018,24 @@ export default function CheckoutScreen() {
 										</View>
 									)}
 
+									{selectedTrialLabel && (
+										<Text style={styles.trialNote}>
+											{selectedTrialLabel.charAt(0).toUpperCase() + selectedTrialLabel.slice(1)}, then {monthlyPriceLabel}. Cancel anytime before the trial ends and you won't be charged.
+										</Text>
+									)}
+
 									<Pressable
 										style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
 										onPress={startCheckout}
 										disabled={loading || fetchingOfferings || packages.length === 0}
 										accessible={true}
 										accessibilityRole="button"
-										accessibilityLabel="Subscribe Now"
+										accessibilityLabel={subscribeLabel}
 									>
 										{loading ? (
 											<ActivityIndicator color="#ffffff" />
 										) : (
-											<Text style={styles.buttonText}>Subscribe Now</Text>
+											<Text style={styles.buttonText}>{subscribeLabel}</Text>
 										)}
 									</Pressable>
 
@@ -976,12 +1057,22 @@ export default function CheckoutScreen() {
 										)}
 									</Pressable>
 
+									{isOnboarding && (
+										<Pressable
+											style={styles.skipButton}
+											onPress={skipOnboarding}
+											accessible={true}
+											accessibilityRole="button"
+											accessibilityLabel="Maybe later"
+										>
+											<Text style={styles.skipButtonText}>Maybe later</Text>
+										</Pressable>
+									)}
+
 									<Text style={styles.legalDisclaimer}>
-										Subscription automatically renews unless auto-renew is turned off at
-										least 24 hours before the end of the current period. Your account is
-										charged for renewal within 24 hours prior to the end of the current
-										period. You can manage or cancel your subscription in your App Store
-										account settings after purchase.
+										{selectedTrialLabel
+											? `Your ${selectedTrialLabel} starts today. After it ends, the subscription automatically renews at ${monthlyPriceLabel} unless auto-renew is turned off at least 24 hours before the end of the current period. You can manage or cancel anytime in your App Store account settings.`
+											: "Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel your subscription in your App Store account settings after purchase."}
 									</Text>
 									<View style={styles.legalLinksRow}>
 										<Pressable
@@ -1197,6 +1288,24 @@ const styles = StyleSheet.create({
 		height: 10,
 		borderRadius: 5,
 		backgroundColor: theme.colors.primary,
+	},
+	trialNote: {
+		...typography.body2,
+		color: theme.colors.primary,
+		fontWeight: "700",
+		textAlign: "center",
+		marginBottom: 12,
+	},
+	skipButton: {
+		marginTop: 12,
+		height: 44,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	skipButtonText: {
+		...typography.body2,
+		color: theme.colors.textSecondary,
+		fontWeight: "600",
 	},
 	legalDisclaimer: {
 		...typography.caption,
