@@ -1,20 +1,25 @@
 # Privacy Policy
 
-**Effective date:** April 18, 2026
+**Effective date:** June 18, 2026
+**Last updated:** June 18, 2026
 
-Trainee is a fitness and sports-coaching marketplace that connects trainers, sports coaches, and other service providers with potential clients. This Privacy Policy explains how we collect, use, disclose, protect, and retain personal data when you use our mobile app, website, and related services (together, the "Service"). It also explains the rights available to you under applicable privacy laws, including the GDPR, CCPA/CPRA, PIPEDA, and similar laws, and how to exercise those rights.
+Trainee is a fitness and sports-coaching marketplace that connects trainers, sports coaches, and other service providers with potential clients. This Privacy Policy explains how we collect, use, disclose, protect, and retain personal data when you use our mobile app, website, and related services (together, the "Service"). Trainee is operated from Romania (European Union), and we treat the EU General Data Protection Regulation (GDPR) and Romanian data protection law as the primary framework governing this Policy. We also describe rights that may apply to you under other laws, such as the CCPA/CPRA (for California residents), PIPEDA (for Canada), and similar laws, and how to exercise those rights.
 
 By using the Service, you acknowledge that you have read this Privacy Policy. If you do not agree with it, you should not use the Service.
 
 ## 1. Who We Are and How to Contact Us
 
-Trainee operates the Service as a platform for discovering trainers and sports coaches, managing profiles, booking-related interactions, billing, support requests, and scheduling features. We are the data controller for personal data that we collect directly through the Service, unless a third party is independently acting as a controller for its own services. If you have privacy questions, requests, or complaints, you can contact us using the support or contact details provided in the Service or in our general app documentation.
+The Service is operated by **Juroc Tech Solutions SRL**, a company organized under the laws of Romania (registered office: Str. Luminii nr. 37, Faurei, Vrancea, Romania; trade-register number: [⚠️ INSERT ORC NUMBER, e.g. J40/…/2024]; CUI/CIF: [⚠️ INSERT CUI, e.g. RO…]). Juroc Tech Solutions SRL ("Trainee," "we," "us," or "our") is the **data controller** for personal data that we collect directly through the Service, unless a third party is independently acting as a controller for its own services. Trainee operates the Service as a platform for discovering trainers and sports coaches, managing profiles, booking-related interactions, billing, support requests, and scheduling features.
+
+If you have privacy questions, requests, or complaints, you can contact us at **robertojudele@juroc.tech**, or through the support and contact options provided in the Service.
 
 ## 2. Personal Data We Collect
 
 We collect personal data that you provide directly to us, such as your name, email address, phone number, password, profile information, role selection, profile image, training or coaching details, location information, social contact links, issue reports, billing-related details, and any other information you choose to submit in your profile, messages, support requests, or account settings. If you are a trainer or coach, we may also collect professional profile details such as experience, specializations, rates, availability, schedule information, and gym association data.
 
-We also collect information automatically when you use the Service. This may include device and app information, IP address, approximate location derived from your device or network, log files, crash and diagnostic information, page or screen interactions, authentication events, rate-limiting and security events, and usage analytics. When you view public trainer profiles, we may record profile-view events for fraud prevention, analytics, and service improvement. Where permitted, we may also use cookies or similar technologies on web surfaces for authentication, preferences, and security.
+We also collect information automatically when you use the Service. This may include device and app information, IP address, approximate (coarse) location derived from your device or network, log files, crash and diagnostic information, screen interactions, authentication events, rate-limiting and security events, and first-party usage analytics that we generate ourselves. When you view public trainer profiles, we may record profile-view events to power our in-house trainer analytics (for example, profile-view counts shown to trainers), for fraud prevention, and for service improvement. Where permitted, we may also use cookies or similar technologies on web surfaces for authentication, preferences, and security.
+
+**We do not use third-party advertising networks, ad SDKs, or cross-app tracking technologies.** We do not track you across other companies' apps or websites, and we do not use your personal data for cross-context behavioral advertising. Any "analytics" we perform is first-party and is used to operate, secure, and improve the Service.
 
 We may receive information from third parties when you choose to connect them to the Service. For example, we may receive subscription, billing, or entitlement data from payment providers, app store billing systems, or RevenueCat; profile image or file-upload data from cloud storage providers; email delivery and verification data from messaging providers; and map or place data from external data sources used for location-based features.
 
@@ -30,7 +35,7 @@ If you are located in the European Economic Area, the United Kingdom, or a simil
 
 ## 5. How We Share Personal Data
 
-We do not sell your personal data in the ordinary sense of the word. We may share personal data with service providers and processors that help us operate the Service, such as hosting providers, database and infrastructure providers, email delivery providers, payment processors, app billing and subscription providers, cloud storage providers, analytics or logging providers, and support tooling providers. These providers are only permitted to process personal data on our instructions and are expected to use appropriate safeguards.
+We do not sell your personal data, and we do not share it for cross-context behavioral advertising. We may share personal data with service providers and processors that help us operate the Service, such as hosting providers, database and infrastructure providers, email delivery providers, payment processors (for example, Stripe), app-store billing and subscription providers (for example, Apple App Store, Google Play, and RevenueCat for subscription entitlement management), cloud storage providers, map and location providers (for example, Google Maps), and logging, monitoring, and error-diagnostics providers. These providers are only permitted to process personal data on our instructions and under a data processing agreement, and are expected to use appropriate safeguards.
 
 We may also share personal data where required by law, to respond to lawful requests, to protect our rights or the rights of others, to prevent fraud or abuse, or in connection with a corporate transaction such as a merger, acquisition, reorganization, or asset transfer. In addition, certain information may be visible to other users as part of the marketplace experience, such as a trainer or coach profile, contact details you intentionally publish, availability, ratings, reviews, or other profile data you have chosen to make public.
 
@@ -54,15 +59,25 @@ We also protect certain sensitive workflows by hashing values before storage whe
 
 ## 9. Retention of Personal Data
 
-We retain personal data only for as long as necessary to provide the Service, comply with legal obligations, resolve disputes, enforce agreements, support accounting and tax requirements, and maintain legitimate business records. Retention periods depend on the type of data and the reason we collected it. For example, account information may be retained while your account is active and for a reasonable period afterward, support messages may be retained for troubleshooting and recordkeeping, and billing records may be retained for tax, accounting, or regulatory purposes.
+We retain personal data only for as long as necessary to provide the Service, comply with legal obligations, resolve disputes, enforce agreements, support accounting and tax requirements, and maintain legitimate business records. Retention periods depend on the type of data and the reason we collected it. The table below sets out our standard retention periods.
 
-When personal data is no longer needed, we will delete, anonymize, or archive it in accordance with our retention practices and applicable law. Some information may remain in backups or logs for a limited period until those systems are cycled out, subject to our backup retention schedule and security controls.
+| Category of data | Retention period |
+| --- | --- |
+| Account and profile data (name, email, phone number, role, profile details) | While your account is active; deleted or anonymized within 90 days of account closure |
+| Profile and workout photos / uploaded images | While your account is active; removed within 90 days of account deletion |
+| Support requests and issue reports | Up to 24 months after the issue is resolved |
+| Billing, subscription, and invoicing records | For the period required by applicable Romanian accounting and tax law |
+| Security, fraud-prevention, and rate-limiting logs | Up to 12 months, unless extended for active investigations or legal obligations |
+| Verification and check-in codes (stored hashed) | Until used or expired, then deleted |
+| Backups | Retained on a rolling cycle and deleted within 90 days |
+
+When personal data is no longer needed, we will delete, anonymize, or archive it in accordance with the schedule above and applicable law. Some information may remain in backups or logs for a limited period until those systems are cycled out, subject to our backup retention schedule and security controls.
 
 ## 10. Your Rights
 
 Depending on where you live, you may have rights to access your personal data, correct inaccurate information, delete your personal data, obtain a copy of your data in a portable format, object to or restrict certain processing, and withdraw consent where processing is based on consent. You may also have the right to know what categories of personal information we collect, use, and disclose, and the right to opt out of certain disclosures or uses under applicable law, including rights recognized by the CCPA/CPRA for California residents.
 
-To exercise your rights, you can contact us through the support channels in the Service and specify the request you want to make. We may need to verify your identity before fulfilling a request. We will not discriminate against you for exercising privacy rights, although some features may not function if we cannot process certain data necessary to provide them.
+To exercise your rights, you can contact us at **robertojudele@juroc.tech** or through the support channels in the Service, specifying the request you want to make. We will respond within the timeframe required by applicable law (under the GDPR, generally within one month, which may be extended for complex requests). We may need to verify your identity before fulfilling a request. We will not discriminate against you for exercising privacy rights, although some features may not function if we cannot process certain data necessary to provide them.
 
 ## 11. Data Portability and Deletion
 
@@ -78,7 +93,9 @@ You may submit requests using the contact methods described in this Policy. We m
 
 ## 13. Privacy Rights Under GDPR, PIPEDA, and Similar Laws
 
-If you are covered by GDPR, you may have the right to access, rectify, erase, restrict processing, object to processing, and data portability, as well as the right to lodge a complaint with a supervisory authority. If you are covered by PIPEDA or similar Canadian privacy laws, you may have rights to access and challenge the accuracy or completeness of your information and to address concerns about how it is handled. Where local laws provide additional rights, we will honor them as required.
+If you are covered by GDPR, you may have the right to access, rectify, erase, restrict processing, object to processing, and data portability, as well as the right to lodge a complaint with a supervisory authority. Because Trainee is established in Romania, our lead supervisory authority is the Romanian National Supervisory Authority for Personal Data Processing (Autoritatea Națională de Supraveghere a Prelucrării Datelor cu Caracter Personal, "ANSPDCP"), www.dataprotection.ro. If you are in the European Economic Area or the United Kingdom, you may also lodge a complaint with the data protection authority in your country of residence or work. We would, however, appreciate the chance to address your concerns directly before you do so — please contact us at **robertojudele@juroc.tech**.
+
+If you are covered by PIPEDA or similar Canadian privacy laws, you may have rights to access and challenge the accuracy or completeness of your information and to address concerns about how it is handled. Where local laws provide additional rights, we will honor them as required.
 
 ## 14. Minors and Age Restrictions
 
@@ -102,4 +119,10 @@ We may update this Privacy Policy from time to time to reflect changes in our pr
 
 ## 18. Contact Us
 
-If you have questions about this Privacy Policy, your rights, or how we handle your personal data, please contact us through the support or contact options available in the Service. If you are making a privacy request, please include enough information for us to verify your identity and understand your request.
+If you have questions about this Privacy Policy, your rights, or how we handle your personal data, please contact:
+
+**Juroc Tech Solutions SRL**
+Email: **robertojudele@juroc.tech**
+Registered office: Str. Luminii nr. 37, Faurei, Vrancea, Romania
+
+You can also reach us through the support or contact options available in the Service. If you are making a privacy request, please include enough information for us to verify your identity and understand your request.

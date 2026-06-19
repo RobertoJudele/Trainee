@@ -10,8 +10,6 @@ const RequireAuth = () => {
   const segments = useSegments();
   const router = useRouter();
   const inAuthGroup = segments[0] === "(auth)";
-  console.log("Current segments: ", segments);
-  console.log("In auth group:", inAuthGroup);
 
   useEffect(() => {
     if (!token && !inAuthGroup) {

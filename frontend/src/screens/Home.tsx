@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, PressableScale } from "../components/ui";
+import { useTourTarget } from "../components/onboarding/TourContext";
 
 const { width } = Dimensions.get("window");
 
@@ -36,6 +37,9 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const userRole = user?.role;
   const isClient = userRole === UserRole.CLIENT;
+
+  // Onboarding tour target — the "Find Trainers" quick action.
+  const findTrainersTourRef = useTourTarget("home-find-trainers");
 
   const quickActions = [
     {
@@ -371,6 +375,10 @@ export default function Home() {
                 delay={theme.motion.stagger * (3 + index)}
                 style={styles.actionCardWrap}
               >
+                <View
+                  ref={action.route === "/search" ? findTrainersTourRef : undefined}
+                  collapsable={false}
+                >
                 <PressableScale
                   style={styles.actionCard}
                   onPress={() => {
@@ -389,6 +397,7 @@ export default function Home() {
                   <Text style={styles.actionTitle}>{action.title}</Text>
                   <Text style={styles.actionDesc}>{action.desc}</Text>
                 </PressableScale>
+                </View>
               </FadeInUp>
             ))}
           </View>

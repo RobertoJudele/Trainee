@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -28,7 +28,7 @@ import { theme, typography } from "../src/lib/theme";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { DayPill, ScheduleCard, scheduleDayLabels } from "../src/components/schedule/SchedulePrimitives";
 import { MonthCalendar } from "../src/components/schedule/MonthCalendar";
-import { useTourTarget } from "../src/components/onboarding/TourContext";
+import { useTour, useTourTarget } from "../src/components/onboarding/TourContext";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const monthStartKey = (year: number, month1: number) => `${year}-${pad(month1)}-01`;
@@ -64,6 +64,19 @@ export default function TrainerScheduleScreen() {
   const heroTourRef = useTourTarget("trainer-hero");
   const templateTourRef = useTourTarget("trainer-template");
   const generateTourRef = useTourTarget("trainer-generate");
+  const scrollRef = useRef<ScrollView>(null);
+  const { currentStep: tourStep } = useTour();
+
+  // Scroll the spotlighted section fully into view as the tour reaches it.
+  useEffect(() => {
+    const id = tourStep?.targetId;
+    if (!id) return;
+    if (id === "trainer-template") {
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd({ animated: true }));
+    } else if (id === "trainer-hero" || id === "trainer-generate") {
+      requestAnimationFrame(() => scrollRef.current?.scrollTo({ y: 0, animated: true }));
+    }
+  }, [tourStep?.targetId]);
 
   const { data: slotsData } = useGetTrainerSlotsQuery(
     { from: fromKey, to: toKey },
@@ -175,7 +188,7 @@ export default function TrainerScheduleScreen() {
       style={styles.container}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View ref={heroTourRef} collapsable={false}>
           <LinearGradient
             colors={theme.gradients.primary}

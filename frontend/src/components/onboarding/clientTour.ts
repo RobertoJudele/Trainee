@@ -5,6 +5,16 @@ export const clientTour: Tour = {
   id: "client",
   steps: [
     {
+      // Start on the home screen and make the user tap the real button.
+      targetId: "home-find-trainers",
+      route: "/",
+      title: "Start here",
+      body: 'Tap "Find Trainers" to start browsing.',
+      interactive: true,
+      advanceWhenRoute: "/search",
+      hint: "Tap the button →",
+    },
+    {
       targetId: "client-search-bar",
       route: "/search",
       title: "Find your trainer",
@@ -17,22 +27,33 @@ export const clientTour: Tour = {
       body: "Open filters to narrow by city, state, price range, and specializations, then sort by Top Rated, Most Reviewed, Price, Most Experienced, or Newest.",
     },
     {
-      targetId: "client-map",
+      // Real map stays visible; a demo gym pin (not a real marker) is shown so
+      // the step always works regardless of what's loaded on the map.
       route: "/map",
       title: "Explore gyms on the map",
-      body: "Pinch and drag to move around. Green markers are gyms; a numbered circle is a cluster of gyms — tap it to zoom in.",
+      body: "Pinch and drag to explore. Gyms appear as pins — tap the highlighted gym to see its trainers.",
+      dim: false,
+      interactive: true,
+      demo: "gym",
+      tooltipAt: "top",
+      hint: "Tap the gym →",
     },
     {
-      targetId: "client-map",
       route: "/map",
       title: "See who trains there",
-      body: "Tap any gym to open its card and see the trainers available there, with ratings and rates. Tap a trainer to view their full profile.",
+      body: "Tapping a trainer opens their full profile — bio, rates, reviews, and a Contact button.",
+      dim: false,
+      interactive: true,
+      demo: "trainer",
+      tooltipAt: "top",
+      hint: "Tap the trainer →",
     },
     {
       targetId: "client-schedule-list",
       route: "/my-schedule",
       title: "Your sessions live here",
       body: "Every session a trainer books for you shows up here with its date, time, and status. You can cancel an upcoming booking from its card.",
+      dim: false,
     },
     {
       targetId: "client-code-card",
