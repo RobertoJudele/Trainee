@@ -407,6 +407,7 @@ export default function MapScreen() {
   const mapRegionRef = useRef<Region>(DEFAULT_REGION);
   const lastAppliedRegionAtRef = useRef(0);
   const didCenterOnUserRef = useRef(false);
+  const [locationGranted, setLocationGranted] = useState(false);
 
   const applyMapRegionSafely = useCallback((nextRegion: Region): boolean => {
     const currentRegion = mapRegionRef.current;
@@ -447,6 +448,7 @@ export default function MapScreen() {
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (cancelled || status !== "granted") return;
+        setLocationGranted(true);
         const pos = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
@@ -923,8 +925,8 @@ export default function MapScreen() {
           initialRegion={DEFAULT_REGION}
           onRegionChangeComplete={handleRegionChangeComplete}
           onPress={closeSheet}
-          showsUserLocation
-          showsMyLocationButton
+          showsUserLocation={locationGranted}
+          showsMyLocationButton={locationGranted}
         >
           {deferredMarkers.map((item) =>
             item.type === "cluster" ? (
