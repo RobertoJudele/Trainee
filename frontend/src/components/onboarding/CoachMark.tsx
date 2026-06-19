@@ -26,6 +26,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../../lib/theme";
 import { useTour } from "./TourContext";
+import { useLanguage } from "../../lib/i18n/LanguageContext";
 
 const SPOTLIGHT_PAD = 6;
 
@@ -36,6 +37,7 @@ const DEMO_TRAINER = { initials: "AP", name: "Alex P.", rating: 4.9, rate: 35 };
 export default function CoachMark() {
   const { isActive, currentStep, currentRect, stepIndex, totalSteps, next, back, skip } =
     useTour();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const { width: screenW, height: screenH } = useWindowDimensions();
 
@@ -264,16 +266,16 @@ export default function CoachMark() {
         pointerEvents="auto"
         style={[styles.tooltip, { left: 16, right: 16, opacity: tooltipOpacity }, tooltipPos]}
       >
-        <Text style={styles.title}>{currentStep.title}</Text>
-        <Text style={styles.body}>{currentStep.body}</Text>
+        <Text style={styles.title}>{currentStep.titleKey ? t(currentStep.titleKey) : currentStep.title}</Text>
+        <Text style={styles.body}>{currentStep.bodyKey ? t(currentStep.bodyKey) : currentStep.body}</Text>
 
         <View style={styles.footer}>
-          <Pressable onPress={skip} hitSlop={10} accessibilityRole="button" accessibilityLabel="Skip tutorial">
-            <Text style={styles.skip}>Skip</Text>
+          <Pressable onPress={skip} hitSlop={10} accessibilityRole="button" accessibilityLabel={t("tourSkip")}>
+            <Text style={styles.skip}>{t("tourSkip")}</Text>
           </Pressable>
 
           <Text style={styles.counter}>
-            {stepIndex + 1} of {totalSteps}
+            {stepIndex + 1} {t("tourOf")} {totalSteps}
           </Text>
 
           <View style={styles.navBtns}>
@@ -283,22 +285,22 @@ export default function CoachMark() {
                 style={[styles.navBtn, styles.backBtn]}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel="Previous step"
+                accessibilityLabel={t("tourBack")}
               >
-                <Text style={styles.backText}>Back</Text>
+                <Text style={styles.backText}>{t("tourBack")}</Text>
               </Pressable>
             )}
             {interactive ? (
-              <Text style={styles.hint}>{currentStep.hint ?? "Tap to continue"}</Text>
+              <Text style={styles.hint}>{currentStep.hintKey ? t(currentStep.hintKey) : currentStep.hint ?? t("tourTapToContinue")}</Text>
             ) : (
               <Pressable
                 onPress={next}
                 style={[styles.navBtn, styles.nextBtn]}
                 hitSlop={10}
                 accessibilityRole="button"
-                accessibilityLabel={isLast ? "Finish tutorial" : "Next step"}
+                accessibilityLabel={isLast ? t("tourDone") : t("tourNext")}
               >
-                <Text style={styles.nextText}>{isLast ? "Done" : "Next"}</Text>
+                <Text style={styles.nextText}>{isLast ? t("tourDone") : t("tourNext")}</Text>
               </Pressable>
             )}
           </View>

@@ -44,6 +44,7 @@ import EditableAvatar from "../../src/components/EditableAvatar";
 import TrainerImageSection from "../../src/components/TrainerImageSection";
 import { useProfilePictureUpload } from "../../src/lib/useProfilePictureUpload";
 import { pickImages, toImageFormData } from "../../src/lib/imageUpload";
+import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 
 const MAX_TRAINER_IMAGES = 5;
 
@@ -137,6 +138,7 @@ function TrainerProfile() {
   const dispatch = useDispatch();
   const { startTour } = useTour();
   const insets = useSafeAreaInsets();
+  const { t, language, setLanguage } = useLanguage();
   const {
     data: trainerResponse,
     isLoading,
@@ -200,10 +202,10 @@ function TrainerProfile() {
         if (category === "gallery") await uploadGallery(form).unwrap();
         else await uploadCredential(form).unwrap();
       } catch (err: any) {
-        Alert.alert("Upload failed", err?.data?.message || "Could not upload images.");
+        Alert.alert(t("uploadFailed"), err?.data?.message || t("uploadError"));
       }
     },
-    [galleryImages.length, credentialImages.length, uploadGallery, uploadCredential]
+    [galleryImages.length, credentialImages.length, uploadGallery, uploadCredential, t]
   );
 
   const removeImage = useCallback(
@@ -212,7 +214,7 @@ function TrainerProfile() {
       try {
         await deleteTrainerImage(id).unwrap();
       } catch (err: any) {
-        Alert.alert("Error", err?.data?.message || "Could not delete image.");
+        Alert.alert(t("error"), err?.data?.message || t("deleteImageError"));
       } finally {
         setDeletingImageId(null);
       }
@@ -278,14 +280,14 @@ function TrainerProfile() {
 
   const handleDelete = useCallback(async () => {
     Alert.alert(
-      "Delete Trainer Profile",
-      "Are you sure you want to delete your trainer profile? This action cannot be undone.",
+      t("deleteTrainerTitle"),
+      t("deleteTrainerMessage"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => performDelete() },
+        { text: t("cancel"), style: "cancel" },
+        { text: t("delete"), style: "destructive", onPress: () => performDelete() },
       ]
     );
-  }, []);
+  }, [t]);
 
   const performDelete = useCallback(async () => {
     try {
@@ -296,20 +298,20 @@ function TrainerProfile() {
       }
       router.push("/(auth)/Welcome");
     } catch {
-      Alert.alert("Error", "Failed to delete trainer profile");
+      Alert.alert(t("error"), t("deleteTrainerError"));
     }
-  }, [deleteTrainerProfile, dispatch, user, token]);
+  }, [deleteTrainerProfile, dispatch, user, token, t]);
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
-      "Delete Account",
-      "This will permanently delete your entire account and all associated data. This action cannot be undone.",
+      t("deleteFullAccountTitle"),
+      t("deleteFullAccountMessage"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: performDeleteAccount },
+        { text: t("cancel"), style: "cancel" },
+        { text: t("delete"), style: "destructive", onPress: performDeleteAccount },
       ]
     );
-  }, []);
+  }, [t]);
 
   const performDeleteAccount = useCallback(async () => {
     try {
@@ -325,9 +327,9 @@ function TrainerProfile() {
       }
       router.replace("/(auth)/Welcome");
     } catch {
-      Alert.alert("Error", "Failed to delete account. Please try again.");
+      Alert.alert(t("error"), t("deleteAccountError"));
     }
-  }, [deleteAccount, dispatch]);
+  }, [deleteAccount, dispatch, t]);
 
   const handleSubscribe = useCallback(async () => {
     setIsSubscribing(true);
@@ -361,12 +363,12 @@ function TrainerProfile() {
       parsedExperience !== undefined &&
       (!Number.isFinite(parsedExperience) || parsedExperience < 0)
     ) {
-      Alert.alert("Invalid input", "Experience years must be 0 or greater.");
+      Alert.alert(t("invalidInput"), t("invalidExperience"));
       return;
     }
 
     if (parsedHourly !== undefined && (!Number.isFinite(parsedHourly) || parsedHourly < 0)) {
-      Alert.alert("Invalid input", "Hourly rate must be 0 or greater.");
+      Alert.alert(t("invalidInput"), t("invalidHourly"));
       return;
     }
 
@@ -374,33 +376,30 @@ function TrainerProfile() {
       parsedSession !== undefined &&
       (!Number.isFinite(parsedSession) || parsedSession < 0)
     ) {
-      Alert.alert("Invalid input", "Session rate must be 0 or greater.");
+      Alert.alert(t("invalidInput"), t("invalidSession"));
       return;
     }
 
     if (selectedSpecializationIds.length === 0) {
-      Alert.alert("Invalid input", "Select at least one specialization.");
+      Alert.alert(t("invalidInput"), t("invalidSpecializations"));
       return;
     }
 
     const instagramPayload = normalizeSocialUrlForSave(instagramUrl);
     if (instagramPayload === "INVALID") {
-      Alert.alert("Invalid input", "Instagram link must be a valid URL.");
+      Alert.alert(t("invalidInput"), t("invalidInstagram"));
       return;
     }
 
     const facebookPayload = normalizeSocialUrlForSave(facebookUrl);
     if (facebookPayload === "INVALID") {
-      Alert.alert("Invalid input", "Facebook link must be a valid URL.");
+      Alert.alert(t("invalidInput"), t("invalidFacebook"));
       return;
     }
 
     const whatsappPayload = normalizeWhatsAppForSave(whatsappUrl);
     if (whatsappPayload === "INVALID") {
-      Alert.alert(
-        "Invalid input",
-        "WhatsApp must be a valid phone number (for example +40712345678) or a wa.me/api.whatsapp.com link with a phone number."
-      );
+      Alert.alert(t("invalidInput"), t("invalidWhatsApp"));
       return;
     }
 
@@ -423,10 +422,10 @@ function TrainerProfile() {
         dispatch(setTrainerProfile(response.data));
       }
       setIsEditing(false);
-      Alert.alert("Success", "Trainer profile updated.");
+      Alert.alert(t("success"), t("profileUpdated"));
     } catch (error: any) {
-      const message = error?.data?.message || "Failed to update profile";
-      Alert.alert("Error", message);
+      const message = error?.data?.message || t("updateError");
+      Alert.alert(t("error"), message);
     }
   }, [
     trainer,
@@ -448,9 +447,9 @@ function TrainerProfile() {
   if (user?.role !== UserRole.TRAINER) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Trainer profile is available only for trainer accounts.</Text>
+        <Text style={styles.errorText}>{t("trainerOnly")}</Text>
         <Pressable style={styles.button} onPress={() => router.push("/")}>
-          <Text style={styles.buttonText}>Go Home</Text>
+          <Text style={styles.buttonText}>{t("goHome")}</Text>
         </Pressable>
       </View>
     );
@@ -467,20 +466,21 @@ function TrainerProfile() {
   if (!trainer) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>No trainer profile found</Text>
+        <Text style={styles.errorText}>{t("noTrainerFound")}</Text>
         <Pressable style={styles.button} onPress={() => router.push("/login")}>
-          <Text style={styles.buttonText}>Login</Text>
+          <Text style={styles.buttonText}>{t("login")}</Text>
         </Pressable>
         <Pressable style={styles.button} onPress={() => router.push("/")}>
-          <Text style={styles.buttonText}>Go Back</Text>
+          <Text style={styles.buttonText}>{t("goBack")}</Text>
         </Pressable>
       </View>
     );
   }
 
+  const dateLocale = language === "ro" ? "ro-RO" : "en-US";
   const formatDate = (date: string | Date) => {
     if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-US", {
+    return new Date(date).toLocaleDateString(dateLocale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -511,7 +511,7 @@ function TrainerProfile() {
           <Pressable style={styles.backBtn} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
           </Pressable>
-          <Text style={styles.title}>Trainer Profile</Text>
+          <Text style={styles.title}>{t("trainerProfile")}</Text>
           {!isEditing && (
             <Pressable style={styles.menuIconButton} onPress={() => setMenuVisible(true)}>
               <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
@@ -532,7 +532,7 @@ function TrainerProfile() {
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Ionicons name="ellipse" size={10} color={trainer.isAvailable ? theme.colors.success : theme.colors.error} style={{marginRight: 4}} />
             <Text style={styles.statusText}>
-              {trainer.isAvailable ? "Available" : "Unavailable"}
+              {trainer.isAvailable ? t("available") : t("unavailable")}
             </Text>
           </View>
         </View>
@@ -540,7 +540,7 @@ function TrainerProfile() {
           <View style={styles.featuredBadge}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Ionicons name="star" size={14} color="#D97706" style={{marginRight: 4}} />
-              <Text style={styles.featuredText}>Featured Trainer</Text>
+              <Text style={styles.featuredText}>{t("featuredTrainer")}</Text>
             </View>
           </View>
         )}
@@ -548,24 +548,24 @@ function TrainerProfile() {
 
       {/* ── Bio ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About Me</Text>
+        <Text style={styles.sectionTitle}>{t("aboutMe")}</Text>
         {isEditing ? (
           <TextInput
             style={[styles.input, styles.textArea]}
             multiline
             value={bio}
             onChangeText={setBio}
-            placeholder="Tell clients about your coaching style"
+            placeholder={t("bioPlaceholder")}
           />
         ) : (
-          <Text style={styles.bioText}>{trainer.bio || "No bio available"}</Text>
+          <Text style={styles.bioText}>{trainer.bio || t("noBio")}</Text>
         )}
       </View>
 
       {/* ── Gallery & credentials ── */}
       <TrainerImageSection
-        title="Gallery"
-        subtitle="Showcase photos clients see on your profile."
+        title={t("gallery")}
+        subtitle={t("gallerySubtitle")}
         images={galleryImages}
         max={MAX_TRAINER_IMAGES}
         uploading={isUploadingGallery}
@@ -574,8 +574,8 @@ function TrainerProfile() {
         onDelete={removeImage}
       />
       <TrainerImageSection
-        title="Certifications & Awards"
-        subtitle="Upload your certificates and contest awards."
+        title={t("certificationsAwards")}
+        subtitle={t("certificationsSubtitle")}
         images={credentialImages}
         max={MAX_TRAINER_IMAGES}
         uploading={isUploadingCredential}
@@ -586,7 +586,7 @@ function TrainerProfile() {
 
       {/* ── Experience & Rates ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Experience & Rates</Text>
+        <Text style={styles.sectionTitle}>{t("experienceAndRates")}</Text>
         {isEditing ? (
           <View style={styles.editGrid}>
             <TextInput
@@ -594,36 +594,36 @@ function TrainerProfile() {
               keyboardType="number-pad"
               value={experienceYears}
               onChangeText={setExperienceYears}
-              placeholder="Experience years"
+              placeholder={t("experiencePlaceholder")}
             />
             <TextInput
               style={styles.input}
               keyboardType="decimal-pad"
               value={hourlyRate}
               onChangeText={setHourlyRate}
-              placeholder="Hourly rate"
+              placeholder={t("hourlyRatePlaceholder")}
             />
             <TextInput
               style={styles.input}
               keyboardType="decimal-pad"
               value={sessionRate}
               onChangeText={setSessionRate}
-              placeholder="Session rate"
+              placeholder={t("sessionRatePlaceholder")}
             />
           </View>
         ) : (
           <View style={styles.infoGrid}>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Experience</Text>
-              <Text style={styles.infoValue}>{trainer.experienceYears || 0} years</Text>
+              <Text style={styles.infoLabel}>{t("experience")}</Text>
+              <Text style={styles.infoValue}>{trainer.experienceYears || 0} {t("years")}</Text>
             </View>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Hourly Rate</Text>
-              <Text style={styles.infoValue}>${trainer.hourlyRate || 0}/hr</Text>
+              <Text style={styles.infoLabel}>{t("hourlyRate")}</Text>
+              <Text style={styles.infoValue}>${trainer.hourlyRate || 0}{t("perHour")}</Text>
             </View>
             <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>Session Rate</Text>
-              <Text style={styles.infoValue}>${trainer.sessionRate || 0}/session</Text>
+              <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
+              <Text style={styles.infoValue}>${trainer.sessionRate || 0}{t("perSession")}</Text>
             </View>
           </View>
         )}
@@ -633,7 +633,7 @@ function TrainerProfile() {
       <View style={styles.section}>
         <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
           <Ionicons name="location" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Location</Text>
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("location")}</Text>
         </View>
         {isEditing ? (
           <View style={styles.editGrid}>
@@ -641,19 +641,19 @@ function TrainerProfile() {
               style={styles.input}
               value={locationCity}
               onChangeText={setLocationCity}
-              placeholder="City"
+              placeholder={t("city")}
             />
             <TextInput
               style={styles.input}
               value={locationState}
               onChangeText={setLocationState}
-              placeholder="State"
+              placeholder={t("state")}
             />
             <TextInput
               style={styles.input}
               value={locationCountry}
               onChangeText={setLocationCountry}
-              placeholder="Country"
+              placeholder={t("country")}
             />
           </View>
         ) : (
@@ -661,10 +661,10 @@ function TrainerProfile() {
             <Text style={styles.locationText}>
               {trainer.locationCity && trainer.locationState
                 ? `${trainer.locationCity}, ${trainer.locationState}`
-                : "Location not specified"}
+                : t("locationNotSpecified")}
             </Text>
             <Text style={styles.locationSubtext}>
-              {trainer.locationCountry || "Country not specified"}
+              {trainer.locationCountry || t("countryNotSpecified")}
             </Text>
           </>
         )}
@@ -673,7 +673,7 @@ function TrainerProfile() {
       <View style={styles.section}>
         <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
           <Ionicons name="phone-portrait-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Social Media</Text>
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("socialMedia")}</Text>
         </View>
         {isEditing ? (
           <View style={styles.editGrid}>
@@ -684,7 +684,7 @@ function TrainerProfile() {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
-              placeholder="Instagram profile URL"
+              placeholder={t("instagramPlaceholder")}
             />
             <TextInput
               style={styles.input}
@@ -693,7 +693,7 @@ function TrainerProfile() {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
-              placeholder="Facebook profile URL"
+              placeholder={t("facebookPlaceholder")}
             />
             <TextInput
               style={styles.input}
@@ -702,7 +702,7 @@ function TrainerProfile() {
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="phone-pad"
-              placeholder="WhatsApp number (e.g. +40712345678)"
+              placeholder={t("whatsappPlaceholder")}
             />
           </View>
         ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
@@ -718,20 +718,20 @@ function TrainerProfile() {
             ) : null}
           </View>
         ) : (
-          <Text style={styles.locationSubtext}>No social links added</Text>
+          <Text style={styles.locationSubtext}>{t("noSocialLinks")}</Text>
         )}
       </View>
 
       <View style={styles.section}>
         <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
           <Ionicons name="pricetag-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Specializations</Text>
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("specializations")}</Text>
         </View>
         {isEditing ? (
           isSpecializationsLoading ? (
             <View style={styles.specLoadingRow}>
               <ActivityIndicator size="small" color="#6366F1" />
-              <Text style={styles.specLoadingText}>Loading specializations...</Text>
+              <Text style={styles.specLoadingText}>{t("loadingSpecializations")}</Text>
             </View>
           ) : specializationOptions.length > 0 ? (
             <View style={styles.specGrid}>
@@ -753,7 +753,7 @@ function TrainerProfile() {
           ) : (
             <View style={styles.specFallbackBox}>
               <Text style={styles.specFallbackText}>
-                No specialization options loaded.
+                {t("noSpecOptions")}
               </Text>
               <Pressable
                 style={styles.specRetryButton}
@@ -762,7 +762,7 @@ function TrainerProfile() {
                   void refetch();
                 }}
               >
-                <Text style={styles.specRetryText}>Retry</Text>
+                <Text style={styles.specRetryText}>{t("retry")}</Text>
               </Pressable>
             </View>
           )
@@ -775,7 +775,7 @@ function TrainerProfile() {
             ))}
           </View>
         ) : (
-          <Text style={styles.locationSubtext}>No specialization selected</Text>
+          <Text style={styles.locationSubtext}>{t("noSpecSelected")}</Text>
         )}
       </View>
 
@@ -783,16 +783,16 @@ function TrainerProfile() {
       <View style={styles.section}>
         <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
           <Ionicons name="bar-chart-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Statistics</Text>
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("statistics")}</Text>
         </View>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{trainer.profileViews || 0}</Text>
-            <Text style={styles.statLabel}>Profile Views</Text>
+            <Text style={styles.statLabel}>{t("profileViews")}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{trainer.reviewCount || 0}</Text>
-            <Text style={styles.statLabel}>Reviews</Text>
+            <Text style={styles.statLabel}>{t("reviews")}</Text>
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{Number(trainer.totalRating || 0).toFixed(1)}</Text>
@@ -808,8 +808,8 @@ function TrainerProfile() {
         <View style={styles.analyticsButtonInner}>
           <Ionicons name="analytics-outline" size={26} color={theme.colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.analyticsButtonTitle}>Trainer Analytics</Text>
-            <Text style={styles.analyticsButtonSub}>View trends, sources, age, and sex breakdowns</Text>
+            <Text style={styles.analyticsButtonTitle}>{t("trainerAnalytics")}</Text>
+            <Text style={styles.analyticsButtonSub}>{t("analyticsSubtitle")}</Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
         </View>
@@ -817,13 +817,13 @@ function TrainerProfile() {
 
       {/* ── Account info ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Account Information</Text>
+        <Text style={styles.sectionTitle}>{t("accountInformation")}</Text>
         <View style={styles.accountInfo}>
-          <Text style={styles.accountLabel}>Profile Created:</Text>
+          <Text style={styles.accountLabel}>{t("profileCreated")}</Text>
           <Text style={styles.accountValue}>{formatDate(trainer.createdAt)}</Text>
         </View>
         <View style={styles.accountInfo}>
-          <Text style={styles.accountLabel}>Last Updated:</Text>
+          <Text style={styles.accountLabel}>{t("lastUpdated")}</Text>
           <Text style={styles.accountValue}>{formatDate(trainer.updatedAt)}</Text>
         </View>
       </View>
@@ -838,8 +838,8 @@ function TrainerProfile() {
           <View style={styles.gymsButtonInner}>
             <Ionicons name="barbell" size={28} color={theme.colors.primary} />
             <View style={{flex: 1}}>
-              <Text style={styles.gymsButtonTitle}>My Gyms</Text>
-              <Text style={styles.gymsButtonSub}>Manage your gym locations & availability</Text>
+              <Text style={styles.gymsButtonTitle}>{t("myGyms")}</Text>
+              <Text style={styles.gymsButtonSub}>{t("gymsSubtitle")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
           </View>
@@ -847,7 +847,7 @@ function TrainerProfile() {
 
         {isEditing && (
           <View style={styles.actionContainer}>
-            <Text style={styles.actionHeader}>Save Changes</Text>
+            <Text style={styles.actionHeader}>{t("saveChanges")}</Text>
             
             <Pressable
               style={({ pressed }) => [
@@ -867,7 +867,7 @@ function TrainerProfile() {
                 color="#fff" 
               />
               <Text style={styles.primaryActionText}>
-                {isUpdating ? "Saving..." : "Save Profile"}
+                {isUpdating ? t("saving") : t("saveProfile")}
               </Text>
             </Pressable>
 
@@ -896,7 +896,7 @@ function TrainerProfile() {
                 setIsEditing(false);
               }}
             >
-              <Text style={styles.secondaryActionText}>Cancel</Text>
+              <Text style={styles.secondaryActionText}>{t("cancel")}</Text>
             </Pressable>
           </View>
         )}
@@ -907,49 +907,60 @@ function TrainerProfile() {
     <Modal visible={menuVisible} transparent animationType="fade">
       <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
         <View style={styles.dropdownMenu}>
+          {/* Language toggle */}
+          <Pressable style={styles.dropdownItem} onPress={() => { setLanguage(language === "en" ? "ro" : "en"); }}>
+            <Ionicons name="language-outline" size={18} color={theme.colors.text} />
+            <Text style={styles.dropdownItemText}>{t("language")}</Text>
+            <View style={styles.langBadge}>
+              <Text style={styles.langBadgeText}>{language === "en" ? "EN" : "RO"}</Text>
+            </View>
+          </Pressable>
+
+          <View style={styles.dropdownDivider} />
+
           <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); setIsEditing(true); }}>
             <Ionicons name="pencil" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>Edit Profile</Text>
+            <Text style={styles.dropdownItemText}>{t("editProfile")}</Text>
           </Pressable>
-          
+
           <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); handleSubscribe(); }} disabled={isSubscribing}>
             {isSubscribing ? <ActivityIndicator size="small" color={theme.colors.text} /> : <Ionicons name="receipt-outline" size={18} color={theme.colors.text} />}
-            <Text style={styles.dropdownItemText}>{isSubscribing ? "Processing..." : "Manage Subscription"}</Text>
+            <Text style={styles.dropdownItemText}>{isSubscribing ? t("processing") : t("manageSubscription")}</Text>
           </Pressable>
 
           <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push("/legal"); }}>
             <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>Legal & Policies</Text>
+            <Text style={styles.dropdownItemText}>{t("legalAndPolicies")}</Text>
           </Pressable>
 
           <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}>
             <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>Report Issue</Text>
+            <Text style={styles.dropdownItemText}>{t("reportIssue")}</Text>
           </Pressable>
 
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); startTour(trainerTour); }} accessible accessibilityRole="button" accessibilityLabel="Show tutorial again">
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); startTour(trainerTour); }} accessible accessibilityRole="button" accessibilityLabel={t("showTutorial")}>
             <Ionicons name="help-circle-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>Show tutorial again</Text>
+            <Text style={styles.dropdownItemText}>{t("showTutorial")}</Text>
           </Pressable>
 
           <View style={styles.dropdownDivider} />
-          
+
           <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleLogout(); }}>
             <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>Log Out</Text>
+            <Text style={styles.dropdownItemText}>{t("logOut")}</Text>
           </Pressable>
-          
+
           <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleDelete(); }} disabled={isDeleting}>
             <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
             <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
-              {isDeleting ? "Deleting..." : "Delete Profile"}
+              {isDeleting ? t("deleting") : t("deleteProfile")}
             </Text>
           </Pressable>
 
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleDeleteAccount(); }} disabled={isDeletingAccount} accessible accessibilityRole="button" accessibilityLabel="Delete my account">
+          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleDeleteAccount(); }} disabled={isDeletingAccount} accessible accessibilityRole="button" accessibilityLabel={t("deleteAccount")}>
             <Ionicons name="person-remove-outline" size={18} color={theme.colors.error} />
             <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
-              {isDeletingAccount ? "Deleting..." : "Delete Account"}
+              {isDeletingAccount ? t("deleting") : t("deleteAccount")}
             </Text>
           </Pressable>
         </View>
@@ -1340,6 +1351,18 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     marginLeft: 12,
     fontWeight: "600",
+    flex: 1,
+  },
+  langBadge: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  langBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
   dropdownDivider: {
     height: 1,

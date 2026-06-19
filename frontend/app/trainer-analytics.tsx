@@ -17,32 +17,7 @@ import {
   useGetTrainerAnalyticsQuery,
 } from "../features/trainer/trainerApiSlice";
 import { theme, typography } from "../src/lib/theme";
-
-const sourceLabels: Record<keyof TrainerAnalyticsBreakdown, string> = {
-  search: "Search",
-  map: "Map",
-  direct: "Direct",
-  other: "Other",
-};
-
-const ageLabels = [
-  ["under_18", "Under 18"],
-  ["18_24", "18-24"],
-  ["25_34", "25-34"],
-  ["35_44", "35-44"],
-  ["45_54", "45-54"],
-  ["55_plus", "55+"],
-  ["unknown", "Unknown"],
-] as const;
-
-const sexLabels = [
-  ["male", "Male"],
-  ["female", "Female"],
-  ["non_binary", "Non-binary"],
-  ["other", "Other"],
-  ["prefer_not_to_say", "Prefer not to say"],
-  ["unknown", "Unknown"],
-] as const;
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 const formatPercent = (value: number, total: number) => {
   if (!total) {
@@ -101,7 +76,34 @@ function BreakdownRow({
 
 export default function TrainerAnalyticsScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const user = useSelector(selectCurrentUser);
+
+  const sourceLabels: Record<keyof TrainerAnalyticsBreakdown, string> = {
+    search: t("sourceSearch"),
+    map: t("sourceMap"),
+    direct: t("sourceDirect"),
+    other: t("sourceOther"),
+  };
+
+  const ageLabels: readonly (readonly [string, string])[] = [
+    ["under_18", "Under 18"],
+    ["18_24", "18-24"],
+    ["25_34", "25-34"],
+    ["35_44", "35-44"],
+    ["45_54", "45-54"],
+    ["55_plus", "55+"],
+    ["unknown", t("ageUnknown")],
+  ];
+
+  const sexLabels: readonly (readonly [string, string])[] = [
+    ["male", "Male"],
+    ["female", "Female"],
+    ["non_binary", "Non-binary"],
+    ["other", t("sourceOther")],
+    ["prefer_not_to_say", "Prefer not to say"],
+    ["unknown", t("ageUnknown")],
+  ];
 
   const { data, isLoading, isFetching, isError, refetch } = useGetTrainerAnalyticsQuery(undefined, {
     skip: user?.role !== UserRole.TRAINER,
@@ -110,7 +112,7 @@ export default function TrainerAnalyticsScreen() {
   if (user?.role !== UserRole.TRAINER) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Trainer analytics is available only for trainer accounts.</Text>
+        <Text style={styles.errorText}>{t("analyticsTrainerOnly")}</Text>
         <Pressable
           style={styles.primaryButton}
           onPress={() => router.back()}
@@ -118,7 +120,7 @@ export default function TrainerAnalyticsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Text style={styles.primaryButtonText}>Go back</Text>
+          <Text style={styles.primaryButtonText}>{t("goBack")}</Text>
         </Pressable>
       </View>
     );
@@ -128,7 +130,7 @@ export default function TrainerAnalyticsScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading analytics...</Text>
+        <Text style={styles.loadingText}>{t("loadingAnalytics")}</Text>
       </View>
     );
   }
@@ -136,7 +138,7 @@ export default function TrainerAnalyticsScreen() {
   if (isError || !data) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Could not load trainer analytics.</Text>
+        <Text style={styles.errorText}>{t("couldNotLoadAnalytics")}</Text>
         <Pressable
           style={styles.primaryButton}
           onPress={() => refetch()}
@@ -144,7 +146,7 @@ export default function TrainerAnalyticsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Try again"
         >
-          <Text style={styles.primaryButtonText}>Try again</Text>
+          <Text style={styles.primaryButtonText}>{t("tryAgain")}</Text>
         </Pressable>
       </View>
     );
@@ -163,24 +165,24 @@ export default function TrainerAnalyticsScreen() {
             <Ionicons name="analytics" size={24} color={theme.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>Trainer Analytics</Text>
+            <Text style={styles.heroTitle}>{t("analyticsTitle")}</Text>
             <Text style={styles.heroSubtitle}>
-              Profile views, discovery sources, and audience demographics.
+              {t("analyticsDescription")}
             </Text>
           </View>
         </View>
 
         <View style={styles.heroMetrics}>
-          <MetricCard label="Total views" value={data.totalViews} hint="Deduplicated views" />
-          <MetricCard label="Unique events" value={data.uniqueViewEvents} hint="Counted sessions" />
-          <MetricCard label="Tracked days" value={data.viewsByDay.length} hint="Last 7 days" />
+          <MetricCard label={t("totalViews")} value={data.totalViews} hint={t("deduplicatedViews")} />
+          <MetricCard label={t("uniqueEvents")} value={data.uniqueViewEvents} hint={t("countedSessions")} />
+          <MetricCard label={t("trackedDays")} value={data.viewsByDay.length} hint={t("last7Days")} />
         </View>
       </View>
 
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="trending-up-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>View Trends</Text>
+          <Text style={styles.sectionTitle}>{t("viewTrends")}</Text>
         </View>
         <View style={styles.trendRow}>
           {data.viewsByDay.map((item) => {
@@ -200,7 +202,7 @@ export default function TrainerAnalyticsScreen() {
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="locate-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>Source Breakdown</Text>
+          <Text style={styles.sectionTitle}>{t("sourceBreakdown")}</Text>
         </View>
         <View style={styles.breakdownStack}>
           {(Object.keys(data.sourceBreakdown) as Array<keyof TrainerAnalyticsBreakdown>).map((key) => (
@@ -218,11 +220,11 @@ export default function TrainerAnalyticsScreen() {
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="people-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>Audience Age</Text>
+          <Text style={styles.sectionTitle}>{t("audienceAge")}</Text>
         </View>
         <View style={styles.breakdownStack}>
           {ageLabels.map(([key, label]) => (
-            <BreakdownRow key={key} label={label} value={data.ageBreakdown[key]} total={totalAgeViews} />
+            <BreakdownRow key={key} label={label} value={data.ageBreakdown[key as keyof typeof data.ageBreakdown]} total={totalAgeViews} />
           ))}
         </View>
       </View>
@@ -230,11 +232,11 @@ export default function TrainerAnalyticsScreen() {
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="person-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>Audience Sex</Text>
+          <Text style={styles.sectionTitle}>{t("audienceSex")}</Text>
         </View>
         <View style={styles.breakdownStack}>
           {sexLabels.map(([key, label]) => (
-            <BreakdownRow key={key} label={label} value={data.sexBreakdown[key]} total={totalSexViews} />
+            <BreakdownRow key={key} label={label} value={data.sexBreakdown[key as keyof typeof data.sexBreakdown]} total={totalSexViews} />
           ))}
         </View>
       </View>
@@ -242,7 +244,7 @@ export default function TrainerAnalyticsScreen() {
       <View style={styles.sectionCard}>
         <View style={styles.sectionHeader}>
           <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>Recent Views</Text>
+          <Text style={styles.sectionTitle}>{t("recentViews")}</Text>
         </View>
         {data.recentViews.length > 0 ? (
           data.recentViews.slice(0, 8).map((view) => (
@@ -250,14 +252,14 @@ export default function TrainerAnalyticsScreen() {
               <View style={styles.recentMeta}>
                 <Text style={styles.recentTitle}>{sourceLabels[view.sourceType]}</Text>
                 <Text style={styles.recentSubtitle}>
-                  {view.age !== null ? `${view.age} years` : "Age unknown"} · {view.sex.replace(/_/g, " ")}
+                  {view.age !== null ? `${view.age} ${t("years")}` : t("ageUnknown")} · {view.sex.replace(/_/g, " ")}
                 </Text>
               </View>
-              <Text style={styles.recentTime}>{new Date(view.viewedAt).toLocaleDateString()}</Text>
+              <Text style={styles.recentTime}>{new Date(view.viewedAt).toLocaleDateString(language === "ro" ? "ro-RO" : "en-US")}</Text>
             </View>
           ))
         ) : (
-          <Text style={styles.emptyText}>No tracked views yet.</Text>
+          <Text style={styles.emptyText}>{t("noTrackedViews")}</Text>
         )}
       </View>
     </ScrollView>

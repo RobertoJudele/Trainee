@@ -26,6 +26,7 @@ import {
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
@@ -390,6 +391,7 @@ const GymMarkerView = React.memo(function GymMarkerView({
 
 export default function MapScreen() {
   const router = useRouter();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const mapRef      = useRef<MapView>(null);
   const [selectedGymId, setSelectedGymId] = useState<number | null>(null);
@@ -875,12 +877,12 @@ export default function MapScreen() {
             ]}
           >
             <Text style={styles.availBadgeText}>
-              {trainer.isAvailableAtGym ? "Available" : "Busy"}
+              {trainer.isAvailableAtGym ? t("available") : t("unavailable")}
             </Text>
           </View>
         </View>
         <Text style={styles.trainerBio} numberOfLines={1}>
-          {trainer.bio ?? "Fitness trainer"}
+          {trainer.bio ?? t("fitnessTrainer")}
         </Text>
         <View style={styles.trainerStats}>
           <Text style={styles.trainerStat}>
@@ -893,7 +895,7 @@ export default function MapScreen() {
           {trainer.hourlyRate ? (
             <Text style={styles.trainerStatPrice}> · ${trainer.hourlyRate}/hr</Text>
           ) : null}
-          <Text style={styles.trainerViewLink}> · View details</Text>
+          <Text style={styles.trainerViewLink}> · {t("viewDetails")}</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -916,7 +918,7 @@ export default function MapScreen() {
       {gymsLoading ? (
         <View style={styles.mapLoading}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.mapLoadingText}>Loading gyms...</Text>
+          <Text style={styles.mapLoadingText}>{t("loadingGyms")}</Text>
         </View>
       ) : (
         <MapView
@@ -986,7 +988,7 @@ export default function MapScreen() {
             </View>
           ) : (
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetGymName}>Loading…</Text>
+              <Text style={styles.sheetGymName}>{t("loading")}</Text>
               <TouchableOpacity
                 style={styles.closeBtn}
                 onPress={closeSheet}
@@ -1001,7 +1003,7 @@ export default function MapScreen() {
 
           {/* Pull-up hint pill */}
           <View style={styles.expandHintRow}>
-            <Text style={styles.expandHintText}>↑ pull up for full screen</Text>
+            <Text style={styles.expandHintText}>{t("pullUpFullScreen")}</Text>
           </View>
         </View>
 
@@ -1009,7 +1011,7 @@ export default function MapScreen() {
         {detailFetching || !gymDetail ? (
           <View style={styles.sheetLoading}>
             <ActivityIndicator color={theme.colors.primary} />
-            <Text style={styles.sheetLoadingText}>Loading gym details...</Text>
+            <Text style={styles.sheetLoadingText}>{t("loadingGymDetails")}</Text>
           </View>
         ) : (
           <ScrollView
@@ -1023,7 +1025,7 @@ export default function MapScreen() {
               <View style={styles.quickInfoChip}>
                 <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
                 <Text style={styles.quickInfoText} numberOfLines={1}>
-                  {gymDetail.openingHours ?? "Hours N/A"}
+                  {gymDetail.openingHours ?? t("hoursNA")}
                 </Text>
               </View>
               {gymDetail.phone && (
@@ -1056,7 +1058,7 @@ export default function MapScreen() {
 
             {/* Trainers */}
             <View style={styles.trainersHeader}>
-              <Text style={styles.trainersTitle}>Trainers here</Text>
+              <Text style={styles.trainersTitle}>{t("trainersHere")}</Text>
               <View style={styles.trainerCountBadge}>
                 <Text style={styles.trainerCountText}>
                   {gymTrainers.length}
@@ -1067,7 +1069,7 @@ export default function MapScreen() {
             {gymTrainers.length === 0 ? (
               <View style={styles.noTrainers}>
                 <Text style={styles.noTrainersText}>
-                  No trainers registered here yet
+                  {t("noTrainersHere")}
                 </Text>
               </View>
             ) : (

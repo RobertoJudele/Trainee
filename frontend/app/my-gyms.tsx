@@ -26,8 +26,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { useRouter } from "expo-router";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 export default function MyGymsScreen() {
+  const { t } = useLanguage();
   const router = useRouter();
   const user = useSelector(selectCurrentUser);
   console.log("Current user in MyGymsScreen:", user);
@@ -72,10 +74,10 @@ export default function MyGymsScreen() {
     async (gymId: number, gymName: string) => {
       try {
         await joinGym(gymId).unwrap();
-        Alert.alert("✅ Joined!", `You are now registered at ${gymName}`);
+        Alert.alert(t("joinedGym"), t("joinedGymMessage").replace("{name}", gymName));
         setShowBrowser(false);
       } catch (err: any) {
-        Alert.alert("Error", err?.data?.message ?? "Failed to join gym");
+        Alert.alert(t("error"), err?.data?.message ?? t("error"));
       }
     },
     [joinGym]
@@ -86,7 +88,7 @@ export default function MyGymsScreen() {
       try {
         await setAvailability({ gymId, isAvailable: !current }).unwrap();
       } catch (err: any) {
-        Alert.alert("Error", err?.data?.message ?? "Failed to update availability");
+        Alert.alert(t("error"), err?.data?.message ?? t("error"));
       }
     },
     [setAvailability]
@@ -95,18 +97,18 @@ export default function MyGymsScreen() {
   const handleLeave = useCallback(
     (gymId: number, gymName: string) => {
       Alert.alert(
-        "Leave gym",
-        `Remove yourself from ${gymName}?`,
+        t("leaveGym"),
+        t("removeFromGym").replace("{name}", gymName),
         [
-          { text: "Cancel", style: "cancel" },
+          { text: t("cancel"), style: "cancel" },
           {
-            text: "Leave",
+            text: t("leaveGym"),
             style: "destructive",
             onPress: async () => {
               try {
                 await leaveGym(gymId).unwrap();
               } catch (err: any) {
-                Alert.alert("Error", err?.data?.message ?? "Failed to leave gym");
+                Alert.alert(t("error"), err?.data?.message ?? t("error"));
               }
             },
           },
@@ -121,18 +123,18 @@ export default function MyGymsScreen() {
     return (
       <View style={styles.centeredBox}>
         <Ionicons name="barbell" size={48} color={theme.colors.primary} style={{ marginBottom: 8 }} />
-        <Text style={styles.emptyTitle}>Trainers only</Text>
+        <Text style={styles.emptyTitle}>{t("trainersOnlyGyms")}</Text>
         <Text style={styles.emptyDesc}>
-          You need a trainer profile to manage gym availability.
+          {t("trainersOnlyGymsMessage")}
         </Text>
         <TouchableOpacity
           style={styles.primaryBtn}
           onPress={() => router.push("/create-trainer")}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Become a Trainer"
+          accessibilityLabel={t("becomeATrainer")}
         >
-          <Text style={styles.primaryBtnText}>Become a Trainer</Text>
+          <Text style={styles.primaryBtnText}>{t("becomeATrainer")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -156,7 +158,7 @@ export default function MyGymsScreen() {
         {/* Availability toggle */}
         <View style={styles.toggleBox}>
           <Text style={styles.toggleLabel}>
-            {item.isAvailable ? "Available" : "Unavailable"}
+            {item.isAvailable ? t("available") : t("unavailable")}
           </Text>
           <Switch
             value={item.isAvailable}
@@ -178,8 +180,8 @@ export default function MyGymsScreen() {
           <Ionicons name={item.isAvailable ? "checkmark-circle" : "close-circle"} size={16} color={item.isAvailable ? "#059669" : "#DC2626"} style={{marginRight: 6}} />
           <Text style={styles.availText}>
             {item.isAvailable
-              ? "Clients can see you as available at this gym"
-              : "You appear unavailable at this gym"}
+              ? t("clientsCanSeeAvailable")
+              : t("youAppearUnavailable")}
           </Text>
         </View>
       </View>
@@ -193,7 +195,7 @@ export default function MyGymsScreen() {
         accessibilityRole="button"
         accessibilityLabel={`Leave ${item.name}`}
       >
-        <Text style={styles.leaveBtnText}>Leave gym</Text>
+        <Text style={styles.leaveBtnText}>{t("leaveGym")}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -215,7 +217,7 @@ export default function MyGymsScreen() {
         </View>
         {alreadyJoined ? (
           <View style={styles.joinedBadge}>
-            <Text style={styles.joinedBadgeText}>Joined</Text>
+            <Text style={styles.joinedBadgeText}>{t("joined")}</Text>
           </View>
         ) : (
           <TouchableOpacity
@@ -226,7 +228,7 @@ export default function MyGymsScreen() {
             accessibilityRole="button"
             accessibilityLabel={`Join ${gym.name}`}
           >
-            <Text style={styles.joinBtnText}>{joining ? "..." : "Join"}</Text>
+            <Text style={styles.joinBtnText}>{joining ? "..." : t("join")}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -237,7 +239,7 @@ export default function MyGymsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Gyms</Text>
+        <Text style={styles.headerTitle}>{t("myGyms")}</Text>
         <TouchableOpacity
           style={styles.addBtn}
           onPress={() => setShowBrowser(true)}
@@ -245,7 +247,7 @@ export default function MyGymsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Add Gym"
         >
-          <Text style={styles.addBtnText}>+ Add Gym</Text>
+          <Text style={styles.addBtnText}>{t("addGym")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -256,18 +258,18 @@ export default function MyGymsScreen() {
       ) : myGyms.length === 0 ? (
         <View style={styles.centeredBox}>
           <Ionicons name="location" size={48} color={theme.colors.primary} style={{marginBottom: 8}} />
-          <Text style={styles.emptyTitle}>No gyms yet</Text>
+          <Text style={styles.emptyTitle}>{t("noGymsYet")}</Text>
           <Text style={styles.emptyDesc}>
-            Add gyms where you train so clients can find you.
+            {t("addGymsMessage")}
           </Text>
           <TouchableOpacity
             style={styles.primaryBtn}
             onPress={() => setShowBrowser(true)}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Browse Gyms"
+            accessibilityLabel={t("browseGyms")}
           >
-            <Text style={styles.primaryBtnText}>Browse Gyms</Text>
+            <Text style={styles.primaryBtnText}>{t("browseGyms")}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -289,7 +291,7 @@ export default function MyGymsScreen() {
       >
         <View style={styles.modal}>
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Find a Gym</Text>
+            <Text style={styles.modalTitle}>{t("findAGym")}</Text>
             <TouchableOpacity
               onPress={() => setShowBrowser(false)}
               accessible={true}
@@ -304,7 +306,7 @@ export default function MyGymsScreen() {
             <Ionicons name="search" size={16} color={theme.colors.textSecondary} style={{marginRight: 8}} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search by name or city..."
+              placeholder={t("searchGymPlaceholder")}
               placeholderTextColor={theme.colors.textSecondary}
               value={gymSearch}
               onChangeText={setGymSearch}
@@ -328,7 +330,7 @@ export default function MyGymsScreen() {
               initialNumToRender={12}
               maxToRenderPerBatch={12}
               windowSize={11}
-              ListEmptyComponent={<Text style={styles.noResults}>No gyms found</Text>}
+              ListEmptyComponent={<Text style={styles.noResults}>{t("noGymsFound")}</Text>}
             />
           )}
         </View>

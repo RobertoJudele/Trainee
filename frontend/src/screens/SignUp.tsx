@@ -17,11 +17,13 @@ import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
+import { useLanguage } from '../lib/i18n/LanguageContext';
 
 export default function SignUp() {
   const router = useRouter();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -37,7 +39,7 @@ export default function SignUp() {
     setErrMsg('');
 
     if (!firstName || !lastName || !email || !password) {
-      setErrMsg('Please fill out all required fields');
+      setErrMsg(t('fillRequiredFields'));
       return;
     }
 
@@ -57,7 +59,7 @@ export default function SignUp() {
 
       router.replace('/');
     } catch (error: any) {
-      const errorMessage = error?.data?.message || 'Signup failed. Please try again.';
+      const errorMessage = error?.data?.message || t('signupFailed');
       setErrMsg(errorMessage);
     }
   };
@@ -87,8 +89,8 @@ export default function SignUp() {
           >
             <Ionicons name="person-add" size={38} color="#FFFFFF" />
           </LinearGradient>
-          <Text style={styles.title}>Create Account</Text>
-          <Text style={styles.subtitle}>Start your fitness journey today</Text>
+          <Text style={styles.title}>{t("createAccount")}</Text>
+          <Text style={styles.subtitle}>{t("signUpSubtitle")}</Text>
         </FadeInUp>
 
         {errMsg ? (
@@ -103,14 +105,14 @@ export default function SignUp() {
         <View style={styles.form}>
           <FadeInUp delay={theme.motion.stagger} style={styles.row}>
             <Field
-              label="First Name"
+              label={t("firstName")}
               placeholder="John"
               value={firstName}
               onChangeText={setFirstName}
               containerStyle={{ flex: 1 }}
             />
             <Field
-              label="Last Name"
+              label={t("lastName")}
               placeholder="Doe"
               value={lastName}
               onChangeText={setLastName}
@@ -120,8 +122,8 @@ export default function SignUp() {
 
           <FadeInUp delay={theme.motion.stagger * 2}>
             <Field
-              label="Email Address"
-              placeholder="your.email@example.com"
+              label={t("emailAddress")}
+              placeholder={t("emailPlaceholder")}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
@@ -131,7 +133,7 @@ export default function SignUp() {
 
           <FadeInUp delay={theme.motion.stagger * 3}>
             <Field
-              label="Phone Number"
+              label={t("phoneNumber")}
               placeholder="(555) 123-4567"
               value={phone}
               onChangeText={setPhone}
@@ -141,8 +143,8 @@ export default function SignUp() {
 
           <FadeInUp delay={theme.motion.stagger * 4}>
             <Field
-              label="Password"
-              placeholder="Create a strong password"
+              label={t("password")}
+              placeholder={t("createStrongPassword")}
               value={password}
               onChangeText={setPassword}
               secure
@@ -152,7 +154,7 @@ export default function SignUp() {
 
           <FadeInUp delay={theme.motion.stagger * 5}>
             <GradientButton
-              title="Sign Up"
+              title={t("signUp")}
               onPress={handleSignup}
               loading={isLoading}
               iconRight="arrow-forward"
@@ -161,13 +163,13 @@ export default function SignUp() {
 
           <FadeInUp delay={theme.motion.stagger * 6} style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>{t("or")}</Text>
             <View style={styles.dividerLine} />
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger * 7}>
             <OutlineButton
-              title="Already have an account? Sign In"
+              title={t("alreadyHaveAccount")}
               onPress={() => router.push('/(auth)/login')}
             />
           </FadeInUp>
@@ -177,9 +179,9 @@ export default function SignUp() {
               style={styles.backButton}
               onPress={() => router.back()}
               accessibilityRole="button"
-              accessibilityLabel="Back to Welcome"
+              accessibilityLabel={t("backToWelcome")}
             >
-              <Text style={styles.backButtonText}>← Back to Welcome</Text>
+              <Text style={styles.backButtonText}>{t("backToWelcome")}</Text>
             </TouchableOpacity>
           </FadeInUp>
         </View>

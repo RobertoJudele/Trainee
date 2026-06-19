@@ -9,8 +9,10 @@ import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, GradientButton, PressableScale } from "../src/components/ui";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 export default function MyScheduleScreen() {
+  const { t, language } = useLanguage();
   const router = useRouter();
   const user = useSelector(selectCurrentUser);
   const { data, isLoading, isError, refetch, isFetching } = useGetMyScheduleQuery();
@@ -32,26 +34,26 @@ export default function MyScheduleScreen() {
         expiresAt: resp.data.expiresAt,
       });
     } catch (error: any) {
-      Alert.alert("Error", error?.data?.message || "Could not generate check-in code.");
+      Alert.alert(t("error"), error?.data?.message || t("error"));
     }
   };
 
   const handleCancelBooking = useCallback((slotId: number, startsAt: string) => {
-    const dateStr = new Date(startsAt).toLocaleString();
+    const dateStr = new Date(startsAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US");
     Alert.alert(
-      "Cancel Booking",
-      `Are you sure you want to cancel your session on ${dateStr}? This cannot be undone.`,
+      t("cancelBooking"),
+      t("cancelBookingConfirm").replace("{date}", dateStr),
       [
-        { text: "Keep Booking", style: "cancel" },
+        { text: t("keepBooking"), style: "cancel" },
         {
-          text: "Cancel Booking",
+          text: t("cancelBooking"),
           style: "destructive",
           onPress: async () => {
             setCancellingSlotId(slotId);
             try {
               await unassignSlot({ slotId }).unwrap();
             } catch (err: any) {
-              Alert.alert("Error", err?.data?.message || "Could not cancel booking. Please try again.");
+              Alert.alert(t("error"), err?.data?.message || t("couldNotCancelBooking"));
             } finally {
               setCancellingSlotId(null);
             }
@@ -68,10 +70,10 @@ export default function MyScheduleScreen() {
           <View style={styles.emptyIconWrap}>
             <Ionicons name="lock-closed-outline" size={36} color={theme.colors.primary} />
           </View>
-          <Text style={styles.title}>Client access required</Text>
-          <Text style={styles.emptyText}>This page shows sessions assigned to clients.</Text>
+          <Text style={styles.title}>{t("clientAccessRequired")}</Text>
+          <Text style={styles.emptyText}>{t("clientAccessMessage")}</Text>
           <GradientButton
-            title="Go to Home"
+            title={t("goHome")}
             icon="home"
             onPress={() => router.replace("/")}
             style={{ marginTop: theme.spacing.md, alignSelf: "stretch" }}
@@ -96,8 +98,8 @@ export default function MyScheduleScreen() {
           <View style={[styles.emptyIconWrap, { backgroundColor: `${theme.colors.error}15` }]}>
             <Ionicons name="cloud-offline-outline" size={36} color={theme.colors.error} />
           </View>
-          <Text style={styles.emptyText}>Could not load your schedule.</Text>
-          <GradientButton title="Try Again" icon="refresh" onPress={refetch} style={{ marginTop: theme.spacing.md }} />
+          <Text style={styles.emptyText}>{t("couldNotLoadSchedule")}</Text>
+          <GradientButton title={t("tryAgain")} icon="refresh" onPress={refetch} style={{ marginTop: theme.spacing.md }} />
         </FadeInUp>
       </View>
     );
@@ -120,12 +122,12 @@ export default function MyScheduleScreen() {
               <Ionicons name="qr-code-outline" size={22} color="#FFFFFF" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.title}>Generate Client Code</Text>
-              <Text style={styles.text}>Share a short-lived code directly with your trainer.</Text>
+              <Text style={styles.title}>{t("generateClientCode")}</Text>
+              <Text style={styles.text}>{t("shareCodeMessage")}</Text>
             </View>
           </View>
           <GradientButton
-            title={isGeneratingCode ? "Generating..." : "Generate Check-in Code"}
+            title={isGeneratingCode ? t("generating") : t("generateCheckinCode")}
             icon="key-outline"
             onPress={onGenerateCode}
             loading={isGeneratingCode}
@@ -133,9 +135,9 @@ export default function MyScheduleScreen() {
           />
           {generatedCode && (
             <FadeInUp style={styles.codeBox}>
-              <Text style={styles.codeLabel}>Give this code to your trainer</Text>
+              <Text style={styles.codeLabel}>{t("giveCodeToTrainer")}</Text>
               <Text style={styles.codeText}>{generatedCode.code}</Text>
-              <Text style={styles.codeExpiry}>Expires: {new Date(generatedCode.expiresAt).toLocaleString()}</Text>
+              <Text style={styles.codeExpiry}>{t("expires")} {new Date(generatedCode.expiresAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US")}</Text>
             </FadeInUp>
           )}
         </FadeInUp>
@@ -146,8 +148,8 @@ export default function MyScheduleScreen() {
           <View style={styles.emptyIconWrap}>
             <Ionicons name="calendar-outline" size={36} color={theme.colors.primary} />
           </View>
-          <Text style={styles.emptyText}>No upcoming sessions yet.</Text>
-          <Text style={styles.text}>You can still generate a code above.</Text>
+          <Text style={styles.emptyText}>{t("noUpcomingSessions")}</Text>
+          <Text style={styles.text}>{t("canGenerateCode")}</Text>
         </FadeInUp>
       }
       renderItem={({ item, index }) => {
@@ -176,11 +178,11 @@ export default function MyScheduleScreen() {
               </View>
               <View style={styles.timeRow}>
                 <Ionicons name="time-outline" size={15} color={theme.colors.textSecondary} />
-                <Text style={styles.text}>{new Date(item.startsAt).toLocaleString()}</Text>
+                <Text style={styles.text}>{new Date(item.startsAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US")}</Text>
               </View>
               <View style={styles.timeRow}>
                 <Ionicons name="flag-outline" size={15} color={theme.colors.textSecondary} />
-                <Text style={styles.text}>{new Date(item.endsAt).toLocaleString()}</Text>
+                <Text style={styles.text}>{new Date(item.endsAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US")}</Text>
               </View>
               {item.status === "assigned" && (
                 <PressableScale
@@ -192,7 +194,7 @@ export default function MyScheduleScreen() {
                 >
                   <Ionicons name="close-circle-outline" size={16} color={theme.colors.error} style={{ marginRight: 6 }} />
                   <Text style={styles.cancelBtnText}>
-                    {cancellingSlotId === item.id ? "Cancelling..." : "Cancel Booking"}
+                    {cancellingSlotId === item.id ? t("cancelling") : t("cancelBooking")}
                   </Text>
                 </PressableScale>
               )}

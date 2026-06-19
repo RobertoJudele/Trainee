@@ -10,6 +10,7 @@ import {
   useGetTrainerSlotsQuery,
 } from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
+import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import {
   OutlineButton,
   ScheduleCard,
@@ -34,6 +35,7 @@ export default function TrainerWeekSnapshotScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ from?: string; to?: string }>();
   const user = useSelector(selectCurrentUser);
+  const { t, language } = useLanguage();
 
   const initialWeekDate =
     typeof params.from === "string" && isValidDateKey(params.from)
@@ -93,9 +95,9 @@ export default function TrainerWeekSnapshotScreen() {
   if (user?.role !== UserRole.TRAINER) {
     return (
       <View style={styles.deniedWrap}>
-        <Text style={styles.deniedTitle}>Trainer access required</Text>
-        <Text style={styles.deniedText}>This page is available only for trainer accounts.</Text>
-        <OutlineButton label="Go to Home" onPress={() => router.replace("/")} />
+        <Text style={styles.deniedTitle}>{t("scheduleTrainerRequired")}</Text>
+        <Text style={styles.deniedText}>{t("dayTrainerOnlyMsg")}</Text>
+        <OutlineButton label={t("goHome")} onPress={() => router.replace("/")} />
       </View>
     );
   }
@@ -104,37 +106,37 @@ export default function TrainerWeekSnapshotScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroCard}>
         <View style={styles.heroTopRow}>
-          <OutlineButton label="Back" onPress={() => router.back()} />
+          <OutlineButton label={t("back")} onPress={() => router.back()} />
           <View style={styles.heroTitleWrap}>
-            <Text style={styles.heroEyebrow}>Week Overview</Text>
-            <Text style={styles.heroTitle}>Week Snapshot</Text>
+            <Text style={styles.heroEyebrow}>{t("weekOverviewEyebrow")}</Text>
+            <Text style={styles.heroTitle}>{t("weekSnapshotTitle")}</Text>
             <Text style={styles.weekLabel}>{weekLabel}</Text>
           </View>
         </View>
 
         <View style={styles.weekNavRow}>
-          <OutlineButton label="Prev" onPress={() => setWeekStartDate(startOfWeek(addDays(weekStartDate, -7)))} />
-          <OutlineButton label="Today" onPress={() => setWeekStartDate(startOfWeek(new Date()))} />
-          <OutlineButton label="Next" onPress={() => setWeekStartDate(startOfWeek(addDays(weekStartDate, 7)))} />
+          <OutlineButton label={t("weekPrev")} onPress={() => setWeekStartDate(startOfWeek(addDays(weekStartDate, -7)))} />
+          <OutlineButton label={t("weekToday")} onPress={() => setWeekStartDate(startOfWeek(new Date()))} />
+          <OutlineButton label={t("weekNext")} onPress={() => setWeekStartDate(startOfWeek(addDays(weekStartDate, 7)))} />
         </View>
       </View>
 
-      <ScheduleCard title="Status Summary" subtitle="All slots in the displayed week.">
+      <ScheduleCard title={t("weekStatusSummary")} subtitle={t("weekStatusSubtitle")}>
         <View style={styles.metricGrid}>
           <View style={styles.metricChip}>
-            <Text style={styles.metricLabel}>Available</Text>
+            <Text style={styles.metricLabel}>{t("scheduleLegendAvailable")}</Text>
             <Text style={styles.metricValue}>{countByStatus.available}</Text>
           </View>
           <View style={styles.metricChip}>
-            <Text style={styles.metricLabel}>Assigned</Text>
+            <Text style={styles.metricLabel}>{t("weekAssigned")}</Text>
             <Text style={styles.metricValue}>{countByStatus.assigned}</Text>
           </View>
           <View style={styles.metricChip}>
-            <Text style={styles.metricLabel}>Completed</Text>
+            <Text style={styles.metricLabel}>{t("weekCompleted")}</Text>
             <Text style={styles.metricValue}>{countByStatus.completed}</Text>
           </View>
           <View style={styles.metricChip}>
-            <Text style={styles.metricLabel}>Canceled + No Show</Text>
+            <Text style={styles.metricLabel}>{t("weekCanceledNoShow")}</Text>
             <Text style={styles.metricValue}>{countByStatus.canceled + countByStatus.no_show}</Text>
           </View>
         </View>
@@ -155,19 +157,19 @@ export default function TrainerWeekSnapshotScreen() {
           <ScheduleCard
             key={dayKey}
             title={`${scheduleDayLabels[day.getDay()]} ${day.getDate()}`}
-            subtitle={blocked ? "Blocked day" : daySlots.length === 0 ? "No slots" : `${daySlots.length} slots`}
+            subtitle={blocked ? t("weekBlockedDay") : daySlots.length === 0 ? t("weekNoSlots") : `${daySlots.length} ${t("weekSlotsCount")}`}
             rightSlot={
               blocked ? (
                 <View style={styles.blockedBadge}>
-                  <Text style={styles.blockedBadgeText}>Blocked</Text>
+                  <Text style={styles.blockedBadgeText}>{t("scheduleLegendBlocked")}</Text>
                 </View>
               ) : undefined
             }
           >
             {blocked ? (
-              <Text style={styles.emptyText}>This day is blocked off.</Text>
+              <Text style={styles.emptyText}>{t("weekBlockedOff")}</Text>
             ) : daySlots.length === 0 ? (
-              <Text style={styles.emptyText}>No slots created for this day.</Text>
+              <Text style={styles.emptyText}>{t("weekNoSlotsCreated")}</Text>
             ) : (
               daySlots.map((slot) => (
                 <View key={slot.id} style={styles.slotRow}>
@@ -180,7 +182,7 @@ export default function TrainerWeekSnapshotScreen() {
                         {slot.client.firstName} {slot.client.lastName}
                       </Text>
                     ) : (
-                      <Text style={styles.slotClientPlaceholder}>No client assigned</Text>
+                      <Text style={styles.slotClientPlaceholder}>{t("weekNoClientAssigned")}</Text>
                     )}
                   </View>
                   <StatusBadge status={slot.status} />

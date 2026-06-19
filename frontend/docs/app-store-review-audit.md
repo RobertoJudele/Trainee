@@ -161,12 +161,89 @@ it **must** use Apple IAP. Source: `app/checkout.tsx`, `features/billing/billing
 
 ---
 
-## 5. Metadata, Build & HIG — _NOT YET AUDITED_
+## 5. Metadata, Build & HIG — _audited 2026-06-19_
 
-Mostly lives in App Store Connect (not visible from the repo). To check before submission:
-metadata/screenshots (app name & subtitle 30-char, keyword field 100-char comma format,
-6.9" iPhone + 13" iPad screenshot sets, no prices / no other-platform mentions); Xcode 26+/SDK 26
-build requirement for uploads after 2026-04-28; HIG (Dark Mode / Dynamic Type, launch screen).
+### 5a. Dark Mode — 🟡 NOT SUPPORTED
+
+- `app.json` sets `"userInterfaceStyle": "light"` → Expo forces light mode system-wide. The app
+  does not respond to system dark-mode at all.
+- `theme.ts` contains a single light palette (background `#F8FAFC`, surface `#FFFFFF`,
+  text `#0F172A`). No dark variant, no `useColorScheme`, no `Appearance` API usage anywhere.
+- Many screens use inline hardcoded light-only colors (e.g. `backgroundColor: "#fff"`,
+  `color: "#333"`, `backgroundColor: "#F8F9FA"`) outside the theme system — at least
+  `TrainerProfile.tsx`, `CreateTrainer.tsx`, `[date].tsx`, `week-snapshot.tsx`, `map.tsx`.
+- **HIG note:** Apple's HIG *strongly recommends* Dark Mode support but it is **not an App Review
+  rejection reason** on its own. Locking to `"userInterfaceStyle": "light"` is a valid choice —
+  Apple will not reject for this.
+- **Recommendation:** acceptable for launch. If adding Dark Mode later, centralize all colors
+  through the theme first (eliminate inline hex values), then add a dark palette.
+
+### 5b. Dynamic Type — 🟡 NOT SUPPORTED (low rejection risk)
+
+- `typography` in `theme.ts` uses fixed `fontSize` values (12–34px). No screen uses
+  `allowFontScaling`, `maxFontSizeMultiplier`, or React Native's built-in Dynamic Type scaling.
+- React Native's `<Text>` defaults to `allowFontScaling={true}`, so system font scaling
+  **does partially work** — but fixed layout dimensions can break with large accessibility sizes
+  (text clipping, overlapping badges, overflowing cards).
+- **HIG note:** Dynamic Type support is recommended but **not a rejection requirement** per se.
+  Apple may flag it under Guideline 4.0 (Design) if the app is fully unusable at large sizes, but
+  a fitness app with fixed-size UI is very unlikely to be rejected for this alone.
+- **Recommendation:** acceptable for launch. For a future pass, add `maxFontSizeMultiplier={1.3}`
+  to key UI Text elements and test at the largest system size.
+
+### 5c. Launch Screen / Splash — 🟢 OK
+
+- `app.json → splash` configured: `splash-icon.png`, `resizeMode: "contain"`,
+  `backgroundColor: "#ffffff"`. Expo generates the native launch storyboard from this.
+- No placeholder / "Powered by" / test text visible.
+
+### 5d. Navigation Patterns — 🟢 OK
+
+- Uses `expo-router` `<Stack>` with `slide_from_right` animation (standard iOS push navigation).
+- Back buttons present on all sub-screens (profile, search, map, schedule, preferences, legal).
+- No non-standard gestures that would confuse an Apple reviewer.
+- Modals used appropriately (gym browser in `my-gyms.tsx`, dropdown menus in profiles).
+
+### 5e. StatusBar — 🟡 MINOR
+
+- `_layout.tsx` sets `<StatusBar style="light" />` globally. This works on gradient headers
+  (Welcome, Home, Profile) but on screens with white/light backgrounds (search, schedule,
+  preferences) the white status-bar text becomes invisible against the light header.
+- **Rejection risk:** Low — but it's a visible UX bug. Consider `style="auto"` or per-screen
+  status bar control.
+
+### 5f. iPad Support — 🟡 NEEDS SCREENSHOTS
+
+- `app.json` sets `"supportsTablet": true` → the app runs on iPad natively (not scaled).
+- This **triggers the App Store Connect requirement for 13-inch iPad screenshots**. You must
+  provide them or change `supportsTablet` to `false`.
+- The UI is phone-first with no tablet-specific layout (no sidebar, no split view). On iPad it
+  will render as a stretched phone app. This is **not a rejection reason** — many apps ship
+  phone-first on iPad — but screenshots must still be provided.
+
+### 5g. App Name & Bundle ID — 🟢 / 🟡
+
+- Display name: `Trainee` (7 chars) — well within 30-char limit. ✅
+- Bundle ID: `com.juroctech.frontend` — the `.frontend` suffix is unusual and user-facing in
+  some contexts (Keychain groups, iCloud containers). Not a rejection risk but consider a cleaner
+  ID like `com.juroctech.trainee` for future builds. **Cannot change after first submission
+  without creating a new App Store listing.**
+
+### 5h. Build / SDK — 🟢 DONE
+
+- Xcode 26+ / SDK 26+ requirement for uploads after 2026-04-28 confirmed done (per §C above).
+
+### 5i. Metadata (ASC-only items) — ⏳ OUTSTANDING
+
+These live in App Store Connect, not in the repo:
+- Subtitle (≤30 chars)
+- Keyword field (≤100 chars, comma-separated, no spaces after commas)
+- 6.9-inch iPhone screenshot set (1–10 screenshots)
+- 13-inch iPad screenshot set (**required** since `supportsTablet: true`)
+- App Preview video (optional, ≤30s)
+- No prices in description, no other-platform references
+
+Cannot verify from code — verify at submission time.
 
 ---
 
@@ -231,6 +308,21 @@ Single source of truth for what's still open. Code fixes from §1–§4 are alre
 - [x] 🔴 ~~**Build with Xcode 26+ / platform SDK 26+** (required for uploads after 2026-04-28).~~ —
       **done 2026-06-18.**
 
-## D. Not yet audited
-- [ ] §5 — Metadata/build/HIG deep pass (Dark Mode, Dynamic Type, launch screen, navigation patterns).
+## D. Metadata / Build / HIG — audited 2026-06-19
+- [x] 🟢 **§5a — Dark Mode** — not supported (`userInterfaceStyle: "light"`). Acceptable for launch;
+      not a rejection reason. Many inline hardcoded colors exist outside theme — centralize before
+      adding dark mode.
+- [x] 🟢 **§5b — Dynamic Type** — not explicitly supported but RN default `allowFontScaling` provides
+      partial scaling. Low rejection risk for a fitness app. Future: add `maxFontSizeMultiplier`.
+- [x] 🟢 **§5c — Launch screen** — splash configured correctly in `app.json`.
+- [x] 🟢 **§5d — Navigation** — standard Stack navigation, back buttons present, modals used correctly.
+- [ ] 🟡 **§5e — StatusBar** — globally `light` style causes invisible text on white-background screens.
+      Consider `style="auto"` or per-screen control. Not blocking.
+- [ ] 🟡 **§5f — iPad screenshots** — `supportsTablet: true` triggers the 13-inch iPad screenshot
+      requirement in ASC. Either provide iPad screenshots or set `supportsTablet: false`.
+- [x] 🟢 **§5g — App name** — `Trainee` (7 chars), well within 30. Bundle ID `com.juroctech.frontend`
+      is functional but the `.frontend` suffix is unusual — cannot change after first submission.
+- [x] 🟢 **§5h — Build/SDK** — Xcode 26+ confirmed.
+- [ ] 🟡 **§5i — ASC metadata** — subtitle, keywords, screenshots, description still outstanding
+      (App Store Connect only, not in repo).
 

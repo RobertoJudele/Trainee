@@ -18,11 +18,13 @@ import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
+import { useLanguage } from '../lib/i18n/LanguageContext';
 
 export default function Login() {
   const router = useRouter();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -42,18 +44,18 @@ export default function Login() {
     let hasError = false;
 
     if (!email) {
-      setEmailError('Email is required');
+      setEmailError(t('emailRequired'));
       hasError = true;
     } else if (!validateEmail(email)) {
-      setEmailError('Please enter a valid email');
+      setEmailError(t('emailInvalid'));
       hasError = true;
     }
 
     if (!password) {
-      setPasswordError('Password is required');
+      setPasswordError(t('passwordRequired'));
       hasError = true;
     } else if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
+      setPasswordError(t('passwordMinLength'));
       hasError = true;
     }
 
@@ -70,8 +72,8 @@ export default function Login() {
       );
       router.replace('/');
     } catch (error: any) {
-      const errorMessage = error?.data?.message || 'Login failed. Please try again.';
-      Alert.alert('Login Failed', errorMessage);
+      const errorMessage = error?.data?.message || t('loginFailedMessage');
+      Alert.alert(t('loginFailed'), errorMessage);
     }
   };
 
@@ -100,15 +102,15 @@ export default function Login() {
           >
             <Ionicons name="barbell" size={40} color="#FFFFFF" />
           </LinearGradient>
-          <Text style={styles.title}>Welcome Back</Text>
-          <Text style={styles.subtitle}>Sign in to continue your fitness journey</Text>
+          <Text style={styles.title}>{t("welcomeBack")}</Text>
+          <Text style={styles.subtitle}>{t("signInSubtitle")}</Text>
         </FadeInUp>
 
         <View style={styles.form}>
           <FadeInUp delay={theme.motion.stagger}>
             <Field
-              label="Email Address"
-              placeholder="your.email@example.com"
+              label={t("emailAddress")}
+              placeholder={t("emailPlaceholder")}
               value={email}
               error={emailError}
               onChangeText={(text) => {
@@ -123,8 +125,8 @@ export default function Login() {
 
           <FadeInUp delay={theme.motion.stagger * 2}>
             <Field
-              label="Password"
-              placeholder="Enter your password"
+              label={t("password")}
+              placeholder={t("enterYourPassword")}
               value={password}
               error={passwordError}
               secure
@@ -142,15 +144,15 @@ export default function Login() {
               style={styles.forgotPassword}
               onPress={() => router.push('/forgot-password')}
               accessibilityRole="button"
-              accessibilityLabel="Forgot Password"
+              accessibilityLabel={t("forgotPassword")}
             >
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              <Text style={styles.forgotPasswordText}>{t("forgotPassword")}</Text>
             </TouchableOpacity>
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger * 4}>
             <GradientButton
-              title="Sign In"
+              title={t("signInButton")}
               onPress={handleLogin}
               loading={isLoading}
               iconRight="arrow-forward"
@@ -159,13 +161,13 @@ export default function Login() {
 
           <FadeInUp delay={theme.motion.stagger * 5} style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
+            <Text style={styles.dividerText}>{t("or")}</Text>
             <View style={styles.dividerLine} />
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger * 6}>
             <OutlineButton
-              title="Create New Account"
+              title={t("createNewAccount")}
               onPress={() => router.push('/(auth)/signup')}
             />
           </FadeInUp>
@@ -175,9 +177,9 @@ export default function Login() {
               style={styles.backButton}
               onPress={() => router.back()}
               accessibilityRole="button"
-              accessibilityLabel="Back to Welcome"
+              accessibilityLabel={t("backToWelcome")}
             >
-              <Text style={styles.backButtonText}>← Back to Welcome</Text>
+              <Text style={styles.backButtonText}>{t("backToWelcome")}</Text>
             </TouchableOpacity>
           </FadeInUp>
         </View>
