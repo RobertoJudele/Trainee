@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { theme, typography } from "../src/lib/theme";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 type LegalSection = {
   heading: string;
@@ -200,6 +201,7 @@ const legalDocuments: LegalDocument[] = [
 export default function LegalScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t, language } = useLanguage();
   const [selectedDocument, setSelectedDocument] = useState<LegalDocument["id"]>("terms");
 
   const document = useMemo(
@@ -225,18 +227,19 @@ export default function LegalScreen() {
             <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
           </Pressable>
           <View style={styles.headerTextWrap}>
-            <Text style={styles.eyebrow}>Settings</Text>
-            <Text style={styles.title}>Legal & Policies</Text>
+            <Text style={styles.eyebrow}>{t("settings")}</Text>
+            <Text style={styles.title}>{t("legalAndPolicies")}</Text>
           </View>
         </View>
         <Text style={styles.subtitle}>
-          Review the service terms and privacy policy from one place.
+          {t("reviewLegalSubtitle")}
         </Text>
       </View>
 
       <View style={styles.segmentRow}>
         {legalDocuments.map((item) => {
           const active = item.id === selectedDocument;
+          const translatedTitle = item.id === "terms" ? t("termsOfUseTitle") : t("privacyPolicyTitle");
           return (
             <Pressable
               key={item.id}
@@ -244,18 +247,18 @@ export default function LegalScreen() {
               style={[styles.segmentButton, active && styles.segmentButtonActive]}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel={item.title}
+              accessibilityLabel={translatedTitle}
             >
-              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{item.title}</Text>
+              <Text style={[styles.segmentLabel, active && styles.segmentLabelActive]}>{translatedTitle}</Text>
             </Pressable>
           );
         })}
       </View>
 
       <View style={styles.documentCard}>
-        <Text style={styles.documentTitle}>{document.title}</Text>
+        <Text style={styles.documentTitle}>{selectedDocument === "terms" ? t("termsOfUseTitle") : t("privacyPolicyTitle")}</Text>
         <Text style={styles.documentSubtitle}>{document.subtitle}</Text>
-        <Text style={styles.effectiveDate}>Effective date: {document.effectiveDate}</Text>
+        <Text style={styles.effectiveDate}>{t("effectiveDate")} {document.effectiveDate}</Text>
       </View>
 
       {document.sections.map((section) => (

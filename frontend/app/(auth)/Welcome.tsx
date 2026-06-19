@@ -6,12 +6,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { FadeInUp, PressableScale } from '../../src/components/ui';
+import { useLanguage } from '../../src/lib/i18n/LanguageContext';
 
 const { width, height } = Dimensions.get('window');
 
 export default function Welcome() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
 
   return (
     <LinearGradient
@@ -25,7 +27,7 @@ export default function Welcome() {
           </View>
           <Text style={styles.title}>Trainee</Text>
           <Text style={styles.subtitle}>
-            Find your perfect fitness trainer and achieve your goals
+            {t("welcomeTagline")}
           </Text>
         </FadeInUp>
 
@@ -35,9 +37,9 @@ export default function Welcome() {
               style={[styles.button, styles.primaryButton]}
               onPress={() => router.push('/(auth)/signup')}
               accessibilityRole="button"
-              accessibilityLabel="Get Started"
+              accessibilityLabel={t("getStarted")}
             >
-              <Text style={styles.primaryButtonText}>Get Started</Text>
+              <Text style={styles.primaryButtonText}>{t("getStarted")}</Text>
               <Ionicons name="arrow-forward" size={20} color={theme.colors.primary} />
             </PressableScale>
           </FadeInUp>
@@ -47,16 +49,16 @@ export default function Welcome() {
               style={[styles.button, styles.secondaryButton]}
               onPress={() => router.push('/(auth)/login')}
               accessibilityRole="button"
-              accessibilityLabel="Sign In"
+              accessibilityLabel={t("signIn")}
             >
-              <Text style={styles.secondaryButtonText}>Sign In</Text>
+              <Text style={styles.secondaryButtonText}>{t("signIn")}</Text>
             </PressableScale>
           </FadeInUp>
 
           <View style={styles.features}>
-            <FeatureItem icon="checkmark-circle" text="Certified Trainers" delay={theme.motion.stagger * 5} />
-            <FeatureItem icon="checkmark-circle" text="Personalized Programs" delay={theme.motion.stagger * 6} />
-            <FeatureItem icon="checkmark-circle" text="Track Your Progress" delay={theme.motion.stagger * 7} />
+            <FeatureItem icon="checkmark-circle" text={t("certifiedTrainers")} delay={theme.motion.stagger * 5} />
+            <FeatureItem icon="checkmark-circle" text={t("personalizedPrograms")} delay={theme.motion.stagger * 6} />
+            <FeatureItem icon="checkmark-circle" text={t("trackYourProgress")} delay={theme.motion.stagger * 7} />
           </View>
         </View>
       </View>

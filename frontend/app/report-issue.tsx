@@ -18,23 +18,25 @@ import {
   useCreateIssueMutation,
 } from "../features/support/issueApiSlice";
 import { theme, typography } from "../src/lib/theme";
-
-const categories: Array<{ value: IssueCategory; label: string }> = [
-  { value: "trainer_behavior", label: "Trainer behavior" },
-  { value: "booking_no_show", label: "Booking no-show" },
-  { value: "technical_bug", label: "Technical bug" },
-  { value: "payment_issue", label: "Payment issue" },
-  { value: "other", label: "Other" },
-];
-
-const targetLabels: Record<IssueTargetType, string> = {
-  app: "General app issue",
-  trainer: "Trainer issue",
-  booking: "Booking issue",
-};
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 export default function ReportIssueScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+
+  const categories: Array<{ value: IssueCategory; label: string }> = [
+    { value: "trainer_behavior", label: t("trainerBehavior") },
+    { value: "booking_no_show", label: t("bookingNoShow") },
+    { value: "technical_bug", label: t("technicalBug") },
+    { value: "payment_issue", label: t("paymentIssue") },
+    { value: "other", label: t("other") },
+  ];
+
+  const targetLabels: Record<IssueTargetType, string> = {
+    app: t("generalAppIssue"),
+    trainer: t("trainerIssue"),
+    booking: t("bookingIssue"),
+  };
   const params = useLocalSearchParams<{
     targetType?: IssueTargetType;
     trainerId?: string;
@@ -79,12 +81,12 @@ export default function ReportIssueScreen() {
 
   const onSubmit = async () => {
     if (title.trim().length < 5) {
-      Alert.alert("Validation", "Title must be at least 5 characters.");
+      Alert.alert(t("validation"), t("titleMinLength"));
       return;
     }
 
     if (description.trim().length < 10) {
-      Alert.alert("Validation", "Description must be at least 10 characters.");
+      Alert.alert(t("validation"), t("descriptionMinLength"));
       return;
     }
 
@@ -100,12 +102,12 @@ export default function ReportIssueScreen() {
 
     try {
       await createIssue(payload).unwrap();
-      Alert.alert("Submitted", "Issue reported successfully.", [
+      Alert.alert(t("submitted"), t("issueReported"), [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch (error: any) {
-      const message = error?.data?.message || "Could not submit issue.";
-      Alert.alert("Error", message);
+      const message = error?.data?.message || t("error");
+      Alert.alert(t("error"), message);
     }
   };
 
@@ -115,11 +117,11 @@ export default function ReportIssueScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>Report Issue</Text>
-      <Text style={styles.subtitle}>Help us resolve problems faster.</Text>
+      <Text style={styles.title}>{t("reportIssueTitle")}</Text>
+      <Text style={styles.subtitle}>{t("reportIssueSubtitle")}</Text>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Issue Type</Text>
+        <Text style={styles.label}>{t("issueType")}</Text>
         <Text style={styles.contextText}>{targetLabels[targetType]}</Text>
         {trainerId ? <Text style={styles.contextText}>Trainer ID: {trainerId}</Text> : null}
         {trainerPublicId ? <Text style={styles.contextText}>Trainer Code: {trainerPublicId}</Text> : null}
@@ -127,7 +129,7 @@ export default function ReportIssueScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Category</Text>
+        <Text style={styles.label}>{t("category")}</Text>
         <View style={styles.chipsWrap}>
           {categories.map((item) => {
             const active = item.value === category;
@@ -150,23 +152,23 @@ export default function ReportIssueScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.label}>Title</Text>
+        <Text style={styles.label}>{t("title")}</Text>
         <TextInput
           style={styles.input}
           value={title}
           onChangeText={setTitle}
-          placeholder="Short summary"
+          placeholder={t("shortSummary")}
           maxLength={140}
         />
 
-        <Text style={[styles.label, styles.marginTop]}>Description</Text>
+        <Text style={[styles.label, styles.marginTop]}>{t("description")}</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
           value={description}
           onChangeText={setDescription}
           multiline
           textAlignVertical="top"
-          placeholder="Describe what happened, when, and what you expected"
+          placeholder={t("describeWhatHappened")}
           maxLength={2000}
         />
       </View>
@@ -177,9 +179,9 @@ export default function ReportIssueScreen() {
         disabled={isLoading}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel="Submit Report"
+        accessibilityLabel={t("submitReport")}
       >
-        <Text style={styles.submitText}>{isLoading ? "Submitting..." : "Submit Report"}</Text>
+        <Text style={styles.submitText}>{isLoading ? t("submitting") : t("submitReport")}</Text>
       </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>

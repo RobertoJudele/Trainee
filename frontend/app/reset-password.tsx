@@ -15,9 +15,11 @@ import { useResetPasswordMutation } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const params = useLocalSearchParams<{ token?: string; email?: string }>();
   const [token, setToken] = useState(params.token ?? "");
   const [newPassword, setNewPassword] = useState("");
@@ -33,28 +35,28 @@ export default function ResetPasswordScreen() {
     setError("");
 
     if (!token.trim()) {
-      setError("Reset token is required");
+      setError(t("resetTokenRequired"));
       return;
     }
 
     if (!validatePassword(newPassword)) {
-      setError("Password must have 6+ chars, uppercase, lowercase and a number");
+      setError(t("passwordComplexity"));
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
+      setError(t("passwordsDoNotMatch"));
       return;
     }
 
     try {
       const res = await resetPassword({ token: token.trim(), newPassword }).unwrap();
-      Alert.alert("Success", res.message, [
-        { text: "Go to login", onPress: () => router.replace("/(auth)/login") },
+      Alert.alert(t("success"), res.message, [
+        { text: t("goToLogin"), onPress: () => router.replace("/(auth)/login") },
       ]);
     } catch (err: any) {
-      const msg = err?.data?.message || "Could not reset password";
-      Alert.alert("Reset failed", msg);
+      const msg = err?.data?.message || t("couldNotResetPassword");
+      Alert.alert(t("resetFailed"), msg);
     }
   };
 
@@ -77,17 +79,17 @@ export default function ResetPasswordScreen() {
           >
             <Ionicons name="key-outline" size={36} color="#FFFFFF" />
           </LinearGradient>
-          <Text style={styles.title}>Reset Password</Text>
+          <Text style={styles.title}>{t("resetPassword")}</Text>
           <Text style={styles.subtitle}>
             {hintEmail
-              ? `Set a new password for ${hintEmail}`
-              : "Paste your reset token and choose a new password."}
+              ? t("resetPasswordForEmail").replace("{email}", hintEmail)
+              : t("resetTokenInstructions")}
           </Text>
         </FadeInUp>
 
         <FadeInUp delay={theme.motion.stagger}>
           <Field
-            placeholder="Reset token"
+            placeholder={t("resetToken")}
             value={token}
             onChangeText={setToken}
             autoCapitalize="none"
@@ -97,7 +99,7 @@ export default function ResetPasswordScreen() {
 
         <FadeInUp delay={theme.motion.stagger * 2}>
           <Field
-            placeholder="New password"
+            placeholder={t("newPassword")}
             secure
             value={newPassword}
             onChangeText={setNewPassword}
@@ -108,7 +110,7 @@ export default function ResetPasswordScreen() {
 
         <FadeInUp delay={theme.motion.stagger * 3}>
           <Field
-            placeholder="Confirm new password"
+            placeholder={t("confirmNewPassword")}
             secure
             value={confirmPassword}
             onChangeText={setConfirmPassword}
@@ -120,7 +122,7 @@ export default function ResetPasswordScreen() {
 
         <FadeInUp delay={theme.motion.stagger * 4}>
           <GradientButton
-            title="Update Password"
+            title={t("updatePassword")}
             icon="shield-checkmark-outline"
             onPress={onSubmit}
             loading={isLoading}
@@ -132,9 +134,9 @@ export default function ResetPasswordScreen() {
             style={styles.backButton}
             onPress={() => router.replace("/(auth)/login")}
             accessibilityRole="button"
-            accessibilityLabel="Back to login"
+            accessibilityLabel={t("backToLogin")}
           >
-            <Text style={styles.backButtonText}>Back to login</Text>
+            <Text style={styles.backButtonText}>{t("backToLogin")}</Text>
           </TouchableOpacity>
         </FadeInUp>
       </ScrollView>

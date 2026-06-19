@@ -39,6 +39,12 @@ export interface TourStep {
   targetId?: string;
   title: string;
   body: string;
+  /** Translation key for title (used instead of title when set). */
+  titleKey?: string;
+  /** Translation key for body (used instead of body when set). */
+  bodyKey?: string;
+  /** Translation key for hint (used instead of hint when set). */
+  hintKey?: string;
   /** Pathname to navigate to before showing this step (e.g. "/search"). */
   route?: string;
   /** Darken the rest of the screen. Default true. Set false to keep it visible. */

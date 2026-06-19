@@ -149,6 +149,17 @@
           "photosPermission": "Your app needs access to your photo library to upload profile pictures and workout photos.",
           "cameraPermission": "Your app needs access to the camera to take profile pictures and workout photos."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "newArchEnabled": false
+          },
+          "android": {
+            "newArchEnabled": false
+          }
+        }
       ]
     ],
     "extra": {

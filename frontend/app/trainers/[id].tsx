@@ -23,6 +23,7 @@ import {
   Review,
 } from "../../features/review/reviewApiSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
+import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
@@ -153,6 +154,7 @@ type ReviewFormMode = "idle" | "write" | "edit";
 
 export default function TrainerDetailsScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const params = useLocalSearchParams<TrainerRouteParams>();
   const currentUser = useSelector(selectCurrentUser);
 
@@ -215,11 +217,11 @@ export default function TrainerDetailsScreen() {
     if (!trainerInternalId) return;
     const text = formText.trim();
     if (text && text.length < 10) {
-      Alert.alert("Too short", "Review text must be at least 10 characters.");
+      Alert.alert(t("tooShort"), t("reviewTooShort"));
       return;
     }
     if (text && text.length > 100) {
-      Alert.alert("Too long", "Review text must be under 100 characters.");
+      Alert.alert(t("tooLong"), t("reviewTooLong"));
       return;
     }
     try {
@@ -240,27 +242,27 @@ export default function TrainerDetailsScreen() {
       setReviewMode("idle");
       setEditingReviewId(null);
     } catch (err: any) {
-      Alert.alert("Error", err?.data?.message || "Could not save review.");
+      Alert.alert(t("error"), err?.data?.message || t("couldNotSaveReview"));
     }
-  }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview]);
+  }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview, t]);
 
   const handleDeleteReview = useCallback((reviewId: number) => {
     if (!trainerInternalId) return;
-    Alert.alert("Delete Review", "Are you sure you want to delete your review?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("deleteReview"), t("deleteReviewConfirm"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: t("delete"),
         style: "destructive",
         onPress: async () => {
           try {
             await deleteReview({ reviewId, trainerId: trainerInternalId }).unwrap();
           } catch (err: any) {
-            Alert.alert("Error", err?.data?.message || "Could not delete review.");
+            Alert.alert(t("error"), err?.data?.message || t("couldNotDeleteReview"));
           }
         },
       },
     ]);
-  }, [trainerInternalId, deleteReview]);
+  }, [trainerInternalId, deleteReview, t]);
 
   const fullName =
     [trainer?.user?.firstName ?? params.firstName, trainer?.user?.lastName ?? params.lastName]
@@ -273,7 +275,7 @@ export default function TrainerDetailsScreen() {
     trainer?.experienceYears ?? toNumber(params.experienceYears) ?? 0;
   const hourlyRate = trainer?.hourlyRate ?? toNumber(params.hourlyRate);
   const sessionRate = trainer?.sessionRate ?? toNumber(params.sessionRate);
-  const bio = trainer?.bio ?? params.bio ?? "No bio available";
+  const bio = trainer?.bio ?? params.bio ?? t("noBioAvailable");
   const locationText = [
     trainer?.locationCity,
     trainer?.locationState,
@@ -328,11 +330,11 @@ export default function TrainerDetailsScreen() {
         }
       }
 
-      Alert.alert("Unavailable", "Could not open this social link.");
+      Alert.alert(t("unavailable"), t("couldNotOpenSocial"));
     } catch {
-      Alert.alert("Error", "Failed to open social link.");
+      Alert.alert(t("error"), t("failedOpenSocial"));
     }
-  }, []);
+  }, [t]);
 
   const handleContactPress = React.useCallback(() => {
     if (contactOptions.length === 0) {
@@ -340,8 +342,8 @@ export default function TrainerDetailsScreen() {
     }
 
     Alert.alert(
-      "Contact Trainer",
-      "Choose platform",
+      t("contactTrainer"),
+      t("choosePlatform"),
       contactOptions.slice(0, 3).map((option) => ({
         text: option.label,
         onPress: () => {
@@ -350,20 +352,20 @@ export default function TrainerDetailsScreen() {
       })),
       { cancelable: true }
     );
-  }, [contactOptions, openContactUrl]);
+  }, [contactOptions, openContactUrl, t]);
 
   if (!hasValidTrainerId) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Invalid trainer selected.</Text>
+        <Text style={styles.errorText}>{t("invalidTrainer")}</Text>
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => router.back()}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("goBackButton")}
         >
-          <Text style={styles.primaryButtonText}>Go back</Text>
+          <Text style={styles.primaryButtonText}>{t("goBackButton")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -373,7 +375,7 @@ export default function TrainerDetailsScreen() {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
-        <Text style={styles.loadingText}>Loading trainer details...</Text>
+        <Text style={styles.loadingText}>{t("loadingTrainerDetails")}</Text>
       </View>
     );
   }
@@ -381,15 +383,15 @@ export default function TrainerDetailsScreen() {
   if (isError) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.errorText}>Could not load trainer details.</Text>
+        <Text style={styles.errorText}>{t("couldNotLoadTrainer")}</Text>
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => refetch()}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Try again"
+          accessibilityLabel={t("tryAgain")}
         >
-          <Text style={styles.primaryButtonText}>Try again</Text>
+          <Text style={styles.primaryButtonText}>{t("tryAgain")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -410,49 +412,49 @@ export default function TrainerDetailsScreen() {
 
         <Text style={styles.name}>{fullName}</Text>
         <View style={[styles.availabilityBadge, isAvailable ? styles.badgeOn : styles.badgeOff]}>
-          <Text style={styles.availabilityText}>{isAvailable ? "Available" : "Unavailable"}</Text>
+          <Text style={styles.availabilityText}>{isAvailable ? t("available") : t("unavailable")}</Text>
         </View>
 
         <View style={styles.ratingRow}>
           <Ionicons name="star" size={16} color="#F59E0B" />
           <Text style={styles.ratingText}>{Number(rating).toFixed(1)}</Text>
-          <Text style={styles.reviewsText}>({reviewCount} reviews)</Text>
+          <Text style={styles.reviewsText}>({reviewCount} {t("reviewsCount")})</Text>
         </View>
 
         <View style={styles.viewRow}>
           <Ionicons name="eye-outline" size={16} color={theme.colors.textSecondary} />
-          <Text style={styles.viewText}>{trainer?.profileViews ?? 0} views</Text>
+          <Text style={styles.viewText}>{trainer?.profileViews ?? 0} {t("viewsCount")}</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>About</Text>
+        <Text style={styles.sectionTitle}>{t("about")}</Text>
         <Text style={styles.sectionText}>{bio}</Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Experience & Rates</Text>
+        <Text style={styles.sectionTitle}>{t("experienceAndRates")}</Text>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Experience</Text>
-          <Text style={styles.infoValue}>{experienceYears} years</Text>
+          <Text style={styles.infoLabel}>{t("experience")}</Text>
+          <Text style={styles.infoValue}>{experienceYears} {t("years")}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Hourly rate</Text>
-          <Text style={styles.infoValue}>{hourlyRate ? `$${hourlyRate}/hr` : "N/A"}</Text>
+          <Text style={styles.infoLabel}>{t("hourlyRate")}</Text>
+          <Text style={styles.infoValue}>{hourlyRate ? `$${hourlyRate}${t("perHour")}` : "N/A"}</Text>
         </View>
         <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Session rate</Text>
-          <Text style={styles.infoValue}>{sessionRate ? `$${sessionRate}/session` : "N/A"}</Text>
+          <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
+          <Text style={styles.infoValue}>{sessionRate ? `$${sessionRate}${t("perSession")}` : "N/A"}</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Location</Text>
-        <Text style={styles.sectionText}>{locationText || "Location not specified"}</Text>
+        <Text style={styles.sectionTitle}>{t("location")}</Text>
+        <Text style={styles.sectionText}>{locationText || t("locationNotSpecified")}</Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Available Gyms</Text>
+        <Text style={styles.sectionTitle}>{t("availableGyms")}</Text>
         {trainer?.availableGyms && trainer.availableGyms.length > 0 ? (
           trainer.availableGyms.map((gym) => (
             <View key={gym.id} style={styles.gymRow}>
@@ -469,7 +471,7 @@ export default function TrainerDetailsScreen() {
             </View>
           ))
         ) : (
-          <Text style={styles.sectionText}>No currently available gyms.</Text>
+          <Text style={styles.sectionText}>{t("noAvailableGyms")}</Text>
         )}
       </View>
 
@@ -487,10 +489,10 @@ export default function TrainerDetailsScreen() {
 
       {/* ── Reviews ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Reviews ({reviews.length})</Text>
+        <Text style={styles.sectionTitle}>{t("reviews")} ({reviews.length})</Text>
 
         {reviews.length === 0 && reviewMode === "idle" && (
-          <Text style={styles.sectionText}>No reviews yet. Be the first!</Text>
+          <Text style={styles.sectionText}>{t("noReviewsYet")}</Text>
         )}
 
         {reviews.map((review) => {
@@ -555,7 +557,7 @@ export default function TrainerDetailsScreen() {
         {(reviewMode === "write" || reviewMode === "edit") && (
           <View style={styles.reviewForm}>
             <Text style={styles.reviewFormTitle}>
-              {reviewMode === "edit" ? "Edit your review" : "Write a review"}
+              {reviewMode === "edit" ? t("editYourReview") : t("writeAReview")}
             </Text>
             <View style={styles.starSelector}>
               {[1, 2, 3, 4, 5].map((s) => (
@@ -577,7 +579,7 @@ export default function TrainerDetailsScreen() {
             </View>
             <TextInput
               style={styles.reviewInput}
-              placeholder="Add a comment (optional, 10–100 chars)"
+              placeholder={t("addComment")}
               placeholderTextColor={theme.colors.textSecondary}
               value={formText}
               onChangeText={setFormText}
@@ -593,7 +595,7 @@ export default function TrainerDetailsScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Cancel"
               >
-                <Text style={styles.cancelFormBtnText}>Cancel</Text>
+                <Text style={styles.cancelFormBtnText}>{t("cancel")}</Text>
               </Pressable>
               <Pressable
                 style={[styles.submitFormBtn, (isCreating || isUpdating) && { opacity: 0.6 }]}
@@ -604,7 +606,7 @@ export default function TrainerDetailsScreen() {
                 accessibilityLabel="Submit review"
               >
                 <Text style={styles.submitFormBtnText}>
-                  {isCreating || isUpdating ? "Saving…" : "Submit"}
+                  {isCreating || isUpdating ? t("saving") : t("submit")}
                 </Text>
               </Pressable>
             </View>
@@ -620,7 +622,7 @@ export default function TrainerDetailsScreen() {
             accessibilityLabel="Write a review"
           >
             <Ionicons name="star-outline" size={16} color={theme.colors.primary} style={{ marginRight: 6 }} />
-            <Text style={styles.writeReviewBtnText}>Write a Review</Text>
+            <Text style={styles.writeReviewBtnText}>{t("writeReview")}</Text>
           </Pressable>
         )}
       </View>
@@ -630,9 +632,9 @@ export default function TrainerDetailsScreen() {
         onPress={() => router.back()}
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel="Back to map"
+        accessibilityLabel={t("backToMap")}
       >
-        <Text style={styles.primaryButtonText}>Back to map</Text>
+        <Text style={styles.primaryButtonText}>{t("backToMap")}</Text>
       </TouchableOpacity>
 
       {contactOptions.length > 0 && (
@@ -641,9 +643,9 @@ export default function TrainerDetailsScreen() {
           onPress={handleContactPress}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Contact trainer"
+          accessibilityLabel={t("contactTrainer")}
         >
-          <Text style={styles.contactButtonText}>Contact</Text>
+          <Text style={styles.contactButtonText}>{t("contact")}</Text>
         </TouchableOpacity>
       )}
 
@@ -661,9 +663,9 @@ export default function TrainerDetailsScreen() {
         }
         accessible={true}
         accessibilityRole="button"
-        accessibilityLabel="Report Issue"
+        accessibilityLabel={t("reportIssue")}
       >
-        <Text style={styles.secondaryButtonText}>Report Issue</Text>
+        <Text style={styles.secondaryButtonText}>{t("reportIssue")}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

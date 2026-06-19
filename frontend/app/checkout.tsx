@@ -23,6 +23,7 @@ import {
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 const LOOKUP_KEY = "MonthlySubscription-349c6bd";
 const REVENUECAT_ENTITLEMENT_ID =
@@ -212,12 +213,13 @@ const SuccessDisplay = ({
 	onManageBilling,
 	loading,
 }: SuccessDisplayProps) => {
+	const { t } = useLanguage();
 	return (
 		<View style={styles.section}>
 			<View style={styles.productRow}>
 				<Logo />
 				<View style={styles.description}>
-					<Text style={styles.title}>Subscription successful!</Text>
+					<Text style={styles.title}>{t("subscriptionSuccessful")}</Text>
 					<Text style={styles.sessionText}>Session: {sessionId}</Text>
 				</View>
 			</View>
@@ -228,12 +230,12 @@ const SuccessDisplay = ({
 				disabled={loading}
 				accessible={true}
 				accessibilityRole="button"
-				accessibilityLabel="Manage Billing Information"
+				accessibilityLabel={t("manageBilling")}
 			>
 				{loading ? (
 					<ActivityIndicator color="#ffffff" />
 				) : (
-					<Text style={styles.buttonText}>Manage Billing Information</Text>
+					<Text style={styles.buttonText}>{t("manageBilling")}</Text>
 				)}
 			</Pressable>
 		</View>
@@ -267,6 +269,7 @@ const WebBillingModeNotice = () => (
 );
 
 export default function CheckoutScreen() {
+	const { t, language } = useLanguage();
 	const params = useLocalSearchParams<{
 		success?: string;
 		canceled?: string;
@@ -296,7 +299,7 @@ export default function CheckoutScreen() {
 		if (!dateStr) return "N/A";
 		const date = new Date(dateStr);
 		if (!Number.isFinite(date.getTime())) return "N/A";
-		return date.toLocaleDateString("en-US", {
+		return date.toLocaleDateString(language === "ro" ? "ro-RO" : "en-US", {
 			year: "numeric",
 			month: "short",
 			day: "numeric",
@@ -321,13 +324,13 @@ export default function CheckoutScreen() {
 	const getStatusLabel = (status: string) => {
 		switch (status) {
 			case "trial":
-				return "Trial Period";
+				return t("trialPeriod");
 			case "active":
-				return "Active (Auto-renewing)";
+				return t("activeAutoRenewing");
 			case "canceled":
-				return "Cancelled";
+				return t("cancelled");
 			case "past_due":
-				return "Past Due / Action Required";
+				return t("pastDueAction");
 			default:
 				return String(status).toUpperCase();
 		}
@@ -336,26 +339,34 @@ export default function CheckoutScreen() {
 	const getProviderLabel = (source: string) => {
 		switch (source) {
 			case "apple":
-				return "Apple App Store";
+				return t("appleAppStore");
 			case "google":
-				return "Google Play Store";
+				return t("googlePlayStore");
 			case "stripe":
-				return "Stripe Checkout";
+				return t("stripeCheckout");
 			default:
-				return "Mobile Store";
+				return t("mobileStore");
 		}
 	};
 
 	const handleManageSubscription = async () => {
 		const source = entitlement?.source;
-		if (source === "apple" || Platform.OS === "ios") {
+		if (source === "google") {
+			await Linking.openURL("https://play.google.com/store/account/subscriptions");
+		} else if (source === "apple") {
 			await Linking.openURL("https://apps.apple.com/account/subscriptions");
-		} else if (source === "google" || Platform.OS === "android") {
+		} else if (Platform.OS === "ios") {
+			await Linking.openURL("https://apps.apple.com/account/subscriptions");
+		} else if (Platform.OS === "android") {
 			await Linking.openURL("https://play.google.com/store/account/subscriptions");
 		} else {
-			Alert.alert("Manage Subscription", `Please manage your subscription directly via your app store account.`);
+			Alert.alert("Manage Subscription", "Please manage your subscription directly via your app store account.");
 		}
 	};
+
+	const isCrossPlatformSubscription =
+		(entitlement?.source === "google" && Platform.OS === "ios") ||
+		(entitlement?.source === "apple" && Platform.OS === "android");
 
 	const showPastDueBanner = entitlement?.status === "past_due";
 
@@ -393,7 +404,7 @@ export default function CheckoutScreen() {
 		[selectedPackage, packages]
 	);
 
-	const subscribeLabel = selectedTrialLabel ? "Start Free Trial" : "Subscribe Now";
+	const subscribeLabel = selectedTrialLabel ? t("startFreeTrial") : t("subscribeNow");
 
 	const onboardingParam = Array.isArray(params.onboarding) ? params.onboarding[0] : params.onboarding;
 	const isOnboarding = onboardingParam === "1";
@@ -793,8 +804,8 @@ export default function CheckoutScreen() {
 								<Ionicons name="shield-checkmark" size={22} color="#ffffff" />
 							</View>
 							<View style={{ marginLeft: 12, flex: 1 }}>
-								<Text style={styles.title}>Your Subscription</Text>
-								<Text style={styles.subtitle}>Premium Trainer Access</Text>
+								<Text style={styles.title}>{t("yourSubscription")}</Text>
+								<Text style={styles.subtitle}>{t("premiumTrainerAccess")}</Text>
 							</View>
 						</View>
 						
@@ -829,7 +840,7 @@ export default function CheckoutScreen() {
 
 						<View style={styles.detailsGrid}>
 							<View style={styles.detailsRow}>
-								<Text style={styles.detailsLabel}>Status</Text>
+								<Text style={styles.detailsLabel}>{t("status")}</Text>
 								<View style={[styles.badge, { backgroundColor: getStatusColor(entitlement?.status || "active") + "20" }]}>
 									<Text style={[styles.badgeText, { color: getStatusColor(entitlement?.status || "active") }]}>
 										{getStatusLabel(entitlement?.status || "active")}
@@ -838,13 +849,13 @@ export default function CheckoutScreen() {
 							</View>
 
 							<View style={styles.detailsRow}>
-								<Text style={styles.detailsLabel}>Billing Cycle</Text>
+								<Text style={styles.detailsLabel}>{t("billingCycle")}</Text>
 								<Text style={styles.detailsValue}>{monthlyPriceLabel}</Text>
 							</View>
 
 							<View style={styles.detailsRow}>
 								<Text style={styles.detailsLabel}>
-									{entitlement?.status === "canceled" ? "Expiration Date" : "Next Renewal Date"}
+									{entitlement?.status === "canceled" ? t("expirationDate") : t("nextRenewalDate")}
 								</Text>
 								<Text style={styles.detailsValue}>
 									{formatDateString(entitlement?.expiresAt)}
@@ -852,7 +863,7 @@ export default function CheckoutScreen() {
 							</View>
 
 							<View style={styles.detailsRow}>
-								<Text style={styles.detailsLabel}>Billed Via</Text>
+								<Text style={styles.detailsLabel}>{t("billedVia")}</Text>
 								<Text style={styles.detailsValue}>
 									{getProviderLabel(entitlement?.source || "none")}
 								</Text>
@@ -864,11 +875,20 @@ export default function CheckoutScreen() {
 							onPress={handleManageSubscription}
 							accessible={true}
 							accessibilityRole="button"
-							accessibilityLabel="Manage Subscription"
+							accessibilityLabel={t("manageSubscription")}
 						>
 							<Ionicons name="open-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
-							<Text style={styles.buttonText}>Manage Subscription</Text>
+							<Text style={styles.buttonText}>{t("manageSubscription")}</Text>
 						</Pressable>
+
+						{isCrossPlatformSubscription && (
+							<View style={styles.infoBanner}>
+								<Ionicons name="information-circle" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+								<Text style={styles.infoBannerText}>
+									Your subscription was purchased on {getProviderLabel(entitlement?.source || "none")}. You'll be redirected there to manage it.
+								</Text>
+							</View>
+						)}
 
 						<Pressable
 							style={({ pressed }) => [
@@ -879,27 +899,27 @@ export default function CheckoutScreen() {
 							disabled={isRestoring}
 							accessible={true}
 							accessibilityRole="button"
-							accessibilityLabel="Restore Purchases"
+							accessibilityLabel={t("restorePurchases")}
 						>
 							{isRestoring ? (
 								<ActivityIndicator color={theme.colors.primary} />
 							) : (
-								<Text style={styles.secondaryButtonText}>Restore Purchases</Text>
+								<Text style={styles.secondaryButtonText}>{t("restorePurchases")}</Text>
 							)}
 						</Pressable>
 					</View>
 
 					{/* Transaction history list */}
 					<View style={styles.section}>
-						<Text style={[styles.title, { marginBottom: 4 }]}>Payment History</Text>
-						<Text style={[styles.subtitle, { marginBottom: 16 }]}>Logs of all billing charges and receipts</Text>
+						<Text style={[styles.title, { marginBottom: 4 }]}>{t("paymentHistory")}</Text>
+						<Text style={[styles.subtitle, { marginBottom: 16 }]}>{t("paymentHistorySubtitle")}</Text>
 
 						{isLoadingTransactions ? (
 							<ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 24 }} />
 						) : transactions.length === 0 ? (
 							<View style={styles.emptyContainer}>
 								<Ionicons name="receipt-outline" size={32} color={theme.colors.textSecondary} style={{ marginBottom: 8 }} />
-								<Text style={styles.emptyText}>No transactions recorded yet.</Text>
+								<Text style={styles.emptyText}>{t("noTransactions")}</Text>
 							</View>
 						) : (
 							<View style={styles.transactionList}>
@@ -945,21 +965,21 @@ export default function CheckoutScreen() {
 						<ScrollView contentContainerStyle={{ paddingBottom: 24 }} showsVerticalScrollIndicator={false}>
 							{!success && (
 								<View style={styles.section}>
-									<Text style={styles.title}>Choose Your Plan</Text>
-									<Text style={styles.subtitle}>Select a subscription length that fits your needs.</Text>
+									<Text style={styles.title}>{t("chooseYourPlan")}</Text>
+									<Text style={styles.subtitle}>{t("choosePlanSubtitle")}</Text>
 
 									{fetchingOfferings ? (
 							<ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 32 }} />
 						) : message === "no_plans" ? (
 							<View style={{ alignItems: "center", marginVertical: 20 }}>
 								<Text style={[styles.message, { textAlign: "center", marginBottom: 16 }]}>
-									Could not load subscription plans. Check your internet connection and try again.
+									{t("couldNotLoadPlans")}
 								</Text>
 								<Pressable
 									style={({ pressed }) => [styles.secondaryButton, { width: "100%" }, pressed && styles.buttonPressed]}
 									accessible={true}
 									accessibilityRole="button"
-									accessibilityLabel="Try Again"
+									accessibilityLabel={t("tryAgain")}
 									onPress={() => {
 										setMessage("");
 										setFetchingOfferings(true);
@@ -977,7 +997,7 @@ export default function CheckoutScreen() {
 											.finally(() => setFetchingOfferings(false));
 									}}
 								>
-									<Text style={styles.secondaryButtonText}>Try Again</Text>
+									<Text style={styles.secondaryButtonText}>{t("tryAgain")}</Text>
 								</Pressable>
 							</View>
 						) : (
@@ -1048,12 +1068,12 @@ export default function CheckoutScreen() {
 										disabled={isRestoring}
 										accessible={true}
 										accessibilityRole="button"
-										accessibilityLabel="Restore Purchases"
+										accessibilityLabel={t("restorePurchases")}
 									>
 										{isRestoring ? (
 											<ActivityIndicator color={theme.colors.primary} />
 										) : (
-											<Text style={styles.secondaryButtonText}>Restore Purchases</Text>
+											<Text style={styles.secondaryButtonText}>{t("restorePurchases")}</Text>
 										)}
 									</Pressable>
 
@@ -1063,9 +1083,9 @@ export default function CheckoutScreen() {
 											onPress={skipOnboarding}
 											accessible={true}
 											accessibilityRole="button"
-											accessibilityLabel="Maybe later"
+											accessibilityLabel={t("maybeLater")}
 										>
-											<Text style={styles.skipButtonText}>Maybe later</Text>
+											<Text style={styles.skipButtonText}>{t("maybeLater")}</Text>
 										</Pressable>
 									)}
 
@@ -1079,18 +1099,18 @@ export default function CheckoutScreen() {
 											onPress={() => router.push("/legal")}
 											accessible={true}
 											accessibilityRole="link"
-											accessibilityLabel="Terms of Use"
+											accessibilityLabel={t("termsOfUse")}
 										>
-											<Text style={styles.legalLink}>Terms of Use (EULA)</Text>
+											<Text style={styles.legalLink}>{t("termsOfUse")}</Text>
 										</Pressable>
 										<Text style={styles.legalLinkSeparator}>•</Text>
 										<Pressable
 											onPress={() => router.push("/legal")}
 											accessible={true}
 											accessibilityRole="link"
-											accessibilityLabel="Privacy Policy"
+											accessibilityLabel={t("privacyPolicy")}
 										>
-											<Text style={styles.legalLink}>Privacy Policy</Text>
+											<Text style={styles.legalLink}>{t("privacyPolicy")}</Text>
 										</Pressable>
 									</View>
 								</View>

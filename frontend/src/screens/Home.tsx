@@ -27,6 +27,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, PressableScale } from "../components/ui";
 import { useTourTarget } from "../components/onboarding/TourContext";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 const { width } = Dimensions.get("window");
 
@@ -37,6 +38,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false);
   const userRole = user?.role;
   const isClient = userRole === UserRole.CLIENT;
+  const { t, language } = useLanguage();
 
   // Onboarding tour target — the "Find Trainers" quick action.
   const findTrainersTourRef = useTourTarget("home-find-trainers");
@@ -44,57 +46,57 @@ export default function Home() {
   const quickActions = [
     {
       icon: "search",
-      title: "Find Trainers",
-      desc: "Browse all trainers",
+      title: t("findTrainers"),
+      desc: t("browseAllTrainers"),
       route: "/search" as const,
       roles: [UserRole.CLIENT],
     },
     {
       icon: "briefcase",
-      title: "Become Trainer",
-      desc: "Start your journey",
+      title: t("becomeTrainer"),
+      desc: t("startYourJourney"),
       route: "/create-trainer" as const,
       hiddenIfRole: UserRole.TRAINER,
       roles: [UserRole.CLIENT],
     },
     {
       icon: "person",
-      title: "My Profile",
-      desc: "View trainer profile",
+      title: t("myProfile"),
+      desc: t("viewTrainerProfile"),
       route: "/TrainerProfile" as const,
       roles: [UserRole.TRAINER],
     },
     {
       icon: "person",
-      title: "My Profile",
-      desc: "View your account",
+      title: t("myProfile"),
+      desc: t("viewYourAccount"),
       route: "/UserProfile" as const,
       roles: [UserRole.CLIENT],
     },
     {
       icon: "map",
-      title: "Gym Map",
-      desc: "Find gyms near you",
+      title: t("gymMap"),
+      desc: t("findGymsNearYou"),
       route: "/map" as const,
     },
     {
       icon: "calendar",
-      title: "Trainer Schedule",
-      desc: "Set hours and assign clients",
+      title: t("trainerSchedule"),
+      desc: t("setHoursAndAssign"),
       route: "/trainer-schedule" as const,
       roles: [UserRole.TRAINER],
     },
     {
       icon: "receipt",
-      title: "My Schedule",
-      desc: "See assigned sessions",
+      title: t("mySchedule"),
+      desc: t("seeAssignedSessions"),
       route: "/my-schedule" as const,
       roles: [UserRole.CLIENT],
     },
     {
       icon: "construct",
-      title: "Admin Issues",
-      desc: "Review reports",
+      title: t("adminIssues"),
+      desc: t("reviewReports"),
       route: "/admin-issues" as const,
       roles: [UserRole.ADMIN],
     },
@@ -139,9 +141,9 @@ export default function Home() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 18) return "Good Afternoon";
-    return "Good Evening";
+    if (hour < 12) return t("goodMorning");
+    if (hour < 18) return t("goodAfternoon");
+    return t("goodEvening");
   };
 
 
@@ -188,7 +190,7 @@ export default function Home() {
           {item.user?.firstName} {item.user?.lastName}
         </Text>
         <Text style={styles.trainerBio} numberOfLines={1}>
-          {item.bio || "Professional fitness trainer"}
+          {item.bio || t("professionalTrainer")}
         </Text>
         {item.specializations?.length > 0 && (
           <Text style={styles.trainerSpec} numberOfLines={1}>
@@ -271,7 +273,7 @@ export default function Home() {
           </View>
         </View>
         <Text style={styles.trainerBio} numberOfLines={1}>
-          {item.bio || "Professional fitness trainer"}
+          {item.bio || t("professionalTrainer")}
         </Text>
         {item.specializations?.length > 0 && (
           <Text style={styles.trainerSpec} numberOfLines={1}>
@@ -288,7 +290,7 @@ export default function Home() {
             <View style={[styles.metaBadge, { marginLeft: 8 }]}>
               <Ionicons name="business" size={12} color={theme.colors.primary} />
               <Text style={[styles.location, { color: theme.colors.primary, fontWeight: "700" }]}>
-                Works at your gym
+                {t("worksAtYourGym")}
               </Text>
             </View>
           ) : (
@@ -327,7 +329,7 @@ export default function Home() {
           <View>
             <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>
-              {user?.firstName ? `${user.firstName}!` : "Welcome!"}
+              {user?.firstName ? `${user.firstName}!` : t("welcome")}
             </Text>
           </View>
           <TouchableOpacity
@@ -337,7 +339,7 @@ export default function Home() {
             }}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel={user ? "View my profile" : "Sign in"}
+            accessibilityLabel={user ? t("myProfile") : t("signIn")}
           >
             <View style={styles.profileAvatar}>
               <Text style={styles.profileInitials}>{user?.firstName?.[0] ?? "U"}</Text>
@@ -354,11 +356,11 @@ export default function Home() {
             onPress={() => router.push("/search")}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Search trainers"
+            accessibilityLabel={t("findTrainers")}
           >
             <View style={styles.searchBar}>
               <Ionicons name="search" size={20} color={theme.colors.primary} style={styles.searchIcon} />
-              <Text style={styles.searchPlaceholder}>Search trainers, specializations...</Text>
+              <Text style={styles.searchPlaceholder}>{t("searchPlaceholder")}</Text>
             </View>
           </PressableScale>
         </FadeInUp>
@@ -366,7 +368,7 @@ export default function Home() {
         {/* Quick Actions */}
         <View style={styles.quickActions}>
           <FadeInUp delay={theme.motion.stagger * 2}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <Text style={styles.sectionTitle}>{t("quickActions")}</Text>
           </FadeInUp>
           <View style={styles.actionGrid}>
             {quickActions.map((action, index) => (
@@ -407,14 +409,14 @@ export default function Home() {
         {isClient && (
           <View style={styles.trainersSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Suggested for You</Text>
+              <Text style={styles.sectionTitle}>{t("suggestedForYou")}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/preferences")}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Edit preferences"
+                accessibilityLabel={t("editPreferences")}
               >
-                <Text style={styles.seeAllButton}>Edit preferences</Text>
+                <Text style={styles.seeAllButton}>{t("editPreferences")}</Text>
               </TouchableOpacity>
             </View>
 
@@ -424,13 +426,13 @@ export default function Home() {
                 onPress={() => router.push("/preferences")}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Set your preferences"
+                accessibilityLabel={t("editPreferences")}
               >
                 <Ionicons name="sparkles" size={24} color={theme.colors.primary} />
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.preferencesPromptTitle}>Get personalized matches</Text>
+                  <Text style={styles.preferencesPromptTitle}>{t("getPersonalizedMatches")}</Text>
                   <Text style={styles.preferencesPromptText}>
-                    Tell us your goals, budget and preferred gym to see trainers picked for you.
+                    {t("suggestedDescription")}
                   </Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
@@ -440,20 +442,20 @@ export default function Home() {
             {suggestedLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text style={styles.loadingText}>Finding your matches...</Text>
+                <Text style={styles.loadingText}>{t("findingMatches")}</Text>
               </View>
             ) : suggestedError ? (
               <View style={styles.errorContainer}>
                 <Ionicons name="alert-circle" size={48} color={theme.colors.error} />
-                <Text style={styles.errorText}>Unable to load suggestions</Text>
+                <Text style={styles.errorText}>{t("unableToLoadSuggestions")}</Text>
                 <TouchableOpacity
                   style={styles.retryButton}
                   onPress={() => refetchSuggested()}
                   accessible={true}
                   accessibilityRole="button"
-                  accessibilityLabel="Try Again"
+                  accessibilityLabel={t("tryAgain")}
                 >
-                  <Text style={styles.retryButtonText}>Try Again</Text>
+                  <Text style={styles.retryButtonText}>{t("tryAgain")}</Text>
                 </TouchableOpacity>
               </View>
             ) : suggestedTrainers.length > 0 ? (
@@ -467,7 +469,7 @@ export default function Home() {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="barbell" size={48} color={theme.colors.textSecondary} />
-                <Text style={styles.emptyText}>No trainers yet</Text>
+                <Text style={styles.emptyText}>{t("noTrainersYet")}</Text>
               </View>
             )}
           </View>
@@ -477,34 +479,34 @@ export default function Home() {
         {!isClient && (
           <View style={styles.trainersSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Top Rated Trainers</Text>
+              <Text style={styles.sectionTitle}>{t("topRatedTrainers")}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/search")}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="See all trainers"
+                accessibilityLabel={t("seeAll")}
               >
-                <Text style={styles.seeAllButton}>See All</Text>
+                <Text style={styles.seeAllButton}>{t("seeAll")}</Text>
               </TouchableOpacity>
             </View>
 
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text style={styles.loadingText}>Finding trainers...</Text>
+                <Text style={styles.loadingText}>{t("findingTrainers")}</Text>
               </View>
             ) : isError ? (
               <View style={styles.errorContainer}>
                 <Ionicons name="alert-circle" size={48} color={theme.colors.error} />
-                <Text style={styles.errorText}>Unable to load trainers</Text>
+                <Text style={styles.errorText}>{t("unableToLoadTrainers")}</Text>
                 <TouchableOpacity
                   style={styles.retryButton}
                   onPress={() => refetch()}
                   accessible={true}
                   accessibilityRole="button"
-                  accessibilityLabel="Try Again"
+                  accessibilityLabel={t("tryAgain")}
                 >
-                  <Text style={styles.retryButtonText}>Try Again</Text>
+                  <Text style={styles.retryButtonText}>{t("tryAgain")}</Text>
                 </TouchableOpacity>
               </View>
             ) : topRatedTrainers.length > 0 ? (
@@ -518,7 +520,7 @@ export default function Home() {
             ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="barbell" size={48} color={theme.colors.textSecondary} />
-                <Text style={styles.emptyText}>No trainers yet</Text>
+                <Text style={styles.emptyText}>{t("noTrainersYet")}</Text>
               </View>
             )}
           </View>

@@ -13,6 +13,7 @@ import { StatusBar } from "expo-status-bar";
 import { TourProvider } from "../src/components/onboarding/TourContext";
 import CoachMark from "../src/components/onboarding/CoachMark";
 import TourGate from "../src/components/onboarding/TourGate";
+import { LanguageProvider } from "../src/lib/i18n/LanguageContext";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -103,6 +104,7 @@ export default function RootLayout() {
     >
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
+        <LanguageProvider>
         <TourProvider>
         <RevenueCatIdentityBridge />
         <StatusBar style="light" />
@@ -143,6 +145,7 @@ export default function RootLayout() {
         <CoachMark />
         <TourGate />
         </TourProvider>
+        </LanguageProvider>
         </PersistGate>
       </Provider>
     </StripeProvider>

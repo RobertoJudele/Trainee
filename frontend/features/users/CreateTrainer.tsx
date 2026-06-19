@@ -24,7 +24,9 @@ import {
 import React from "react";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 export default function CreateTrainer() {
+  const { t } = useLanguage();
   const [bio, setBio] = useState("");
   const [exp, setExp] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
@@ -58,57 +60,57 @@ export default function CreateTrainer() {
 
   const validateForm = () => {
     if (!bio.trim()) {
-      setErrMsg("Bio is required");
+      setErrMsg(t("bioIsRequired"));
       return false;
     }
     if (!exp.trim()) {
-      setErrMsg("Experience is required");
+      setErrMsg(t("experienceIsRequired"));
       return false;
     }
     if (!hourlyRate.trim()) {
-      setErrMsg("Hourly rate is required");
+      setErrMsg(t("hourlyRateIsRequired"));
       return false;
     }
     if (!sessionRate.trim()) {
-      setErrMsg("Session rate is required");
+      setErrMsg(t("sessionRateIsRequired"));
       return false;
     }
     if (!city.trim()) {
-      setErrMsg("City is required");
+      setErrMsg(t("cityIsRequired"));
       return false;
     }
     if (!county.trim()) {
-      setErrMsg("County is required");
+      setErrMsg(t("countyIsRequired"));
       return false;
     }
     if (!country.trim()) {
-      setErrMsg("Country is required");
+      setErrMsg(t("countryIsRequired"));
       return false;
     }
     if (country.trim().length < 2) {
-      setErrMsg("Country must be at least 2 characters long");
+      setErrMsg(t("countryMinLength"));
       return false;
     }
     if (county.trim().length < 2) {
-      setErrMsg("County must be at least 2 characters long");
+      setErrMsg(t("countryMinLength"));
       return false;
     }
     if (city.trim().length < 2) {
-      setErrMsg("City must be at least 2 characters long");
+      setErrMsg(t("cityIsRequired"));
       return false;
     }
     if (selectedSpecializationIds.length === 0) {
-      setErrMsg("Please select at least one specialization");
+      setErrMsg(t("invalidSpecializations"));
       return false;
     }
 
     // Validate rates are numbers
     if (isNaN(parseFloat(hourlyRate)) || parseFloat(hourlyRate) <= 0) {
-      setErrMsg("Please enter a valid hourly rate");
+      setErrMsg(t("invalidHourly"));
       return false;
     }
     if (isNaN(parseFloat(sessionRate)) || parseFloat(sessionRate) <= 0) {
-      setErrMsg("Please enter a valid session rate");
+      setErrMsg(t("invalidSession"));
       return false;
     }
 
@@ -149,29 +151,29 @@ export default function CreateTrainer() {
       }
 
       Alert.alert(
-        "You're a trainer now! 🎉",
-        "Want to start your 1-month free trial? It's free for the first month, then RON 100/month — cancel anytime. You can also start it later from your profile.",
+        t("trainerCreated"),
+        t("freeTrialPrompt"),
         [
           {
-            text: "Maybe later",
+            text: t("maybeLater"),
             style: "cancel",
             onPress: () => router.replace("/"),
           },
           {
-            text: "Start free trial",
+            text: t("startFreeTrial"),
             onPress: () => router.replace("/checkout?onboarding=1"),
           },
         ]
       );
     } catch (error: any) {
       if (!error.originalStatus) {
-        setErrMsg("No server response. Please check your connection.");
+        setErrMsg(t("couldNotLoadTrainer"));
       } else if (error.response?.status === 400) {
-        setErrMsg("Invalid data provided. Please check your inputs.");
+        setErrMsg(t("invalidInput"));
       } else if (error.response?.status === 401) {
-        setErrMsg("Unauthorized. Please log in again.");
+        setErrMsg(t("mustBeLoggedIn"));
       } else {
-        setErrMsg("Failed to create profile. Please try again.");
+        setErrMsg(t("updateError"));
       }
       errRef.current;
     }
@@ -191,16 +193,16 @@ export default function CreateTrainer() {
     return (
       <View style={styles.buttonContainer}>
         <Text style={styles.row}>
-          You must be logged in to create a trainer profile.
+          {t("mustBeLoggedIn")}
         </Text>
         <Pressable style={styles.button} onPress={() => router.push("/(auth)/login")}>
           <Text>
-            Log in or sign up to get started!
+            {t("logInToGetStarted")}
           </Text>
         </Pressable>
         <Pressable style={styles.button} onPress={() => router.back()}>
           <Text>
-            Back
+            {t("back")}
           </Text>
         </Pressable>
       </View>
@@ -211,16 +213,16 @@ export default function CreateTrainer() {
     return (
       <View style={styles.buttonContainer}>
         <Text style={styles.row}>
-          You already have a trainer profile.
+          {t("alreadyHaveTrainer")}
         </Text>
         <Pressable style={styles.button} onPress={() => router.push("/TrainerProfile")}>
           <Text>
-            Go to trainer profile
+            {t("goToTrainerProfile")}
           </Text>
         </Pressable>
         <Pressable style={styles.button} onPress={() => router.back()}>
           <Text>
-            Back
+            {t("back")}
           </Text>
         </Pressable>
       </View>
@@ -240,10 +242,10 @@ export default function CreateTrainer() {
           <View style={styles.header}>
             <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8}}>
               <Ionicons name="sparkles" size={24} color={theme.colors.primary} style={{marginRight: 8}} />
-              <Text style={[styles.title, {marginBottom: 0}]}>Create Your Trainer Profile</Text>
+              <Text style={[styles.title, {marginBottom: 0}]}>{t("createTrainerProfile")}</Text>
             </View>
             <Text style={styles.subtitle}>
-              Tell us about yourself and start connecting with clients
+              {t("createTrainerSubtitle")}
             </Text>
           </View>
 
@@ -261,15 +263,15 @@ export default function CreateTrainer() {
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
                 <Ionicons name="document-text-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
-                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>About You</Text>
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("aboutYou")}</Text>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Bio *</Text>
+                <Text style={styles.label}>{t("bioRequired")}</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={bio}
-                  placeholder="Tell clients about yourself, your passion for fitness, and what makes you unique..."
+                  placeholder={t("bioPlaceholderLong")}
                   onChangeText={setBio}
                   multiline
                   numberOfLines={4}
@@ -278,11 +280,11 @@ export default function CreateTrainer() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Experience *</Text>
+                <Text style={styles.label}>{t("experienceRequired")}</Text>
                 <TextInput
                   style={styles.input}
                   value={exp}
-                  placeholder="Years of experience (e.g. 5)"
+                  placeholder={t("experiencePlaceholderLong")}
                   onChangeText={setExp}
                   keyboardType="number-pad"
                 />
@@ -293,12 +295,12 @@ export default function CreateTrainer() {
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
                 <Ionicons name="pricetags-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
-                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Specializations *</Text>
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("specializationsRequired")}</Text>
               </View>
               {specializationsLoading ? (
                 <View style={styles.specLoadingRow}>
                   <ActivityIndicator size="small" color="#3B82F6" />
-                  <Text style={styles.specLoadingText}>Loading specializations...</Text>
+                  <Text style={styles.specLoadingText}>{t("loadingSpecializations")}</Text>
                 </View>
               ) : specializationOptions.length > 0 ? (
                 <View style={styles.specGrid}>
@@ -320,7 +322,7 @@ export default function CreateTrainer() {
               ) : (
                 <View style={styles.specFallbackBox}>
                   <Text style={styles.specFallbackText}>
-                    Couldn't load specializations. Check your connection and try again.
+                    {t("couldNotLoadSpecs")}
                   </Text>
                   <Pressable
                     style={styles.specRetryButton}
@@ -333,7 +335,7 @@ export default function CreateTrainer() {
                     {specializationsFetching ? (
                       <ActivityIndicator size="small" color="#fff" />
                     ) : (
-                      <Text style={styles.specRetryText}>Retry</Text>
+                      <Text style={styles.specRetryText}>{t("retry")}</Text>
                     )}
                   </Pressable>
                 </View>
@@ -344,12 +346,12 @@ export default function CreateTrainer() {
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
                 <Ionicons name="cash-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
-                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Pricing</Text>
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("pricing")}</Text>
               </View>
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Hourly Rate * ($)</Text>
+                  <Text style={styles.label}>{t("hourlyRateRequired")}</Text>
                   <TextInput
                     style={styles.input}
                     value={hourlyRate}
@@ -360,7 +362,7 @@ export default function CreateTrainer() {
                 </View>
 
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Session Rate * ($)</Text>
+                  <Text style={styles.label}>{t("sessionRateRequired")}</Text>
                   <TextInput
                     style={styles.input}
                     value={sessionRate}
@@ -376,36 +378,36 @@ export default function CreateTrainer() {
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
                 <Ionicons name="location" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
-                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>Location</Text>
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("location")}</Text>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>City *</Text>
+                <Text style={styles.label}>{t("cityRequired")}</Text>
                 <TextInput
                   style={styles.input}
                   value={city}
-                  placeholder="Enter your city"
+                  placeholder={t("enterYourCity")}
                   onChangeText={setCity}
                 />
               </View>
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>County *</Text>
+                  <Text style={styles.label}>{t("countyRequired")}</Text>
                   <TextInput
                     style={styles.input}
                     value={county}
-                    placeholder="County/State"
+                    placeholder={t("countyState")}
                     onChangeText={setCounty}
                   />
                 </View>
 
                 <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>Country *</Text>
+                  <Text style={styles.label}>{t("countryRequired")}</Text>
                   <TextInput
                     style={styles.input}
                     value={country}
-                    placeholder="Country"
+                    placeholder={t("country")}
                     onChangeText={setCountry}
                   />
                 </View>
@@ -425,15 +427,15 @@ export default function CreateTrainer() {
                 {isLoading ? (
                   <View style={styles.loadingContainer}>
                     <ActivityIndicator color="white" size="small" />
-                    <Text style={styles.buttonText}>Creating Profile...</Text>
+                    <Text style={styles.buttonText}>{t("creatingProfile")}</Text>
                   </View>
                 ) : (
-                  <Text style={styles.buttonText}>Create Trainer Profile</Text>
+                  <Text style={styles.buttonText}>{t("createTrainerButton")}</Text>
                 )}
               </Pressable>
 
               <Text style={styles.footerText}>
-                * Required fields
+                {t("requiredFields")}
               </Text>
             </View>
           </View>

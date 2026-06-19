@@ -16,6 +16,7 @@ import {
 } from "../features/support/issueApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
   "open",
@@ -25,6 +26,7 @@ const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
 ];
 
 export default function AdminIssuesScreen() {
+  const { t } = useLanguage();
   const user = useSelector(selectCurrentUser);
   const isAdmin = user?.role === "admin";
 
@@ -46,14 +48,14 @@ export default function AdminIssuesScreen() {
       await refetch();
     } catch (error: any) {
       const message = error?.data?.message || "Could not update issue status.";
-      Alert.alert("Error", message);
+      Alert.alert(t("error"), message);
     }
   };
 
   if (!isAdmin) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>Admin access required.</Text>
+        <Text style={styles.emptyText}>{t("adminAccessRequired")}</Text>
       </View>
     );
   }
@@ -69,7 +71,7 @@ export default function AdminIssuesScreen() {
   if (isError) {
     return (
       <View style={styles.centered}>
-        <Text style={styles.emptyText}>Could not load issues.</Text>
+        <Text style={styles.emptyText}>{t("couldNotLoadIssues")}</Text>
         <Pressable
           style={styles.retryButton}
           onPress={() => refetch()}
@@ -77,7 +79,7 @@ export default function AdminIssuesScreen() {
           accessibilityRole="button"
           accessibilityLabel="Retry loading issues"
         >
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={styles.retryText}>{t("retry")}</Text>
         </Pressable>
       </View>
     );
@@ -91,7 +93,7 @@ export default function AdminIssuesScreen() {
       contentContainerStyle={styles.content}
       data={issues}
       keyExtractor={(item) => String(item.id)}
-      ListEmptyComponent={<Text style={styles.emptyText}>No issues found.</Text>}
+      ListEmptyComponent={<Text style={styles.emptyText}>{t("noIssuesFound")}</Text>}
       renderItem={({ item }) => (
         <View style={styles.card}>
           <View style={{flexDirection: 'row', alignItems: 'center'}}>
@@ -102,7 +104,7 @@ export default function AdminIssuesScreen() {
             #{item.id} • {item.category} • {item.targetType}
           </Text>
           <Text style={styles.description}>{item.description}</Text>
-          <Text style={styles.status}>Current: {item.status}</Text>
+          <Text style={styles.status}>{t("currentStatus")} {item.status}</Text>
 
           <View style={styles.actions}>
             {statuses.map((status) => (

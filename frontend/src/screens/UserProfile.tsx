@@ -24,12 +24,14 @@ import EditableAvatar from "../components/EditableAvatar";
 import { useProfilePictureUpload } from "../lib/useProfilePictureUpload";
 import { useTour } from "../components/onboarding/TourContext";
 import { clientTour } from "../components/onboarding/clientTour";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 export default function UserProfile() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
+  const { t, language, setLanguage } = useLanguage();
 
   const [menuVisible, setMenuVisible] = useState(false);
   const [deleteProfile, { isLoading: isDeleting }] = useDeleteProfileMutation();
@@ -51,14 +53,14 @@ export default function UserProfile() {
 
   const handleDeleteAccount = useCallback(() => {
     Alert.alert(
-      "Delete My Account",
-      "This will permanently delete your account and all associated data. This action cannot be undone.",
+      t("deleteAccountTitle"),
+      t("deleteAccountMessage"),
       [
-        { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: performDeleteAccount },
+        { text: t("cancel"), style: "cancel" },
+        { text: t("delete"), style: "destructive", onPress: performDeleteAccount },
       ]
     );
-  }, []);
+  }, [t]);
 
   const performDeleteAccount = useCallback(async () => {
     try {
@@ -74,14 +76,15 @@ export default function UserProfile() {
       }
       router.replace("/(auth)/Welcome");
     } catch {
-      Alert.alert("Error", "Failed to delete account. Please try again.");
+      Alert.alert(t("error"), t("deleteAccountError"));
     }
-  }, [deleteProfile, dispatch, router]);
+  }, [deleteProfile, dispatch, router, t]);
 
+  const dateLocale = language === "ro" ? "ro-RO" : "en-US";
   const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "U";
   const fullName = user ? `${user.firstName} ${user.lastName}` : "User";
   const memberSince = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    ? new Date(user.createdAt).toLocaleDateString(dateLocale, { month: "long", year: "numeric" })
     : null;
 
   return (
@@ -107,7 +110,7 @@ export default function UserProfile() {
             onPress={() => setMenuVisible(true)}
             accessible
             accessibilityRole="button"
-            accessibilityLabel="Open profile menu"
+            accessibilityLabel={t("openProfileMenu")}
           >
             <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
           </Pressable>
@@ -125,7 +128,7 @@ export default function UserProfile() {
 
           <Text style={styles.name}>{fullName}</Text>
           <View style={styles.roleBadge}>
-            <Text style={styles.roleBadgeText}>Member</Text>
+            <Text style={styles.roleBadgeText}>{t("member")}</Text>
           </View>
         </LinearGradient>
 
@@ -134,7 +137,7 @@ export default function UserProfile() {
           <View style={styles.infoRow}>
             <Ionicons name="mail-outline" size={20} color={theme.colors.textSecondary} />
             <View style={styles.infoText}>
-              <Text style={styles.infoLabel}>Email</Text>
+              <Text style={styles.infoLabel}>{t("email")}</Text>
               <Text style={styles.infoValue}>{user?.email ?? "—"}</Text>
             </View>
           </View>
@@ -143,7 +146,7 @@ export default function UserProfile() {
             <View style={styles.infoRow}>
               <Ionicons name="call-outline" size={20} color={theme.colors.textSecondary} />
               <View style={styles.infoText}>
-                <Text style={styles.infoLabel}>Phone</Text>
+                <Text style={styles.infoLabel}>{t("phone")}</Text>
                 <Text style={styles.infoValue}>{user.phone}</Text>
               </View>
             </View>
@@ -153,7 +156,7 @@ export default function UserProfile() {
             <View style={styles.infoRow}>
               <Ionicons name="calendar-outline" size={20} color={theme.colors.textSecondary} />
               <View style={styles.infoText}>
-                <Text style={styles.infoLabel}>Member Since</Text>
+                <Text style={styles.infoLabel}>{t("memberSince")}</Text>
                 <Text style={styles.infoValue}>{memberSince}</Text>
               </View>
             </View>
@@ -165,15 +168,36 @@ export default function UserProfile() {
       <Modal visible={menuVisible} transparent animationType="fade">
         <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
           <View style={styles.dropdownMenu}>
+            {/* Language toggle */}
+            <Pressable
+              style={styles.dropdownItem}
+              onPress={() => {
+                setLanguage(language === "en" ? "ro" : "en");
+              }}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel={t("language")}
+            >
+              <Ionicons name="language-outline" size={18} color={theme.colors.text} />
+              <Text style={styles.dropdownItemText}>{t("language")}</Text>
+              <View style={styles.langBadge}>
+                <Text style={styles.langBadgeText}>
+                  {language === "en" ? "EN" : "RO"}
+                </Text>
+              </View>
+            </Pressable>
+
+            <View style={styles.dropdownDivider} />
+
             <Pressable
               style={styles.dropdownItem}
               onPress={() => { setMenuVisible(false); router.push("/legal"); }}
               accessible
               accessibilityRole="button"
-              accessibilityLabel="Legal and Policies"
+              accessibilityLabel={t("legalAndPolicies")}
             >
               <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>Legal & Policies</Text>
+              <Text style={styles.dropdownItemText}>{t("legalAndPolicies")}</Text>
             </Pressable>
 
             <Pressable
@@ -181,10 +205,10 @@ export default function UserProfile() {
               onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}
               accessible
               accessibilityRole="button"
-              accessibilityLabel="Report an issue"
+              accessibilityLabel={t("reportIssue")}
             >
               <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>Report Issue</Text>
+              <Text style={styles.dropdownItemText}>{t("reportIssue")}</Text>
             </Pressable>
 
             <Pressable
@@ -192,10 +216,10 @@ export default function UserProfile() {
               onPress={() => { setMenuVisible(false); startTour(clientTour); }}
               accessible
               accessibilityRole="button"
-              accessibilityLabel="Show tutorial again"
+              accessibilityLabel={t("showTutorial")}
             >
               <Ionicons name="help-circle-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>Show tutorial again</Text>
+              <Text style={styles.dropdownItemText}>{t("showTutorial")}</Text>
             </Pressable>
 
             <View style={styles.dropdownDivider} />
@@ -205,10 +229,10 @@ export default function UserProfile() {
               onPress={() => { setMenuVisible(false); void handleLogout(); }}
               accessible
               accessibilityRole="button"
-              accessibilityLabel="Log out"
+              accessibilityLabel={t("logOut")}
             >
               <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>Log Out</Text>
+              <Text style={styles.dropdownItemText}>{t("logOut")}</Text>
             </Pressable>
 
             <Pressable
@@ -217,7 +241,7 @@ export default function UserProfile() {
               disabled={isDeleting}
               accessible
               accessibilityRole="button"
-              accessibilityLabel="Delete my account"
+              accessibilityLabel={t("deleteMyAccount")}
             >
               {isDeleting ? (
                 <ActivityIndicator size="small" color={theme.colors.error} />
@@ -225,7 +249,7 @@ export default function UserProfile() {
                 <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
               )}
               <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
-                {isDeleting ? "Deleting..." : "Delete My Account"}
+                {isDeleting ? t("deleting") : t("deleteMyAccount")}
               </Text>
             </Pressable>
           </View>
@@ -356,11 +380,23 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.text,
     fontWeight: "500",
+    flex: 1,
   },
   dropdownDivider: {
     height: 1,
     backgroundColor: theme.colors.border,
     marginVertical: 4,
     marginHorizontal: 16,
+  },
+  langBadge: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  langBadgeText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
   },
 });

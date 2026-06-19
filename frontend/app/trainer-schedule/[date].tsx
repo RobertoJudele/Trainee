@@ -37,6 +37,7 @@ import {
   useUnblockDateMutation,
 } from "../../features/schedule/scheduleApiSlice";
 import { theme, typography } from "../../src/lib/theme";
+import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import {
   BottomSheet,
   OutlineButton,
@@ -175,6 +176,7 @@ export default function TrainerDayScheduleScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ date?: string }>();
   const user = useSelector(selectCurrentUser);
+  const { t, language } = useLanguage();
 
   const routeDate = typeof params.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(params.date) ? params.date : toDateKey(new Date());
 
@@ -254,7 +256,7 @@ export default function TrainerDayScheduleScreen() {
   const onRegenerateDay = async () => {
     const hasCustom = regenStart.trim() !== "" || regenEnd.trim() !== "";
     if (hasCustom && !(/^([01]\d|2[0-3]):([0-5]\d)$/.test(regenStart) && /^([01]\d|2[0-3]):([0-5]\d)$/.test(regenEnd))) {
-      Alert.alert("Validation", "Provide both start and end as HH:mm, or leave both empty to use your template.");
+      Alert.alert(t("validation"), t("dayValidationHHmm"));
       return;
     }
     try {
@@ -269,17 +271,17 @@ export default function TrainerDayScheduleScreen() {
       setRegenEnd("");
       setRegenDuration("");
       Alert.alert(
-        "Day regenerated",
-        `Added ${res.data.created}, removed ${res.data.removed}, kept ${res.data.preserved} assigned.`
+        t("dayRegenerated"),
+        t("dayRegeneratedMsg").replace("{added}", String(res.data.created)).replace("{removed}", String(res.data.removed)).replace("{kept}", String(res.data.preserved))
       );
     } catch (error: unknown) {
-      Alert.alert("Error", getErrorMessage(error, "Could not regenerate this day."));
+      Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotRegenerate")));
     }
   };
 
   const onAddOneOffSlot = async () => {
     if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(newSlotStart) || !/^([01]\d|2[0-3]):([0-5]\d)$/.test(newSlotEnd)) {
-      Alert.alert("Validation", "Enter start and end as HH:mm.");
+      Alert.alert(t("validation"), t("dayValidationHHmm"));
       return;
     }
     try {
@@ -292,22 +294,22 @@ export default function TrainerDayScheduleScreen() {
       setNewSlotStart("");
       setNewSlotEnd("");
     } catch (error: unknown) {
-      Alert.alert("Error", getErrorMessage(error, "Could not add the slot."));
+      Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotAddSlot")));
     }
   };
 
   const onDeleteSlot = (slotId: number) => {
-    Alert.alert("Delete slot", "Remove this available slot?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("dayDeleteSlot"), t("dayDeleteSlotMsg"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Delete",
+        text: t("delete"),
         style: "destructive",
         onPress: async () => {
           try {
             await deleteSlot({ slotId }).unwrap();
             showDropFeedback("delete", slotId);
           } catch (error: unknown) {
-            Alert.alert("Error", getErrorMessage(error, "Could not delete the slot."));
+            Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotDeleteSlot")));
           }
         },
       },
@@ -315,17 +317,17 @@ export default function TrainerDayScheduleScreen() {
   };
 
   const onBlockSlot = (slotId: number, startsAt: string, endsAt: string) => {
-    Alert.alert(`${shortTime(startsAt)} - ${shortTime(endsAt)}`, "Block this open slot?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(`${shortTime(startsAt)} - ${shortTime(endsAt)}`, t("dayBlockSlotMsg"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Block",
+        text: t("dayBlockBtn"),
         style: "destructive",
         onPress: async () => {
           try {
             await deleteSlot({ slotId }).unwrap();
             showDropFeedback("delete", slotId);
           } catch (error: unknown) {
-            Alert.alert("Error", getErrorMessage(error, "Could not block this slot."));
+            Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotBlockSlot")));
           }
         },
       },
@@ -341,12 +343,12 @@ export default function TrainerDayScheduleScreen() {
         | undefined;
       if (conflicts && conflicts.length > 0) {
         const names = conflicts
-          .map((c) => (c.client ? `${c.client.firstName} ${c.client.lastName}` : "a client"))
+          .map((c) => (c.client ? `${c.client.firstName} ${c.client.lastName}` : t("dayAClient")))
           .join(", ");
-        Alert.alert("Cannot block day", `Unassign these first: ${names}`);
+        Alert.alert(t("dayCannotBlock"), t("dayUnassignFirst").replace("{names}", names));
         return;
       }
-      Alert.alert("Error", getErrorMessage(error, "Could not block this day."));
+      Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotBlockDay")));
     }
   };
 
@@ -354,7 +356,7 @@ export default function TrainerDayScheduleScreen() {
     try {
       await unblockDate({ date: routeDate }).unwrap();
     } catch (error: unknown) {
-      Alert.alert("Error", getErrorMessage(error, "Could not unblock this day."));
+      Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotUnblock")));
     }
   };
 
@@ -563,7 +565,7 @@ export default function TrainerDayScheduleScreen() {
       await Promise.all([refetchSlots(), refetchPending()]);
     } catch (error: unknown) {
       showDropFeedback("error", slotId);
-      Alert.alert("Error", getErrorMessage(error, "Could not assign client."));
+      Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotAssign")));
     }
   };
 
@@ -588,7 +590,7 @@ export default function TrainerDayScheduleScreen() {
   const onAddClientCode = async () => {
     const code = clientCodeInput.trim();
     if (!/^\d{6}$/.test(code)) {
-      Alert.alert("Validation", "Client code must be 6 digits.");
+      Alert.alert(t("validation"), t("dayCodeMust6"));
       return;
     }
 
@@ -602,18 +604,18 @@ export default function TrainerDayScheduleScreen() {
       setSelectedClientId(client.id);
       setClientCodeInput("");
     } catch (error: unknown) {
-      Alert.alert("Error", getErrorMessage(error, "Could not resolve client code."));
+      Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotResolveCode")));
     }
   };
 
   const onAssign = async () => {
     if (!selectedSlotId) {
-      Alert.alert("Validation", "Select or drop onto an open slot first.");
+      Alert.alert(t("validation"), t("daySelectSlotFirst"));
       return;
     }
 
     if (!selectedClientId) {
-      Alert.alert("Validation", "Select a client first.");
+      Alert.alert(t("validation"), t("daySelectClientFirst"));
       return;
     }
 
@@ -626,16 +628,16 @@ export default function TrainerDayScheduleScreen() {
       showDropFeedback("unassign", slotId);
       await refetchSlots();
     } catch (error: unknown) {
-      Alert.alert("Error", getErrorMessage(error, "Could not remove assignment."));
+      Alert.alert(t("error"), getErrorMessage(error, t("dayCouldNotUnassign")));
     }
   };
 
   if (user?.role !== UserRole.TRAINER) {
     return (
       <View style={styles.deniedWrap}>
-        <Text style={styles.deniedTitle}>Trainer access required</Text>
-        <Text style={styles.deniedText}>This page is available only for trainer accounts.</Text>
-        <OutlineButton label="Go to Home" onPress={() => router.replace("/")} />
+        <Text style={styles.deniedTitle}>{t("scheduleTrainerRequired")}</Text>
+        <Text style={styles.deniedText}>{t("dayTrainerOnlyMsg")}</Text>
+        <OutlineButton label={t("goHome")} onPress={() => router.replace("/")} />
       </View>
     );
   }
@@ -660,23 +662,23 @@ export default function TrainerDayScheduleScreen() {
               onPress={() => setShowControls(true)}
               hitSlop={8}
               accessibilityRole="button"
-              accessibilityLabel="Open day controls"
+              accessibilityLabel={t("dayControlsTitle")}
             >
               <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.text} />
             </Pressable>
             <View style={styles.heroTitleWrap}>
-              <Text style={styles.heroEyebrow}>Daily Planner</Text>
+              <Text style={styles.heroEyebrow}>{t("dayPlannerEyebrow")}</Text>
               <Text style={styles.heroTitle}>{routeDate}</Text>
             </View>
           </View>
 
           <View style={styles.heroStatsRow}>
             <View style={styles.statChip}>
-              <Text style={styles.statLabel}>Open</Text>
+              <Text style={styles.statLabel}>{t("dayStatOpen")}</Text>
               <Text style={styles.statValue}>{availableSlots.length}</Text>
             </View>
             <View style={styles.statChip}>
-              <Text style={styles.statLabel}>Assigned+</Text>
+              <Text style={styles.statLabel}>{t("dayStatAssigned")}</Text>
               <Text style={styles.statValue}>{assignedSlots.length}</Text>
             </View>
           </View>
@@ -684,7 +686,7 @@ export default function TrainerDayScheduleScreen() {
 
         <BottomSheet
           visible={showControls}
-          title="Day controls"
+          title={t("dayControlsTitle")}
           subtitle={routeDate}
           onClose={() => setShowControls(false)}
         >
@@ -692,27 +694,27 @@ export default function TrainerDayScheduleScreen() {
             <View style={{ gap: 8 }}>
               <View style={styles.blockedBanner}>
                 <Text style={styles.blockedBannerText}>
-                  This day is blocked. No slots can be generated until you unblock it.
+                  {t("dayBlockedNoSlots")}
                 </Text>
               </View>
               <GradientActionButton
-                label={unblocking ? "Unblocking..." : "Unblock this day"}
+                label={unblocking ? t("dayUnblocking") : t("dayUnblockThis")}
                 onPress={onUnblockDay}
                 disabled={unblocking}
               />
               <Text style={styles.controlHint}>
-                Unblocking does not recreate slots — regenerate the day afterwards.
+                {t("dayUnblockHint")}
               </Text>
             </View>
           ) : (
             <View style={{ gap: 10 }}>
-              <Text style={styles.controlLabel}>Regenerate this day</Text>
+              <Text style={styles.controlLabel}>{t("dayRegenerateThis")}</Text>
               <View style={styles.controlRow}>
                 <TextInput
                   style={[styles.input, styles.controlField]}
                   value={regenStart}
                   onChangeText={setRegenStart}
-                  placeholder="Start"
+                  placeholder={t("scheduleStart")}
                   placeholderTextColor={theme.colors.textSecondary}
                   autoCapitalize="none"
                 />
@@ -720,7 +722,7 @@ export default function TrainerDayScheduleScreen() {
                   style={[styles.input, styles.controlField]}
                   value={regenEnd}
                   onChangeText={setRegenEnd}
-                  placeholder="End"
+                  placeholder={t("scheduleEnd")}
                   placeholderTextColor={theme.colors.textSecondary}
                   autoCapitalize="none"
                 />
@@ -728,27 +730,27 @@ export default function TrainerDayScheduleScreen() {
                   style={[styles.input, styles.controlFieldNarrow]}
                   value={regenDuration}
                   onChangeText={setRegenDuration}
-                  placeholder="Min"
+                  placeholder={t("scheduleMins")}
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="number-pad"
                 />
               </View>
               <OutlineButton
-                label={regenerating ? "Regenerating..." : "Regenerate day"}
+                label={regenerating ? t("dayRegenerating") : t("dayRegenerateDay")}
                 onPress={onRegenerateDay}
                 disabled={regenerating}
               />
               <Text style={styles.controlHint}>
-                Leave times empty to use your saved template. Assigned slots are always kept.
+                {t("dayRegenHint")}
               </Text>
 
-              <Text style={styles.controlLabel}>Add a one-off slot</Text>
+              <Text style={styles.controlLabel}>{t("dayAddOneOff")}</Text>
               <View style={styles.controlRow}>
                 <TextInput
                   style={[styles.input, styles.controlField]}
                   value={newSlotStart}
                   onChangeText={setNewSlotStart}
-                  placeholder="Start 14:00"
+                  placeholder={t("dayOneOffStartPh")}
                   placeholderTextColor={theme.colors.textSecondary}
                   autoCapitalize="none"
                 />
@@ -756,13 +758,13 @@ export default function TrainerDayScheduleScreen() {
                   style={[styles.input, styles.controlField]}
                   value={newSlotEnd}
                   onChangeText={setNewSlotEnd}
-                  placeholder="End 15:00"
+                  placeholder={t("dayOneOffEndPh")}
                   placeholderTextColor={theme.colors.textSecondary}
                   autoCapitalize="none"
                 />
               </View>
               <OutlineButton
-                label={creatingSlot ? "Adding..." : "Add slot"}
+                label={creatingSlot ? t("dayAdding") : t("dayAddSlot")}
                 onPress={onAddOneOffSlot}
                 disabled={creatingSlot}
               />
@@ -772,9 +774,9 @@ export default function TrainerDayScheduleScreen() {
                 onPress={onBlockDay}
                 disabled={blocking}
                 accessibilityRole="button"
-                accessibilityLabel="Block this day"
+                accessibilityLabel={t("dayBlockThis")}
               >
-                <Text style={styles.blockBtnText}>{blocking ? "Blocking..." : "Block this day"}</Text>
+                <Text style={styles.blockBtnText}>{blocking ? t("dayBlocking") : t("dayBlockThis")}</Text>
               </Pressable>
             </View>
           )}
@@ -783,20 +785,20 @@ export default function TrainerDayScheduleScreen() {
         {isBlocked ? (
           <View style={styles.blockedBanner}>
             <Text style={styles.blockedBannerText}>
-              This day is blocked. Tap the dots (top-left) to unblock it.
+              {t("dayBlockedTapDots")}
             </Text>
           </View>
         ) : null}
 
         <View ref={slotsTourRef} collapsable={false}>
         <ScheduleCard
-          title="Slots"
-          subtitle="Drag a client onto an open slot to assign. Tap the ⋮ menu (top-left) for day options."
+          title={t("daySlotsTitle")}
+          subtitle={t("daySlotsSubtitle")}
         >
           {slotsLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
 
           {daySlots.length === 0 ? (
-            <Text style={styles.emptyText}>No slots for this day.</Text>
+            <Text style={styles.emptyText}>{t("dayNoSlots")}</Text>
           ) : (
             daySlots.map((slot) => {
               const selected = selectedSlotId === slot.id;
@@ -862,7 +864,7 @@ export default function TrainerDayScheduleScreen() {
                     <StatusBadge status={slot.status} />
                   </View>
                   <Text style={styles.assignedClientText}>
-                    {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : "No client"}
+                    {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : t("dayNoClient")}
                   </Text>
                   {slot.status === "assigned" ? (
                     <Pressable
@@ -873,7 +875,7 @@ export default function TrainerDayScheduleScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Unassign client from slot at ${shortTime(slot.startsAt)}`}
                     >
-                      <Text style={styles.unassignBtnText}>{unassigning ? "Removing..." : "Unassign"}</Text>
+                      <Text style={styles.unassignBtnText}>{unassigning ? t("dayRemoving") : t("dayUnassign")}</Text>
                     </Pressable>
                   ) : null}
                 </View>
@@ -885,8 +887,8 @@ export default function TrainerDayScheduleScreen() {
 
         <View style={styles.clientPool}>
           <View style={styles.clientPoolHeader}>
-            <Text style={styles.clientPoolTitle}>Clients Area</Text>
-            <Text style={styles.clientPoolHint}>Add by code once, then drag or tap-select.</Text>
+            <Text style={styles.clientPoolTitle}>{t("dayClientsArea")}</Text>
+            <Text style={styles.clientPoolHint}>{t("dayClientsHint")}</Text>
           </View>
 
           <View style={styles.clientInputRow} onLayout={(event) => setClientInputY(event.nativeEvent.layout.y)}>
@@ -894,7 +896,7 @@ export default function TrainerDayScheduleScreen() {
               style={[styles.input, styles.codeInput]}
               value={clientCodeInput}
               onChangeText={setClientCodeInput}
-              placeholder="Client code (6 digits)"
+              placeholder={t("dayClientCodePh")}
               placeholderTextColor={theme.colors.textSecondary}
               selectionColor={theme.colors.primary}
               cursorColor={theme.colors.primary}
@@ -903,14 +905,14 @@ export default function TrainerDayScheduleScreen() {
               onFocus={scrollToClientInput}
               keyboardType="number-pad"
             />
-            <GradientActionButton label={resolvingCode ? "Adding..." : "Add"} onPress={onAddClientCode} disabled={resolvingCode} />
+            <GradientActionButton label={resolvingCode ? t("dayAdding") : t("dayAddBtn")} onPress={onAddClientCode} disabled={resolvingCode} />
           </View>
 
           {pendingLoading ? <ActivityIndicator color={theme.colors.primary} /> : null}
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.clientList}>
             {availableClients.length === 0 ? (
-              <Text style={styles.emptyText}>No clients added yet.</Text>
+              <Text style={styles.emptyText}>{t("dayNoClients")}</Text>
             ) : (
               availableClients.map((client) => {
                 const selected = selectedClientId === client.id;

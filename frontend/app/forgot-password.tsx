@@ -14,9 +14,11 @@ import { useForgotPasswordMutation } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
@@ -28,22 +30,22 @@ export default function ForgotPasswordScreen() {
 
     const normalized = email.trim().toLowerCase();
     if (!normalized) {
-      setError("Email is required");
+      setError(t("emailRequired"));
       return;
     }
 
     if (!validateEmail(normalized)) {
-      setError("Please enter a valid email");
+      setError(t("emailInvalid"));
       return;
     }
 
     try {
       const res = await forgotPassword({ email: normalized }).unwrap();
-      Alert.alert("Check your email", res.message);
+      Alert.alert(t("checkYourEmail"), res.message);
       router.push({ pathname: "/reset-password", params: { email: normalized } });
     } catch (err: any) {
-      const msg = err?.data?.message || "Could not send reset email";
-      Alert.alert("Request failed", msg);
+      const msg = err?.data?.message || t("couldNotSendReset");
+      Alert.alert(t("requestFailed"), msg);
     }
   };
 
@@ -62,9 +64,9 @@ export default function ForgotPasswordScreen() {
           >
             <Ionicons name="lock-closed-outline" size={36} color="#FFFFFF" />
           </LinearGradient>
-          <Text style={styles.title}>Forgot Password</Text>
+          <Text style={styles.title}>{t("forgotPasswordTitle")}</Text>
           <Text style={styles.subtitle}>
-            Enter your email address and we will send a reset link.
+            {t("forgotPasswordSubtitle")}
           </Text>
         </FadeInUp>
 
@@ -85,7 +87,7 @@ export default function ForgotPasswordScreen() {
 
         <FadeInUp delay={theme.motion.stagger * 2}>
           <GradientButton
-            title="Send Reset Link"
+            title={t("sendResetLink")}
             icon="mail-outline"
             onPress={onSubmit}
             loading={isLoading}
@@ -97,9 +99,9 @@ export default function ForgotPasswordScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
             accessibilityRole="button"
-            accessibilityLabel="Back to login"
+            accessibilityLabel={t("backToLogin")}
           >
-            <Text style={styles.backButtonText}>Back to login</Text>
+            <Text style={styles.backButtonText}>{t("backToLogin")}</Text>
           </TouchableOpacity>
         </FadeInUp>
       </View>

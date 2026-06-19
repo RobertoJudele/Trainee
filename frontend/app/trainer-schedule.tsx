@@ -25,6 +25,7 @@ import {
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { DayPill, ScheduleCard, scheduleDayLabels } from "../src/components/schedule/SchedulePrimitives";
 import { MonthCalendar } from "../src/components/schedule/MonthCalendar";
@@ -41,6 +42,7 @@ export default function TrainerScheduleScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const user = useSelector(selectCurrentUser);
+  const { t, language } = useLanguage();
 
   const today = new Date();
   const [visibleMonth, setVisibleMonth] = useState<string>(
@@ -114,16 +116,16 @@ export default function TrainerScheduleScreen() {
 
   const onSaveTemplate = async () => {
     if (!TIME_RE.test(startTime) || !TIME_RE.test(endTime)) {
-      Alert.alert("Invalid time", "Use HH:mm (24h) for start and end times.");
+      Alert.alert(t("scheduleInvalidTime"), t("scheduleInvalidTimeMsg"));
       return;
     }
     const dur = Number(duration);
     if (!Number.isFinite(dur) || dur < 5 || dur > 360) {
-      Alert.alert("Invalid duration", "Slot duration must be between 5 and 360 minutes.");
+      Alert.alert(t("scheduleInvalidDuration"), t("scheduleInvalidDurationMsg"));
       return;
     }
     if (startTime >= endTime) {
-      Alert.alert("Invalid range", "End time must be after start time.");
+      Alert.alert(t("scheduleInvalidRange"), t("scheduleInvalidRangeMsg"));
       return;
     }
     try {
@@ -134,9 +136,9 @@ export default function TrainerScheduleScreen() {
         slotDurationMin: dur,
         isActive,
       }).unwrap();
-      Alert.alert("Saved", `${scheduleDayLabels[selectedDow]} hours updated.`);
+      Alert.alert(t("scheduleSaved"), `${scheduleDayLabels[selectedDow]} ${t("scheduleHoursUpdated")}`);
     } catch (err: any) {
-      Alert.alert("Error", err?.data?.message || "Could not save the template.");
+      Alert.alert(t("error"), err?.data?.message || t("scheduleCouldNotSaveTemplate"));
     }
   };
 
@@ -149,19 +151,19 @@ export default function TrainerScheduleScreen() {
       }).unwrap();
       const parts: string[] = [];
       if (res.data.count > 0) {
-        parts.push(`Created ${res.data.count} new slot${res.data.count === 1 ? "" : "s"}`);
+        parts.push(`${t("scheduleCreated")} ${res.data.count} ${res.data.count === 1 ? t("scheduleNewSlot") : t("scheduleNewSlots")}`);
       }
       if (res.data.removed > 0) {
-        parts.push(`replaced ${res.data.removed} outdated open slot${res.data.removed === 1 ? "" : "s"}`);
+        parts.push(`${t("scheduleReplaced")} ${res.data.removed} ${res.data.removed === 1 ? t("scheduleOutdatedSlot") : t("scheduleOutdatedSlots")}`);
       }
       Alert.alert(
-        "Slots generated",
+        t("scheduleSlotsGenerated"),
         parts.length > 0
-          ? `${parts.join(", ")} for this month.`
-          : "No changes — this month is already filled from your template."
+          ? `${parts.join(", ")} ${t("scheduleForThisMonth")}`
+          : t("scheduleNoChanges")
       );
     } catch (err: any) {
-      Alert.alert("Error", err?.data?.message || "Could not generate slots.");
+      Alert.alert(t("error"), err?.data?.message || t("scheduleCouldNotGenerate"));
     }
   };
 
@@ -171,10 +173,10 @@ export default function TrainerScheduleScreen() {
         <View style={styles.lockIcon}>
           <Ionicons name="lock-closed-outline" size={34} color={theme.colors.primary} />
         </View>
-        <Text style={styles.lockTitle}>Trainer access required</Text>
-        <Text style={styles.lockText}>This planner is available to trainers.</Text>
+        <Text style={styles.lockTitle}>{t("scheduleTrainerRequired")}</Text>
+        <Text style={styles.lockText}>{t("schedulePlannerAvailable")}</Text>
         <GradientButton
-          title="Go to Home"
+          title={t("goHome")}
           icon="home"
           onPress={() => router.replace("/")}
           style={{ marginTop: theme.spacing.md, alignSelf: "stretch" }}
@@ -196,9 +198,9 @@ export default function TrainerScheduleScreen() {
             end={{ x: 1, y: 1 }}
             style={[styles.hero, { paddingTop: Math.max(insets.top + theme.spacing.sm, theme.spacing.xl) }]}
           >
-            <Text style={styles.heroTitle}>Schedule</Text>
+            <Text style={styles.heroTitle}>{t("scheduleTitle")}</Text>
             <Text style={styles.heroSubtitle}>
-              Set your weekly hours, generate a month, then tap any day to fine-tune it.
+              {t("scheduleSubtitle")}
             </Text>
           </LinearGradient>
         </View>
@@ -215,15 +217,15 @@ export default function TrainerScheduleScreen() {
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger} style={styles.legendRow}>
-            <Legend color={theme.colors.primary} label="Available" />
-            <Legend color="#0D6EFD" label="Booked" />
-            <Legend color="#94A3B8" label="Blocked" />
+            <Legend color={theme.colors.primary} label={t("scheduleLegendAvailable")} />
+            <Legend color="#0D6EFD" label={t("scheduleLegendBooked")} />
+            <Legend color="#94A3B8" label={t("scheduleLegendBlocked")} />
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger * 2}>
             <View ref={generateTourRef} collapsable={false}>
               <GradientButton
-                title={`Generate ${new Date(vy, vm - 1, 1).toLocaleString(undefined, { month: "long" })}`}
+                title={`${t("scheduleGenerate")} ${new Date(vy, vm - 1, 1).toLocaleString(language === "ro" ? "ro-RO" : "en-US", { month: "long" })}`}
                 icon="sparkles-outline"
                 onPress={onGenerateMonth}
                 loading={generating}
@@ -234,8 +236,8 @@ export default function TrainerScheduleScreen() {
           <FadeInUp delay={theme.motion.stagger * 3}>
             <View ref={templateTourRef} collapsable={false}>
             <ScheduleCard
-              title="Working hours template"
-              subtitle="Your reusable weekly availability — used when generating slots."
+              title={t("scheduleWorkingHoursTemplate")}
+              subtitle={t("scheduleWorkingHoursSubtitle")}
             >
               <View style={styles.dayPillRow}>
                 {scheduleDayLabels.map((label, dow) => (
@@ -250,7 +252,7 @@ export default function TrainerScheduleScreen() {
 
               <View style={styles.timeRow}>
                 <Field
-                  label="Start"
+                  label={t("scheduleStart")}
                   placeholder="09:00"
                   value={startTime}
                   onChangeText={setStartTime}
@@ -258,7 +260,7 @@ export default function TrainerScheduleScreen() {
                   containerStyle={styles.timeField}
                 />
                 <Field
-                  label="End"
+                  label={t("scheduleEnd")}
                   placeholder="17:00"
                   value={endTime}
                   onChangeText={setEndTime}
@@ -266,7 +268,7 @@ export default function TrainerScheduleScreen() {
                   containerStyle={styles.timeField}
                 />
                 <Field
-                  label="Mins"
+                  label={t("scheduleMins")}
                   placeholder="60"
                   value={duration}
                   onChangeText={setDuration}
@@ -276,7 +278,7 @@ export default function TrainerScheduleScreen() {
               </View>
 
               <View style={styles.activeRow}>
-                <Text style={styles.activeLabel}>Active on {scheduleDayLabels[selectedDow]}</Text>
+                <Text style={styles.activeLabel}>{t("scheduleActiveOn")} {scheduleDayLabels[selectedDow]}</Text>
                 <Switch
                   value={isActive}
                   onValueChange={setIsActive}
@@ -286,7 +288,7 @@ export default function TrainerScheduleScreen() {
               </View>
 
               <GradientButton
-                title={`Save ${scheduleDayLabels[selectedDow]} hours`}
+                title={`${t("scheduleSaveHours")} ${scheduleDayLabels[selectedDow]}`}
                 icon="save-outline"
                 onPress={onSaveTemplate}
                 loading={savingTemplate}
@@ -302,7 +304,7 @@ export default function TrainerScheduleScreen() {
                         <Text style={[styles.summaryHours, !w.isActive && styles.summaryInactive]}>
                           {w.isActive
                             ? `${w.startTime.slice(0, 5)}–${w.endTime.slice(0, 5)} · ${w.slotDurationMin}m`
-                            : "Off"}
+                            : t("scheduleOff")}
                         </Text>
                       </View>
                     ))}

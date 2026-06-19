@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useSearchTrainersQuery, useGetSpecializationsQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,16 +28,17 @@ if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental
 }
 
 
-const SORT_OPTIONS = [
-  { value: "totalRating", label: "Top Rated" },
-  { value: "reviewCount", label: "Most Reviewed" },
-  { value: "hourlyRate", label: "Price: Low to High" },
-  { value: "experienceYears", label: "Most Experienced" },
-  { value: "createdAt", label: "Newest" },
-] as const;
-
 export default function SearchScreen() {
   const router = useRouter();
+  const { t, language } = useLanguage();
+
+  const SORT_OPTIONS = [
+    { value: "totalRating", label: t("topRated") },
+    { value: "reviewCount", label: t("mostReviewed") },
+    { value: "hourlyRate", label: t("priceLowToHigh") },
+    { value: "experienceYears", label: t("mostExperienced") },
+    { value: "createdAt", label: t("newest") },
+  ] as const;
 
   // --- search state ---
   const [query, setQuery] = useState("");
@@ -189,7 +191,7 @@ export default function SearchScreen() {
           {item.isFeatured && (
             <View style={styles.featuredBadge}>
               <Ionicons name="star" size={10} color="#D97706" style={{marginRight: 2}} />
-              <Text style={styles.featuredText}>Featured</Text>
+              <Text style={styles.featuredText}>{t("featured")}</Text>
             </View>
           )}
         </View>
@@ -242,24 +244,24 @@ export default function SearchScreen() {
       return (
         <View style={styles.emptyState}>
           <Ionicons name="search" size={48} color={theme.colors.textSecondary} style={{ marginBottom: theme.spacing.md }} />
-          <Text style={styles.emptyTitle}>Find your trainer</Text>
-          <Text style={styles.emptyDesc}>Search by name, location, or specialization</Text>
+          <Text style={styles.emptyTitle}>{t("findYourTrainer")}</Text>
+          <Text style={styles.emptyDesc}>{t("searchByNameLocation")}</Text>
         </View>
       );
     }
     return (
       <View style={styles.emptyState}>
         <Ionicons name="sad-outline" size={48} color={theme.colors.textSecondary} style={{ marginBottom: theme.spacing.md }} />
-        <Text style={styles.emptyTitle}>No trainers found</Text>
-        <Text style={styles.emptyDesc}>Try adjusting your filters</Text>
+        <Text style={styles.emptyTitle}>{t("noTrainersFound")}</Text>
+        <Text style={styles.emptyDesc}>{t("tryAdjustingFilters")}</Text>
         <TouchableOpacity
           style={styles.clearBtn}
           onPress={handleClear}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Clear Filters"
+          accessibilityLabel={t("clearFilters")}
         >
-          <Text style={styles.clearBtnText}>Clear Filters</Text>
+          <Text style={styles.clearBtnText}>{t("clearFilters")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -274,7 +276,7 @@ export default function SearchScreen() {
             <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Search trainers..."
+              placeholder={t("searchTrainers")}
               placeholderTextColor={theme.colors.textSecondary}
               value={query}
               onChangeText={setQuery}
@@ -308,29 +310,29 @@ export default function SearchScreen() {
         {/* ── Filters panel ── */}
         {showFilters && (
           <View style={styles.filtersPanel}>
-            <Text style={styles.filterSection}>Location</Text>
+            <Text style={styles.filterSection}>{t("locationFilter")}</Text>
             <View style={styles.row}>
               <TextInput
                 style={[styles.filterInput, { flex: 1, marginRight: 8 }]}
-                placeholder="City"
+                placeholder={t("cityFilter")}
                 placeholderTextColor={theme.colors.textSecondary}
                 value={city}
                 onChangeText={setCity}
               />
               <TextInput
                 style={[styles.filterInput, { flex: 1 }]}
-                placeholder="State"
+                placeholder={t("stateFilter")}
                 placeholderTextColor={theme.colors.textSecondary}
                 value={state}
                 onChangeText={setState}
               />
             </View>
 
-            <Text style={styles.filterSection}>Price Range (per session)</Text>
+            <Text style={styles.filterSection}>{t("priceRange")}</Text>
             <View style={styles.row}>
               <TextInput
                 style={[styles.filterInput, { flex: 1, marginRight: 8 }]}
-                placeholder="Min $"
+                placeholder={t("minPrice")}
                 placeholderTextColor={theme.colors.textSecondary}
                 value={minPrice}
                 onChangeText={setMinPrice}
@@ -338,7 +340,7 @@ export default function SearchScreen() {
               />
               <TextInput
                 style={[styles.filterInput, { flex: 1 }]}
-                placeholder="Max $"
+                placeholder={t("maxPrice")}
                 placeholderTextColor={theme.colors.textSecondary}
                 value={maxPrice}
                 onChangeText={setMaxPrice}
@@ -346,7 +348,7 @@ export default function SearchScreen() {
               />
             </View>
 
-            <Text style={styles.filterSection}>Specializations</Text>
+            <Text style={styles.filterSection}>{t("specializations")}</Text>
             <View style={styles.specGrid}>
               {specializationOptions.map((s) => {
                 const active = selectedSpecs.includes(s.id);
@@ -367,7 +369,7 @@ export default function SearchScreen() {
               })}
             </View>
 
-            <Text style={styles.filterSection}>Sort By</Text>
+            <Text style={styles.filterSection}>{t("sortBy")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortRow}>
               {SORT_OPTIONS.map((opt) => (
                 <TouchableOpacity
@@ -393,7 +395,7 @@ export default function SearchScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Clear All filters"
               >
-                <Text style={styles.clearFilterText}>Clear All</Text>
+                <Text style={styles.clearFilterText}>{t("clearAll")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.applyBtn}
@@ -402,7 +404,7 @@ export default function SearchScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Apply Filters"
               >
-                <Text style={styles.applyBtnText}>Apply Filters</Text>
+                <Text style={styles.applyBtnText}>{t("applyFilters")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -422,7 +424,7 @@ export default function SearchScreen() {
             )}
             {activeParams.specializations && (
               <ActiveChip
-                label={`${activeParams.specializations.split(",").length} specialization(s)`}
+                label={`${activeParams.specializations.split(",").length} ${t("specializationCount")}`}
                 onRemove={() => { setSelectedSpecs([]); setActiveParams(p => { const n = {...p}; delete n.specializations; return n; }); }}
               />
             )}
@@ -434,7 +436,7 @@ export default function SearchScreen() {
       {(isLoading || isFetching) ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={styles.loadingText}>Finding trainers...</Text>
+          <Text style={styles.loadingText}>{t("findingTrainers")}</Text>
         </View>
       ) : (
         <FlatList
@@ -446,7 +448,7 @@ export default function SearchScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             pagination && pagination.total > 0 ? (
-              <Text style={styles.resultCount}>{pagination.total} trainer{pagination.total !== 1 ? "s" : ""} found</Text>
+              <Text style={styles.resultCount}>{pagination.total} {t("trainersFound")}</Text>
             ) : null
           }
           ListFooterComponent={
@@ -462,7 +464,7 @@ export default function SearchScreen() {
                 accessibilityRole="button"
                 accessibilityLabel="Load More trainers"
               >
-                <Text style={styles.loadMoreText}>Load More</Text>
+                <Text style={styles.loadMoreText}>{t("loadMore")}</Text>
               </TouchableOpacity>
             ) : null
           }

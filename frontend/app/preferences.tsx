@@ -25,21 +25,7 @@ import {
   FitnessLevel,
   RateType,
 } from "../features/recommendations/recommendationApiSlice";
-
-const GOAL_OPTIONS = [
-  "Weight loss",
-  "Muscle gain",
-  "Endurance",
-  "Flexibility",
-  "Rehab",
-  "General fitness",
-];
-
-const FITNESS_LEVEL_OPTIONS: { value: FitnessLevel; label: string }[] = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "expert", label: "Expert" },
-];
+import { useLanguage } from "../src/lib/i18n/LanguageContext";
 
 const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
   const R = 6371;
@@ -54,6 +40,22 @@ const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => 
 export default function PreferencesScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { t, language } = useLanguage();
+
+  const GOAL_OPTIONS = [
+    { value: "Weight loss", label: t("weightLoss") },
+    { value: "Muscle gain", label: t("muscleGain") },
+    { value: "Endurance", label: t("endurance") },
+    { value: "Flexibility", label: t("flexibility") },
+    { value: "Rehab", label: t("rehab") },
+    { value: "General fitness", label: t("generalFitness") },
+  ];
+
+  const FITNESS_LEVEL_OPTIONS: { value: FitnessLevel; label: string }[] = [
+    { value: "beginner", label: t("beginner") },
+    { value: "intermediate", label: t("intermediate") },
+    { value: "expert", label: t("expert") },
+  ];
 
   const { data: preferencesResponse, isLoading: preferencesLoading } = useGetMyPreferencesQuery();
   const [updatePreferences, { isLoading: isSaving }] = useUpdateMyPreferencesMutation();
@@ -156,15 +158,15 @@ export default function PreferencesScreen() {
     const distanceVal = maxDistanceKm.trim() ? parseFloat(maxDistanceKm) : null;
 
     if (minVal !== null && isNaN(minVal)) {
-      Alert.alert("Invalid input", "Budget minimum must be a number.");
+      Alert.alert(t("invalidInput"), t("budgetMinNumber"));
       return;
     }
     if (maxVal !== null && isNaN(maxVal)) {
-      Alert.alert("Invalid input", "Budget maximum must be a number.");
+      Alert.alert(t("invalidInput"), t("budgetMaxNumber"));
       return;
     }
     if (distanceVal !== null && isNaN(distanceVal)) {
-      Alert.alert("Invalid input", "Max distance must be a number.");
+      Alert.alert(t("invalidInput"), t("maxDistanceNumber"));
       return;
     }
 
@@ -180,11 +182,11 @@ export default function PreferencesScreen() {
         preferredGymId,
       }).unwrap();
 
-      Alert.alert("Preferences saved", "We'll use this to personalize your trainer suggestions.", [
+      Alert.alert(t("preferencesSaved"), t("preferencesDescription"), [
         { text: "OK", onPress: () => router.back() },
       ]);
     } catch {
-      Alert.alert("Error", "Could not save your preferences. Please try again.");
+      Alert.alert(t("error"), t("couldNotSavePreferences"));
     }
   };
 
@@ -204,8 +206,8 @@ export default function PreferencesScreen() {
           >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </Pressable>
-          <Text style={styles.headerTitle}>Edit Preferences</Text>
-          <Text style={styles.headerSubtitle}>Tell us what you're looking for so we can suggest the right trainers</Text>
+          <Text style={styles.headerTitle}>{t("editPreferencesTitle")}</Text>
+          <Text style={styles.headerSubtitle}>{t("editPreferencesSubtitle")}</Text>
         </LinearGradient>
 
         {preferencesLoading ? (
@@ -216,8 +218,8 @@ export default function PreferencesScreen() {
           <View style={styles.form}>
             {/* Specializations */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Specializations</Text>
-              <Text style={styles.sectionHint}>What kind of training are you interested in?</Text>
+              <Text style={styles.sectionTitle}>{t("specializations")}</Text>
+              <Text style={styles.sectionHint}>{t("whatKindOfTraining")}</Text>
               {specializationsLoading ? (
                 <ActivityIndicator size="small" color={theme.colors.primary} />
               ) : (
@@ -245,12 +247,12 @@ export default function PreferencesScreen() {
                       onPress={() => setShowAllSpecializations((prev) => !prev)}
                       accessible
                       accessibilityRole="button"
-                      accessibilityLabel={showAllSpecializations ? "Show less" : "Show more specializations"}
+                      accessibilityLabel={showAllSpecializations ? t("showLess") : t("showMore")}
                     >
                       <Text style={styles.showMoreText}>
                         {showAllSpecializations
-                          ? "Show less"
-                          : `Show more (+${specializationOptions.length - 4})`}
+                          ? t("showLess")
+                          : `${t("showMore")} (+${specializationOptions.length - 4})`}
                       </Text>
                       <Ionicons
                         name={showAllSpecializations ? "chevron-up" : "chevron-down"}
@@ -265,21 +267,21 @@ export default function PreferencesScreen() {
 
             {/* Goals */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Goals</Text>
-              <Text style={styles.sectionHint}>What do you want to achieve?</Text>
+              <Text style={styles.sectionTitle}>{t("goals")}</Text>
+              <Text style={styles.sectionHint}>{t("whatToAchieve")}</Text>
               <View style={styles.chipGrid}>
                 {GOAL_OPTIONS.map((goal) => {
-                  const active = selectedGoals.includes(goal);
+                  const active = selectedGoals.includes(goal.value);
                   return (
                     <Pressable
-                      key={goal}
+                      key={goal.value}
                       style={[styles.chip, active && styles.chipActive]}
-                      onPress={() => toggleGoal(goal)}
+                      onPress={() => toggleGoal(goal.value)}
                       accessible
                       accessibilityRole="button"
-                      accessibilityLabel={goal}
+                      accessibilityLabel={goal.label}
                     >
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{goal}</Text>
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{goal.label}</Text>
                     </Pressable>
                   );
                 })}
@@ -288,8 +290,8 @@ export default function PreferencesScreen() {
 
             {/* Fitness level */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Fitness Level</Text>
-              <Text style={styles.sectionHint}>Helps us match you with trainers at the right level</Text>
+              <Text style={styles.sectionTitle}>{t("fitnessLevel")}</Text>
+              <Text style={styles.sectionHint}>{t("fitnessLevelSubtitle")}</Text>
               <View style={styles.segmentRow}>
                 {FITNESS_LEVEL_OPTIONS.map((opt) => {
                   const active = fitnessLevel === opt.value;
@@ -311,8 +313,8 @@ export default function PreferencesScreen() {
 
             {/* Budget */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Budget</Text>
-              <Text style={styles.sectionHint}>Your preferred price range</Text>
+              <Text style={styles.sectionTitle}>{t("budget")}</Text>
+              <Text style={styles.sectionHint}>{t("budgetSubtitle")}</Text>
               <View style={styles.segmentRow}>
                 {(["session", "hourly"] as RateType[]).map((type) => {
                   const active = rateType === type;
@@ -323,10 +325,10 @@ export default function PreferencesScreen() {
                       onPress={() => setRateType(type)}
                       accessible
                       accessibilityRole="button"
-                      accessibilityLabel={type === "hourly" ? "Hourly rate" : "Per session rate"}
+                      accessibilityLabel={type === "hourly" ? t("hourly") : t("perSessionLabel")}
                     >
                       <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                        {type === "hourly" ? "Hourly" : "Per session"}
+                        {type === "hourly" ? t("hourly") : t("perSessionLabel")}
                       </Text>
                     </Pressable>
                   );
@@ -334,7 +336,7 @@ export default function PreferencesScreen() {
               </View>
               <View style={styles.row}>
                 <View style={styles.halfWidth}>
-                  <Text style={styles.label}>Min ($)</Text>
+                  <Text style={styles.label}>{t("minBudget")}</Text>
                   <TextInput
                     style={styles.input}
                     value={budgetMin}
@@ -345,7 +347,7 @@ export default function PreferencesScreen() {
                   />
                 </View>
                 <View style={styles.halfWidth}>
-                  <Text style={styles.label}>Max ($)</Text>
+                  <Text style={styles.label}>{t("maxBudget")}</Text>
                   <TextInput
                     style={styles.input}
                     value={budgetMax}
@@ -360,9 +362,9 @@ export default function PreferencesScreen() {
 
             {/* Preferred gym */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Preferred Gym</Text>
+              <Text style={styles.sectionTitle}>{t("preferredGym")}</Text>
               <Text style={styles.sectionHint}>
-                We'll prioritize trainers who work at this gym, and use its location for distance matching
+                {t("preferredGymSubtitle")}
               </Text>
 
               {selectedGymLabel ? (
@@ -384,7 +386,7 @@ export default function PreferencesScreen() {
                 style={styles.input}
                 value={gymSearch}
                 onChangeText={setGymSearch}
-                placeholder="Search gyms by name or city..."
+                placeholder={t("searchGymsPlaceholder")}
                 placeholderTextColor={theme.colors.textSecondary}
               />
 
@@ -417,7 +419,7 @@ export default function PreferencesScreen() {
                     );
                   })}
                   {gymSearch.trim() && filteredGyms.length === 0 ? (
-                    <Text style={styles.sectionHint}>No gyms found</Text>
+                    <Text style={styles.sectionHint}>{t("noGymsFound")}</Text>
                   ) : null}
                 </View>
               )}
@@ -425,9 +427,9 @@ export default function PreferencesScreen() {
 
             {/* Max distance */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Max Distance from Gym (km)</Text>
+              <Text style={styles.sectionTitle}>{t("maxDistanceLabel")}</Text>
               <Text style={styles.sectionHint}>
-                Used as a fallback when a trainer doesn't work at your preferred gym
+                {t("maxDistanceSubtitle")}
               </Text>
               <TextInput
                 style={styles.input}
@@ -440,7 +442,7 @@ export default function PreferencesScreen() {
             </View>
 
             <GradientButton
-              title="Save Preferences"
+              title={t("savePreferences")}
               onPress={handleSave}
               loading={isSaving}
               style={{ marginTop: theme.spacing.md }}
