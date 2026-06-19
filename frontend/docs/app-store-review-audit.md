@@ -35,11 +35,13 @@ The native `ios/.../PrivacyInfo.xcprivacy` is **generated from `app.json` →
 - [ ] 🟡 **Decide `UserID` purposes.** Currently only `AppFunctionality`. If RevenueCat/analytics
       profile users by ID, add `NSPrivacyCollectedDataTypePurposeAnalytics`. Verify actual use first.
 - [ ] 🟡 **Cross-check App Store Connect nutrition labels.** They must match the manifest exactly:
-      Precise Location, Photos/Videos, Email, User ID, Payment Info (+ Purchase History once added).
-      Mismatch = Guideline 5.1.2 rejection risk.
+      Coarse Location, Photos/Videos, Email, **Name**, **Phone Number**, User ID, Payment Info,
+      Purchase History. Mismatch = Guideline 5.1.2 rejection risk.
 
 ### Verified OK
-- 🟢 `app.json` correctly declares Precise Location, Photos/Videos, Email, User ID, Payment Info.
+- 🟢 `app.json` declares Coarse Location, Photos/Videos, Email, Name, Phone Number, User ID,
+      Payment Info, Purchase History. (**Name + Phone Number added 2026-06-18** — both are collected at
+      sign-up via `SignUp.tsx` → `RegisterRequest`, so they must be declared.)
 - 🟢 Required-reason APIs (`UserDefaults / CA92.1`, `FileTimestamp / C617.1`) are correct/standard.
 - 🟢 Bundled SDKs (async-storage, expo-file-system, react-native, react-native-maps) ship their
       own manifests; no need to redeclare their required-reason APIs at app level.
@@ -183,8 +185,9 @@ Single source of truth for what's still open. Code fixes from §1–§4 are alre
 - [ ] 🔴 **§3 — Verify the paywall fix end-to-end (needs iOS build).** Confirm the auto-renewal text +
       Terms/Privacy links render and `/legal` opens, and that Billing Cycle shows the localized price.
       Can't run on win32 — requires macOS/EAS simulator or device build.
-- [ ] 🟡 **§3 — Sandbox purchase must complete (operational).** Confirm offerings load reliably (the
-      retry/"no_plans" path); a dead paywall = Guideline 2.1 rejection. Mostly App Store Connect config.
+- [x] 🟡 ~~**§3 — Sandbox purchase must complete (operational).**~~ — **done 2026-06-18.** Sandbox
+      purchase confirmed to complete end-to-end: offerings load reliably (no "no_plans"/dead-paywall
+      path hit), paywall reachable, purchase flow finishes. No longer a Guideline 2.1 risk.
 - [x] 🟢 ~~**§3 — Paywall showed USD ($17.99) while Apple sheet billed 99,99 RON**~~ — **RESOLVED /
       not a bug (2026-06-18).** On-device diagnostic showed `storefront=USA`. Root cause: **TestFlight
       runs IAP in the sandbox environment, where the storefront/currency follows the *Sandbox Apple
@@ -208,14 +211,25 @@ Single source of truth for what's still open. Code fixes from §1–§4 are alre
       provide a working **regular** account AND a **trainer** account (trainer features differ:
       analytics, schedule, subscription). Keep accounts alive + seeded with realistic data; no 2FA/SMS
       the reviewer can't pass.
-- [ ] 🔴 **Products "Ready to Submit"** + Paid Apps Agreement signed + product IDs match RevenueCat,
-      so the reviewer's IAP purchase works.
+- [x] 🔴 ~~**Products "Ready to Submit"** + Paid Apps Agreement signed + product IDs match RevenueCat,
+      so the reviewer's IAP purchase works.~~ — **done 2026-06-18.**
 - [ ] 🟡 **Privacy Policy URL** set in the App Store Connect metadata field (5.1.2).
+      _Checked 2026-06-18:_ no hosted privacy/terms URL exists in `app.json` or app code — the policy
+      currently only ships in-app via `app/legal.tsx`. `PRIVACY_POLICY.md` (repo root) is available to
+      host. Still outstanding: host it and paste the URL into ASC.
 - [ ] 🟡 **Privacy nutrition labels** must match the manifest exactly: Coarse Location, Photos/Videos,
       Email, User ID, Payment Info, Purchase History.
+      _Manifest side verified 2026-06-18:_ `app.json → ios.privacyManifests` declares **8 types** —
+      Coarse Location, Photos/Videos, Email, **Name**, **Phone Number**, User ID, Payment Info,
+      Purchase History (location is **Coarse**, not Precise — consistent with §2; Name + Phone Number
+      added after confirming both are collected at sign-up). Outstanding work is the ASC side only:
+      mirror all 8 in App Store Connect nutrition labels.
 - [ ] 🟡 **Metadata/screenshots** — name & subtitle ≤30 chars; keyword field ≤100 chars comma-separated
       no spaces; 6.9" iPhone + 13" iPad screenshot sets; no prices / no other-platform mentions.
-- [ ] 🔴 **Build with Xcode 26+ / platform SDK 26+** (required for uploads after 2026-04-28).
+      _Checked 2026-06-18:_ app display name is `Trainee` (7 chars, well within 30). Subtitle, keywords,
+      and screenshots are ASC-only (not in repo) — still outstanding.
+- [x] 🔴 ~~**Build with Xcode 26+ / platform SDK 26+** (required for uploads after 2026-04-28).~~ —
+      **done 2026-06-18.**
 
 ## D. Not yet audited
 - [ ] §5 — Metadata/build/HIG deep pass (Dark Mode, Dynamic Type, launch screen, navigation patterns).
