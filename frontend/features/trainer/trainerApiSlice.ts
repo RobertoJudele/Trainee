@@ -15,7 +15,6 @@ interface TrainerDeleteResponse {
 interface TrainerUpdateRequest {
   bio?: string;
   experienceYears?: number;
-  hourlyRate?: number;
   sessionRate?: number;
   locationCity?: string;
   locationState?: string;
@@ -233,38 +232,17 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTrainerProfile: builder.query<TrainerProfileResponse, void>({
       query: () => "/trainer",
-      transformResponse: (response: any) => {
-        console.log("🎯 Trainer profile response:", response);
-        return response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Trainer profile error:", response);
-        return response;
-      },
     }),
 
     getTrainerById: builder.query<PublicTrainerProfile, string>({
       query: (trainerId) => `/trainer/${trainerId}`,
       transformResponse: (response: any) => {
-        console.log("🎯 Public trainer response:", response);
         return response?.data ?? response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Public trainer error:", response);
-        return response;
       },
     }),
 
     getSpecializations: builder.query<SpecializationListResponse, void>({
       query: () => "/specialization",
-      transformResponse: (response: any) => {
-        console.log("🎯 Specializations response:", response);
-        return response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Specializations error:", response);
-        return response;
-      },
     }),
 
     deleteTrainerProfile: builder.mutation<TrainerDeleteResponse, void>({
@@ -272,10 +250,6 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
         url: "/trainer",
         method: "DELETE",
       }),
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Delete trainer error:", JSON.stringify(response));
-        return response;
-      },
     }),
 
     updateTrainerProfile: builder.mutation<
@@ -287,21 +261,12 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body,
       }),
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Update trainer error:", JSON.stringify(response));
-        return response;
-      },
     }),
 
     getTrainerAnalytics: builder.query<TrainerAnalyticsResponseData, void>({
       query: () => "/trainer/analytics",
       transformResponse: (response: any) => {
-        console.log("📈 Trainer analytics response:", response);
         return response?.data ?? response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Trainer analytics error:", JSON.stringify(response));
-        return response;
       },
     }),
 
@@ -316,14 +281,6 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
         });
         const qs = queryParams.toString();
         return `/trainer/search${qs ? `?${qs}` : ""}`;
-      },
-      transformResponse: (response: any) => {
-        console.log("🔍 Search response:", response);
-        return response;
-      },
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Search error:", response);
-        return response;
       },
     }),
 

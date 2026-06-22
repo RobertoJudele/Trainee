@@ -9,6 +9,7 @@ import {
   useGetSpecializationsQuery,
   SpecializationItem,
 } from "../trainer/trainerApiSlice";
+import { useCreateTrainerPackageMutation } from "../trainer/trainerPackageApiSlice";
 import {
   KeyboardAvoidingView,
   View,
@@ -29,8 +30,9 @@ export default function CreateTrainer() {
   const { t } = useLanguage();
   const [bio, setBio] = useState("");
   const [exp, setExp] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
-  const [sessionRate, setSessionRate] = useState("");
+  const [packages, setPackages] = useState<Array<{ name: string; price: string; sessionCount: string }>>([
+    { name: "", price: "", sessionCount: "" },
+  ]);
   const [city, setCity] = useState("");
   const [county, setCounty] = useState("");
   const [country, setCountry] = useState("");
@@ -43,6 +45,7 @@ export default function CreateTrainer() {
   const [errMsg, setErrMsg] = useState("");
   const token = useSelector(selectCurrentToken);
   const [creatingTrainer, { isLoading }] = useCreateTrainerMutation();
+  const [createPackage] = useCreateTrainerPackageMutation();
   const {
     data: specializationResponse,
     isLoading: specializationsLoading,
@@ -58,6 +61,24 @@ export default function CreateTrainer() {
     );
   }, []);
 
+  const addPackageRow = useCallback(() => {
+    if (packages.length >= 5) return;
+    setPackages((prev) => [...prev, { name: "", price: "", sessionCount: "" }]);
+  }, [packages.length]);
+
+  const removePackageRow = useCallback((index: number) => {
+    setPackages((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updatePackageField = useCallback(
+    (index: number, field: "name" | "price" | "sessionCount", value: string) => {
+      setPackages((prev) =>
+        prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+      );
+    },
+    []
+  );
+
   const validateForm = () => {
     if (!bio.trim()) {
       setErrMsg(t("bioIsRequired"));
@@ -67,13 +88,23 @@ export default function CreateTrainer() {
       setErrMsg(t("experienceIsRequired"));
       return false;
     }
-    if (!hourlyRate.trim()) {
-      setErrMsg(t("hourlyRateIsRequired"));
+    if (packages.length === 0) {
+      setErrMsg(t("packageNameRequired"));
       return false;
     }
-    if (!sessionRate.trim()) {
-      setErrMsg(t("sessionRateIsRequired"));
-      return false;
+    for (const pkg of packages) {
+      if (!pkg.name.trim()) {
+        setErrMsg(t("packageNameRequired"));
+        return false;
+      }
+      if (!pkg.price.trim() || isNaN(parseFloat(pkg.price)) || parseFloat(pkg.price) <= 0) {
+        setErrMsg(t("packagePriceRequired"));
+        return false;
+      }
+      if (!pkg.sessionCount.trim() || isNaN(parseInt(pkg.sessionCount)) || parseInt(pkg.sessionCount) < 1) {
+        setErrMsg(t("sessionCountRequired"));
+        return false;
+      }
     }
     if (!city.trim()) {
       setErrMsg(t("cityIsRequired"));
@@ -104,16 +135,6 @@ export default function CreateTrainer() {
       return false;
     }
 
-    // Validate rates are numbers
-    if (isNaN(parseFloat(hourlyRate)) || parseFloat(hourlyRate) <= 0) {
-      setErrMsg(t("invalidHourly"));
-      return false;
-    }
-    if (isNaN(parseFloat(sessionRate)) || parseFloat(sessionRate) <= 0) {
-      setErrMsg(t("invalidSession"));
-      return false;
-    }
-
     return true;
   };
 
@@ -129,25 +150,27 @@ export default function CreateTrainer() {
       const trainerData = {
         bio: bio.trim(),
         experienceYears: parseInt(exp, 10),
-        hourlyRate: parseFloat(hourlyRate),
-        sessionRate: parseFloat(sessionRate),
         locationCity: city.trim(),
         locationState: county.trim(),
         locationCountry: country.trim(),
         specializationIds: selectedSpecializationIds,
       };
-      console.log("Trainer data: ", trainerData);
 
       const result = await creatingTrainer(trainerData);
-      console.log(user);
-
 
       const responseData = (result as any)?.data?.data;
       if (responseData && user) {
         dispatch(setTrainerProfile(responseData));
         dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
-        // Queue the trainer onboarding tour for their first trainer-area visit.
         dispatch(requestTrainerTour());
+
+        for (const pkg of packages) {
+          await createPackage({
+            name: pkg.name.trim(),
+            price: parseFloat(pkg.price),
+            sessionCount: parseInt(pkg.sessionCount),
+          });
+        }
       }
 
       Alert.alert(
@@ -179,14 +202,14 @@ export default function CreateTrainer() {
     }
   }, [
     bio,
-    hourlyRate,
-    sessionRate,
+    packages,
     city,
     country,
     county,
     exp,
     selectedSpecializationIds,
     creatingTrainer,
+    createPackage,
     dispatch,
   ]);
   if (!user) {
@@ -254,7 +277,7 @@ export default function CreateTrainer() {
             {errMsg ? (
               <View style={styles.errorContainer}>
                 <Text ref={errRef} style={styles.errorText}>
-                  ⚠️ {errMsg}
+                  {errMsg}
                 </Text>
               </View>
             ) : null}
@@ -342,36 +365,68 @@ export default function CreateTrainer() {
               )}
             </View>
 
-            {/* Pricing Section */}
+            {/* Packages Section */}
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
                 <Ionicons name="cash-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
-                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("pricing")}</Text>
+                <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("myPackages")}</Text>
               </View>
 
-              <View style={styles.row}>
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t("hourlyRateRequired")}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={hourlyRate}
-                    placeholder="50"
-                    onChangeText={setHourlyRate}
-                    keyboardType="numeric"
-                  />
+              {packages.map((pkg, index) => (
+                <View key={index} style={{marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border}}>
+                  <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
+                    <Text style={{fontSize: 14, fontWeight: '600', color: theme.colors.text}}>
+                      {t("addPackage")} {index + 1}
+                    </Text>
+                    {packages.length > 1 && (
+                      <Pressable onPress={() => removePackageRow(index)}>
+                        <Ionicons name="trash-outline" size={20} color="#DC2626" />
+                      </Pressable>
+                    )}
+                  </View>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.label}>{t("packageName")}</Text>
+                    <TextInput
+                      style={styles.input}
+                      value={pkg.name}
+                      placeholder="e.g. Starter Pack"
+                      onChangeText={(v) => updatePackageField(index, "name", v)}
+                    />
+                  </View>
+                  <View style={styles.row}>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>{t("packagePrice")}</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={pkg.price}
+                        placeholder="120"
+                        onChangeText={(v) => updatePackageField(index, "price", v)}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={[styles.inputGroup, styles.halfWidth]}>
+                      <Text style={styles.label}>{t("sessionCount")}</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={pkg.sessionCount}
+                        placeholder="4"
+                        onChangeText={(v) => updatePackageField(index, "sessionCount", v)}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+                  </View>
                 </View>
+              ))}
 
-                <View style={[styles.inputGroup, styles.halfWidth]}>
-                  <Text style={styles.label}>{t("sessionRateRequired")}</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={sessionRate}
-                    placeholder="75"
-                    onChangeText={setSessionRate}
-                    keyboardType="numeric"
-                  />
-                </View>
-              </View>
+              {packages.length < 5 && (
+                <Pressable
+                  onPress={addPackageRow}
+                  style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed'}}
+                >
+                  <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
+                  <Text style={{color: theme.colors.primary, fontWeight: '600'}}>{t("addPackage")}</Text>
+                </Pressable>
+              )}
             </View>
 
             {/* Location Section */}

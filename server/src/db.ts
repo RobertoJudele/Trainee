@@ -4,6 +4,7 @@ import { User } from "./models/user";
 import { Review } from "./models/review";
 import { Trainer } from "./models/trainer";
 import { TrainerImage } from "./models/trainerImage";
+import { TrainerPackage } from "./models/trainerPackage";
 import { TrainerSpecialization } from "./models/trainerSpecialization";
 import { Specialization } from "./models/specialization";
 import { Gym } from "./models/gym";
@@ -32,6 +33,7 @@ const sequelize = new Sequelize({
     Review,
     Trainer,
     TrainerImage,
+    TrainerPackage,
     TrainerSpecialization,
     Specialization,
     Gym,

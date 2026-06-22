@@ -114,6 +114,7 @@ export const apiSlice = createApi({
     "ClientPreferences",
     "SuggestedTrainers",
     "TrainerImages",
+    "TrainerPackages",
   ],
   endpoints: (builder) => ({}),
 });

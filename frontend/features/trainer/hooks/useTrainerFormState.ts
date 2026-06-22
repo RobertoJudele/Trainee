@@ -3,8 +3,6 @@ import { useCallback, useEffect, useState } from "react";
 export interface TrainerFormFields {
   bio: string;
   experienceYears: string;
-  hourlyRate: string;
-  sessionRate: string;
   locationCity: string;
   locationState: string;
   locationCountry: string;
@@ -17,8 +15,6 @@ export interface TrainerFormFields {
 export interface TrainerFormSetters {
   setBio: (v: string) => void;
   setExperienceYears: (v: string) => void;
-  setHourlyRate: (v: string) => void;
-  setSessionRate: (v: string) => void;
   setLocationCity: (v: string) => void;
   setLocationState: (v: string) => void;
   setLocationCountry: (v: string) => void;
@@ -31,8 +27,6 @@ export interface TrainerFormSetters {
 interface TrainerLike {
   bio?: string | null;
   experienceYears?: number | null;
-  hourlyRate?: number | null;
-  sessionRate?: number | null;
   locationCity?: string | null;
   locationState?: string | null;
   locationCountry?: string | null;
@@ -55,10 +49,6 @@ function hydrateFromTrainer(trainer: TrainerLike | null | undefined) {
     bio: trainer?.bio ?? "",
     experienceYears: trainer?.experienceYears !== undefined && trainer?.experienceYears !== null
       ? String(trainer.experienceYears) : "",
-    hourlyRate: trainer?.hourlyRate !== undefined && trainer?.hourlyRate !== null
-      ? String(trainer.hourlyRate) : "",
-    sessionRate: trainer?.sessionRate !== undefined && trainer?.sessionRate !== null
-      ? String(trainer.sessionRate) : "",
     locationCity: trainer?.locationCity ?? "",
     locationState: trainer?.locationState ?? "",
     locationCountry: trainer?.locationCountry ?? "",
@@ -77,8 +67,6 @@ export function useTrainerFormState(
 
   const [bio, setBio] = useState("");
   const [experienceYears, setExperienceYears] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
-  const [sessionRate, setSessionRate] = useState("");
   const [locationCity, setLocationCity] = useState("");
   const [locationState, setLocationState] = useState("");
   const [locationCountry, setLocationCountry] = useState("");
@@ -92,8 +80,6 @@ export function useTrainerFormState(
     const values = hydrateFromTrainer(initialTrainer);
     setBio(values.bio);
     setExperienceYears(values.experienceYears);
-    setHourlyRate(values.hourlyRate);
-    setSessionRate(values.sessionRate);
     setLocationCity(values.locationCity);
     setLocationState(values.locationState);
     setLocationCountry(values.locationCountry);
@@ -113,8 +99,6 @@ export function useTrainerFormState(
     const values = hydrateFromTrainer(trainer);
     setBio(values.bio);
     setExperienceYears(values.experienceYears);
-    setHourlyRate(values.hourlyRate);
-    setSessionRate(values.sessionRate);
     setLocationCity(values.locationCity);
     setLocationState(values.locationState);
     setLocationCountry(values.locationCountry);
@@ -127,8 +111,6 @@ export function useTrainerFormState(
   return {
     bio, setBio,
     experienceYears, setExperienceYears,
-    hourlyRate, setHourlyRate,
-    sessionRate, setSessionRate,
     locationCity, setLocationCity,
     locationState, setLocationState,
     locationCountry, setLocationCountry,

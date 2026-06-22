@@ -45,6 +45,13 @@ import ProfileMenuModal, { type ProfileMenuItem } from "../../src/components/Pro
 import { useAccountActions } from "../../src/hooks/useAccountActions";
 import { useTrainerFormState } from "./hooks/useTrainerFormState";
 import { useTrainerImages } from "./hooks/useTrainerImages";
+import {
+  useGetTrainerPackagesQuery,
+  useCreateTrainerPackageMutation,
+  useUpdateTrainerPackageMutation,
+  useDeleteTrainerPackageMutation,
+  TrainerPackageItem,
+} from "./trainerPackageApiSlice";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const MAX_TRAINER_IMAGES = 5;
@@ -90,6 +97,25 @@ function TrainerProfile() {
   const { pickAndUpload, isUploading: isUploadingAvatar } = useProfilePictureUpload();
   const images = useTrainerImages();
   const form = useTrainerFormState({ initialTrainer: trainer });
+
+  // ── Packages ──
+  const { data: packagesResponse } = useGetTrainerPackagesQuery(trainer?.id ?? 0, { skip: !trainer?.id });
+  const trainerPackages = packagesResponse?.data ?? [];
+  const [createPkg] = useCreateTrainerPackageMutation();
+  const [updatePkg] = useUpdateTrainerPackageMutation();
+  const [deletePkg] = useDeleteTrainerPackageMutation();
+  const [editingPackages, setEditingPackages] = useState<Array<{ id?: number; name: string; price: string; sessionCount: string }>>([]);
+
+  useEffect(() => {
+    if (trainerPackages.length > 0) {
+      setEditingPackages(trainerPackages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: String(p.price),
+        sessionCount: String(p.sessionCount),
+      })));
+    }
+  }, [trainerPackages]);
 
   const [isEditing, setIsEditing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
@@ -138,19 +164,9 @@ function TrainerProfile() {
     if (!trainer) return;
 
     const parsedExperience = form.experienceYears.trim() === "" ? undefined : Number(form.experienceYears);
-    const parsedHourly = form.hourlyRate.trim() === "" ? undefined : Number(form.hourlyRate);
-    const parsedSession = form.sessionRate.trim() === "" ? undefined : Number(form.sessionRate);
 
     if (parsedExperience !== undefined && (!Number.isFinite(parsedExperience) || parsedExperience < 0)) {
       Alert.alert(t("invalidInput"), t("invalidExperience"));
-      return;
-    }
-    if (parsedHourly !== undefined && (!Number.isFinite(parsedHourly) || parsedHourly < 0)) {
-      Alert.alert(t("invalidInput"), t("invalidHourly"));
-      return;
-    }
-    if (parsedSession !== undefined && (!Number.isFinite(parsedSession) || parsedSession < 0)) {
-      Alert.alert(t("invalidInput"), t("invalidSession"));
       return;
     }
     if (form.selectedSpecializationIds.length === 0) {
@@ -169,8 +185,6 @@ function TrainerProfile() {
       const response = await updateTrainerProfile({
         bio: form.bio.trim() || undefined,
         experienceYears: parsedExperience,
-        hourlyRate: parsedHourly,
-        sessionRate: parsedSession,
         locationCity: form.locationCity.trim() || undefined,
         locationState: form.locationState.trim() || undefined,
         locationCountry: form.locationCountry.trim() || undefined,
@@ -186,6 +200,58 @@ function TrainerProfile() {
       Alert.alert(t("error"), error?.data?.message || t("updateError"));
     }
   }, [trainer, form, updateTrainerProfile, dispatch, t]);
+
+  // ── Package editing ──
+  const addEditPackageRow = useCallback(() => {
+    if (editingPackages.length >= 5) return;
+    setEditingPackages((prev) => [...prev, { name: "", price: "", sessionCount: "" }]);
+  }, [editingPackages.length]);
+
+  const removeEditPackageRow = useCallback((index: number) => {
+    setEditingPackages((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updateEditPackageField = useCallback(
+    (index: number, field: "name" | "price" | "sessionCount", value: string) => {
+      setEditingPackages((prev) =>
+        prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+      );
+    },
+    []
+  );
+
+  const handleSavePackages = useCallback(async () => {
+    if (!trainer) return;
+
+    try {
+      const existingIds = new Set(editingPackages.filter((p) => p.id).map((p) => p.id!));
+      const deletedPackages = trainerPackages.filter((p) => !existingIds.has(p.id));
+      for (const pkg of deletedPackages) {
+        await deletePkg(pkg.id);
+      }
+
+      for (let i = 0; i < editingPackages.length; i++) {
+        const pkg = editingPackages[i];
+        const price = parseFloat(pkg.price);
+        const sessionCount = parseInt(pkg.sessionCount);
+
+        if (!pkg.name.trim() || isNaN(price) || price <= 0 || isNaN(sessionCount) || sessionCount < 1) {
+          Alert.alert(t("invalidInput"), t("packagePriceRequired"));
+          return;
+        }
+
+        if (pkg.id) {
+          await updatePkg({ id: pkg.id, name: pkg.name.trim(), price, sessionCount, sortOrder: i });
+        } else {
+          await createPkg({ name: pkg.name.trim(), price, sessionCount, sortOrder: i });
+        }
+      }
+
+      Alert.alert(t("success"), t("packageUpdated"));
+    } catch (error: any) {
+      Alert.alert(t("error"), error?.data?.message || t("updateError"));
+    }
+  }, [trainer, editingPackages, trainerPackages, createPkg, updatePkg, deletePkg, t]);
 
   // ── Menu items ──
   const menuItems: ProfileMenuItem[] = useMemo(() => [
@@ -363,12 +429,10 @@ function TrainerProfile() {
 
       {/* ── Experience & Rates ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("experienceAndRates")}</Text>
+        <Text style={styles.sectionTitle}>{t("experience")}</Text>
         {isEditing ? (
           <View style={styles.editGrid}>
             <TextInput style={styles.input} keyboardType="number-pad" value={form.experienceYears} onChangeText={form.setExperienceYears} placeholder={t("experiencePlaceholder")} />
-            <TextInput style={styles.input} keyboardType="decimal-pad" value={form.hourlyRate} onChangeText={form.setHourlyRate} placeholder={t("hourlyRatePlaceholder")} />
-            <TextInput style={styles.input} keyboardType="decimal-pad" value={form.sessionRate} onChangeText={form.setSessionRate} placeholder={t("sessionRatePlaceholder")} />
           </View>
         ) : (
           <View style={styles.infoGrid}>
@@ -376,15 +440,72 @@ function TrainerProfile() {
               <Text style={styles.infoLabel}>{t("experience")}</Text>
               <Text style={styles.infoValue}>{trainer.experienceYears || 0} {t("years")}</Text>
             </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>{t("hourlyRate")}</Text>
-              <Text style={styles.infoValue}>${trainer.hourlyRate || 0}{t("perHour")}</Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-              <Text style={styles.infoValue}>${trainer.sessionRate || 0}{t("perSession")}</Text>
-            </View>
+            {trainer.sessionRate ? (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
+                <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(trainer.sessionRate))}</Text>
+              </View>
+            ) : null}
           </View>
+        )}
+      </View>
+
+      {/* ── Packages ── */}
+      <View style={styles.section}>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
+          <Ionicons name="pricetags-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("myPackages")}</Text>
+        </View>
+        {isEditing ? (
+          <View>
+            {editingPackages.map((pkg, index) => (
+              <View key={pkg.id ?? `new-${index}`} style={{marginBottom: 12, padding: 14, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border}}>
+                <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+                  <Text style={{fontSize: 13, fontWeight: '600', color: theme.colors.text}}>
+                    {t("addPackage")} {index + 1}
+                  </Text>
+                  {editingPackages.length > 0 && (
+                    <Pressable onPress={() => removeEditPackageRow(index)}>
+                      <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                    </Pressable>
+                  )}
+                </View>
+                <TextInput style={styles.input} value={pkg.name} onChangeText={(v) => updateEditPackageField(index, "name", v)} placeholder={t("packageName")} />
+                <View style={{flexDirection: 'row', gap: 10, marginTop: 8}}>
+                  <TextInput style={[styles.input, {flex: 1}]} value={pkg.price} onChangeText={(v) => updateEditPackageField(index, "price", v)} placeholder={t("packagePrice")} keyboardType="numeric" />
+                  <TextInput style={[styles.input, {flex: 1}]} value={pkg.sessionCount} onChangeText={(v) => updateEditPackageField(index, "sessionCount", v)} placeholder={t("sessionCount")} keyboardType="number-pad" />
+                </View>
+              </View>
+            ))}
+            {editingPackages.length < 5 && (
+              <Pressable onPress={addEditPackageRow} style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed', marginTop: 4}}>
+                <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+                <Text style={{color: theme.colors.primary, fontWeight: '600', fontSize: 14}}>{t("addPackage")}</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={({pressed}) => [{marginTop: 14, backgroundColor: theme.colors.primary, padding: 14, borderRadius: 12, alignItems: 'center'}, pressed && {opacity: 0.8}]}
+              onPress={() => { void handleSavePackages(); }}
+            >
+              <Text style={{color: '#fff', fontWeight: '600'}}>{t("saveChanges")}</Text>
+            </Pressable>
+          </View>
+        ) : trainerPackages.length > 0 ? (
+          <View>
+            {trainerPackages.map((pkg) => (
+              <View key={pkg.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6'}}>
+                <View>
+                  <Text style={{fontSize: 15, fontWeight: '600', color: theme.colors.text}}>{pkg.name}</Text>
+                  <Text style={{fontSize: 13, color: theme.colors.textSecondary, marginTop: 2}}>
+                    {pkg.sessionCount} {t("sessions")} — ${(Number(pkg.price) / pkg.sessionCount).toFixed(2)}{t("perSession")}
+                  </Text>
+                </View>
+                <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>${Number(pkg.price).toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={{color: theme.colors.textSecondary, fontSize: 14}}>{t("noPackages")}</Text>
         )}
       </View>
 
