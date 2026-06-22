@@ -78,8 +78,8 @@ function RevenueCatIdentityBridge() {
           await Purchases.logIn(nextUserId);
           lastRevenueCatUserIdRef.current = nextUserId;
         }
-      } catch (error) {
-        console.error("RevenueCat identity sync failed:", error);
+      } catch {
+        // RevenueCat sync is best-effort — app continues without it
       }
     };
 

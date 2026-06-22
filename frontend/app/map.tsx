@@ -409,6 +409,7 @@ export default function MapScreen() {
   const mapRegionRef = useRef<Region>(DEFAULT_REGION);
   const lastAppliedRegionAtRef = useRef(0);
   const didCenterOnUserRef = useRef(false);
+  const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const [locationGranted, setLocationGranted] = useState(false);
 
   const applyMapRegionSafely = useCallback((nextRegion: Region): boolean => {
@@ -454,7 +455,12 @@ export default function MapScreen() {
         const pos = await Location.getCurrentPositionAsync({
           accuracy: Location.Accuracy.Balanced,
         });
-        if (cancelled || didCenterOnUserRef.current) return;
+        if (cancelled) return;
+        userLocationRef.current = {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+        };
+        if (didCenterOnUserRef.current) return;
         const region: Region = {
           latitude: pos.coords.latitude,
           longitude: pos.coords.longitude,
@@ -813,6 +819,31 @@ export default function MapScreen() {
     [closeSheet, mapRegion.latitudeDelta, mapRegion.longitudeDelta, suppressRegionUpdatesFor]
   );
 
+  const handleCenterOnUser = useCallback(async () => {
+    try {
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      userLocationRef.current = {
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+      };
+    } catch {
+      // Fall back to the last known position.
+    }
+    if (!userLocationRef.current || !mapRef.current) return;
+    closeSheet();
+    mapRef.current.animateToRegion(
+      {
+        latitude: userLocationRef.current.latitude,
+        longitude: userLocationRef.current.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      },
+      500
+    );
+  }, [closeSheet]);
+
   // ── Helpers ───────────────────────────────────────────────
   const renderStars = (rating: number) =>
     Array.from({ length: 5 }, (_, i) => (
@@ -915,6 +946,18 @@ export default function MapScreen() {
         <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
       </TouchableOpacity>
 
+      {locationGranted && (
+        <TouchableOpacity
+          style={[styles.centerButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]}
+          onPress={handleCenterOnUser}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t("centerOnMyLocation")}
+        >
+          <Ionicons name="navigate" size={22} color={theme.colors.primary} />
+        </TouchableOpacity>
+      )}
+
       {gymsLoading ? (
         <View style={styles.mapLoading}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -928,7 +971,7 @@ export default function MapScreen() {
           onRegionChangeComplete={handleRegionChangeComplete}
           onPress={closeSheet}
           showsUserLocation={locationGranted}
-          showsMyLocationButton={locationGranted}
+          showsMyLocationButton={false}
         >
           {deferredMarkers.map((item) =>
             item.type === "cluster" ? (
@@ -1087,6 +1130,15 @@ const styles = StyleSheet.create({
   backButton: {
     position: "absolute",
     left: theme.spacing.lg,
+    backgroundColor: theme.colors.surface,
+    padding: theme.spacing.sm,
+    borderRadius: theme.roundness,
+    zIndex: 10,
+    ...theme.shadows.medium,
+  },
+  centerButton: {
+    position: "absolute",
+    right: theme.spacing.lg,
     backgroundColor: theme.colors.surface,
     padding: theme.spacing.sm,
     borderRadius: theme.roundness,
