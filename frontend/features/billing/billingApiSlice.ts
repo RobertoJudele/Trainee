@@ -77,17 +77,9 @@ export const billingApiSlice = apiSlice.injectEndpoints({
         url: "/billing/subscribe",
         method: "POST",
       }),
-      transformErrorResponse: (response: any) => {
-        console.error("🔴 Subscription error:", response);
-        return response;
-      },
     }),
     getBillingEntitlement: builder.query<BillingEntitlementResponse, void>({
       query: () => "/billing/entitlement",
-      transformErrorResponse: (response: any) => {
-        console.error("🔴 Entitlement error:", response);
-        return response;
-      },
     }),
     validateIapSubscription: builder.mutation<
       ValidateIapSubscriptionResponse,
@@ -98,17 +90,9 @@ export const billingApiSlice = apiSlice.injectEndpoints({
         method: "POST",
         body,
       }),
-      transformErrorResponse: (response: any) => {
-        console.error("🔴 IAP validation error:", response);
-        return response;
-      },
     }),
     getBillingTransactions: builder.query<BillingTransactionsResponse, void>({
       query: () => "/billing/transactions",
-      transformErrorResponse: (response: any) => {
-        console.error("🔴 Transactions error:", response);
-        return response;
-      },
     }),
   }),
 });

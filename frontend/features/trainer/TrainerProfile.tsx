@@ -8,8 +8,7 @@ import {
   Alert,
   ActivityIndicator,
   TextInput,
-  Platform,
-  Modal,
+  Dimensions,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -18,7 +17,6 @@ import {
   setTrainerProfile,
   setCredentials,
   selectCurrentToken,
-  logOut,
 } from "../auth/authSlice";
 import { UserRole } from "../auth/authApiSlice";
 import {
@@ -26,10 +24,6 @@ import {
   useGetTrainerProfileQuery,
   useGetSpecializationsQuery,
   useUpdateTrainerProfileMutation,
-  useGetTrainerImagesQuery,
-  useUploadGalleryImagesMutation,
-  useUploadCredentialImagesMutation,
-  useDeleteTrainerImageMutation,
 } from "./trainerApiSlice";
 import { useDeleteProfileMutation } from "../users/usersApiSlicet";
 import { router, useRouter } from "expo-router";
@@ -38,98 +32,29 @@ import { theme, typography } from "../../src/lib/theme";
 import { useTour } from "../../src/components/onboarding/TourContext";
 import { trainerTour } from "../../src/components/onboarding/trainerTour";
 import { Ionicons } from "@expo/vector-icons";
-import Purchases from "react-native-purchases";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import EditableAvatar from "../../src/components/EditableAvatar";
 import TrainerImageSection from "../../src/components/TrainerImageSection";
 import { useProfilePictureUpload } from "../../src/lib/useProfilePictureUpload";
-import { pickImages, toImageFormData } from "../../src/lib/imageUpload";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
+import {
+  normalizeSocialUrlForSave,
+  normalizeWhatsAppForSave,
+} from "../../src/lib/validation";
+import StarRating from "../../src/components/StarRating";
+import ProfileMenuModal, { type ProfileMenuItem } from "../../src/components/ProfileMenuModal";
+import { useAccountActions } from "../../src/hooks/useAccountActions";
+import { useTrainerFormState } from "./hooks/useTrainerFormState";
+import { useTrainerImages } from "./hooks/useTrainerImages";
+import {
+  useGetTrainerPackagesQuery,
+  useCreateTrainerPackageMutation,
+  useUpdateTrainerPackageMutation,
+  useDeleteTrainerPackageMutation,
+  TrainerPackageItem,
+} from "./trainerPackageApiSlice";
 
+const { height: SCREEN_H } = Dimensions.get("window");
 const MAX_TRAINER_IMAGES = 5;
-
-const normalizeSocialUrlForSave = (value: string): string | null | "INVALID" => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const withProtocol = /^https?:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`;
-
-  try {
-    new URL(withProtocol);
-    return withProtocol;
-  } catch {
-    return "INVALID";
-  }
-};
-
-const normalizeWhatsAppPhone = (value: string): string | null => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const normalizedPrefix = trimmed.startsWith("00")
-    ? `+${trimmed.slice(2)}`
-    : trimmed;
-
-  const digitsOnly = normalizedPrefix.replace(/\D/g, "");
-
-  if (!digitsOnly || digitsOnly.length < 7 || digitsOnly.length > 15) {
-    return null;
-  }
-
-  if (!/^[1-9]/.test(digitsOnly)) {
-    return null;
-  }
-
-  return `+${digitsOnly}`;
-};
-
-const normalizeWhatsAppForSave = (value: string): string | null | "INVALID" => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const directPhone = normalizeWhatsAppPhone(trimmed);
-  if (directPhone) {
-    return directPhone;
-  }
-
-  const withProtocol = /^https?:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`;
-
-  try {
-    const parsed = new URL(withProtocol);
-    const hostname = parsed.hostname.toLowerCase();
-
-    const fromQuery = parsed.searchParams.get("phone") ?? "";
-    const fromPath = parsed.pathname.split("/").filter(Boolean)[0] ?? "";
-
-    let phoneCandidate = "";
-    if (hostname === "wa.me" || hostname.endsWith(".wa.me")) {
-      phoneCandidate = fromPath;
-    } else if (
-      hostname === "api.whatsapp.com" ||
-      hostname === "whatsapp.com" ||
-      hostname === "www.whatsapp.com"
-    ) {
-      phoneCandidate = fromQuery;
-    } else {
-      return "INVALID";
-    }
-
-    const parsedPhone = normalizeWhatsAppPhone(phoneCandidate);
-    return parsedPhone ?? "INVALID";
-  } catch {
-    return "INVALID";
-  }
-};
 
 function TrainerProfile() {
   const trainer = useSelector(selectCurrentTrainer);
@@ -137,12 +62,11 @@ function TrainerProfile() {
   const token = useSelector(selectCurrentToken);
   const dispatch = useDispatch();
   const { startTour } = useTour();
-  const insets = useSafeAreaInsets();
   const { t, language, setLanguage } = useLanguage();
+
   const {
     data: trainerResponse,
     isLoading,
-    isError,
     refetch,
   } = useGetTrainerProfileQuery(undefined, {
     skip: user?.role !== UserRole.TRAINER,
@@ -154,10 +78,7 @@ function TrainerProfile() {
   } = useGetSpecializationsQuery();
   const specializationOptions = useMemo(() => {
     const fetched = specializationsResponse?.data ?? [];
-    if (fetched.length > 0) {
-      return fetched;
-    }
-
+    if (fetched.length > 0) return fetched;
     const trainerSpecs = trainer?.specializations ?? [];
     return trainerSpecs.map((spec) => ({
       id: spec.id,
@@ -168,282 +89,220 @@ function TrainerProfile() {
     }));
   }, [specializationsResponse, trainer]);
 
-  const [deleteTrainerProfile, { isLoading: isDeleting }] =
-    useDeleteTrainerProfileMutation();
-  const [deleteAccount, { isLoading: isDeletingAccount }] =
-    useDeleteProfileMutation();
-  const [updateTrainerProfile, { isLoading: isUpdating }] =
-    useUpdateTrainerProfileMutation();
+  const [deleteTrainerProfile, { isLoading: isDeleting }] = useDeleteTrainerProfileMutation();
+  const [deleteAccount, { isLoading: isDeletingAccount }] = useDeleteProfileMutation();
+  const [updateTrainerProfile, { isLoading: isUpdating }] = useUpdateTrainerProfileMutation();
 
-  // ── Profile picture + image galleries ──
+  // ── Extracted hooks ──
   const { pickAndUpload, isUploading: isUploadingAvatar } = useProfilePictureUpload();
-  const { data: imagesResp } = useGetTrainerImagesQuery(undefined, {
-    skip: user?.role !== UserRole.TRAINER,
-  });
-  const galleryImages = imagesResp?.data?.gallery ?? [];
-  const credentialImages = imagesResp?.data?.credential ?? [];
-  const [uploadGallery, { isLoading: isUploadingGallery }] =
-    useUploadGalleryImagesMutation();
-  const [uploadCredential, { isLoading: isUploadingCredential }] =
-    useUploadCredentialImagesMutation();
-  const [deleteTrainerImage] = useDeleteTrainerImageMutation();
-  const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
+  const images = useTrainerImages();
+  const form = useTrainerFormState({ initialTrainer: trainer });
 
-  const trainerInitials =
-    `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "T";
+  // ── Packages ──
+  const { data: packagesResponse } = useGetTrainerPackagesQuery(trainer?.id ?? 0, { skip: !trainer?.id });
+  const trainerPackages = packagesResponse?.data ?? [];
+  const [createPkg] = useCreateTrainerPackageMutation();
+  const [updatePkg] = useUpdateTrainerPackageMutation();
+  const [deletePkg] = useDeleteTrainerPackageMutation();
+  const [editingPackages, setEditingPackages] = useState<Array<{ id?: number; name: string; price: string; sessionCount: string }>>([]);
 
-  const addImages = useCallback(
-    async (category: "gallery" | "credential") => {
-      const current = category === "gallery" ? galleryImages.length : credentialImages.length;
-      const picked = await pickImages(MAX_TRAINER_IMAGES - current);
-      if (picked.length === 0) return;
-      const form = toImageFormData("images", picked);
-      try {
-        if (category === "gallery") await uploadGallery(form).unwrap();
-        else await uploadCredential(form).unwrap();
-      } catch (err: any) {
-        Alert.alert(t("uploadFailed"), err?.data?.message || t("uploadError"));
-      }
-    },
-    [galleryImages.length, credentialImages.length, uploadGallery, uploadCredential, t]
-  );
-
-  const removeImage = useCallback(
-    async (id: number) => {
-      setDeletingImageId(id);
-      try {
-        await deleteTrainerImage(id).unwrap();
-      } catch (err: any) {
-        Alert.alert(t("error"), err?.data?.message || t("deleteImageError"));
-      } finally {
-        setDeletingImageId(null);
-      }
-    },
-    [deleteTrainerImage]
-  );
+  useEffect(() => {
+    if (trainerPackages.length > 0) {
+      setEditingPackages(trainerPackages.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: String(p.price),
+        sessionCount: String(p.sessionCount),
+      })));
+    }
+  }, [trainerPackages]);
 
   const [isEditing, setIsEditing] = useState(false);
-  const [bio, setBio] = useState("");
-  const [experienceYears, setExperienceYears] = useState("");
-  const [hourlyRate, setHourlyRate] = useState("");
-  const [sessionRate, setSessionRate] = useState("");
-  const [locationCity, setLocationCity] = useState("");
-  const [locationState, setLocationState] = useState("");
-  const [locationCountry, setLocationCountry] = useState("");
-  const [instagramUrl, setInstagramUrl] = useState("");
-  const [facebookUrl, setFacebookUrl] = useState("");
-  const [whatsappUrl, setWhatsappUrl] = useState("");
-  const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
-  const [isSubscribing, setIsSubscribing] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
-    if (user?.role !== UserRole.TRAINER) {
-      return;
-    }
-
+    if (user?.role !== UserRole.TRAINER) return;
     if (trainerResponse?.data) {
       dispatch(setTrainerProfile(trainerResponse.data));
     }
   }, [trainerResponse, dispatch, user?.role]);
 
-  useEffect(() => {
-    if (!trainer) return;
-    setBio(trainer.bio ?? "");
-    setExperienceYears(
-      trainer.experienceYears !== undefined ? String(trainer.experienceYears) : ""
-    );
-    setHourlyRate(
-      trainer.hourlyRate !== undefined ? String(trainer.hourlyRate) : ""
-    );
-    setSessionRate(
-      trainer.sessionRate !== undefined ? String(trainer.sessionRate) : ""
-    );
-    setLocationCity(trainer.locationCity ?? "");
-    setLocationState(trainer.locationState ?? "");
-    setLocationCountry(trainer.locationCountry ?? "");
-    setInstagramUrl(trainer.instagramUrl ?? "");
-    setFacebookUrl(trainer.facebookUrl ?? "");
-    setWhatsappUrl(trainer.whatsappUrl ?? "");
-    setSelectedSpecializationIds(
-      Array.isArray(trainer.specializations)
-        ? trainer.specializations.map((spec) => spec.id)
-        : []
-    );
-  }, [trainer]);
+  // ── Account actions ──
+  const { handleLogout, handleDeleteAccount } = useAccountActions({
+    deleteAccount,
+    isDeleting: isDeletingAccount,
+  });
 
-  const toggleSpecialization = useCallback((id: number) => {
-    setSelectedSpecializationIds((prev) =>
-      prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
-    );
-  }, []);
-
-  const handleDelete = useCallback(async () => {
+  const handleDeleteTrainer = useCallback(async () => {
     Alert.alert(
       t("deleteTrainerTitle"),
       t("deleteTrainerMessage"),
       [
         { text: t("cancel"), style: "cancel" },
-        { text: t("delete"), style: "destructive", onPress: () => performDelete() },
-      ]
+        {
+          text: t("delete"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteTrainerProfile().unwrap();
+              dispatch(setTrainerProfile(null));
+              if (user) {
+                dispatch(setCredentials({ user: { ...user, role: "client" }, token: token || "" }));
+              }
+              router.push("/(auth)/Welcome");
+            } catch {
+              Alert.alert(t("error"), t("deleteTrainerError"));
+            }
+          },
+        },
+      ],
     );
-  }, [t]);
-
-  const performDelete = useCallback(async () => {
-    try {
-      await deleteTrainerProfile().unwrap();
-      dispatch(setTrainerProfile(null));
-      if (user) {
-        dispatch(setCredentials({ user: { ...user, role: "client" }, token: token || "" }));
-      }
-      router.push("/(auth)/Welcome");
-    } catch {
-      Alert.alert(t("error"), t("deleteTrainerError"));
-    }
   }, [deleteTrainerProfile, dispatch, user, token, t]);
 
-  const handleDeleteAccount = useCallback(() => {
-    Alert.alert(
-      t("deleteFullAccountTitle"),
-      t("deleteFullAccountMessage"),
-      [
-        { text: t("cancel"), style: "cancel" },
-        { text: t("delete"), style: "destructive", onPress: performDeleteAccount },
-      ]
-    );
-  }, [t]);
-
-  const performDeleteAccount = useCallback(async () => {
-    try {
-      await deleteAccount().unwrap();
-      dispatch(logOut());
-      dispatch(apiSlice.util.resetApiState());
-      try {
-        if (Platform.OS === "ios" || Platform.OS === "android") {
-          await Purchases.logOut();
-        }
-      } catch {
-        // best-effort
-      }
-      router.replace("/(auth)/Welcome");
-    } catch {
-      Alert.alert(t("error"), t("deleteAccountError"));
-    }
-  }, [deleteAccount, dispatch, t]);
-
-  const handleSubscribe = useCallback(async () => {
-    setIsSubscribing(true);
-    router.push("/checkout");
-    setIsSubscribing(false);
-  }, []);
-
-  const handleLogout = useCallback(async () => {
-    dispatch(logOut());
-    dispatch(apiSlice.util.resetApiState());
-    try {
-      if (Platform.OS === "ios" || Platform.OS === "android") {
-        await Purchases.logOut();
-      }
-    } catch (error) {
-      console.log('RevenueCat logout error:', error);
-    }
-    router.replace("/(auth)/Welcome");
-  }, [dispatch]);
-
+  // ── Save profile ──
   const handleSaveProfile = useCallback(async () => {
     if (!trainer) return;
 
-    const parsedExperience =
-      experienceYears.trim() === "" ? undefined : Number(experienceYears);
-    const parsedHourly = hourlyRate.trim() === "" ? undefined : Number(hourlyRate);
-    const parsedSession =
-      sessionRate.trim() === "" ? undefined : Number(sessionRate);
+    const parsedExperience = form.experienceYears.trim() === "" ? undefined : Number(form.experienceYears);
 
-    if (
-      parsedExperience !== undefined &&
-      (!Number.isFinite(parsedExperience) || parsedExperience < 0)
-    ) {
+    if (parsedExperience !== undefined && (!Number.isFinite(parsedExperience) || parsedExperience < 0)) {
       Alert.alert(t("invalidInput"), t("invalidExperience"));
       return;
     }
-
-    if (parsedHourly !== undefined && (!Number.isFinite(parsedHourly) || parsedHourly < 0)) {
-      Alert.alert(t("invalidInput"), t("invalidHourly"));
-      return;
-    }
-
-    if (
-      parsedSession !== undefined &&
-      (!Number.isFinite(parsedSession) || parsedSession < 0)
-    ) {
-      Alert.alert(t("invalidInput"), t("invalidSession"));
-      return;
-    }
-
-    if (selectedSpecializationIds.length === 0) {
+    if (form.selectedSpecializationIds.length === 0) {
       Alert.alert(t("invalidInput"), t("invalidSpecializations"));
       return;
     }
 
-    const instagramPayload = normalizeSocialUrlForSave(instagramUrl);
-    if (instagramPayload === "INVALID") {
-      Alert.alert(t("invalidInput"), t("invalidInstagram"));
-      return;
-    }
-
-    const facebookPayload = normalizeSocialUrlForSave(facebookUrl);
-    if (facebookPayload === "INVALID") {
-      Alert.alert(t("invalidInput"), t("invalidFacebook"));
-      return;
-    }
-
-    const whatsappPayload = normalizeWhatsAppForSave(whatsappUrl);
-    if (whatsappPayload === "INVALID") {
-      Alert.alert(t("invalidInput"), t("invalidWhatsApp"));
-      return;
-    }
+    const instagramPayload = normalizeSocialUrlForSave(form.instagramUrl);
+    if (instagramPayload === "INVALID") { Alert.alert(t("invalidInput"), t("invalidInstagram")); return; }
+    const facebookPayload = normalizeSocialUrlForSave(form.facebookUrl);
+    if (facebookPayload === "INVALID") { Alert.alert(t("invalidInput"), t("invalidFacebook")); return; }
+    const whatsappPayload = normalizeWhatsAppForSave(form.whatsappUrl);
+    if (whatsappPayload === "INVALID") { Alert.alert(t("invalidInput"), t("invalidWhatsApp")); return; }
 
     try {
       const response = await updateTrainerProfile({
-        bio: bio.trim() || undefined,
+        bio: form.bio.trim() || undefined,
         experienceYears: parsedExperience,
-        hourlyRate: parsedHourly,
-        sessionRate: parsedSession,
-        locationCity: locationCity.trim() || undefined,
-        locationState: locationState.trim() || undefined,
-        locationCountry: locationCountry.trim() || undefined,
+        locationCity: form.locationCity.trim() || undefined,
+        locationState: form.locationState.trim() || undefined,
+        locationCountry: form.locationCountry.trim() || undefined,
         instagramUrl: instagramPayload,
         facebookUrl: facebookPayload,
         whatsappUrl: whatsappPayload,
-        specializationIds: selectedSpecializationIds,
+        specializationIds: form.selectedSpecializationIds,
       }).unwrap();
-
-      if (response?.data) {
-        dispatch(setTrainerProfile(response.data));
-      }
+      if (response?.data) dispatch(setTrainerProfile(response.data));
       setIsEditing(false);
       Alert.alert(t("success"), t("profileUpdated"));
     } catch (error: any) {
-      const message = error?.data?.message || t("updateError");
-      Alert.alert(t("error"), message);
+      Alert.alert(t("error"), error?.data?.message || t("updateError"));
     }
-  }, [
-    trainer,
-    experienceYears,
-    hourlyRate,
-    sessionRate,
-    updateTrainerProfile,
-    bio,
-    locationCity,
-    locationState,
-    locationCountry,
-    instagramUrl,
-    facebookUrl,
-    whatsappUrl,
-    selectedSpecializationIds,
-    dispatch,
-  ]);
+  }, [trainer, form, updateTrainerProfile, dispatch, t]);
 
+  // ── Package editing ──
+  const addEditPackageRow = useCallback(() => {
+    if (editingPackages.length >= 5) return;
+    setEditingPackages((prev) => [...prev, { name: "", price: "", sessionCount: "" }]);
+  }, [editingPackages.length]);
+
+  const removeEditPackageRow = useCallback((index: number) => {
+    setEditingPackages((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
+  const updateEditPackageField = useCallback(
+    (index: number, field: "name" | "price" | "sessionCount", value: string) => {
+      setEditingPackages((prev) =>
+        prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+      );
+    },
+    []
+  );
+
+  const handleSavePackages = useCallback(async () => {
+    if (!trainer) return;
+
+    try {
+      const existingIds = new Set(editingPackages.filter((p) => p.id).map((p) => p.id!));
+      const deletedPackages = trainerPackages.filter((p) => !existingIds.has(p.id));
+      for (const pkg of deletedPackages) {
+        await deletePkg(pkg.id);
+      }
+
+      for (let i = 0; i < editingPackages.length; i++) {
+        const pkg = editingPackages[i];
+        const price = parseFloat(pkg.price);
+        const sessionCount = parseInt(pkg.sessionCount);
+
+        if (!pkg.name.trim() || isNaN(price) || price <= 0 || isNaN(sessionCount) || sessionCount < 1) {
+          Alert.alert(t("invalidInput"), t("packagePriceRequired"));
+          return;
+        }
+
+        if (pkg.id) {
+          await updatePkg({ id: pkg.id, name: pkg.name.trim(), price, sessionCount, sortOrder: i });
+        } else {
+          await createPkg({ name: pkg.name.trim(), price, sessionCount, sortOrder: i });
+        }
+      }
+
+      Alert.alert(t("success"), t("packageUpdated"));
+    } catch (error: any) {
+      Alert.alert(t("error"), error?.data?.message || t("updateError"));
+    }
+  }, [trainer, editingPackages, trainerPackages, createPkg, updatePkg, deletePkg, t]);
+
+  // ── Menu items ──
+  const menuItems: ProfileMenuItem[] = useMemo(() => [
+    {
+      key: "lang", icon: "language-outline", label: t("language"),
+      onPress: () => setLanguage(language === "en" ? "ro" : "en"),
+      trailing: (
+        <View style={styles.langBadge}>
+          <Text style={styles.langBadgeText}>{language === "en" ? "EN" : "RO"}</Text>
+        </View>
+      ),
+    },
+    {
+      key: "edit", icon: "pencil", label: t("editProfile"),
+      onPress: () => { setMenuVisible(false); setIsEditing(true); },
+    },
+    {
+      key: "sub", icon: "receipt-outline", label: t("manageSubscription"),
+      onPress: () => { setMenuVisible(false); router.push("/checkout"); },
+    },
+    {
+      key: "legal", icon: "document-text-outline", label: t("legalAndPolicies"),
+      onPress: () => { setMenuVisible(false); router.push("/legal"); },
+    },
+    {
+      key: "report", icon: "flag-outline", label: t("reportIssue"),
+      onPress: () => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); },
+    },
+    {
+      key: "tour", icon: "help-circle-outline", label: t("showTutorial"),
+      onPress: () => { setMenuVisible(false); startTour(trainerTour); },
+    },
+    {
+      key: "logout", icon: "log-out-outline", label: t("logOut"),
+      onPress: () => { setMenuVisible(false); void handleLogout(); },
+    },
+    {
+      key: "delTrainer", icon: "trash-outline",
+      label: isDeleting ? t("deleting") : t("deleteProfile"),
+      onPress: () => { setMenuVisible(false); void handleDeleteTrainer(); },
+      destructive: true, disabled: isDeleting, loading: isDeleting,
+    },
+    {
+      key: "delAccount", icon: "person-remove-outline",
+      label: isDeletingAccount ? t("deleting") : t("deleteAccount"),
+      onPress: () => { setMenuVisible(false); void handleDeleteAccount(); },
+      destructive: true, disabled: isDeletingAccount, loading: isDeletingAccount,
+    },
+  ], [t, language, setLanguage, isDeleting, isDeletingAccount, handleLogout, handleDeleteTrainer, handleDeleteAccount, startTour]);
+
+  // ── Guards ──
   if (user?.role !== UserRole.TRAINER) {
     return (
       <View style={styles.centered}>
@@ -477,29 +336,13 @@ function TrainerProfile() {
     );
   }
 
+  const trainerInitials =
+    `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "T";
   const dateLocale = language === "ro" ? "ro-RO" : "en-US";
   const formatDate = (date: string | Date) => {
     if (!date) return "N/A";
-    return new Date(date).toLocaleDateString(dateLocale, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return new Date(date).toLocaleDateString(dateLocale, { year: "numeric", month: "short", day: "numeric" });
   };
-
-  const renderStars = (rating: number) => (
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      {Array.from({ length: 5 }, (_, i) => (
-        <Ionicons
-          key={i}
-          name={i < Math.floor(rating) ? "star" : "star-outline"}
-          size={14}
-          color={i < Math.floor(rating) ? "#F59E0B" : "#E5E7EB"}
-          style={{ marginRight: 2 }}
-        />
-      ))}
-    </View>
-  );
 
   return (
     <>
@@ -553,8 +396,8 @@ function TrainerProfile() {
           <TextInput
             style={[styles.input, styles.textArea]}
             multiline
-            value={bio}
-            onChangeText={setBio}
+            value={form.bio}
+            onChangeText={form.setBio}
             placeholder={t("bioPlaceholder")}
           />
         ) : (
@@ -566,50 +409,30 @@ function TrainerProfile() {
       <TrainerImageSection
         title={t("gallery")}
         subtitle={t("gallerySubtitle")}
-        images={galleryImages}
+        images={images.galleryImages}
         max={MAX_TRAINER_IMAGES}
-        uploading={isUploadingGallery}
-        deletingId={deletingImageId}
-        onAdd={() => addImages("gallery")}
-        onDelete={removeImage}
+        uploading={images.isUploadingGallery}
+        deletingId={images.deletingImageId}
+        onAdd={() => images.addImages("gallery")}
+        onDelete={images.removeImage}
       />
       <TrainerImageSection
         title={t("certificationsAwards")}
         subtitle={t("certificationsSubtitle")}
-        images={credentialImages}
+        images={images.credentialImages}
         max={MAX_TRAINER_IMAGES}
-        uploading={isUploadingCredential}
-        deletingId={deletingImageId}
-        onAdd={() => addImages("credential")}
-        onDelete={removeImage}
+        uploading={images.isUploadingCredential}
+        deletingId={images.deletingImageId}
+        onAdd={() => images.addImages("credential")}
+        onDelete={images.removeImage}
       />
 
       {/* ── Experience & Rates ── */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("experienceAndRates")}</Text>
+        <Text style={styles.sectionTitle}>{t("experience")}</Text>
         {isEditing ? (
           <View style={styles.editGrid}>
-            <TextInput
-              style={styles.input}
-              keyboardType="number-pad"
-              value={experienceYears}
-              onChangeText={setExperienceYears}
-              placeholder={t("experiencePlaceholder")}
-            />
-            <TextInput
-              style={styles.input}
-              keyboardType="decimal-pad"
-              value={hourlyRate}
-              onChangeText={setHourlyRate}
-              placeholder={t("hourlyRatePlaceholder")}
-            />
-            <TextInput
-              style={styles.input}
-              keyboardType="decimal-pad"
-              value={sessionRate}
-              onChangeText={setSessionRate}
-              placeholder={t("sessionRatePlaceholder")}
-            />
+            <TextInput style={styles.input} keyboardType="number-pad" value={form.experienceYears} onChangeText={form.setExperienceYears} placeholder={t("experiencePlaceholder")} />
           </View>
         ) : (
           <View style={styles.infoGrid}>
@@ -617,15 +440,72 @@ function TrainerProfile() {
               <Text style={styles.infoLabel}>{t("experience")}</Text>
               <Text style={styles.infoValue}>{trainer.experienceYears || 0} {t("years")}</Text>
             </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>{t("hourlyRate")}</Text>
-              <Text style={styles.infoValue}>${trainer.hourlyRate || 0}{t("perHour")}</Text>
-            </View>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-              <Text style={styles.infoValue}>${trainer.sessionRate || 0}{t("perSession")}</Text>
-            </View>
+            {trainer.sessionRate ? (
+              <View style={styles.infoCard}>
+                <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
+                <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(trainer.sessionRate))}</Text>
+              </View>
+            ) : null}
           </View>
+        )}
+      </View>
+
+      {/* ── Packages ── */}
+      <View style={styles.section}>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
+          <Ionicons name="pricetags-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("myPackages")}</Text>
+        </View>
+        {isEditing ? (
+          <View>
+            {editingPackages.map((pkg, index) => (
+              <View key={pkg.id ?? `new-${index}`} style={{marginBottom: 12, padding: 14, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border}}>
+                <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
+                  <Text style={{fontSize: 13, fontWeight: '600', color: theme.colors.text}}>
+                    {t("addPackage")} {index + 1}
+                  </Text>
+                  {editingPackages.length > 0 && (
+                    <Pressable onPress={() => removeEditPackageRow(index)}>
+                      <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                    </Pressable>
+                  )}
+                </View>
+                <TextInput style={styles.input} value={pkg.name} onChangeText={(v) => updateEditPackageField(index, "name", v)} placeholder={t("packageName")} />
+                <View style={{flexDirection: 'row', gap: 10, marginTop: 8}}>
+                  <TextInput style={[styles.input, {flex: 1}]} value={pkg.price} onChangeText={(v) => updateEditPackageField(index, "price", v)} placeholder={t("packagePrice")} keyboardType="numeric" />
+                  <TextInput style={[styles.input, {flex: 1}]} value={pkg.sessionCount} onChangeText={(v) => updateEditPackageField(index, "sessionCount", v)} placeholder={t("sessionCount")} keyboardType="number-pad" />
+                </View>
+              </View>
+            ))}
+            {editingPackages.length < 5 && (
+              <Pressable onPress={addEditPackageRow} style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed', marginTop: 4}}>
+                <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
+                <Text style={{color: theme.colors.primary, fontWeight: '600', fontSize: 14}}>{t("addPackage")}</Text>
+              </Pressable>
+            )}
+            <Pressable
+              style={({pressed}) => [{marginTop: 14, backgroundColor: theme.colors.primary, padding: 14, borderRadius: 12, alignItems: 'center'}, pressed && {opacity: 0.8}]}
+              onPress={() => { void handleSavePackages(); }}
+            >
+              <Text style={{color: '#fff', fontWeight: '600'}}>{t("saveChanges")}</Text>
+            </Pressable>
+          </View>
+        ) : trainerPackages.length > 0 ? (
+          <View>
+            {trainerPackages.map((pkg) => (
+              <View key={pkg.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6'}}>
+                <View>
+                  <Text style={{fontSize: 15, fontWeight: '600', color: theme.colors.text}}>{pkg.name}</Text>
+                  <Text style={{fontSize: 13, color: theme.colors.textSecondary, marginTop: 2}}>
+                    {pkg.sessionCount} {t("sessions")} — ${(Number(pkg.price) / pkg.sessionCount).toFixed(2)}{t("perSession")}
+                  </Text>
+                </View>
+                <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>${Number(pkg.price).toFixed(2)}</Text>
+              </View>
+            ))}
+          </View>
+        ) : (
+          <Text style={{color: theme.colors.textSecondary, fontSize: 14}}>{t("noPackages")}</Text>
         )}
       </View>
 
@@ -637,24 +517,9 @@ function TrainerProfile() {
         </View>
         {isEditing ? (
           <View style={styles.editGrid}>
-            <TextInput
-              style={styles.input}
-              value={locationCity}
-              onChangeText={setLocationCity}
-              placeholder={t("city")}
-            />
-            <TextInput
-              style={styles.input}
-              value={locationState}
-              onChangeText={setLocationState}
-              placeholder={t("state")}
-            />
-            <TextInput
-              style={styles.input}
-              value={locationCountry}
-              onChangeText={setLocationCountry}
-              placeholder={t("country")}
-            />
+            <TextInput style={styles.input} value={form.locationCity} onChangeText={form.setLocationCity} placeholder={t("city")} />
+            <TextInput style={styles.input} value={form.locationState} onChangeText={form.setLocationState} placeholder={t("state")} />
+            <TextInput style={styles.input} value={form.locationCountry} onChangeText={form.setLocationCountry} placeholder={t("country")} />
           </View>
         ) : (
           <>
@@ -663,13 +528,12 @@ function TrainerProfile() {
                 ? `${trainer.locationCity}, ${trainer.locationState}`
                 : t("locationNotSpecified")}
             </Text>
-            <Text style={styles.locationSubtext}>
-              {trainer.locationCountry || t("countryNotSpecified")}
-            </Text>
+            <Text style={styles.locationSubtext}>{trainer.locationCountry || t("countryNotSpecified")}</Text>
           </>
         )}
       </View>
 
+      {/* ── Social Media ── */}
       <View style={styles.section}>
         <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
           <Ionicons name="phone-portrait-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
@@ -677,51 +541,22 @@ function TrainerProfile() {
         </View>
         {isEditing ? (
           <View style={styles.editGrid}>
-            <TextInput
-              style={styles.input}
-              value={instagramUrl}
-              onChangeText={setInstagramUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholder={t("instagramPlaceholder")}
-            />
-            <TextInput
-              style={styles.input}
-              value={facebookUrl}
-              onChangeText={setFacebookUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="url"
-              placeholder={t("facebookPlaceholder")}
-            />
-            <TextInput
-              style={styles.input}
-              value={whatsappUrl}
-              onChangeText={setWhatsappUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="phone-pad"
-              placeholder={t("whatsappPlaceholder")}
-            />
+            <TextInput style={styles.input} value={form.instagramUrl} onChangeText={form.setInstagramUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("instagramPlaceholder")} />
+            <TextInput style={styles.input} value={form.facebookUrl} onChangeText={form.setFacebookUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("facebookPlaceholder")} />
+            <TextInput style={styles.input} value={form.whatsappUrl} onChangeText={form.setWhatsappUrl} autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" placeholder={t("whatsappPlaceholder")} />
           </View>
         ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
           <View style={styles.socialList}>
-            {trainer.instagramUrl ? (
-              <Text style={styles.socialItem}>Instagram: {trainer.instagramUrl}</Text>
-            ) : null}
-            {trainer.facebookUrl ? (
-              <Text style={styles.socialItem}>Facebook: {trainer.facebookUrl}</Text>
-            ) : null}
-            {trainer.whatsappUrl ? (
-              <Text style={styles.socialItem}>WhatsApp: {trainer.whatsappUrl}</Text>
-            ) : null}
+            {trainer.instagramUrl ? <Text style={styles.socialItem}>Instagram: {trainer.instagramUrl}</Text> : null}
+            {trainer.facebookUrl ? <Text style={styles.socialItem}>Facebook: {trainer.facebookUrl}</Text> : null}
+            {trainer.whatsappUrl ? <Text style={styles.socialItem}>WhatsApp: {trainer.whatsappUrl}</Text> : null}
           </View>
         ) : (
           <Text style={styles.locationSubtext}>{t("noSocialLinks")}</Text>
         )}
       </View>
 
+      {/* ── Specializations ── */}
       <View style={styles.section}>
         <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
           <Ionicons name="pricetag-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
@@ -736,32 +571,18 @@ function TrainerProfile() {
           ) : specializationOptions.length > 0 ? (
             <View style={styles.specGrid}>
               {specializationOptions.map((spec) => {
-                const active = selectedSpecializationIds.includes(spec.id);
+                const active = form.selectedSpecializationIds.includes(spec.id);
                 return (
-                  <Pressable
-                    key={spec.id}
-                    style={[styles.specChip, active && styles.specChipActive]}
-                    onPress={() => toggleSpecialization(spec.id)}
-                  >
-                    <Text style={[styles.specChipText, active && styles.specChipTextActive]}>
-                      {spec.name}
-                    </Text>
+                  <Pressable key={spec.id} style={[styles.specChip, active && styles.specChipActive]} onPress={() => form.toggleSpecialization(spec.id)}>
+                    <Text style={[styles.specChipText, active && styles.specChipTextActive]}>{spec.name}</Text>
                   </Pressable>
                 );
               })}
             </View>
           ) : (
             <View style={styles.specFallbackBox}>
-              <Text style={styles.specFallbackText}>
-                {t("noSpecOptions")}
-              </Text>
-              <Pressable
-                style={styles.specRetryButton}
-                onPress={() => {
-                  void refetchSpecializations();
-                  void refetch();
-                }}
-              >
+              <Text style={styles.specFallbackText}>{t("noSpecOptions")}</Text>
+              <Pressable style={styles.specRetryButton} onPress={() => { void refetchSpecializations(); void refetch(); }}>
                 <Text style={styles.specRetryText}>{t("retry")}</Text>
               </Pressable>
             </View>
@@ -796,7 +617,9 @@ function TrainerProfile() {
           </View>
           <View style={styles.statCard}>
             <Text style={styles.statNumber}>{Number(trainer.totalRating || 0).toFixed(1)}</Text>
-            <View style={styles.starsText}>{renderStars(Number(trainer.totalRating || 0))}</View>
+            <View style={styles.starsText}>
+              <StarRating rating={Number(trainer.totalRating || 0)} />
+            </View>
           </View>
         </View>
       </View>
@@ -830,7 +653,6 @@ function TrainerProfile() {
 
       {/* ── Actions ── */}
       <View style={styles.buttonSection}>
-        {/* My Gyms — the new button */}
         <Pressable
           style={({ pressed }) => [styles.gymsButton, pressed && styles.buttonPressed]}
           onPress={() => router.push("/my-gyms")}
@@ -848,53 +670,17 @@ function TrainerProfile() {
         {isEditing && (
           <View style={styles.actionContainer}>
             <Text style={styles.actionHeader}>{t("saveChanges")}</Text>
-            
             <Pressable
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.primaryAction,
-                isUpdating && styles.buttonDisabled,
-                pressed && styles.buttonPressed
-              ]}
-              onPress={() => {
-                void handleSaveProfile();
-              }}
+              style={({ pressed }) => [styles.actionButton, styles.primaryAction, isUpdating && styles.buttonDisabled, pressed && styles.buttonPressed]}
+              onPress={() => { void handleSaveProfile(); }}
               disabled={isUpdating}
             >
-              <Ionicons 
-                name={isUpdating ? "sync" : "save-outline"} 
-                size={18} 
-                color="#fff" 
-              />
-              <Text style={styles.primaryActionText}>
-                {isUpdating ? t("saving") : t("saveProfile")}
-              </Text>
+              <Ionicons name={isUpdating ? "sync" : "save-outline"} size={18} color="#fff" />
+              <Text style={styles.primaryActionText}>{isUpdating ? t("saving") : t("saveProfile")}</Text>
             </Pressable>
-
             <Pressable
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.secondaryAction,
-                pressed && styles.buttonPressed
-              ]}
-              onPress={() => {
-                if (trainer) {
-                  setBio(trainer.bio ?? "");
-                  setExperienceYears(trainer.experienceYears !== undefined ? String(trainer.experienceYears) : "");
-                  setHourlyRate(trainer.hourlyRate !== undefined ? String(trainer.hourlyRate) : "");
-                  setSessionRate(trainer.sessionRate !== undefined ? String(trainer.sessionRate) : "");
-                  setLocationCity(trainer.locationCity ?? "");
-                  setLocationState(trainer.locationState ?? "");
-                  setLocationCountry(trainer.locationCountry ?? "");
-                  setInstagramUrl(trainer.instagramUrl ?? "");
-                  setFacebookUrl(trainer.facebookUrl ?? "");
-                  setWhatsappUrl(trainer.whatsappUrl ?? "");
-                  setSelectedSpecializationIds(
-                    Array.isArray(trainer.specializations) ? trainer.specializations.map((spec) => spec.id) : []
-                  );
-                }
-                setIsEditing(false);
-              }}
+              style={({ pressed }) => [styles.actionButton, styles.secondaryAction, pressed && styles.buttonPressed]}
+              onPress={() => { if (trainer) form.resetToTrainer(trainer); setIsEditing(false); }}
             >
               <Text style={styles.secondaryActionText}>{t("cancel")}</Text>
             </Pressable>
@@ -903,471 +689,89 @@ function TrainerProfile() {
       </View>
     </ScrollView>
 
-    {/* ── Dropdown Modal ── */}
-    <Modal visible={menuVisible} transparent animationType="fade">
-      <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-        <View style={styles.dropdownMenu}>
-          {/* Language toggle */}
-          <Pressable style={styles.dropdownItem} onPress={() => { setLanguage(language === "en" ? "ro" : "en"); }}>
-            <Ionicons name="language-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>{t("language")}</Text>
-            <View style={styles.langBadge}>
-              <Text style={styles.langBadgeText}>{language === "en" ? "EN" : "RO"}</Text>
-            </View>
-          </Pressable>
-
-          <View style={styles.dropdownDivider} />
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); setIsEditing(true); }}>
-            <Ionicons name="pencil" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>{t("editProfile")}</Text>
-          </Pressable>
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); handleSubscribe(); }} disabled={isSubscribing}>
-            {isSubscribing ? <ActivityIndicator size="small" color={theme.colors.text} /> : <Ionicons name="receipt-outline" size={18} color={theme.colors.text} />}
-            <Text style={styles.dropdownItemText}>{isSubscribing ? t("processing") : t("manageSubscription")}</Text>
-          </Pressable>
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push("/legal"); }}>
-            <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>{t("legalAndPolicies")}</Text>
-          </Pressable>
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}>
-            <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>{t("reportIssue")}</Text>
-          </Pressable>
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); startTour(trainerTour); }} accessible accessibilityRole="button" accessibilityLabel={t("showTutorial")}>
-            <Ionicons name="help-circle-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>{t("showTutorial")}</Text>
-          </Pressable>
-
-          <View style={styles.dropdownDivider} />
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleLogout(); }}>
-            <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
-            <Text style={styles.dropdownItemText}>{t("logOut")}</Text>
-          </Pressable>
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleDelete(); }} disabled={isDeleting}>
-            <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
-            <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
-              {isDeleting ? t("deleting") : t("deleteProfile")}
-            </Text>
-          </Pressable>
-
-          <Pressable style={styles.dropdownItem} onPress={() => { setMenuVisible(false); void handleDeleteAccount(); }} disabled={isDeletingAccount} accessible accessibilityRole="button" accessibilityLabel={t("deleteAccount")}>
-            <Ionicons name="person-remove-outline" size={18} color={theme.colors.error} />
-            <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
-              {isDeletingAccount ? t("deleting") : t("deleteAccount")}
-            </Text>
-          </Pressable>
-        </View>
-      </Pressable>
-      </Modal>
+    <ProfileMenuModal
+      visible={menuVisible}
+      onClose={() => setMenuVisible(false)}
+      items={menuItems}
+      dividerAfter={[0, 5]}
+    />
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#f8f9fa",
-    padding: 20,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    gap: 12,
-  },
-  header: {
-    alignItems: "center",
-    marginBottom: 30,
-    paddingTop: 20,
-    zIndex: 1,
-  },
-  headerTop: {
-    width: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    position: "relative",
-    marginBottom: 15,
-  },
-  avatarRow: {
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  title: {
-    ...typography.h2,
-    color: theme.colors.text,
-  },
-  menuIconButton: {
-    position: "absolute",
-    right: 0,
-    top: -5,
-    padding: 10,
-  },
-  backBtn: {
-    position: "absolute",
-    left: 0,
-    top: -5,
-    padding: 10,
-  },
-  statusBadge: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginBottom: 10,
-  },
+  container: { flex: 1, backgroundColor: "#f8f9fa", padding: 20 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, gap: 12 },
+  header: { alignItems: "center", marginBottom: 30, paddingTop: 20, zIndex: 1 },
+  headerTop: { width: "100%", alignItems: "center", justifyContent: "center", position: "relative", marginBottom: 15 },
+  avatarRow: { alignItems: "center", marginBottom: 12 },
+  title: { ...typography.h2, color: theme.colors.text },
+  menuIconButton: { position: "absolute", right: 0, top: -5, padding: 10 },
+  backBtn: { position: "absolute", left: 0, top: -5, padding: 10 },
+  statusBadge: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, marginBottom: 10 },
   available: { backgroundColor: "#d4edda" },
   unavailable: { backgroundColor: "#f8d7da" },
   statusText: { fontSize: 14, fontWeight: "600", color: "#333" },
-  featuredBadge: {
-    backgroundColor: "#fff3cd",
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
+  featuredBadge: { backgroundColor: "#fff3cd", paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 },
   featuredText: { fontSize: 14, fontWeight: "600", color: "#856404" },
-
-  section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    padding: 20,
-    marginBottom: 20,
-    ...theme.shadows.medium,
-  },
-  sectionTitle: {
-    ...typography.h3,
-    color: theme.colors.text,
-    marginBottom: 15,
-  },
+  section: { backgroundColor: theme.colors.surface, borderRadius: theme.roundness, padding: 20, marginBottom: 20, ...theme.shadows.medium },
+  sectionTitle: { ...typography.h3, color: theme.colors.text, marginBottom: 15 },
   bioText: { fontSize: 16, lineHeight: 24, color: "#666" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: "#111827",
-  },
-  textArea: {
-    minHeight: 90,
-    textAlignVertical: "top",
-  },
-  editGrid: {
-    gap: 10,
-  },
-  specGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  specLoadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  specLoadingText: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  specFallbackBox: {
-    backgroundColor: "#F9FAFB",
-    borderWidth: 1,
-    borderColor: "#E5E7EB",
-    borderRadius: 10,
-    padding: 12,
-    gap: 10,
-  },
-  specFallbackText: {
-    fontSize: 13,
-    color: "#6B7280",
-  },
-  specRetryButton: {
-    alignSelf: "flex-start",
-    backgroundColor: "#6366F1",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  specRetryText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  specChip: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#fff",
-  },
-  specChipActive: {
-    backgroundColor: "#3B82F6",
-    borderColor: "#3B82F6",
-  },
-  specChipText: {
-    color: "#374151",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  specChipTextActive: {
-    color: "#fff",
-  },
-  specChipReadOnly: {
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#E5E7EB",
-  },
-  specChipReadOnlyText: {
-    color: "#374151",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-
-  infoGrid: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  infoCard: {
-    backgroundColor: "#f8f9fa",
-    borderRadius: 8,
-    padding: 15,
-    flex: 1,
-    minWidth: 100,
-    alignItems: "center",
-  },
+  input: { borderWidth: 1, borderColor: "#D1D5DB", backgroundColor: "#fff", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#111827" },
+  textArea: { minHeight: 90, textAlignVertical: "top" },
+  editGrid: { gap: 10 },
+  specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  specLoadingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  specLoadingText: { fontSize: 13, color: "#6B7280" },
+  specFallbackBox: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, padding: 12, gap: 10 },
+  specFallbackText: { fontSize: 13, color: "#6B7280" },
+  specRetryButton: { alignSelf: "flex-start", backgroundColor: "#6366F1", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  specRetryText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  specChip: { borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff" },
+  specChipActive: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
+  specChipText: { color: "#374151", fontSize: 13, fontWeight: "600" },
+  specChipTextActive: { color: "#fff" },
+  specChipReadOnly: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#E5E7EB" },
+  specChipReadOnlyText: { color: "#374151", fontSize: 13, fontWeight: "600" },
+  infoGrid: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: 10 },
+  infoCard: { backgroundColor: "#f8f9fa", borderRadius: 8, padding: 15, flex: 1, minWidth: 100, alignItems: "center" },
   infoLabel: { fontSize: 12, color: "#999", marginBottom: 5, textTransform: "uppercase" },
   infoValue: { fontSize: 16, fontWeight: "bold", color: "#333" },
-
   locationText: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 5 },
   locationSubtext: { fontSize: 14, color: "#666" },
   socialList: { gap: 6 },
   socialItem: { fontSize: 14, color: "#374151" },
-
   statsGrid: { flexDirection: "row", justifyContent: "space-around", gap: 15 },
   statCard: { alignItems: "center", flex: 1 },
   statNumber: { fontSize: 24, fontWeight: "bold", color: "#007AFF", marginBottom: 5 },
   statLabel: { fontSize: 12, color: "#666", textAlign: "center" },
   starsText: { fontSize: 12, marginTop: 2 },
-
-  accountInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
+  accountInfo: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
   accountLabel: { fontSize: 14, color: "#666" },
   accountValue: { fontSize: 14, fontWeight: "600", color: "#333" },
-
   buttonSection: { gap: 15, marginTop: 20, marginBottom: 40 },
-
-  // ── My Gyms button ──────────────────────────────────────
-  gymsButton: {
-    backgroundColor: "white",
-    borderRadius: theme.roundness,
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    overflow: "hidden",
-    ...theme.shadows.medium,
-  },
-  gymsButtonInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    gap: 14,
-  },
-  gymsButtonIcon: { fontSize: 28 },
-  gymsButtonTitle: {
-    ...typography.body1,
-    fontWeight: "700",
-    color: theme.colors.primary,
-    marginBottom: 2,
-  },
-  gymsButtonSub: {
-    fontSize: 12,
-    color: "#6B7280",
-  },
-  gymsButtonArrow: {
-    fontSize: 24,
-    color: "#6366F1",
-    marginLeft: "auto",
-    fontWeight: "300",
-  },
+  gymsButton: { backgroundColor: "white", borderRadius: theme.roundness, borderWidth: 2, borderColor: theme.colors.primary, overflow: "hidden", ...theme.shadows.medium },
+  gymsButtonInner: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
+  gymsButtonTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.primary, marginBottom: 2 },
+  gymsButtonSub: { fontSize: 12, color: "#6B7280" },
   buttonPressed: { opacity: 0.8 },
-  // ────────────────────────────────────────────────────────
-
-  actionContainer: {
-    marginTop: theme.spacing.xl,
-    gap: theme.spacing.md,
-  },
-  actionHeader: {
-    ...typography.h3,
-    color: theme.colors.text,
-    marginBottom: theme.spacing.xs,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderRadius: theme.roundness,
-    gap: 8,
-  },
-  primaryAction: {
-    backgroundColor: theme.colors.primary,
-    ...theme.shadows.small,
-  },
-  primaryActionText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  secondaryAction: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-  },
-  secondaryActionText: {
-    color: theme.colors.textSecondary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  analyticsButton: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-    ...theme.shadows.small,
-  },
-  analyticsButtonInner: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    gap: 14,
-  },
-  analyticsButtonTitle: {
-    ...typography.body1,
-    fontWeight: "700",
-    color: theme.colors.text,
-    marginBottom: 2,
-  },
-  analyticsButtonSub: {
-    fontSize: 12,
-    color: theme.colors.textSecondary,
-  },
-  dangerZone: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-    marginTop: theme.spacing.sm,
-  },
-  actionRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 16,
-    gap: 12,
-  },
-  actionRowIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: theme.colors.background,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  actionRowText: {
-    ...typography.body1,
-    color: theme.colors.text,
-    fontWeight: "600",
-  },
-  actionRowDestructiveText: {
-    ...typography.body1,
-    color: theme.colors.error,
-    fontWeight: "600",
-  },
-  divider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginLeft: 60,
-  },
+  actionContainer: { marginTop: theme.spacing.xl, gap: theme.spacing.md },
+  actionHeader: { ...typography.h3, color: theme.colors.text, marginBottom: theme.spacing.xs },
+  actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 16, borderRadius: theme.roundness, gap: 8 },
+  primaryAction: { backgroundColor: theme.colors.primary, ...theme.shadows.small },
+  primaryActionText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  secondaryAction: { backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border },
+  secondaryActionText: { color: theme.colors.textSecondary, fontSize: 16, fontWeight: "600" },
+  analyticsButton: { backgroundColor: theme.colors.surface, borderRadius: theme.roundness, borderWidth: 1, borderColor: theme.colors.border, overflow: "hidden", ...theme.shadows.small },
+  analyticsButtonInner: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
+  analyticsButtonTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text, marginBottom: 2 },
+  analyticsButtonSub: { fontSize: 12, color: theme.colors.textSecondary },
   buttonDisabled: { opacity: 0.6 },
   errorText: { fontSize: 16, color: theme.colors.error, textAlign: "center" },
-  subscribeButton: {
-    backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: theme.roundness,
-    alignItems: "center",
-  },
-  button: {
-    backgroundColor: theme.colors.primary,
-    padding: 16,
-    borderRadius: theme.roundness,
-    alignItems: "center",
-    width: "100%",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.1)",
-  },
-  dropdownMenu: {
-    position: "absolute",
-    top: 60,
-    right: 20,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    minWidth: 220,
-    ...theme.shadows.medium,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    overflow: "hidden",
-  },
-  dropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-  },
-  dropdownItemText: {
-    ...typography.body1,
-    color: theme.colors.text,
-    marginLeft: 12,
-    fontWeight: "600",
-    flex: 1,
-  },
-  langBadge: {
-    backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  langBadgeText: {
-    color: "#fff",
-    fontSize: 11,
-    fontWeight: "700",
-  },
-  dropdownDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
+  button: { backgroundColor: theme.colors.primary, padding: 16, borderRadius: theme.roundness, alignItems: "center", width: "100%" },
+  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  langBadge: { backgroundColor: theme.colors.primary, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
+  langBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
 });
 
 export default TrainerProfile;

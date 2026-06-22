@@ -53,6 +53,10 @@ export default function TrainerImageCarousel({
     [slideWidth]
   );
 
+  // Update the viewer page only once the swipe settles. Tracking it on every
+  // scroll frame re-rendered the ScrollView mid-drag, which re-applied the
+  // `contentOffset` prop and yanked the scroll back — so it never finished
+  // paging and rested showing parts of two images.
   const handleViewerScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
@@ -137,8 +141,7 @@ export default function TrainerImageCarousel({
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
-            onScroll={handleViewerScroll}
-            scrollEventThrottle={16}
+            onMomentumScrollEnd={handleViewerScroll}
             scrollEnabled={images.length > 1}
             contentOffset={{ x: (viewerIndex ?? 0) * SCREEN_W, y: 0 }}
           >

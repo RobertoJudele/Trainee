@@ -495,7 +495,6 @@ export default function CheckoutScreen() {
 					}
 				}
 			} catch (error) {
-				console.error("Failed to fetch RevenueCat offerings:", error);
 				const errStr = error instanceof Error ? error.message : JSON.stringify(error);
 				if (!cancelled) {
 					if (attempt < 4) {

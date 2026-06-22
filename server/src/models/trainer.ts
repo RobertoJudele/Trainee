@@ -21,6 +21,7 @@ import { User } from "./user";
 import { TrainerSpecialization } from "./trainerSpecialization";
 import { Specialization } from "./specialization";
 import { TrainerImage } from "./trainerImage";
+import { TrainerPackage } from "./trainerPackage";
 import { Review } from "./review";
 
 @Table({
@@ -159,6 +160,8 @@ export class Trainer extends Model<
 
   @HasMany(() => TrainerImage) images!: TrainerImage[];
 
+  @HasMany(() => TrainerPackage) packages!: TrainerPackage[];
+
   @BelongsToMany(
     () => {
       const { Specialization } = require("./specialization");
@@ -191,7 +194,7 @@ export class Trainer extends Model<
     return !!(
       this.bio &&
       this.experienceYears !== null &&
-      (this.hourlyRate || this.sessionRate) &&
+      this.sessionRate &&
       this.locationCity &&
       this.locationState
     );

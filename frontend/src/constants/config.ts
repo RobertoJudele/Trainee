@@ -17,10 +17,10 @@ const resolveApiUrl = (): string => {
     return normalizeUrl(prodUrl);
   }
 
-  return __DEV__ ? "http://localhost:8000" : "https://your-production-api.com";
+  if (!__DEV__) {
+    throw new Error("EXPO_PUBLIC_API_URL or EXPO_PUBLIC_API_URL_PROD must be set for production builds.");
+  }
+  return "http://localhost:8000";
 };
 
 export const API_URL = resolveApiUrl();
-
-// Log API URL for debugging
-console.log("🔗 API_URL:", API_URL);

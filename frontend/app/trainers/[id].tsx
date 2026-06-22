@@ -28,6 +28,7 @@ import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
+import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
@@ -178,6 +179,11 @@ export default function TrainerDetailsScreen() {
     skip: !trainerInternalId,
   });
   const reviews = reviewsData?.data ?? [];
+
+  const { data: packagesResponse } = useGetTrainerPackagesQuery(trainerInternalId!, {
+    skip: !trainerInternalId,
+  });
+  const trainerPackages = packagesResponse?.data ?? [];
 
   const [createReview, { isLoading: isCreating }] = useCreateReviewMutation();
   const [updateReview, { isLoading: isUpdating }] = useUpdateReviewMutation();
@@ -438,15 +444,30 @@ export default function TrainerDetailsScreen() {
           <Text style={styles.infoLabel}>{t("experience")}</Text>
           <Text style={styles.infoValue}>{experienceYears} {t("years")}</Text>
         </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t("hourlyRate")}</Text>
-          <Text style={styles.infoValue}>{hourlyRate ? `$${hourlyRate}${t("perHour")}` : "N/A"}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-          <Text style={styles.infoValue}>{sessionRate ? `$${sessionRate}${t("perSession")}` : "N/A"}</Text>
-        </View>
+        {sessionRate && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
+            <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(sessionRate))}</Text>
+          </View>
+        )}
       </View>
+
+      {trainerPackages.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("myPackages")}</Text>
+          {trainerPackages.map((pkg) => (
+            <View key={pkg.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6'}}>
+              <View>
+                <Text style={{fontSize: 15, fontWeight: '600', color: theme.colors.text}}>{pkg.name}</Text>
+                <Text style={{fontSize: 13, color: theme.colors.textSecondary, marginTop: 2}}>
+                  {pkg.sessionCount} {t("sessions")}
+                </Text>
+              </View>
+              <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>${Number(pkg.price).toFixed(2)}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t("location")}</Text>

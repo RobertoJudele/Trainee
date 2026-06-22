@@ -65,41 +65,18 @@ interface ResetPasswordRequest {
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
-      query: (credentials) => {
-        console.log("Login mutation called wih:", credentials); // ✅ Debug log
-        return {
-          url: "/auth/login",
-          method: "POST",
-          body: credentials,
-        };
-      },
+      query: (credentials) => ({
+        url: "/auth/login",
+        method: "POST",
+        body: credentials,
+      }),
     }),
     signup: builder.mutation<SignupResponse, SignupRequest>({
-      query: (client) => {
-        console.log("Sign up mutation called with: ", client);
-        return {
-          url: "/auth/register",
-          method: "POST",
-          body: client,
-        };
-      },
-      transformErrorResponse: (response: any) => {
-        console.log("🔴 Signup error response:", JSON.stringify(response)); // ✅ Add error logging
-        if (response?.data?.errors) {
-          console.log(
-            "🔴 Detailed errors:",
-            JSON.stringify(response.data.errors, null, 2)
-          );
-          // Log each error individually
-          response.data.errors.forEach((error: any, index: number) => {
-            console.log(
-              `🔴 Error ${index + 1}:`,
-              JSON.stringify(error, null, 2)
-            );
-          });
-        }
-        return response;
-      },
+      query: (client) => ({
+        url: "/auth/register",
+        method: "POST",
+        body: client,
+      }),
     }),
     forgotPassword: builder.mutation<GenericMessageResponse, ForgotPasswordRequest>({
       query: (body) => ({

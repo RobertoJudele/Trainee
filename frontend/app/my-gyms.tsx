@@ -32,7 +32,6 @@ export default function MyGymsScreen() {
   const { t } = useLanguage();
   const router = useRouter();
   const user = useSelector(selectCurrentUser);
-  console.log("Current user in MyGymsScreen:", user);
   const isTrainer = user?.role === "trainer";
 
   const [showBrowser, setShowBrowser] = useState(false);

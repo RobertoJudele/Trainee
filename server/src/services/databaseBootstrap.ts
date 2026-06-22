@@ -143,6 +143,20 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     ON trainer_blocked_dates (trainer_id, date);
   `);
 
+  // Create trainer_packages table if not exists
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS trainer_packages (
+      id SERIAL PRIMARY KEY,
+      trainer_id INTEGER NOT NULL REFERENCES trainer_profiles(id) ON DELETE CASCADE,
+      name VARCHAR(100) NOT NULL,
+      price DECIMAL(7,2) NOT NULL CHECK (price > 0),
+      session_count INTEGER NOT NULL CHECK (session_count >= 1),
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    );
+  `);
+
   // client_preferences: replace legacy lat/lng columns with a preferred gym reference
   await sequelize.query(`
     ALTER TABLE client_preferences

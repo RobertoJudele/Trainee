@@ -368,6 +368,49 @@ export const updateTrainerValidation = [
   }),
 ];
 
+export const createTrainerPackageValidation = [
+  body("name")
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Name must be between 1 and 100 characters."),
+  body("price")
+    .isFloat({ min: 0.01, max: 99999.99 })
+    .withMessage("Price must be between 0.01 and 99999.99."),
+  body("sessionCount")
+    .isInt({ min: 1 })
+    .withMessage("Session count must be at least 1."),
+  body("sortOrder")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Sort order must be a non-negative integer."),
+  strictSchema({
+    body: ["name", "price", "sessionCount", "sortOrder"],
+  }),
+];
+
+export const updateTrainerPackageValidation = [
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Name must be between 1 and 100 characters."),
+  body("price")
+    .optional()
+    .isFloat({ min: 0.01, max: 99999.99 })
+    .withMessage("Price must be between 0.01 and 99999.99."),
+  body("sessionCount")
+    .optional()
+    .isInt({ min: 1 })
+    .withMessage("Session count must be at least 1."),
+  body("sortOrder")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Sort order must be a non-negative integer."),
+  strictSchema({
+    body: ["name", "price", "sessionCount", "sortOrder"],
+  }),
+];
+
 export const createIssueValidation = [
   body("targetType")
     .isIn(Object.values(IssueTargetType))

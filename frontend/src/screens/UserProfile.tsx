@@ -1,23 +1,17 @@
-import React, { useCallback, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
   Pressable,
   StyleSheet,
   ScrollView,
-  Alert,
-  ActivityIndicator,
-  Platform,
-  Modal,
 } from "react-native";
-import { useSelector, useDispatch } from "react-redux";
-import { selectCurrentUser, logOut } from "../../features/auth/authSlice";
+import { useSelector } from "react-redux";
+import { selectCurrentUser } from "../../features/auth/authSlice";
 import { useDeleteProfileMutation } from "../../features/users/usersApiSlicet";
 import { useRouter } from "expo-router";
-import { apiSlice } from "../api/apiSlice";
 import { theme, typography } from "../lib/theme";
 import { Ionicons } from "@expo/vector-icons";
-import Purchases from "react-native-purchases";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import EditableAvatar from "../components/EditableAvatar";
@@ -25,11 +19,12 @@ import { useProfilePictureUpload } from "../lib/useProfilePictureUpload";
 import { useTour } from "../components/onboarding/TourContext";
 import { clientTour } from "../components/onboarding/clientTour";
 import { useLanguage } from "../lib/i18n/LanguageContext";
+import ProfileMenuModal, { type ProfileMenuItem } from "../components/ProfileMenuModal";
+import { useAccountActions } from "../hooks/useAccountActions";
 
 export default function UserProfile() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const dispatch = useDispatch();
   const user = useSelector(selectCurrentUser);
   const { t, language, setLanguage } = useLanguage();
 
@@ -38,47 +33,10 @@ export default function UserProfile() {
   const { pickAndUpload, isUploading } = useProfilePictureUpload();
   const { startTour } = useTour();
 
-  const handleLogout = useCallback(async () => {
-    dispatch(logOut());
-    dispatch(apiSlice.util.resetApiState());
-    try {
-      if (Platform.OS === "ios" || Platform.OS === "android") {
-        await Purchases.logOut();
-      }
-    } catch {
-      // RevenueCat logout is best-effort
-    }
-    router.replace("/(auth)/Welcome");
-  }, [dispatch, router]);
-
-  const handleDeleteAccount = useCallback(() => {
-    Alert.alert(
-      t("deleteAccountTitle"),
-      t("deleteAccountMessage"),
-      [
-        { text: t("cancel"), style: "cancel" },
-        { text: t("delete"), style: "destructive", onPress: performDeleteAccount },
-      ]
-    );
-  }, [t]);
-
-  const performDeleteAccount = useCallback(async () => {
-    try {
-      await deleteProfile().unwrap();
-      dispatch(logOut());
-      dispatch(apiSlice.util.resetApiState());
-      try {
-        if (Platform.OS === "ios" || Platform.OS === "android") {
-          await Purchases.logOut();
-        }
-      } catch {
-        // best-effort
-      }
-      router.replace("/(auth)/Welcome");
-    } catch {
-      Alert.alert(t("error"), t("deleteAccountError"));
-    }
-  }, [deleteProfile, dispatch, router, t]);
+  const { handleLogout, handleDeleteAccount, isDeletingAccount } = useAccountActions({
+    deleteAccount: deleteProfile,
+    isDeleting,
+  });
 
   const dateLocale = language === "ro" ? "ro-RO" : "en-US";
   const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase() || "U";
@@ -86,6 +44,40 @@ export default function UserProfile() {
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).toLocaleDateString(dateLocale, { month: "long", year: "numeric" })
     : null;
+
+  const menuItems: ProfileMenuItem[] = useMemo(() => [
+    {
+      key: "lang", icon: "language-outline", label: t("language"),
+      onPress: () => setLanguage(language === "en" ? "ro" : "en"),
+      trailing: (
+        <View style={styles.langBadge}>
+          <Text style={styles.langBadgeText}>{language === "en" ? "EN" : "RO"}</Text>
+        </View>
+      ),
+    },
+    {
+      key: "legal", icon: "document-text-outline", label: t("legalAndPolicies"),
+      onPress: () => { setMenuVisible(false); router.push("/legal"); },
+    },
+    {
+      key: "report", icon: "flag-outline", label: t("reportIssue"),
+      onPress: () => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); },
+    },
+    {
+      key: "tour", icon: "help-circle-outline", label: t("showTutorial"),
+      onPress: () => { setMenuVisible(false); startTour(clientTour); },
+    },
+    {
+      key: "logout", icon: "log-out-outline", label: t("logOut"),
+      onPress: () => { setMenuVisible(false); void handleLogout(); },
+    },
+    {
+      key: "delAccount", icon: "trash-outline",
+      label: isDeletingAccount ? t("deleting") : t("deleteMyAccount"),
+      onPress: () => { setMenuVisible(false); void handleDeleteAccount(); },
+      destructive: true, disabled: isDeletingAccount, loading: isDeletingAccount,
+    },
+  ], [t, language, setLanguage, isDeletingAccount, handleLogout, handleDeleteAccount, startTour]);
 
   return (
     <>
@@ -164,97 +156,12 @@ export default function UserProfile() {
         </View>
       </ScrollView>
 
-      {/* Dropdown Menu */}
-      <Modal visible={menuVisible} transparent animationType="fade">
-        <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
-          <View style={styles.dropdownMenu}>
-            {/* Language toggle */}
-            <Pressable
-              style={styles.dropdownItem}
-              onPress={() => {
-                setLanguage(language === "en" ? "ro" : "en");
-              }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={t("language")}
-            >
-              <Ionicons name="language-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>{t("language")}</Text>
-              <View style={styles.langBadge}>
-                <Text style={styles.langBadgeText}>
-                  {language === "en" ? "EN" : "RO"}
-                </Text>
-              </View>
-            </Pressable>
-
-            <View style={styles.dropdownDivider} />
-
-            <Pressable
-              style={styles.dropdownItem}
-              onPress={() => { setMenuVisible(false); router.push("/legal"); }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={t("legalAndPolicies")}
-            >
-              <Ionicons name="document-text-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>{t("legalAndPolicies")}</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.dropdownItem}
-              onPress={() => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={t("reportIssue")}
-            >
-              <Ionicons name="flag-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>{t("reportIssue")}</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.dropdownItem}
-              onPress={() => { setMenuVisible(false); startTour(clientTour); }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={t("showTutorial")}
-            >
-              <Ionicons name="help-circle-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>{t("showTutorial")}</Text>
-            </Pressable>
-
-            <View style={styles.dropdownDivider} />
-
-            <Pressable
-              style={styles.dropdownItem}
-              onPress={() => { setMenuVisible(false); void handleLogout(); }}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={t("logOut")}
-            >
-              <Ionicons name="log-out-outline" size={18} color={theme.colors.text} />
-              <Text style={styles.dropdownItemText}>{t("logOut")}</Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.dropdownItem}
-              onPress={() => { setMenuVisible(false); void handleDeleteAccount(); }}
-              disabled={isDeleting}
-              accessible
-              accessibilityRole="button"
-              accessibilityLabel={t("deleteMyAccount")}
-            >
-              {isDeleting ? (
-                <ActivityIndicator size="small" color={theme.colors.error} />
-              ) : (
-                <Ionicons name="trash-outline" size={18} color={theme.colors.error} />
-              )}
-              <Text style={[styles.dropdownItemText, { color: theme.colors.error }]}>
-                {isDeleting ? t("deleting") : t("deleteMyAccount")}
-              </Text>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Modal>
+      <ProfileMenuModal
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        items={menuItems}
+        dividerAfter={[0, 3]}
+      />
     </>
   );
 }
@@ -353,40 +260,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: theme.colors.text,
     fontWeight: "400",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    paddingTop: 80,
-    paddingRight: 16,
-  },
-  dropdownMenu: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 12,
-    paddingVertical: 6,
-    minWidth: 200,
-    ...theme.shadows.medium,
-  },
-  dropdownItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 12,
-  },
-  dropdownItemText: {
-    fontSize: 15,
-    color: theme.colors.text,
-    fontWeight: "500",
-    flex: 1,
-  },
-  dropdownDivider: {
-    height: 1,
-    backgroundColor: theme.colors.border,
-    marginVertical: 4,
-    marginHorizontal: 16,
   },
   langBadge: {
     backgroundColor: theme.colors.primary,

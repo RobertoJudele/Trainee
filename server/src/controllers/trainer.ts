@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { randomUUID } from "crypto";
-import { TrainerProfileCreationAttributes, subStatus } from "../types/trainer";
+import { TrainerProfileCreationAttributes, subStatus, BillingProvider } from "../types/trainer";
 import { sendError, sendSuccess } from "../utils/response";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
@@ -32,8 +32,34 @@ import {
   isValidLongitude,
   toFiniteNumber,
 } from "../utils/geo";
-import { get } from "http";
-import { resolveTrainerEntitlement } from "../services/entitlement";
+import { resolveEntitlement } from "../services/billing/domain";
+import { SystemClock } from "../services/billing/adapters/SystemClock";
+import { isRevenueCatOnlyMode } from "../config/billingMode";
+import type { BillingState } from "../services/billing/types";
+
+const billingClock = new SystemClock();
+
+const trainerToBillingState = (trainer: Trainer): BillingState => ({
+  trainerId: trainer.id,
+  userId: trainer.userId,
+  billingProvider: (trainer.billingProvider as BillingProvider) || BillingProvider.NONE,
+  subscriptionStatus: (trainer.subscriptionStatus as subStatus) || subStatus.CANCELED,
+  stripeCustomerId: trainer.stripeCustomerId || undefined,
+  stripeSubscriptionId: trainer.stripeSubscriptionId || undefined,
+  trialEndsAt: trainer.trialEndsAt || undefined,
+  currentPeriodEndsAt: trainer.currentPeriodEndsAt || undefined,
+  iapProductId: trainer.iapProductId || undefined,
+  iapExpiresAt: trainer.iapExpiresAt || undefined,
+  iapLastVerifiedAt: trainer.iapLastVerifiedAt || undefined,
+  appleOriginalTransactionId: trainer.appleOriginalTransactionId || undefined,
+  googlePurchaseToken: trainer.googlePurchaseToken || undefined,
+});
+
+const resolveTrainerEntitlement = (trainer: Trainer) =>
+  resolveEntitlement(trainerToBillingState(trainer), {
+    isRevenueCatOnly: isRevenueCatOnlyMode(),
+    clock: billingClock,
+  });
 
 
 interface SearchQuery {
