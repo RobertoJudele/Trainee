@@ -49,7 +49,7 @@ const sequelize = new Sequelize({
     RefreshToken,
     ClientPreference,
   ],
-  logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
+  logging: process.env.NODE_ENV === "test" ? false : (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {
     max: 5,
     min: 0,
