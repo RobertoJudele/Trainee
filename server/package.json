@@ -13,7 +13,8 @@
     "seed:gyms": "ts-node src/seeds/gymSeed.ts",
     "seed:gyms:prod": "node dist/seeds/gymSeed.js",
     "seed:specializations": "ts-node src/seeds/specializationSeed.ts",
-    "seed:trainer-specializations": "ts-node src/seeds/trainerSpecializationSeed.ts"
+    "seed:trainer-specializations": "ts-node src/seeds/trainerSpecializationSeed.ts",
+    "seed:demo": "ts-node src/seeds/demoScreenshotSeed.ts"
   },
   "author": "fsniraj",
   "license": "ISC",

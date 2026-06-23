@@ -272,7 +272,7 @@ async function seed() {
         sessionRate: d.sessionRate, locationCity: d.city, locationState: d.state,
         locationCountry: "Romania", isAvailable: true, isFeatured: d.featured,
         subscriptionStatus: "active", billingProvider: "none",
-      });
+      } as any);
 
       // assign 2 specializations
       const chosen = [specs[i % specs.length], specs[(i + 1) % specs.length]];
