@@ -77,7 +77,7 @@ export const issueApiSlice = apiSlice.injectEndpoints({
         method: "PATCH",
         body: { status, resolutionNote },
       }),
-      transformResponse: (response: any) => response?.data,
+      transformResponse: (response: { data: IssueRecord }) => response.data,
     }),
   }),
 });

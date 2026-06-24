@@ -1,4 +1,5 @@
 import { apiSlice } from "../../src/api/apiSlice";
+import { ApiEnvelope } from "../../src/types/api";
 import { TrainerProfileAttributes } from "../../src/types/trainer";
 
 interface TrainerProfileResponse {
@@ -236,9 +237,8 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
 
     getTrainerById: builder.query<PublicTrainerProfile, string>({
       query: (trainerId) => `/trainer/${trainerId}`,
-      transformResponse: (response: any) => {
-        return response?.data ?? response;
-      },
+      transformResponse: (response: ApiEnvelope<PublicTrainerProfile>) =>
+        response.data ?? (response as unknown as PublicTrainerProfile),
     }),
 
     getSpecializations: builder.query<SpecializationListResponse, void>({
@@ -265,9 +265,8 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
 
     getTrainerAnalytics: builder.query<TrainerAnalyticsResponseData, void>({
       query: () => "/trainer/analytics",
-      transformResponse: (response: any) => {
-        return response?.data ?? response;
-      },
+      transformResponse: (response: ApiEnvelope<TrainerAnalyticsResponseData>) =>
+        response.data ?? (response as unknown as TrainerAnalyticsResponseData),
     }),
 
     searchTrainers: builder.query<TrainerSearchResponse, SearchParams | void>({

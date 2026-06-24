@@ -72,3 +72,10 @@ export interface AuthResponse {
   token: string;
   trainer?: TrainerProfileAttributes | null;
 }
+
+/** Standard server response envelope: `{ success, message, data }`. */
+export interface ApiEnvelope<T> {
+  success?: boolean;
+  message?: string;
+  data?: T;
+}

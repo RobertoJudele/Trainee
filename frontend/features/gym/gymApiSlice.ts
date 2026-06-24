@@ -106,7 +106,7 @@ export const gymApiSlice = apiSlice.injectEndpoints({
     }),
 
     // Join a gym
-    joinGym: builder.mutation<ApiResponse<any>, number>({
+    joinGym: builder.mutation<ApiResponse<void>, number>({
       query: (gymId) => ({
         url: `/gyms/${gymId}/join`,
         method: "POST",
@@ -116,7 +116,7 @@ export const gymApiSlice = apiSlice.injectEndpoints({
 
     // Toggle availability at a gym
     setGymAvailability: builder.mutation<
-      ApiResponse<any>,
+      ApiResponse<void>,
       { gymId: number; isAvailable: boolean }
     >({
       query: ({ gymId, isAvailable }) => ({
@@ -128,7 +128,7 @@ export const gymApiSlice = apiSlice.injectEndpoints({
     }),
 
     // Leave a gym
-    leaveGym: builder.mutation<ApiResponse<any>, number>({
+    leaveGym: builder.mutation<ApiResponse<void>, number>({
       query: (gymId) => ({
         url: `/gyms/${gymId}/leave`,
         method: "DELETE",
