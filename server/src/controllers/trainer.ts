@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { TrainerProfileCreationAttributes, subStatus, BillingProvider } from "../types/trainer";
 import { sendError, sendSuccess } from "../utils/response";
+import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
 import { Op } from "sequelize";
@@ -407,14 +408,11 @@ export const createTrainer = async (
       "Trainer profile created succesfully",
       (trainerWithSpecializations?.toJSON() as any) || trainerData
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at creating trainer profile", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation trainer error");
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation trainer error", validationErrors);
       return;
     }
     sendError(res, 500, "Unexpected error while creating trainer happened");
@@ -542,7 +540,7 @@ export const getTrainer = async (
     };
 
     res.json(payload);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error while fetching public trainer details", error);
     sendError(res, 500, "Failed to retrieve trainer details");
   }
@@ -618,14 +616,11 @@ export const deleteTrainer = async (req: Request, res: Response) => {
     await user.save();
 
     sendSuccess(res, 200, "Trainer deleted succesfully");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at deleting trainer", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        path: err.fields,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation error: ", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation error: ", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown errot at deleting trainer");
@@ -757,14 +752,11 @@ export const updateTrainer = async (req: Request, res: Response) => {
       "Trainer updated succesfully",
       updatedTrainer?.toJSON() as any
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at updating trainer", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        path: err.fields,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation error: ", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation error: ", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown errot at updating trainer");
@@ -803,14 +795,11 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
     };
 
     sendSuccess(res, 200, "Trainer profile retrieved successfully", responsePayload);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at  getting self trainer", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        path: err.fields,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation error: ", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation error: ", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown errot at getting self trainer");
@@ -1194,7 +1183,7 @@ export const searchTrainers = async (
         hasPreviousPage: parseInt(page) > 1,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Search trainers error:", error);
     sendError(res, 500, "Search failed");
   }

@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { User } from "../models/user";
 import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
+import { getSequelizeValidationErrors } from "../utils/errors";
 import { uploadImageMemory, generateS3key } from "../config/s3";
 import { S3ImageService } from "../services/s3ImageService";
 import { processProfileImage } from "../services/imageProcessor";
@@ -30,14 +31,11 @@ export const updateProfile = async (
     });
 
     sendSuccess(res, 200, "Profile updated succesfully!");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Update profile error:", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation failed", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Failed to update profile.");
@@ -140,14 +138,11 @@ export const deleteProfile = async (req: Request, res: Response) => {
     await user.destroy();
 
     sendSuccess(res, 200, "Succesfully deleted user");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error while deleting profile: ", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        fields: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown error while deleting user");

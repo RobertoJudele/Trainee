@@ -16,7 +16,7 @@ export const getMyPreferences = async (req: Request, res: Response) => {
     });
 
     sendSuccess(res, 200, "Preferences retrieved", preferences ?? null);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get client preferences error:", error);
     sendError(res, 500, "Could not load preferences");
   }
@@ -86,7 +86,7 @@ export const upsertMyPreferences = async (req: Request, res: Response) => {
     });
 
     sendSuccess(res, 200, "Preferences saved", result);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Upsert client preferences error:", error);
     sendError(res, 500, "Could not save preferences");
   }

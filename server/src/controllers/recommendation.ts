@@ -292,7 +292,7 @@ export const suggestTrainers = async (req: Request<{}, {}, {}, SuggestQuery>, re
         hasPreviousPage: pageNum > 1,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Suggest trainers error:", error);
     sendError(res, 500, "Could not load suggestions");
   }

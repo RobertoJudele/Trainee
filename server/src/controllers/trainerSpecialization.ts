@@ -4,6 +4,7 @@ import { Trainer } from "../models/trainer";
 import { AuthenticatedRequest } from "../types/common";
 import { TrainerSpecializationCreationAttributes } from "../types/trainerSpecialization";
 import { sendError, sendSuccess } from "../utils/response";
+import { getSequelizeValidationErrors } from "../utils/errors";
 import { Specialization } from "../models/specialization";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { link } from "fs";
@@ -84,14 +85,11 @@ export const createTrainerSpecialization = async (
       await TrainerSpecialization.bulkCreate(recordsToCreate);
 
     sendSuccess(res, 201, "Specializations added succesfully");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error adding specializations to trainer:", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      return sendError(res, 400, "Validation failed", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      return sendError(res, 400, "Validation failed", validationErrors);
     }
     sendError(res, 500, "Failed to add specializations.");
   }
@@ -149,7 +147,7 @@ export const getAllTrainerSpecializations = async (
       "Trainer specializations retrieved successfully",
       enrichedData
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error getting trainer specializations:", error);
     sendError(res, 500, "Failed to get trainer specializations");
   }

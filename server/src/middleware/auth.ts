@@ -32,12 +32,12 @@ export const authenticate = async (
 
     req.user = userWithoutPassword;
     next();
-  } catch (error: any) {
-    if (error.name === "JsonWebTokenError") {
+  } catch (error: unknown) {
+    if (error instanceof Error && error.name === "JsonWebTokenError") {
       sendError(res, 401, "Invalid token.");
       return;
     }
-    if (error.name === "TokenExpiredError") {
+    if (error instanceof Error && error.name === "TokenExpiredError") {
       sendError(res, 401, "Token expired.");
       return;
     }

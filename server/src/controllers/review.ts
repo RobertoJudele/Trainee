@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { ReviewRequest } from "../types/review";
 import { sendError, sendSuccess } from "../utils/response";
+import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Review } from "../models/review";
 import { User } from "../models/user";
@@ -97,14 +98,11 @@ export const createReview = async (
     });
 
     sendSuccess(res, 201, "Complete review", completeReview);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation failed");
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Error while creating revirw");
@@ -137,14 +135,11 @@ export const deleteReview = async (req: Request, res: Response) => {
 
     review.destroy();
     sendSuccess(res, 200, "Review deleted succesfully");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error while deleting review: ", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        fields: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown error while deleting review");
@@ -189,14 +184,11 @@ export const updateReview = async (req: Request, res: Response) => {
     });
 
     sendSuccess(res, 200, "Review updateds succesfully");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error while updating review: ", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        fields: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown error while updating review");

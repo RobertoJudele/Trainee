@@ -128,8 +128,15 @@ export class S3ImageService {
       await s3.send(command);
       console.log("File exists");
       return true;
-    } catch (error: any) {
-      if (error.name === "NotFound" || error.$metadata.httpStatusCode === 404) {
+    } catch (error: unknown) {
+      const isNotFound =
+        (error instanceof Error && error.name === "NotFound") ||
+        (typeof error === "object" &&
+          error !== null &&
+          "$metadata" in error &&
+          (error as { $metadata: { httpStatusCode?: number } }).$metadata
+            .httpStatusCode === 404);
+      if (isNotFound) {
         return false;
       }
       throw error;

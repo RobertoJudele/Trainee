@@ -9,6 +9,7 @@ import {
   verifyPasswordResetToken,
 } from "../utils/jwt";
 import { sendError, sendSuccess } from "../utils/response";
+import { getSequelizeValidationErrors } from "../utils/errors";
 import { AuthenticatedRequest } from "../types/common";
 import { emailService } from "../services/emailService";
 
@@ -75,14 +76,11 @@ export const register = async (
     };
 
     sendSuccess(res, 201, "User registered succesfully", authResponse);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.log(error);
-    if (error.name == "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation failed", error);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Registrations failed. Please try again");
