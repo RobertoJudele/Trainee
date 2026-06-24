@@ -19,7 +19,7 @@ import {
 } from "sequelize-typescript";
 import { User } from "./user";
 import { TrainerSpecialization } from "./trainerSpecialization";
-import { Specialization } from "./specialization";
+import type { Specialization } from "./specialization";
 import { TrainerImage } from "./trainerImage";
 import { TrainerPackage } from "./trainerPackage";
 import { Review } from "./review";
@@ -173,7 +173,7 @@ export class Trainer extends Model<
     },
     "trainer_id"
   ) // Explicitly specify foreign key
-  specializations!: any[];
+  specializations!: Specialization[];
 
   @HasMany(() => Review, { onDelete: "CASCADE", hooks: true })
   reviews!: Review[];
