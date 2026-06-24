@@ -42,7 +42,7 @@ export default function ProfileMenuModal({
     <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
         <View style={styles.menu}>
-          <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+          <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
             {items.map((item, index) => (
               <React.Fragment key={item.key}>
                 <Pressable

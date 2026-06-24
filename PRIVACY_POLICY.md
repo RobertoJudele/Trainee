@@ -9,7 +9,7 @@ By using the Service, you acknowledge that you have read this Privacy Policy. If
 
 ## 1. Who We Are and How to Contact Us
 
-The Service is operated by **Juroc Tech Solutions SRL**, a company organized under the laws of Romania (registered office: Str. Luminii nr. 37, Faurei, Vrancea, Romania; trade-register number: [⚠️ INSERT ORC NUMBER, e.g. J40/…/2024]; CUI/CIF: [⚠️ INSERT CUI, e.g. RO…]). Juroc Tech Solutions SRL ("Trainee," "we," "us," or "our") is the **data controller** for personal data that we collect directly through the Service, unless a third party is independently acting as a controller for its own services. Trainee operates the Service as a platform for discovering trainers and sports coaches, managing profiles, booking-related interactions, billing, support requests, and scheduling features.
+The Service is operated by **Juroc Tech Solutions SRL**, a company organized under the laws of Romania (registered office: Str. Luminii nr. 37, Faurei, Vrancea, Romania; trade-register number: J39/412/2026; CUI/CIF: 54645022). Juroc Tech Solutions SRL ("Trainee," "we," "us," or "our") is the **data controller** for personal data that we collect directly through the Service, unless a third party is independently acting as a controller for its own services. Trainee operates the Service as a platform for discovering trainers and sports coaches, managing profiles, booking-related interactions, billing, support requests, and scheduling features.
 
 If you have privacy questions, requests, or complaints, you can contact us at **robertojudele@juroc.tech**, or through the support and contact options provided in the Service.
 

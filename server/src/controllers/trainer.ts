@@ -781,7 +781,7 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
 
     const trainer = await Trainer.findOne({
       where: { userId: userId },
-      attributes: { exclude: ["id", "userId"] },
+      attributes: { exclude: ["userId"] },
       include: [
         {
           model: Specialization,
