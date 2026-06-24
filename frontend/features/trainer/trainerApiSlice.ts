@@ -289,7 +289,7 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       providesTags: ["TrainerImages"],
     }),
 
-    uploadGalleryImages: builder.mutation<any, FormData>({
+    uploadGalleryImages: builder.mutation<ApiEnvelope<void>, FormData>({
       query: (formData) => ({
         url: "/trainer-images/gallery",
         method: "POST",
@@ -298,7 +298,7 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["TrainerImages"],
     }),
 
-    uploadCredentialImages: builder.mutation<any, FormData>({
+    uploadCredentialImages: builder.mutation<ApiEnvelope<void>, FormData>({
       query: (formData) => ({
         url: "/trainer-images/credential",
         method: "POST",
@@ -307,7 +307,7 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       invalidatesTags: ["TrainerImages"],
     }),
 
-    deleteTrainerImage: builder.mutation<any, number>({
+    deleteTrainerImage: builder.mutation<ApiEnvelope<void>, number>({
       query: (id) => ({ url: `/trainer-images/${id}`, method: "DELETE" }),
       invalidatesTags: ["TrainerImages"],
     }),

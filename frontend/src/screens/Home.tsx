@@ -32,7 +32,7 @@ import { useLanguage } from "../lib/i18n/LanguageContext";
 const { width } = Dimensions.get("window");
 
 interface QuickAction {
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
   title: string;
   desc: string;
   route: string;
@@ -53,19 +53,19 @@ export default function Home() {
   // Onboarding tour target — the "Find Trainers" quick action.
   const findTrainersTourRef = useTourTarget("home-find-trainers");
 
-  const quickActions: QuickAction[] = [
+  const allActions: QuickAction[] = [
     {
       icon: "search",
       title: t("findTrainers"),
       desc: t("browseAllTrainers"),
-      route: "/search" as const,
+      route: "/search",
       roles: [UserRole.CLIENT],
     },
     {
       icon: "briefcase",
       title: t("becomeTrainer"),
       desc: t("startYourJourney"),
-      route: "/create-trainer" as const,
+      route: "/create-trainer",
       hiddenIfRole: UserRole.TRAINER,
       roles: [UserRole.CLIENT],
     },
@@ -73,44 +73,45 @@ export default function Home() {
       icon: "person",
       title: t("myProfile"),
       desc: t("viewTrainerProfile"),
-      route: "/TrainerProfile" as const,
+      route: "/TrainerProfile",
       roles: [UserRole.TRAINER],
     },
     {
       icon: "person",
       title: t("myProfile"),
       desc: t("viewYourAccount"),
-      route: "/UserProfile" as const,
+      route: "/UserProfile",
       roles: [UserRole.CLIENT],
     },
     {
       icon: "map",
       title: t("gymMap"),
       desc: t("findGymsNearYou"),
-      route: "/map" as const,
+      route: "/map",
     },
     {
       icon: "calendar",
       title: t("trainerSchedule"),
       desc: t("setHoursAndAssign"),
-      route: "/trainer-schedule" as const,
+      route: "/trainer-schedule",
       roles: [UserRole.TRAINER],
     },
     {
       icon: "receipt",
       title: t("mySchedule"),
       desc: t("seeAssignedSessions"),
-      route: "/my-schedule" as const,
+      route: "/my-schedule",
       roles: [UserRole.CLIENT],
     },
     {
       icon: "construct",
       title: t("adminIssues"),
       desc: t("reviewReports"),
-      route: "/admin-issues" as const,
+      route: "/admin-issues",
       roles: [UserRole.ADMIN],
     },
-  ].filter((action: QuickAction) => {
+  ];
+  const quickActions = allActions.filter((action) => {
     if (action.hiddenIfRole && userRole === action.hiddenIfRole) return false;
     if (action.roles && (!userRole || !action.roles.includes(userRole as UserRole))) return false;
     if (action.requiresAuth && !user) return false;
@@ -403,7 +404,6 @@ export default function Home() {
                   accessibilityLabel={action.title}
                 >
                   <View style={styles.actionIconWrap}>
-                    {/* @ts-ignore */}
                     <Ionicons name={action.icon} size={28} color={theme.colors.primary} />
                   </View>
                   <Text style={styles.actionTitle}>{action.title}</Text>
