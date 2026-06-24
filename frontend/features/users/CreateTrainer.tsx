@@ -189,12 +189,11 @@ export default function CreateTrainer() {
         ]
       );
     } catch (error: unknown) {
-      const err = error as Record<string, unknown> | null | undefined;
-      if (
-        typeof err !== "object" ||
-        err === null ||
-        !("originalStatus" in err)
-      ) {
+      const err =
+        typeof error === "object" && error !== null
+          ? (error as Record<string, unknown>)
+          : null;
+      if (!err || !err.originalStatus) {
         setErrMsg(t("couldNotLoadTrainer"));
       } else {
         const resp = (err as { response?: { status?: number } }).response;
