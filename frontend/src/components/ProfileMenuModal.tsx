@@ -16,7 +16,7 @@ const { height: SCREEN_H } = Dimensions.get("window");
 
 export interface ProfileMenuItem {
   key: string;
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
   onPress: () => void;
   destructive?: boolean;
@@ -60,7 +60,7 @@ export default function ProfileMenuModal({
                     />
                   ) : (
                     <Ionicons
-                      name={item.icon as any}
+                      name={item.icon}
                       size={18}
                       color={item.destructive ? theme.colors.error : theme.colors.text}
                     />

@@ -31,6 +31,16 @@ import { useLanguage } from "../lib/i18n/LanguageContext";
 
 const { width } = Dimensions.get("window");
 
+interface QuickAction {
+  icon: string;
+  title: string;
+  desc: string;
+  route: string;
+  roles?: UserRole[];
+  hiddenIfRole?: UserRole;
+  requiresAuth?: boolean;
+}
+
 export default function Home() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -43,7 +53,7 @@ export default function Home() {
   // Onboarding tour target — the "Find Trainers" quick action.
   const findTrainersTourRef = useTourTarget("home-find-trainers");
 
-  const quickActions = [
+  const quickActions: QuickAction[] = [
     {
       icon: "search",
       title: t("findTrainers"),
@@ -100,10 +110,10 @@ export default function Home() {
       route: "/admin-issues" as const,
       roles: [UserRole.ADMIN],
     },
-  ].filter((action) => {
+  ].filter((action: QuickAction) => {
     if (action.hiddenIfRole && userRole === action.hiddenIfRole) return false;
     if (action.roles && (!userRole || !action.roles.includes(userRole as UserRole))) return false;
-    if ((action as any).requiresAuth && !user) return false;
+    if (action.requiresAuth && !user) return false;
     return true;
   });
 

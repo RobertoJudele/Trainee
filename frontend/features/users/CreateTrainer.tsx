@@ -26,6 +26,7 @@ import React from "react";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
+import { ApiEnvelope, TrainerProfileAttributes } from "../../src/types/api";
 export default function CreateTrainer() {
   const { t } = useLanguage();
   const [bio, setBio] = useState("");
@@ -158,7 +159,7 @@ export default function CreateTrainer() {
 
       const result = await creatingTrainer(trainerData);
 
-      const responseData = (result as any)?.data?.data;
+      const responseData = (result as ApiEnvelope<{ data?: TrainerProfileAttributes }>)?.data?.data;
       if (responseData && user) {
         dispatch(setTrainerProfile(responseData));
         dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
