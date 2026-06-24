@@ -5,7 +5,7 @@ import { sendError, sendSuccess } from "../utils/response";
 import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
-import { Op } from "sequelize";
+import { Op, FindAttributeOptions, Order } from "sequelize";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
 import { S3ImageService } from "../services/s3ImageService";
@@ -1074,7 +1074,7 @@ export const searchTrainers = async (
       applyGeoFilters(finalTrainerWhere);
     }
 
-    const trainerAttributes: any[] = [
+    const trainerAttributes: FindAttributeOptions = [
       "id",
       "publicId",
       "bio",
@@ -1103,7 +1103,7 @@ export const searchTrainers = async (
     }
 
     const resolvedSortBy = safeSortBy === "distance" && !distanceExpression ? "totalRating" : safeSortBy;
-    const orderClause: any[] =
+    const orderClause: Order =
       resolvedSortBy === "distance" && distanceExpression
         ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["totalRating", "DESC"]]
         : [[resolvedSortBy, safeSortOrder]];
