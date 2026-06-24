@@ -17,6 +17,7 @@ import {
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
   "open",
@@ -46,8 +47,8 @@ export default function AdminIssuesScreen() {
     try {
       await updateStatus({ issueId, status }).unwrap();
       await refetch();
-    } catch (error: any) {
-      const message = error?.data?.message || "Could not update issue status.";
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, "Could not update issue status.");
       Alert.alert(t("error"), message);
     }
   };

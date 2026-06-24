@@ -63,6 +63,24 @@ type ApiErrorShape = {
   };
 };
 
+interface SlotConflict {
+  client?: { firstName: string; lastName: string } | null;
+}
+
+function getConflicts(error: unknown): SlotConflict[] | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof (error as { data?: unknown }).data === "object" &&
+    (error as { data?: unknown }).data !== null
+  ) {
+    const data = (error as { data: { conflicts?: unknown } }).data;
+    return Array.isArray(data.conflicts) ? (data.conflicts as SlotConflict[]) : undefined;
+  }
+  return undefined;
+}
+
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error && typeof error === "object") {
     const maybeError = error as ApiErrorShape;
@@ -338,9 +356,7 @@ export default function TrainerDayScheduleScreen() {
     try {
       await blockDate({ date: routeDate, timeZone: deviceTimeZone }).unwrap();
     } catch (error: unknown) {
-      const conflicts = (error as any)?.data?.conflicts as
-        | { client?: { firstName: string; lastName: string } | null }[]
-        | undefined;
+      const conflicts = getConflicts(error);
       if (conflicts && conflicts.length > 0) {
         const names = conflicts
           .map((c) => (c.client ? `${c.client.firstName} ${c.client.lastName}` : t("dayAClient")))

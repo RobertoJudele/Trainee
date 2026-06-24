@@ -30,6 +30,7 @@ import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { DayPill, ScheduleCard, scheduleDayLabels } from "../src/components/schedule/SchedulePrimitives";
 import { MonthCalendar } from "../src/components/schedule/MonthCalendar";
 import { useTour, useTourTarget } from "../src/components/onboarding/TourContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const monthStartKey = (year: number, month1: number) => `${year}-${pad(month1)}-01`;
@@ -137,8 +138,8 @@ export default function TrainerScheduleScreen() {
         isActive,
       }).unwrap();
       Alert.alert(t("scheduleSaved"), `${scheduleDayLabels[selectedDow]} ${t("scheduleHoursUpdated")}`);
-    } catch (err: any) {
-      Alert.alert(t("error"), err?.data?.message || t("scheduleCouldNotSaveTemplate"));
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("scheduleCouldNotSaveTemplate")));
     }
   };
 
@@ -162,8 +163,8 @@ export default function TrainerScheduleScreen() {
           ? `${parts.join(", ")} ${t("scheduleForThisMonth")}`
           : t("scheduleNoChanges")
       );
-    } catch (err: any) {
-      Alert.alert(t("error"), err?.data?.message || t("scheduleCouldNotGenerate"));
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("scheduleCouldNotGenerate")));
     }
   };
 

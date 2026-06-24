@@ -29,6 +29,7 @@ import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
+import { getApiErrorMessage } from "../../src/lib/errors";
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
@@ -247,8 +248,8 @@ export default function TrainerDetailsScreen() {
       }
       setReviewMode("idle");
       setEditingReviewId(null);
-    } catch (err: any) {
-      Alert.alert(t("error"), err?.data?.message || t("couldNotSaveReview"));
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotSaveReview")));
     }
   }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview, t]);
 
@@ -262,8 +263,8 @@ export default function TrainerDetailsScreen() {
         onPress: async () => {
           try {
             await deleteReview({ reviewId, trainerId: trainerInternalId }).unwrap();
-          } catch (err: any) {
-            Alert.alert(t("error"), err?.data?.message || t("couldNotDeleteReview"));
+          } catch (err: unknown) {
+            Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotDeleteReview")));
           }
         },
       },

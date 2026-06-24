@@ -36,6 +36,7 @@ import EditableAvatar from "../../src/components/EditableAvatar";
 import TrainerImageSection from "../../src/components/TrainerImageSection";
 import { useProfilePictureUpload } from "../../src/lib/useProfilePictureUpload";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../../src/lib/errors";
 import {
   normalizeSocialUrlForSave,
   normalizeWhatsAppForSave,
@@ -196,8 +197,8 @@ function TrainerProfile() {
       if (response?.data) dispatch(setTrainerProfile(response.data));
       setIsEditing(false);
       Alert.alert(t("success"), t("profileUpdated"));
-    } catch (error: any) {
-      Alert.alert(t("error"), error?.data?.message || t("updateError"));
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("updateError")));
     }
   }, [trainer, form, updateTrainerProfile, dispatch, t]);
 
@@ -248,8 +249,8 @@ function TrainerProfile() {
       }
 
       Alert.alert(t("success"), t("packageUpdated"));
-    } catch (error: any) {
-      Alert.alert(t("error"), error?.data?.message || t("updateError"));
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("updateError")));
     }
   }, [trainer, editingPackages, trainerPackages, createPkg, updatePkg, deletePkg, t]);
 
@@ -348,353 +349,353 @@ function TrainerProfile() {
     <>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <Pressable style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
-          </Pressable>
-          <Text style={styles.title}>{t("trainerProfile")}</Text>
-          {!isEditing && (
-            <Pressable style={styles.menuIconButton} onPress={() => setMenuVisible(true)}>
-              <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <Pressable style={styles.backBtn} onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
             </Pressable>
-          )}
-        </View>
-        <View style={styles.avatarRow}>
-          <EditableAvatar
-            imageUrl={user?.profileImageUrl}
-            initials={trainerInitials}
-            size={92}
-            editable
-            uploading={isUploadingAvatar}
-            onPress={pickAndUpload}
-          />
-        </View>
-        <View style={[styles.statusBadge, trainer.isAvailable ? styles.available : styles.unavailable]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Ionicons name="ellipse" size={10} color={trainer.isAvailable ? theme.colors.success : theme.colors.error} style={{marginRight: 4}} />
-            <Text style={styles.statusText}>
-              {trainer.isAvailable ? t("available") : t("unavailable")}
-            </Text>
-          </View>
-        </View>
-        {trainer.isFeatured && (
-          <View style={styles.featuredBadge}>
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Ionicons name="star" size={14} color="#D97706" style={{marginRight: 4}} />
-              <Text style={styles.featuredText}>{t("featuredTrainer")}</Text>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* ── Bio ── */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("aboutMe")}</Text>
-        {isEditing ? (
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            multiline
-            value={form.bio}
-            onChangeText={form.setBio}
-            placeholder={t("bioPlaceholder")}
-          />
-        ) : (
-          <Text style={styles.bioText}>{trainer.bio || t("noBio")}</Text>
-        )}
-      </View>
-
-      {/* ── Gallery & credentials ── */}
-      <TrainerImageSection
-        title={t("gallery")}
-        subtitle={t("gallerySubtitle")}
-        images={images.galleryImages}
-        max={MAX_TRAINER_IMAGES}
-        uploading={images.isUploadingGallery}
-        deletingId={images.deletingImageId}
-        onAdd={() => images.addImages("gallery")}
-        onDelete={images.removeImage}
-      />
-      <TrainerImageSection
-        title={t("certificationsAwards")}
-        subtitle={t("certificationsSubtitle")}
-        images={images.credentialImages}
-        max={MAX_TRAINER_IMAGES}
-        uploading={images.isUploadingCredential}
-        deletingId={images.deletingImageId}
-        onAdd={() => images.addImages("credential")}
-        onDelete={images.removeImage}
-      />
-
-      {/* ── Experience & Rates ── */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("experience")}</Text>
-        {isEditing ? (
-          <View style={styles.editGrid}>
-            <TextInput style={styles.input} keyboardType="number-pad" value={form.experienceYears} onChangeText={form.setExperienceYears} placeholder={t("experiencePlaceholder")} />
-          </View>
-        ) : (
-          <View style={styles.infoGrid}>
-            <View style={styles.infoCard}>
-              <Text style={styles.infoLabel}>{t("experience")}</Text>
-              <Text style={styles.infoValue}>{trainer.experienceYears || 0} {t("years")}</Text>
-            </View>
-            {trainer.sessionRate ? (
-              <View style={styles.infoCard}>
-                <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-                <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(trainer.sessionRate))}</Text>
-              </View>
-            ) : null}
-          </View>
-        )}
-      </View>
-
-      {/* ── Packages ── */}
-      <View style={styles.section}>
-        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
-          <Ionicons name="pricetags-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("myPackages")}</Text>
-        </View>
-        {isEditing ? (
-          <View>
-            {editingPackages.map((pkg, index) => (
-              <View key={pkg.id ?? `new-${index}`} style={{marginBottom: 12, padding: 14, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border}}>
-                <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10}}>
-                  <Text style={{fontSize: 13, fontWeight: '600', color: theme.colors.text}}>
-                    {t("addPackage")} {index + 1}
-                  </Text>
-                  {editingPackages.length > 0 && (
-                    <Pressable onPress={() => removeEditPackageRow(index)}>
-                      <Ionicons name="trash-outline" size={18} color="#DC2626" />
-                    </Pressable>
-                  )}
-                </View>
-                <TextInput style={styles.input} value={pkg.name} onChangeText={(v) => updateEditPackageField(index, "name", v)} placeholder={t("packageName")} />
-                <View style={{flexDirection: 'row', gap: 10, marginTop: 8}}>
-                  <TextInput style={[styles.input, {flex: 1}]} value={pkg.price} onChangeText={(v) => updateEditPackageField(index, "price", v)} placeholder={t("packagePrice")} keyboardType="numeric" />
-                  <TextInput style={[styles.input, {flex: 1}]} value={pkg.sessionCount} onChangeText={(v) => updateEditPackageField(index, "sessionCount", v)} placeholder={t("sessionCount")} keyboardType="number-pad" />
-                </View>
-              </View>
-            ))}
-            {editingPackages.length < 5 && (
-              <Pressable onPress={addEditPackageRow} style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed', marginTop: 4}}>
-                <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-                <Text style={{color: theme.colors.primary, fontWeight: '600', fontSize: 14}}>{t("addPackage")}</Text>
+            <Text style={styles.title}>{t("trainerProfile")}</Text>
+            {!isEditing && (
+              <Pressable style={styles.menuIconButton} onPress={() => setMenuVisible(true)}>
+                <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
               </Pressable>
             )}
-            <Pressable
-              style={({pressed}) => [{marginTop: 14, backgroundColor: theme.colors.primary, padding: 14, borderRadius: 12, alignItems: 'center'}, pressed && {opacity: 0.8}]}
-              onPress={() => { void handleSavePackages(); }}
-            >
-              <Text style={{color: '#fff', fontWeight: '600'}}>{t("saveChanges")}</Text>
-            </Pressable>
           </View>
-        ) : trainerPackages.length > 0 ? (
-          <View>
-            {trainerPackages.map((pkg) => (
-              <View key={pkg.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6'}}>
-                <View>
-                  <Text style={{fontSize: 15, fontWeight: '600', color: theme.colors.text}}>{pkg.name}</Text>
-                  <Text style={{fontSize: 13, color: theme.colors.textSecondary, marginTop: 2}}>
-                    {pkg.sessionCount} {t("sessions")} — ${(Number(pkg.price) / pkg.sessionCount).toFixed(2)}{t("perSession")}
-                  </Text>
-                </View>
-                <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>${Number(pkg.price).toFixed(2)}</Text>
-              </View>
-            ))}
+          <View style={styles.avatarRow}>
+            <EditableAvatar
+              imageUrl={user?.profileImageUrl}
+              initials={trainerInitials}
+              size={92}
+              editable
+              uploading={isUploadingAvatar}
+              onPress={pickAndUpload}
+            />
           </View>
-        ) : (
-          <Text style={{color: theme.colors.textSecondary, fontSize: 14}}>{t("noPackages")}</Text>
-        )}
-      </View>
-
-      {/* ── Location ── */}
-      <View style={styles.section}>
-        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
-          <Ionicons name="location" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("location")}</Text>
-        </View>
-        {isEditing ? (
-          <View style={styles.editGrid}>
-            <TextInput style={styles.input} value={form.locationCity} onChangeText={form.setLocationCity} placeholder={t("city")} />
-            <TextInput style={styles.input} value={form.locationState} onChangeText={form.setLocationState} placeholder={t("state")} />
-            <TextInput style={styles.input} value={form.locationCountry} onChangeText={form.setLocationCountry} placeholder={t("country")} />
-          </View>
-        ) : (
-          <>
-            <Text style={styles.locationText}>
-              {trainer.locationCity && trainer.locationState
-                ? `${trainer.locationCity}, ${trainer.locationState}`
-                : t("locationNotSpecified")}
-            </Text>
-            <Text style={styles.locationSubtext}>{trainer.locationCountry || t("countryNotSpecified")}</Text>
-          </>
-        )}
-      </View>
-
-      {/* ── Social Media ── */}
-      <View style={styles.section}>
-        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
-          <Ionicons name="phone-portrait-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("socialMedia")}</Text>
-        </View>
-        {isEditing ? (
-          <View style={styles.editGrid}>
-            <TextInput style={styles.input} value={form.instagramUrl} onChangeText={form.setInstagramUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("instagramPlaceholder")} />
-            <TextInput style={styles.input} value={form.facebookUrl} onChangeText={form.setFacebookUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("facebookPlaceholder")} />
-            <TextInput style={styles.input} value={form.whatsappUrl} onChangeText={form.setWhatsappUrl} autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" placeholder={t("whatsappPlaceholder")} />
-          </View>
-        ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
-          <View style={styles.socialList}>
-            {trainer.instagramUrl ? <Text style={styles.socialItem}>Instagram: {trainer.instagramUrl}</Text> : null}
-            {trainer.facebookUrl ? <Text style={styles.socialItem}>Facebook: {trainer.facebookUrl}</Text> : null}
-            {trainer.whatsappUrl ? <Text style={styles.socialItem}>WhatsApp: {trainer.whatsappUrl}</Text> : null}
-          </View>
-        ) : (
-          <Text style={styles.locationSubtext}>{t("noSocialLinks")}</Text>
-        )}
-      </View>
-
-      {/* ── Specializations ── */}
-      <View style={styles.section}>
-        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
-          <Ionicons name="pricetag-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("specializations")}</Text>
-        </View>
-        {isEditing ? (
-          isSpecializationsLoading ? (
-            <View style={styles.specLoadingRow}>
-              <ActivityIndicator size="small" color="#6366F1" />
-              <Text style={styles.specLoadingText}>{t("loadingSpecializations")}</Text>
+          <View style={[styles.statusBadge, trainer.isAvailable ? styles.available : styles.unavailable]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Ionicons name="ellipse" size={10} color={trainer.isAvailable ? theme.colors.success : theme.colors.error} style={{ marginRight: 4 }} />
+              <Text style={styles.statusText}>
+                {trainer.isAvailable ? t("available") : t("unavailable")}
+              </Text>
             </View>
-          ) : specializationOptions.length > 0 ? (
-            <View style={styles.specGrid}>
-              {specializationOptions.map((spec) => {
-                const active = form.selectedSpecializationIds.includes(spec.id);
-                return (
-                  <Pressable key={spec.id} style={[styles.specChip, active && styles.specChipActive]} onPress={() => form.toggleSpecialization(spec.id)}>
-                    <Text style={[styles.specChipText, active && styles.specChipTextActive]}>{spec.name}</Text>
-                  </Pressable>
-                );
-              })}
+          </View>
+          {trainer.isFeatured && (
+            <View style={styles.featuredBadge}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Ionicons name="star" size={14} color="#D97706" style={{ marginRight: 4 }} />
+                <Text style={styles.featuredText}>{t("featuredTrainer")}</Text>
+              </View>
+            </View>
+          )}
+        </View>
+
+        {/* ── Bio ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("aboutMe")}</Text>
+          {isEditing ? (
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              multiline
+              value={form.bio}
+              onChangeText={form.setBio}
+              placeholder={t("bioPlaceholder")}
+            />
+          ) : (
+            <Text style={styles.bioText}>{trainer.bio || t("noBio")}</Text>
+          )}
+        </View>
+
+        {/* ── Gallery & credentials ── */}
+        <TrainerImageSection
+          title={t("gallery")}
+          subtitle={t("gallerySubtitle")}
+          images={images.galleryImages}
+          max={MAX_TRAINER_IMAGES}
+          uploading={images.isUploadingGallery}
+          deletingId={images.deletingImageId}
+          onAdd={() => images.addImages("gallery")}
+          onDelete={images.removeImage}
+        />
+        <TrainerImageSection
+          title={t("certificationsAwards")}
+          subtitle={t("certificationsSubtitle")}
+          images={images.credentialImages}
+          max={MAX_TRAINER_IMAGES}
+          uploading={images.isUploadingCredential}
+          deletingId={images.deletingImageId}
+          onAdd={() => images.addImages("credential")}
+          onDelete={images.removeImage}
+        />
+
+        {/* ── Experience & Rates ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("experience")}</Text>
+          {isEditing ? (
+            <View style={styles.editGrid}>
+              <TextInput style={styles.input} keyboardType="number-pad" value={form.experienceYears} onChangeText={form.setExperienceYears} placeholder={t("experiencePlaceholder")} />
             </View>
           ) : (
-            <View style={styles.specFallbackBox}>
-              <Text style={styles.specFallbackText}>{t("noSpecOptions")}</Text>
-              <Pressable style={styles.specRetryButton} onPress={() => { void refetchSpecializations(); void refetch(); }}>
-                <Text style={styles.specRetryText}>{t("retry")}</Text>
+            <View style={styles.infoGrid}>
+              <View style={styles.infoCard}>
+                <Text style={styles.infoLabel}>{t("experience")}</Text>
+                <Text style={styles.infoValue}>{trainer.experienceYears || 0} {t("years")}</Text>
+              </View>
+              {trainer.sessionRate ? (
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
+                  <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(trainer.sessionRate))}</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+        </View>
+
+        {/* ── Packages ── */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+            <Ionicons name="pricetags-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>{t("myPackages")}</Text>
+          </View>
+          {isEditing ? (
+            <View>
+              {editingPackages.map((pkg, index) => (
+                <View key={pkg.id ?? `new-${index}`} style={{ marginBottom: 12, padding: 14, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.text }}>
+                      {t("addPackage")} {index + 1}
+                    </Text>
+                    {editingPackages.length > 0 && (
+                      <Pressable onPress={() => removeEditPackageRow(index)}>
+                        <Ionicons name="trash-outline" size={18} color="#DC2626" />
+                      </Pressable>
+                    )}
+                  </View>
+                  <TextInput style={styles.input} value={pkg.name} onChangeText={(v) => updateEditPackageField(index, "name", v)} placeholder={t("packageName")} />
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                    <TextInput style={[styles.input, { flex: 1 }]} value={pkg.price} onChangeText={(v) => updateEditPackageField(index, "price", v)} placeholder={t("packagePrice")} keyboardType="numeric" />
+                    <TextInput style={[styles.input, { flex: 1 }]} value={pkg.sessionCount} onChangeText={(v) => updateEditPackageField(index, "sessionCount", v)} placeholder={t("sessionCount")} keyboardType="number-pad" />
+                  </View>
+                </View>
+              ))}
+              {editingPackages.length < 5 && (
+                <Pressable onPress={addEditPackageRow} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed', marginTop: 4 }}>
+                  <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
+                  <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 14 }}>{t("addPackage")}</Text>
+                </Pressable>
+              )}
+              <Pressable
+                style={({ pressed }) => [{ marginTop: 14, backgroundColor: theme.colors.primary, padding: 14, borderRadius: 12, alignItems: 'center' }, pressed && { opacity: 0.8 }]}
+                onPress={() => { void handleSavePackages(); }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>{t("saveChanges")}</Text>
               </Pressable>
             </View>
-          )
-        ) : trainer.specializations && trainer.specializations.length > 0 ? (
-          <View style={styles.specGrid}>
-            {trainer.specializations.map((spec) => (
-              <View key={spec.id} style={styles.specChipReadOnly}>
-                <Text style={styles.specChipReadOnlyText}>{spec.name}</Text>
-              </View>
-            ))}
-          </View>
-        ) : (
-          <Text style={styles.locationSubtext}>{t("noSpecSelected")}</Text>
-        )}
-      </View>
-
-      {/* ── Stats ── */}
-      <View style={styles.section}>
-        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 15}}>
-          <Ionicons name="bar-chart-outline" size={18} color={theme.colors.primary} style={{marginRight: 6}} />
-          <Text style={[styles.sectionTitle, {marginBottom: 0}]}>{t("statistics")}</Text>
+          ) : trainerPackages.length > 0 ? (
+            <View>
+              {trainerPackages.map((pkg) => (
+                <View key={pkg.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
+                  <View>
+                    <Text style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text }}>{pkg.name}</Text>
+                    <Text style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
+                      {pkg.sessionCount} {t("sessions")} — ${(Number(pkg.price) / pkg.sessionCount).toFixed(2)}{t("perSession")}
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.primary }}>${Number(pkg.price).toFixed(2)}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>{t("noPackages")}</Text>
+          )}
         </View>
-        <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{trainer.profileViews || 0}</Text>
-            <Text style={styles.statLabel}>{t("profileViews")}</Text>
+
+        {/* ── Location ── */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+            <Ionicons name="location" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>{t("location")}</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{trainer.reviewCount || 0}</Text>
-            <Text style={styles.statLabel}>{t("reviews")}</Text>
+          {isEditing ? (
+            <View style={styles.editGrid}>
+              <TextInput style={styles.input} value={form.locationCity} onChangeText={form.setLocationCity} placeholder={t("city")} />
+              <TextInput style={styles.input} value={form.locationState} onChangeText={form.setLocationState} placeholder={t("state")} />
+              <TextInput style={styles.input} value={form.locationCountry} onChangeText={form.setLocationCountry} placeholder={t("country")} />
+            </View>
+          ) : (
+            <>
+              <Text style={styles.locationText}>
+                {trainer.locationCity && trainer.locationState
+                  ? `${trainer.locationCity}, ${trainer.locationState}`
+                  : t("locationNotSpecified")}
+              </Text>
+              <Text style={styles.locationSubtext}>{trainer.locationCountry || t("countryNotSpecified")}</Text>
+            </>
+          )}
+        </View>
+
+        {/* ── Social Media ── */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+            <Ionicons name="phone-portrait-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>{t("socialMedia")}</Text>
           </View>
-          <View style={styles.statCard}>
-            <Text style={styles.statNumber}>{Number(trainer.totalRating || 0).toFixed(1)}</Text>
-            <View style={styles.starsText}>
-              <StarRating rating={Number(trainer.totalRating || 0)} />
+          {isEditing ? (
+            <View style={styles.editGrid}>
+              <TextInput style={styles.input} value={form.instagramUrl} onChangeText={form.setInstagramUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("instagramPlaceholder")} />
+              <TextInput style={styles.input} value={form.facebookUrl} onChangeText={form.setFacebookUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("facebookPlaceholder")} />
+              <TextInput style={styles.input} value={form.whatsappUrl} onChangeText={form.setWhatsappUrl} autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" placeholder={t("whatsappPlaceholder")} />
+            </View>
+          ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
+            <View style={styles.socialList}>
+              {trainer.instagramUrl ? <Text style={styles.socialItem}>Instagram: {trainer.instagramUrl}</Text> : null}
+              {trainer.facebookUrl ? <Text style={styles.socialItem}>Facebook: {trainer.facebookUrl}</Text> : null}
+              {trainer.whatsappUrl ? <Text style={styles.socialItem}>WhatsApp: {trainer.whatsappUrl}</Text> : null}
+            </View>
+          ) : (
+            <Text style={styles.locationSubtext}>{t("noSocialLinks")}</Text>
+          )}
+        </View>
+
+        {/* ── Specializations ── */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+            <Ionicons name="pricetag-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>{t("specializations")}</Text>
+          </View>
+          {isEditing ? (
+            isSpecializationsLoading ? (
+              <View style={styles.specLoadingRow}>
+                <ActivityIndicator size="small" color="#6366F1" />
+                <Text style={styles.specLoadingText}>{t("loadingSpecializations")}</Text>
+              </View>
+            ) : specializationOptions.length > 0 ? (
+              <View style={styles.specGrid}>
+                {specializationOptions.map((spec) => {
+                  const active = form.selectedSpecializationIds.includes(spec.id);
+                  return (
+                    <Pressable key={spec.id} style={[styles.specChip, active && styles.specChipActive]} onPress={() => form.toggleSpecialization(spec.id)}>
+                      <Text style={[styles.specChipText, active && styles.specChipTextActive]}>{spec.name}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : (
+              <View style={styles.specFallbackBox}>
+                <Text style={styles.specFallbackText}>{t("noSpecOptions")}</Text>
+                <Pressable style={styles.specRetryButton} onPress={() => { void refetchSpecializations(); void refetch(); }}>
+                  <Text style={styles.specRetryText}>{t("retry")}</Text>
+                </Pressable>
+              </View>
+            )
+          ) : trainer.specializations && trainer.specializations.length > 0 ? (
+            <View style={styles.specGrid}>
+              {trainer.specializations.map((spec) => (
+                <View key={spec.id} style={styles.specChipReadOnly}>
+                  <Text style={styles.specChipReadOnlyText}>{spec.name}</Text>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.locationSubtext}>{t("noSpecSelected")}</Text>
+          )}
+        </View>
+
+        {/* ── Stats ── */}
+        <View style={styles.section}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+            <Ionicons name="bar-chart-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>{t("statistics")}</Text>
+          </View>
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{trainer.profileViews || 0}</Text>
+              <Text style={styles.statLabel}>{t("profileViews")}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{trainer.reviewCount || 0}</Text>
+              <Text style={styles.statLabel}>{t("reviews")}</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statNumber}>{Number(trainer.totalRating || 0).toFixed(1)}</Text>
+              <View style={styles.starsText}>
+                <StarRating rating={Number(trainer.totalRating || 0)} />
+              </View>
             </View>
           </View>
         </View>
-      </View>
 
-      <Pressable
-        style={({ pressed }) => [styles.analyticsButton, pressed && styles.buttonPressed]}
-        onPress={() => router.push("/trainer-analytics")}
-      >
-        <View style={styles.analyticsButtonInner}>
-          <Ionicons name="analytics-outline" size={26} color={theme.colors.primary} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.analyticsButtonTitle}>{t("trainerAnalytics")}</Text>
-            <Text style={styles.analyticsButtonSub}>{t("analyticsSubtitle")}</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
-        </View>
-      </Pressable>
-
-      {/* ── Account info ── */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("accountInformation")}</Text>
-        <View style={styles.accountInfo}>
-          <Text style={styles.accountLabel}>{t("profileCreated")}</Text>
-          <Text style={styles.accountValue}>{formatDate(trainer.createdAt)}</Text>
-        </View>
-        <View style={styles.accountInfo}>
-          <Text style={styles.accountLabel}>{t("lastUpdated")}</Text>
-          <Text style={styles.accountValue}>{formatDate(trainer.updatedAt)}</Text>
-        </View>
-      </View>
-
-      {/* ── Actions ── */}
-      <View style={styles.buttonSection}>
         <Pressable
-          style={({ pressed }) => [styles.gymsButton, pressed && styles.buttonPressed]}
-          onPress={() => router.push("/my-gyms")}
+          style={({ pressed }) => [styles.analyticsButton, pressed && styles.buttonPressed]}
+          onPress={() => router.push("/trainer-analytics")}
         >
-          <View style={styles.gymsButtonInner}>
-            <Ionicons name="barbell" size={28} color={theme.colors.primary} />
-            <View style={{flex: 1}}>
-              <Text style={styles.gymsButtonTitle}>{t("myGyms")}</Text>
-              <Text style={styles.gymsButtonSub}>{t("gymsSubtitle")}</Text>
+          <View style={styles.analyticsButtonInner}>
+            <Ionicons name="analytics-outline" size={26} color={theme.colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.analyticsButtonTitle}>{t("trainerAnalytics")}</Text>
+              <Text style={styles.analyticsButtonSub}>{t("analyticsSubtitle")}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
           </View>
         </Pressable>
 
-        {isEditing && (
-          <View style={styles.actionContainer}>
-            <Text style={styles.actionHeader}>{t("saveChanges")}</Text>
-            <Pressable
-              style={({ pressed }) => [styles.actionButton, styles.primaryAction, isUpdating && styles.buttonDisabled, pressed && styles.buttonPressed]}
-              onPress={() => { void handleSaveProfile(); }}
-              disabled={isUpdating}
-            >
-              <Ionicons name={isUpdating ? "sync" : "save-outline"} size={18} color="#fff" />
-              <Text style={styles.primaryActionText}>{isUpdating ? t("saving") : t("saveProfile")}</Text>
-            </Pressable>
-            <Pressable
-              style={({ pressed }) => [styles.actionButton, styles.secondaryAction, pressed && styles.buttonPressed]}
-              onPress={() => { if (trainer) form.resetToTrainer(trainer); setIsEditing(false); }}
-            >
-              <Text style={styles.secondaryActionText}>{t("cancel")}</Text>
-            </Pressable>
+        {/* ── Account info ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("accountInformation")}</Text>
+          <View style={styles.accountInfo}>
+            <Text style={styles.accountLabel}>{t("profileCreated")}</Text>
+            <Text style={styles.accountValue}>{formatDate(trainer.createdAt)}</Text>
           </View>
-        )}
-      </View>
-    </ScrollView>
+          <View style={styles.accountInfo}>
+            <Text style={styles.accountLabel}>{t("lastUpdated")}</Text>
+            <Text style={styles.accountValue}>{formatDate(trainer.updatedAt)}</Text>
+          </View>
+        </View>
 
-    <ProfileMenuModal
-      visible={menuVisible}
-      onClose={() => setMenuVisible(false)}
-      items={menuItems}
-      dividerAfter={[0, 5]}
-    />
+        {/* ── Actions ── */}
+        <View style={styles.buttonSection}>
+          <Pressable
+            style={({ pressed }) => [styles.gymsButton, pressed && styles.buttonPressed]}
+            onPress={() => router.push("/my-gyms")}
+          >
+            <View style={styles.gymsButtonInner}>
+              <Ionicons name="barbell" size={28} color={theme.colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.gymsButtonTitle}>{t("myGyms")}</Text>
+                <Text style={styles.gymsButtonSub}>{t("gymsSubtitle")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={theme.colors.primary} />
+            </View>
+          </Pressable>
+
+          {isEditing && (
+            <View style={styles.actionContainer}>
+              <Text style={styles.actionHeader}>{t("saveChanges")}</Text>
+              <Pressable
+                style={({ pressed }) => [styles.actionButton, styles.primaryAction, isUpdating && styles.buttonDisabled, pressed && styles.buttonPressed]}
+                onPress={() => { void handleSaveProfile(); }}
+                disabled={isUpdating}
+              >
+                <Ionicons name={isUpdating ? "sync" : "save-outline"} size={18} color="#fff" />
+                <Text style={styles.primaryActionText}>{isUpdating ? t("saving") : t("saveProfile")}</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.actionButton, styles.secondaryAction, pressed && styles.buttonPressed]}
+                onPress={() => { if (trainer) form.resetToTrainer(trainer); setIsEditing(false); }}
+              >
+                <Text style={styles.secondaryActionText}>{t("cancel")}</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+
+      <ProfileMenuModal
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        items={menuItems}
+        dividerAfter={[0, 5]}
+      />
     </>
   );
 }

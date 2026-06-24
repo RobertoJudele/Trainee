@@ -27,6 +27,7 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function MyGymsScreen() {
   const { t } = useLanguage();
@@ -75,8 +76,8 @@ export default function MyGymsScreen() {
         await joinGym(gymId).unwrap();
         Alert.alert(t("joinedGym"), t("joinedGymMessage").replace("{name}", gymName));
         setShowBrowser(false);
-      } catch (err: any) {
-        Alert.alert(t("error"), err?.data?.message ?? t("error"));
+      } catch (err: unknown) {
+        Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
       }
     },
     [joinGym]
@@ -86,8 +87,8 @@ export default function MyGymsScreen() {
     async (gymId: number, current: boolean) => {
       try {
         await setAvailability({ gymId, isAvailable: !current }).unwrap();
-      } catch (err: any) {
-        Alert.alert(t("error"), err?.data?.message ?? t("error"));
+      } catch (err: unknown) {
+        Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
       }
     },
     [setAvailability]
@@ -106,8 +107,8 @@ export default function MyGymsScreen() {
             onPress: async () => {
               try {
                 await leaveGym(gymId).unwrap();
-              } catch (err: any) {
-                Alert.alert(t("error"), err?.data?.message ?? t("error"));
+              } catch (err: unknown) {
+                Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
               }
             },
           },

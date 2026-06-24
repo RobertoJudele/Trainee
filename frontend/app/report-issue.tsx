@@ -19,6 +19,7 @@ import {
 } from "../features/support/issueApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function ReportIssueScreen() {
   const router = useRouter();
@@ -105,8 +106,8 @@ export default function ReportIssueScreen() {
       Alert.alert(t("submitted"), t("issueReported"), [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch (error: any) {
-      const message = error?.data?.message || t("error");
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, t("error"));
       Alert.alert(t("error"), message);
     }
   };

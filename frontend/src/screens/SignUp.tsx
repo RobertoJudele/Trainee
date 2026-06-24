@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useSignupMutation, UserRole } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../../features/auth/authSlice';
+import { getApiErrorMessage } from '../lib/errors';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -58,8 +59,8 @@ export default function SignUp() {
       }
 
       router.replace('/');
-    } catch (error: any) {
-      const errorMessage = error?.data?.message || t('signupFailed');
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, t('signupFailed'));
       setErrMsg(errorMessage);
     }
   };

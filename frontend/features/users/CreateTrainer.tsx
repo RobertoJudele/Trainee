@@ -188,15 +188,23 @@ export default function CreateTrainer() {
           },
         ]
       );
-    } catch (error: any) {
-      if (!error.originalStatus) {
+    } catch (error: unknown) {
+      const err = error as Record<string, unknown> | null | undefined;
+      if (
+        typeof err !== "object" ||
+        err === null ||
+        !("originalStatus" in err)
+      ) {
         setErrMsg(t("couldNotLoadTrainer"));
-      } else if (error.response?.status === 400) {
-        setErrMsg(t("invalidInput"));
-      } else if (error.response?.status === 401) {
-        setErrMsg(t("mustBeLoggedIn"));
       } else {
-        setErrMsg(t("updateError"));
+        const resp = (err as { response?: { status?: number } }).response;
+        if (resp?.status === 400) {
+          setErrMsg(t("invalidInput"));
+        } else if (resp?.status === 401) {
+          setErrMsg(t("mustBeLoggedIn"));
+        } else {
+          setErrMsg(t("updateError"));
+        }
       }
       errRef.current;
     }

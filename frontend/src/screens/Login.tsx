@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
+import { getApiErrorMessage } from '../lib/errors';
 import { setCredentials } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
@@ -71,8 +72,8 @@ export default function Login() {
         })
       );
       router.replace('/');
-    } catch (error: any) {
-      const errorMessage = error?.data?.message || t('loginFailedMessage');
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, t('loginFailedMessage'));
       Alert.alert(t('loginFailed'), errorMessage);
     }
   };

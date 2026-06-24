@@ -10,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, GradientButton, PressableScale } from "../src/components/ui";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function MyScheduleScreen() {
   const { t, language } = useLanguage();
@@ -33,8 +34,8 @@ export default function MyScheduleScreen() {
         code: resp.data.code,
         expiresAt: resp.data.expiresAt,
       });
-    } catch (error: any) {
-      Alert.alert(t("error"), error?.data?.message || t("error"));
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("error")));
     }
   };
 
@@ -52,8 +53,8 @@ export default function MyScheduleScreen() {
             setCancellingSlotId(slotId);
             try {
               await unassignSlot({ slotId }).unwrap();
-            } catch (err: any) {
-              Alert.alert(t("error"), err?.data?.message || t("couldNotCancelBooking"));
+            } catch (err: unknown) {
+              Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotCancelBooking")));
             } finally {
               setCancellingSlotId(null);
             }
