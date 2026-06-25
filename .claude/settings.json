@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "static-analysis@trailofbits": true,
+    "ponytail@ponytail": true
+  }
+}
