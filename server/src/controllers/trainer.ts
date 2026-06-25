@@ -5,7 +5,7 @@ import { sendError, sendSuccess } from "../utils/response";
 import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
-import { Op, FindAttributeOptions, Order } from "sequelize";
+import { Op, FindAttributeOptions, Order, Transaction } from "sequelize";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
 import { S3ImageService } from "../services/s3ImageService";
@@ -27,6 +27,14 @@ import { Gym } from "../models/gym";
 import { stripe } from "../config/stripe";
 import { trackTrainerProfileView } from "../services/profileViewTracking";
 import { ProfileViewEvent } from "../models/profileViewEvent";
+import sequelize from "../db";
+import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
+import { TrainerWorkingHour } from "../models/trainerWorkingHour";
+import { TrainerBlockedDate } from "../models/trainerBlockedDate";
+import { TrainerPackage } from "../models/trainerPackage";
+import { Review } from "../models/review";
+import { BillingTransaction } from "../models/billingTransaction";
+import { Issue } from "../models/issue";
 import {
   buildPointFromLatLng,
   isValidLatitude,
@@ -546,6 +554,32 @@ export const getTrainer = async (
   }
 };
 
+// Deletes every row that references a trainer profile (FK-safe order) and the profile
+// itself, inside the caller's transaction. Shared by trainer-only deletion and full
+// account deletion. Order matters: schedule slots FK both the trainer and
+// trainer_working_hours, so they go first. Issues keep their history — only the
+// trainer link is nulled.
+export const cascadeDeleteTrainer = async (
+  trainerId: number,
+  t: Transaction
+) => {
+  await TrainerScheduleSlot.destroy({ where: { trainerId }, transaction: t });
+  await TrainerWorkingHour.destroy({ where: { trainerId }, transaction: t });
+  await TrainerBlockedDate.destroy({ where: { trainerId }, transaction: t });
+  await TrainerGym.destroy({ where: { trainerId }, transaction: t });
+  await TrainerImage.destroy({ where: { trainerId }, transaction: t });
+  await TrainerSpecialization.destroy({ where: { trainerId }, transaction: t });
+  await TrainerPackage.destroy({ where: { trainerId }, transaction: t });
+  await Review.destroy({ where: { trainerId }, transaction: t });
+  await ProfileViewEvent.destroy({ where: { trainerId }, transaction: t });
+  await BillingTransaction.destroy({ where: { trainerId }, transaction: t });
+  await Issue.update(
+    { trainerId: null as unknown as undefined },
+    { where: { trainerId }, transaction: t }
+  );
+  await Trainer.destroy({ where: { id: trainerId }, transaction: t });
+};
+
 export const deleteTrainer = async (req: Request, res: Response) => {
   try {
     const userId = req.user.id;
@@ -562,58 +596,38 @@ export const deleteTrainer = async (req: Request, res: Response) => {
       sendError(res, 404, "No trainer found");
       return;
     }
+    // Best-effort: clear the trainer's profile pictures from S3 before dropping the row.
     const profilePictureUrl = user.profileImageUrl;
     if (profilePictureUrl) {
-      const folderPrefix = `profilePicture/${userId}/`;
-
-      const listCommand = new ListObjectsV2Command({
-        Bucket: S3_CONFIG.bucket,
-        Prefix: folderPrefix,
-      });
-      const listResponse = await s3.send(listCommand);
-      console.log("📋 S3 list response:", listResponse);
-
-      if (!listResponse.Contents || listResponse.Contents.length === 0) {
-        console.log(`No files found for user ${userId}`);
-
-        console.log("Destroying trainer with no files");
-        await trainer.destroy();
-
-        user.role = UserRole.CLIENT;
-        await user.save();
-
-        sendSuccess(res, 200, "Trainer deleted succesfully");
-        return;
-      }
-
-      // Prepare objects for batch deletion
-      const objectsToDelete = listResponse.Contents.map((obj) => ({
+      const listResponse = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: S3_CONFIG.bucket,
+          Prefix: `profilePicture/${userId}/`,
+        })
+      );
+      const objectsToDelete = (listResponse.Contents ?? []).map((obj) => ({
         Key: obj.Key!,
       }));
-
-      // Delete all objects in batch (more efficient)
-      const deleteCommand = new DeleteObjectsCommand({
-        Bucket: S3_CONFIG.bucket,
-        Delete: {
-          Objects: objectsToDelete,
-        },
-      });
-
-      const deleteResponse = await s3.send(deleteCommand);
-
-      console.log(
-        `✅ Deleted ${objectsToDelete.length} files for user ${userId}`
-      );
-
-      if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
-        console.warn("Some files failed to delete:", deleteResponse.Errors);
+      if (objectsToDelete.length > 0) {
+        const deleteResponse = await s3.send(
+          new DeleteObjectsCommand({
+            Bucket: S3_CONFIG.bucket,
+            Delete: { Objects: objectsToDelete },
+          })
+        );
+        if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
+          console.warn("Some files failed to delete:", deleteResponse.Errors);
+        }
       }
     }
-    console.log("Destroying trainer");
-    await trainer.destroy();
 
-    user.role = UserRole.CLIENT;
-    await user.save();
+    // Clear every row referencing this trainer, then the profile, in one transaction
+    // so a mid-way failure can't leave the trainer half-deleted.
+    await sequelize.transaction(async (t) => {
+      await cascadeDeleteTrainer(trainer.id, t);
+      user.role = UserRole.CLIENT;
+      await user.save({ transaction: t });
+    });
 
     sendSuccess(res, 200, "Trainer deleted succesfully");
   } catch (error: unknown) {
