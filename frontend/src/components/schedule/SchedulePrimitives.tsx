@@ -1,10 +1,14 @@
-import React from "react";
+import React, { useRef, useState } from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleProp,
   StyleSheet,
   Text,
@@ -69,6 +73,10 @@ type ScheduleCardProps = {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
+  collapsible?: boolean;
+  defaultCollapsed?: boolean;
+  onToggle?: (collapsed: boolean) => void;
+  pinScrollRef?: React.RefObject<ScrollView | null>;
 };
 
 export function ScheduleCard({
@@ -78,17 +86,84 @@ export function ScheduleCard({
   children,
   style,
   contentStyle,
+  collapsible,
+  defaultCollapsed = true,
+  onToggle,
+  pinScrollRef,
 }: ScheduleCardProps) {
-  return (
-    <View style={[styles.card, style]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.cardHeaderTextWrap}>
-          <Text style={styles.cardTitle}>{title}</Text>
-          {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
+  const [collapsed, setCollapsed] = useState(collapsible ? defaultCollapsed : false);
+  const anim = useRef(new Animated.Value(defaultCollapsed ? 0 : 1)).current;
+  // State (not ref) so a new measurement re-renders the maxHeight interpolation.
+  // ponytail: keep the tallest height ever seen — a clamped mid-animation onLayout
+  // pass must not shrink it and clip the content. Trades a little extra bottom
+  // padding if the content genuinely shrinks; revisit only if that shows.
+  const [contentHeight, setContentHeight] = useState(0);
+
+  const toggle = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    // Expand: pin the bottom on every frame so the reveal and the scroll move together
+    // instead of scroll-after-open. As maxHeight grows, scrollToEnd tracks the growing
+    // content. Collapse needs no scroll — the height shrinks smoothly without clamping.
+    let scrollSub: string | undefined;
+    if (pinScrollRef && !next) {
+      scrollSub = anim.addListener(() => pinScrollRef.current?.scrollToEnd({ animated: false }));
+    }
+    Animated.timing(anim, {
+      toValue: next ? 0 : 1,
+      duration: 550,
+      easing: Easing.inOut(Easing.cubic),
+      useNativeDriver: false,
+    }).start(() => {
+      if (scrollSub) anim.removeListener(scrollSub);
+    });
+    onToggle?.(next);
+  };
+
+  if (!collapsible) {
+    return (
+      <View style={[styles.card, style]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.cardHeaderTextWrap}>
+            <Text style={styles.cardTitle}>{title}</Text>
+            {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
+          </View>
+          {rightSlot}
         </View>
-        {rightSlot}
+        <View style={[styles.cardContent, contentStyle]}>{children}</View>
       </View>
-      <View style={[styles.cardContent, contentStyle]}>{children}</View>
+    );
+  }
+
+  // ponytail: maxHeight animation is JS-driven (layout props can't use the native
+  // driver); fine for one card, revisit if many animate at once.
+  const maxHeight = anim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, contentHeight || 2000],
+  });
+
+  return (
+    // gap:0 — the card gap would reserve space below the header even when the body is
+    // collapsed to height 0; the body carries its own top padding inside the clip instead.
+    <View style={[styles.card, { gap: 0 }, style]}>
+      <Pressable onPress={toggle}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>{title}</Text>
+          <Ionicons name={collapsed ? "chevron-down" : "chevron-up"} size={20} color={theme.colors.textSecondary} />
+        </View>
+      </Pressable>
+      <Animated.View style={{ maxHeight, overflow: "hidden", opacity: anim }}>
+        <View
+          style={styles.collapsibleBody}
+          onLayout={(e) => {
+            const h = Math.ceil(e.nativeEvent.layout.height);
+            setContentHeight((prev) => (h > prev ? h : prev));
+          }}
+        >
+          {subtitle ? <Text style={styles.cardSubtitle}>{subtitle}</Text> : null}
+          <View style={[styles.cardContent, contentStyle]}>{children}</View>
+        </View>
+      </Animated.View>
     </View>
   );
 }
@@ -243,6 +318,9 @@ const styles = StyleSheet.create({
   },
   cardContent: {
     gap: 8,
+  },
+  collapsibleBody: {
+    paddingTop: 10,
   },
   outlineBtn: {
     borderWidth: 1,

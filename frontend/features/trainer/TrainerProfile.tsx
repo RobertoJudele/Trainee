@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   primaryActionText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   secondaryAction: { backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border },
   secondaryActionText: { color: theme.colors.textSecondary, fontSize: 16, fontWeight: "600" },
-  analyticsButton: { backgroundColor: theme.colors.surface, borderRadius: theme.roundness, borderWidth: 1, borderColor: theme.colors.border, overflow: "hidden", ...theme.shadows.small },
+  analyticsButton: { backgroundColor: theme.colors.surface, borderRadius: theme.roundness, borderWidth: 1, borderColor: theme.colors.border, overflow: "hidden", marginBottom: 20, ...theme.shadows.small },
   analyticsButtonInner: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
   analyticsButtonTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text, marginBottom: 2 },
   analyticsButtonSub: { fontSize: 12, color: theme.colors.textSecondary },
