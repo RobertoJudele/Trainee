@@ -103,3 +103,9 @@ android/app/build/
 xcuserdata/
 build/
 DerivedData/
+
+# Claude Code
+.claude/settings.local.json
+
+# Static analysis artifacts
+static_analysis_codeql_1/
