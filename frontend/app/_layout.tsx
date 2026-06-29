@@ -125,15 +125,16 @@ export default function RootLayout() {
           <Stack.Screen name="UserProfile" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
-          <Stack.Screen name="search" options={{ title: "Find Trainers" }} />
+          <Stack.Screen name="search" options={{ title: "Find Trainers", headerBackButtonDisplayMode: "minimal" }} />
           <Stack.Screen name="map" options={{ headerShown: false }} />
-          <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details" }} />
+          <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details", headerBackButtonDisplayMode: "minimal" }} />
           <Stack.Screen name="my-gyms" options={{ title: "My Gyms" }} />
           <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
           <Stack.Screen name="report-issue" options={{ title: "Report Issue" }} />
+          <Stack.Screen name="request-gym" options={{ title: "Request a Gym" }} />
           <Stack.Screen name="admin-issues" options={{ title: "Admin Issues" }} />
-          <Stack.Screen name="trainer-schedule" options={{ title: "Trainer Schedule" }} />
-          <Stack.Screen name="trainer-schedule/[date]" options={{ title: "Day Schedule" }} />
+          <Stack.Screen name="trainer-schedule" options={{ headerShown: false }} />
+          <Stack.Screen name="trainer-schedule/[date]" options={{ headerShown: false }} />
           <Stack.Screen name="trainer-schedule/week-snapshot" options={{ title: "Week Snapshot" }} />
           <Stack.Screen name="trainer-analytics" options={{ title: "Trainer Analytics" }} />
           <Stack.Screen name="my-schedule" options={{ title: "My Schedule" }} />
