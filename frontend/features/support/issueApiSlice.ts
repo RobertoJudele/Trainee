@@ -1,11 +1,12 @@
 import { apiSlice } from "../../src/api/apiSlice";
 
-export type IssueTargetType = "trainer" | "booking" | "app";
+export type IssueTargetType = "trainer" | "booking" | "app" | "gym";
 export type IssueCategory =
   | "trainer_behavior"
   | "booking_no_show"
   | "technical_bug"
   | "payment_issue"
+  | "gym_request"
   | "other";
 
 export interface CreateIssueRequest {
@@ -16,6 +17,7 @@ export interface CreateIssueRequest {
   trainerId?: number;
   trainerPublicId?: string;
   bookingId?: number;
+  metadata?: Record<string, unknown>;
 }
 
 interface IssueRecord {
@@ -27,6 +29,7 @@ interface IssueRecord {
   category: IssueCategory;
   title: string;
   description: string;
+  metadata?: Record<string, unknown>;
   status: "open" | "in_review" | "resolved" | "rejected";
   createdAt: string;
   updatedAt: string;

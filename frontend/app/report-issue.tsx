@@ -33,7 +33,7 @@ export default function ReportIssueScreen() {
     { value: "other", label: t("other") },
   ];
 
-  const targetLabels: Record<IssueTargetType, string> = {
+  const targetLabels: Partial<Record<IssueTargetType, string>> = {
     app: t("generalAppIssue"),
     trainer: t("trainerIssue"),
     booking: t("bookingIssue"),
