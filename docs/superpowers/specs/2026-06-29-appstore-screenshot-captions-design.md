@@ -38,7 +38,7 @@ Located in `C:\Users\RobertoJudele\Downloads\ss\` (7 total; all used).
 | Pos | Screenshot | Titlu (bold) | Subtitlu |
 |-----|-----------|--------------|----------|
 | 1 | A — Find Trainers | **Antrenorul perfect pentru tine** | Caută după specializare, preț și zonă |
-| 2 | B — Profil + pachete | **Alegi în cunoștință de cauză** | Experiență, tarife și pachete, totul la vedere |
+| 2 | B — Profil + pachete | **Știi exact ce primești** | Experiență, tarife și pachete, totul la vedere |
 | 3 | C — Recenzii + certificări | **Recenzii reale de la clienți** | Vezi certificările și păreri de la cei care l-au ales |
 | 4 | D — Hartă săli | **Antrenori chiar lângă tine** | Explorează harta și vezi cine activează în zona ta |
 | 5 | G — Program | **Ești antrenor? Preia controlul** | Setează orele o dată, generează luna |

@@ -135,11 +135,11 @@ export function ScheduleCard({
     );
   }
 
-  // ponytail: maxHeight animation is JS-driven (layout props can't use the native
+  // ponytail: height animation is JS-driven (layout props can't use the native
   // driver); fine for one card, revisit if many animate at once.
-  const maxHeight = anim.interpolate({
+  const height = anim.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, contentHeight || 2000],
+    outputRange: [0, contentHeight],
   });
 
   return (
@@ -152,9 +152,12 @@ export function ScheduleCard({
           <Ionicons name={collapsed ? "chevron-down" : "chevron-up"} size={20} color={theme.colors.textSecondary} />
         </View>
       </Pressable>
-      <Animated.View style={{ maxHeight, overflow: "hidden", opacity: anim }}>
+      <Animated.View style={{ height, overflow: "hidden", opacity: anim }}>
+        {/* position:absolute so the body is measured at its natural height, independent
+            of the animated clip. Measuring it inside the clip fed the clamped height back
+            into itself and locked contentHeight to ~0 (open-a-little-then-stuck bug). */}
         <View
-          style={styles.collapsibleBody}
+          style={[styles.collapsibleBody, styles.collapsibleMeasure]}
           onLayout={(e) => {
             const h = Math.ceil(e.nativeEvent.layout.height);
             setContentHeight((prev) => (h > prev ? h : prev));
@@ -321,6 +324,12 @@ const styles = StyleSheet.create({
   },
   collapsibleBody: {
     paddingTop: 10,
+  },
+  collapsibleMeasure: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
   },
   outlineBtn: {
     borderWidth: 1,
