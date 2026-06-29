@@ -11,6 +11,7 @@ import {
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import {
+  IssueTargetType,
   useGetIssuesAdminQuery,
   useUpdateIssueStatusAdminMutation,
 } from "../features/support/issueApiSlice";
@@ -26,6 +27,15 @@ const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
   "rejected",
 ];
 
+const TARGET_TABS: Array<{ value: IssueTargetType; labelKey: string }> = [
+  { value: "trainer", labelKey: "tabTrainer" },
+  { value: "booking", labelKey: "tabBooking" },
+  { value: "app", labelKey: "tabApp" },
+  { value: "gym", labelKey: "tabGymRequests" },
+];
+
+const OPEN_STATUSES = ["open", "in_review"];
+
 export default function AdminIssuesScreen() {
   const { t } = useLanguage();
   const user = useSelector(selectCurrentUser);
@@ -39,6 +49,9 @@ export default function AdminIssuesScreen() {
     isFetching,
   } = useGetIssuesAdminQuery(undefined, { skip: !isAdmin });
   const [updateStatus, { isLoading: isUpdating }] = useUpdateIssueStatusAdminMutation();
+
+  const [activeTab, setActiveTab] = React.useState<IssueTargetType>("trainer");
+  const [showOpen, setShowOpen] = React.useState(true);
 
   const handleStatusChange = async (
     issueId: number,
@@ -86,7 +99,12 @@ export default function AdminIssuesScreen() {
     );
   }
 
-  const issues = data?.data || [];
+  const allIssues = data?.data || [];
+  const issues = allIssues.filter((i) => {
+    if (i.targetType !== activeTab) return false;
+    const isOpen = OPEN_STATUSES.includes(i.status);
+    return showOpen ? isOpen : !isOpen;
+  });
 
   return (
     <FlatList
@@ -94,6 +112,50 @@ export default function AdminIssuesScreen() {
       contentContainerStyle={styles.content}
       data={issues}
       keyExtractor={(item) => String(item.id)}
+      ListHeaderComponent={
+        <View>
+          <View style={styles.tabBar}>
+            {TARGET_TABS.map((tab) => (
+              <Pressable
+                key={tab.value}
+                style={[styles.tab, activeTab === tab.value && styles.tabActive]}
+                onPress={() => setActiveTab(tab.value)}
+                accessibilityRole="button"
+                accessibilityLabel={t(tab.labelKey)}
+              >
+                <Text
+                  style={[styles.tabText, activeTab === tab.value && styles.tabTextActive]}
+                >
+                  {t(tab.labelKey)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.filterRow}>
+            {[
+              { open: true, labelKey: "filterOpen" },
+              { open: false, labelKey: "filterClosed" },
+            ].map((f) => (
+              <Pressable
+                key={f.labelKey}
+                style={[styles.filterChip, showOpen === f.open && styles.filterChipActive]}
+                onPress={() => setShowOpen(f.open)}
+                accessibilityRole="button"
+                accessibilityLabel={t(f.labelKey)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    showOpen === f.open && styles.filterChipTextActive,
+                  ]}
+                >
+                  {t(f.labelKey)}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      }
       ListEmptyComponent={<Text style={styles.emptyText}>{t("noIssuesFound")}</Text>}
       renderItem={({ item }) => (
         <View style={styles.card}>
@@ -105,6 +167,17 @@ export default function AdminIssuesScreen() {
             #{item.id} • {item.category} • {item.targetType}
           </Text>
           <Text style={styles.description}>{item.description}</Text>
+          {item.targetType === "gym" && item.metadata ? (
+            <View style={styles.gymMeta}>
+              <Text style={styles.meta}>
+                {t("gymAddress")}: {String(item.metadata.address ?? "—")}
+              </Text>
+              <Text style={styles.meta}>
+                {t("gymLocationLabel")}: {String(item.metadata.latitude ?? "?")},{" "}
+                {String(item.metadata.longitude ?? "?")}
+              </Text>
+            </View>
+          ) : null}
           <Text style={styles.status}>{t("currentStatus")} {item.status}</Text>
 
           <View style={styles.actions}>
@@ -177,6 +250,34 @@ const styles = StyleSheet.create({
   },
   statusButtonText: { ...typography.caption, color: theme.colors.text },
   statusButtonTextActive: { color: "#fff", fontWeight: "700" },
+  tabBar: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
+  tab: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    backgroundColor: "#fff",
+  },
+  tabActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  tabText: { ...typography.caption, color: theme.colors.text },
+  tabTextActive: { color: "#fff", fontWeight: "700" },
+  filterRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
+  filterChip: {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    backgroundColor: "#fff",
+  },
+  filterChipActive: {
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
+  },
+  filterChipText: { ...typography.caption, color: theme.colors.text },
+  filterChipTextActive: { color: "#fff", fontWeight: "700" },
+  gymMeta: { gap: 2, marginTop: 2 },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary },
   retryButton: {
     backgroundColor: theme.colors.primary,
