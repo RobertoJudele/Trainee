@@ -1,6 +1,7 @@
 {
   "enabledPlugins": {
     "static-analysis@trailofbits": true,
-    "ponytail@ponytail": true
+    "ponytail@ponytail": true,
+    "marketing-skills@marketingskills": true
   }
 }

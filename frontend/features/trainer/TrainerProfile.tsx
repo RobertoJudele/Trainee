@@ -498,10 +498,10 @@ function TrainerProfile() {
                   <View>
                     <Text style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text }}>{pkg.name}</Text>
                     <Text style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
-                      {pkg.sessionCount} {t("sessions")} — ${(Number(pkg.price) / pkg.sessionCount).toFixed(2)}{t("perSession")}
+                      {pkg.sessionCount} {t("sessions")} — {(Number(pkg.price) / pkg.sessionCount).toFixed(2)} lei{t("perSession")}
                     </Text>
                   </View>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.primary }}>${Number(pkg.price).toFixed(2)}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.primary }}>{Number(pkg.price).toFixed(2)} lei</Text>
                 </View>
               ))}
             </View>

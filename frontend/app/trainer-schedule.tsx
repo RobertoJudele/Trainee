@@ -3,6 +3,7 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -197,9 +198,20 @@ export default function TrainerScheduleScreen() {
             colors={theme.gradients.primary}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={[styles.hero, { paddingTop: Math.max(insets.top + theme.spacing.sm, theme.spacing.xl) }]}
+            style={[styles.hero, { paddingTop: Math.max(insets.top + 12, 48) }]}
           >
-            <Text style={styles.heroTitle}>{t("scheduleTitle")}</Text>
+            <View style={styles.headerRow}>
+              <Pressable
+                style={styles.backButton}
+                onPress={() => router.back()}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+              >
+                <Ionicons name="arrow-back" size={24} color="#fff" />
+              </Pressable>
+              <Text style={styles.headerTitle}>{t("scheduleTitle")}</Text>
+              <View style={styles.backButton} />
+            </View>
             <Text style={styles.heroSubtitle}>
               {t("scheduleSubtitle")}
             </Text>
@@ -239,6 +251,8 @@ export default function TrainerScheduleScreen() {
             <ScheduleCard
               title={t("scheduleWorkingHoursTemplate")}
               subtitle={t("scheduleWorkingHoursSubtitle")}
+              collapsible
+              pinScrollRef={scrollRef}
             >
               <View style={styles.dayPillRow}>
                 {scheduleDayLabels.map((label, dow) => (
@@ -351,6 +365,20 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
     ...theme.shadows.medium,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    padding: 4,
+    width: 32,
+  },
+  headerTitle: {
+    ...typography.h1,
+    color: "#FFFFFF",
+    flex: 1,
+    textAlign: "center",
   },
   heroTitle: { ...typography.h1, color: "#FFFFFF" },
   heroSubtitle: { ...typography.body2, color: "rgba(255,255,255,0.9)", marginTop: 4 },

@@ -464,7 +464,7 @@ export default function TrainerDetailsScreen() {
                   {pkg.sessionCount} {t("sessions")}
                 </Text>
               </View>
-              <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>${Number(pkg.price).toFixed(2)}</Text>
+              <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>{Number(pkg.price).toFixed(2)} lei</Text>
             </View>
           ))}
         </View>
@@ -498,12 +498,12 @@ export default function TrainerDetailsScreen() {
       </View>
 
       {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
-        <TrainerImageCarousel title="Gallery" images={trainer.galleryImages} />
+        <TrainerImageCarousel title={t("gallery")} images={trainer.galleryImages} />
       )}
 
       {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
         <TrainerImageCarousel
-          title="Certifications & Awards"
+          title={t("certificationsAwards")}
           images={trainer.credentialImages}
           resizeMode="contain"
         />

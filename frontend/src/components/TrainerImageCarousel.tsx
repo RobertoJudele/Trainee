@@ -60,7 +60,10 @@ export default function TrainerImageCarousel({
   const handleViewerScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_W);
-      setViewerIndex(index);
+      // Only track paging while the viewer is open. Tapping X resets contentOffset to 0,
+      // which fires a momentum-scroll event mid fade-out — without this guard that event
+      // would set the index back to a number and reopen the viewer.
+      setViewerIndex((prev) => (prev === null ? null : index));
     },
     []
   );

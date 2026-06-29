@@ -17,7 +17,9 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSelector } from "react-redux";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
@@ -192,6 +194,7 @@ function DraggableClientCard({
 
 export default function TrainerDayScheduleScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ date?: string }>();
   const user = useSelector(selectCurrentUser);
   const { t, language } = useLanguage();
@@ -664,6 +667,23 @@ export default function TrainerDayScheduleScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
+      <LinearGradient
+        colors={[theme.colors.primary, theme.colors.tertiary]}
+        style={[styles.gradientHeader, { paddingTop: Math.max(insets.top + 12, 48) }]}
+      >
+        <View style={styles.headerRow}>
+          <Pressable
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+          >
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </Pressable>
+          <Text style={styles.gradientTitle}>{t("dayPlannerEyebrow")}</Text>
+          <View style={styles.backButton} />
+        </View>
+      </LinearGradient>
       <ScrollView
         ref={scrollRef}
         style={styles.container}
@@ -1072,6 +1092,24 @@ const styles = StyleSheet.create({
   deniedText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
+    textAlign: "center",
+  },
+  gradientHeader: {
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  backButton: {
+    padding: 4,
+    width: 32,
+  },
+  gradientTitle: {
+    ...typography.h2,
+    color: "#FFFFFF",
+    flex: 1,
     textAlign: "center",
   },
   heroCard: {

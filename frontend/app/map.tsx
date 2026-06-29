@@ -17,6 +17,7 @@ import {
   Pressable,
   Switch,
   Keyboard,
+  Alert,
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
@@ -25,13 +26,19 @@ import { skipToken } from "@reduxjs/toolkit/query";
 import {
   useGetAllGymsQuery,
   useGetGymByIdQuery,
+  useGetMyGymsQuery,
+  useJoinGymMutation,
+  useSetGymAvailabilityMutation,
   GymMarker,
   GymTrainer,
 } from "../features/gym/gymApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useSelector } from "react-redux";
+import { selectCurrentUser } from "../features/auth/authSlice";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
@@ -667,7 +674,7 @@ export default function MapScreen() {
   }, [mapItemsToRender]);
 
   const gymDetailQueryArg = selectedGymId ?? skipToken;
-  const { data: gymDetailResponse, isFetching: detailFetching } =
+  const { data: gymDetailResponse, isFetching: detailFetching, refetch: refetchGymDetail } =
     useGetGymByIdQuery(gymDetailQueryArg);
   const gymDetailData = gymDetailResponse?.data ?? null;
   const gymDetail =
@@ -675,6 +682,41 @@ export default function MapScreen() {
       ? gymDetailData
       : null;
   const gymTrainers = Array.isArray(gymDetail?.trainers) ? gymDetail.trainers : [];
+
+  // ── Trainer "list myself here" controls ──────────────────
+  const currentUser = useSelector(selectCurrentUser);
+  const isTrainer = currentUser?.role === "trainer";
+  const { data: myGymsRes } = useGetMyGymsQuery(undefined, { skip: !isTrainer });
+  const myMembership = useMemo(
+    () => myGymsRes?.data?.find((g) => g.id === selectedGymId),
+    [myGymsRes, selectedGymId]
+  );
+  const [joinGym, { isLoading: joining }] = useJoinGymMutation();
+  const [setGymAvailability, { isLoading: savingAvailability }] =
+    useSetGymAvailabilityMutation();
+
+  const handleListSelfHere = useCallback(async () => {
+    if (selectedGymId === null) return;
+    try {
+      await joinGym(selectedGymId).unwrap();
+      await refetchGymDetail();
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
+    }
+  }, [selectedGymId, joinGym, refetchGymDetail, t]);
+
+  const handleToggleAvailabilityHere = useCallback(
+    async (next: boolean) => {
+      if (selectedGymId === null) return;
+      try {
+        await setGymAvailability({ gymId: selectedGymId, isAvailable: next }).unwrap();
+        await refetchGymDetail();
+      } catch (err: unknown) {
+        Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
+      }
+    },
+    [selectedGymId, setGymAvailability, refetchGymDetail, t]
+  );
 
   // ── Animate to a snap point ──────────────────────────────
   const snapTo = useCallback(
@@ -1222,6 +1264,43 @@ export default function MapScreen() {
 
             <View style={styles.divider} />
 
+            {/* Trainer self-listing */}
+            {isTrainer && (
+              myMembership ? (
+                <View style={styles.listSelfJoined}>
+                  <View style={styles.listSelfJoinedText}>
+                    <Ionicons name="checkmark-circle" size={18} color={theme.colors.primary} />
+                    <Text style={styles.listSelfJoinedLabel}>
+                      {myMembership.isAvailable
+                        ? t("listedHereAvailable")
+                        : t("listedHereUnavailable")}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={myMembership.isAvailable}
+                    onValueChange={handleToggleAvailabilityHere}
+                    disabled={savingAvailability}
+                    trackColor={{ true: theme.colors.primary, false: "#CBD5E1" }}
+                    thumbColor="#fff"
+                  />
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.listSelfBtn, joining && styles.listSelfBtnDisabled]}
+                  onPress={handleListSelfHere}
+                  disabled={joining}
+                  activeOpacity={0.85}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("listMyselfHere")}
+                >
+                  <Ionicons name="add-circle-outline" size={18} color="#fff" />
+                  <Text style={styles.listSelfBtnText}>
+                    {joining ? t("submitting") : t("listMyselfHere")}
+                  </Text>
+                </TouchableOpacity>
+              )
+            )}
+
             {/* Trainers */}
             <View style={styles.trainersHeader}>
               <Text style={styles.trainersTitle}>{t("trainersHere")}</Text>
@@ -1435,6 +1514,33 @@ const styles = StyleSheet.create({
     ...theme.shadows.medium,
   },
   requestGymBtnText: { color: "#fff", fontWeight: "700" },
+  listSelfBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.roundness,
+    paddingVertical: 12,
+    marginBottom: 12,
+    ...theme.shadows.small,
+  },
+  listSelfBtnDisabled: { opacity: 0.6 },
+  listSelfBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  listSelfJoined: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: theme.roundness,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  listSelfJoinedText: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  listSelfJoinedLabel: { ...typography.body2, color: theme.colors.text, fontWeight: "600", flex: 1 },
   map: { flex: 1 },
   mapLoading: {
     flex: 1,

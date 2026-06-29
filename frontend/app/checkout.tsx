@@ -1131,7 +1131,7 @@ export default function CheckoutScreen() {
 					{!success && message === "" && (
 						<ProductDisplay
 							title="MonthlySubscription"
-							subtitle="RON 100.00 / month"
+							subtitle="100.00 lei / month"
 							actionLabel="Checkout"
 							onCheckout={startCheckout}
 							loading={loading}

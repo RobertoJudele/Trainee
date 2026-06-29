@@ -227,9 +227,9 @@ export default function Home() {
       <View style={styles.priceTag}>
         <Text style={styles.hourlyRate}>
           {item.hourlyRate
-            ? `$${item.hourlyRate}/hr`
+            ? `${item.hourlyRate} lei/hr`
             : item.sessionRate
-              ? `$${item.sessionRate}/ses`
+              ? `${item.sessionRate} lei/ses`
               : ""}
         </Text>
       </View>
@@ -319,9 +319,9 @@ export default function Home() {
       <View style={styles.priceTag}>
         <Text style={styles.hourlyRate}>
           {item.hourlyRate
-            ? `$${item.hourlyRate}/hr`
+            ? `${item.hourlyRate} lei/hr`
             : item.sessionRate
-              ? `$${item.sessionRate}/ses`
+              ? `${item.sessionRate} lei/ses`
               : ""}
         </Text>
       </View>

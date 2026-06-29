@@ -220,7 +220,7 @@ export default function SearchScreen() {
             <Text style={styles.ratingCount}>({item.reviewCount})</Text>
           </View>
           <Text style={styles.cardPrice}>
-            {item.hourlyRate ? `$${item.hourlyRate}/hr` : item.sessionRate ? `$${item.sessionRate}/ses` : "—"}
+            {item.hourlyRate ? `${item.hourlyRate} lei/hr` : item.sessionRate ? `${item.sessionRate} lei/ses` : "—"}
           </Text>
         </View>
 
