@@ -1,0 +1,7 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Salvio pulse mark">
+  <title>Salvio pulse mark (monochrome)</title>
+  <!-- Standalone mark. Inherits color via currentColor; set `color` or override the stroke. -->
+  <path d="M232 512 H404 L470 360 L548 680 L620 452 L676 512 H792"
+        fill="none" stroke="currentColor" stroke-width="56"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
