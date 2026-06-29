@@ -331,6 +331,19 @@ export default function MyGymsScreen() {
               maxToRenderPerBatch={12}
               windowSize={11}
               ListEmptyComponent={<Text style={styles.noResults}>{t("noGymsFound")}</Text>}
+              ListFooterComponent={
+                <TouchableOpacity
+                  style={styles.requestGymLink}
+                  onPress={() => {
+                    setShowBrowser(false);
+                    router.push("/request-gym");
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("requestGymCta")}
+                >
+                  <Text style={styles.requestGymLinkText}>{t("requestGymCta")}</Text>
+                </TouchableOpacity>
+              }
             />
           )}
         </View>
@@ -448,6 +461,15 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, ...typography.body1, color: theme.colors.text },
   browserList: { paddingHorizontal: theme.spacing.md, paddingBottom: 40 },
+  requestGymLink: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.roundness,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  requestGymLinkText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
   noResults: {
     ...typography.body2,
     color: theme.colors.textSecondary,

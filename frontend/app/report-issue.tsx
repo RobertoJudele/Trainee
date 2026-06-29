@@ -121,6 +121,15 @@ export default function ReportIssueScreen() {
       <Text style={styles.title}>{t("reportIssueTitle")}</Text>
       <Text style={styles.subtitle}>{t("reportIssueSubtitle")}</Text>
 
+      <Pressable
+        style={styles.gymRequestCta}
+        onPress={() => router.push("/request-gym")}
+        accessibilityRole="button"
+        accessibilityLabel={t("requestGymCta")}
+      >
+        <Text style={styles.gymRequestCtaText}>{t("requestGymCta")}</Text>
+      </Pressable>
+
       <View style={styles.card}>
         <Text style={styles.label}>{t("issueType")}</Text>
         <Text style={styles.contextText}>{targetLabels[targetType]}</Text>
@@ -204,6 +213,14 @@ const styles = StyleSheet.create({
     ...theme.shadows.small,
   },
   label: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  gymRequestCta: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.roundness,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  gymRequestCtaText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
   contextText: { ...typography.caption, color: theme.colors.textSecondary },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {

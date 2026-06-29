@@ -12,6 +12,11 @@ import {
   Dimensions,
   Image,
   Platform,
+  TextInput,
+  Modal,
+  Pressable,
+  Switch,
+  Keyboard,
 } from "react-native";
 import MapView, { Marker, Region } from "react-native-maps";
 import * as Location from "expo-location";
@@ -32,9 +37,9 @@ const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
 // ── Snap points ──────────────────────────────────────────────
 const SNAP_CLOSED = SCREEN_H;           // fully hidden
-const SNAP_PEEK   = SCREEN_H - 460;    // first tap: comfortable preview
-const SNAP_HALF   = SCREEN_H * 0.42;   // mid drag
-const SNAP_FULL   = SCREEN_H * 0.06;   // nearly full screen
+const SNAP_PEEK = SCREEN_H - 460;    // first tap: comfortable preview
+const SNAP_HALF = SCREEN_H * 0.42;   // mid drag
+const SNAP_FULL = SCREEN_H * 0.06;   // nearly full screen
 
 const DEFAULT_REGION: Region = {
   latitude: 44.4468,
@@ -42,6 +47,8 @@ const DEFAULT_REGION: Region = {
   latitudeDelta: 0.08,
   longitudeDelta: 0.08,
 };
+
+const RATING_OPTIONS = [0, 3, 4, 4.5];
 
 const CLUSTER_RADIUS_PX = 56;
 const MIN_CLUSTER_DELTA = 0.0006;
@@ -393,11 +400,15 @@ export default function MapScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const mapRef      = useRef<MapView>(null);
+  const mapRef = useRef<MapView>(null);
   const [selectedGymId, setSelectedGymId] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filtersVisible, setFiltersVisible] = useState(false);
+  const [minRating, setMinRating] = useState(0);
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_REGION);
   const [stableGyms, setStableGyms] = useState<GymMarker[]>([]);
-  const sheetAnim   = useRef(new Animated.Value(SNAP_CLOSED)).current;
+  const sheetAnim = useRef(new Animated.Value(SNAP_CLOSED)).current;
   const currentSnap = useRef(SNAP_CLOSED); // track where we are between gestures
   const regionUpdateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const markerAnimationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -512,13 +523,43 @@ export default function MapScreen() {
 
   const gyms = gymsResponse?.data ?? stableGyms;
 
+  // Active filters narrow the whole gym set, so both map markers and the search
+  // results list respect them.
+  const filteredGyms = useMemo(
+    () =>
+      gyms.filter(
+        (gym) =>
+          Number(gym.rating) >= minRating &&
+          (!onlyAvailable || gym.availableTrainerCount > 0)
+      ),
+    [gyms, minRating, onlyAvailable]
+  );
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return [];
+    return filteredGyms
+      .filter(
+        (gym) =>
+          gym.name.toLowerCase().includes(q) ||
+          (gym.city ?? "").toLowerCase().includes(q)
+      )
+      .slice(0, 12);
+  }, [filteredGyms, searchQuery]);
+
+  const hasActiveFilters = minRating > 0 || onlyAvailable;
+  const resetFilters = useCallback(() => {
+    setMinRating(0);
+    setOnlyAvailable(false);
+  }, []);
+
   const gymsForClustering = useMemo(() => {
-    if (gyms.length === 0) {
-      return gyms;
+    if (filteredGyms.length === 0) {
+      return filteredGyms;
     }
 
     const bufferedBounds = getRegionBounds(mapRegion, VIEWPORT_BUFFER_MULTIPLIER);
-    const visibleGyms = gyms.filter((gym) => isGymInsideBounds(gym, bufferedBounds));
+    const visibleGyms = filteredGyms.filter((gym) => isGymInsideBounds(gym, bufferedBounds));
 
     if (visibleGyms.length <= MAX_CLUSTER_INPUT_GYMS) {
       return visibleGyms;
@@ -543,7 +584,7 @@ export default function MapScreen() {
       .slice(0, MAX_CLUSTER_INPUT_GYMS)
       .map((entry) => entry.gym);
   }, [
-    gyms,
+    filteredGyms,
     mapRegion.latitude,
     mapRegion.longitude,
     mapRegion.latitudeDelta,
@@ -649,7 +690,7 @@ export default function MapScreen() {
     [sheetAnim]
   );
 
-  const openSheet  = useCallback(() => snapTo(SNAP_PEEK), [snapTo]);
+  const openSheet = useCallback(() => snapTo(SNAP_PEEK), [snapTo]);
   const closeSheet = useCallback(
     () => snapTo(SNAP_CLOSED, () => setSelectedGymId(null)),
     [snapTo]
@@ -676,10 +717,10 @@ export default function MapScreen() {
         const pos = currentSnap.current + g.dy;
         const vel = g.vy;
 
-        if (vel > 0.8)  { snapTo(SNAP_CLOSED, () => setSelectedGymId(null)); return; }
+        if (vel > 0.8) { snapTo(SNAP_CLOSED, () => setSelectedGymId(null)); return; }
         if (vel < -0.8) { snapTo(SNAP_FULL); return; }
 
-        const snaps   = [SNAP_FULL, SNAP_HALF, SNAP_PEEK, SNAP_CLOSED];
+        const snaps = [SNAP_FULL, SNAP_HALF, SNAP_PEEK, SNAP_CLOSED];
         const nearest = snaps.reduce((a, b) =>
           Math.abs(b - pos) < Math.abs(a - pos) ? b : a
         );
@@ -744,6 +785,17 @@ export default function MapScreen() {
       openSheet();
     },
     [openSheet, selectedGymId, suppressRegionUpdatesFor]
+  );
+
+  // Tap a search result: clear the box, drop the keyboard, then reuse the marker
+  // flow to recenter the map and open the gym sheet.
+  const handleResultPress = useCallback(
+    (gym: GymMarker) => {
+      setSearchQuery("");
+      Keyboard.dismiss();
+      handleMarkerPress(gym);
+    },
+    [handleMarkerPress]
   );
 
   const handleRegionChangeComplete = useCallback((region: Region) => {
@@ -917,14 +969,14 @@ export default function MapScreen() {
         </Text>
         <View style={styles.trainerStats}>
           <Text style={styles.trainerStat}>
-            <Ionicons name="star" size={10} color="#F59E0B" style={{marginRight: 2}} />
+            <Ionicons name="star" size={10} color="#F59E0B" style={{ marginRight: 2 }} />
             {Number(trainer.totalRating).toFixed(1)}
           </Text>
           {trainer.experienceYears ? (
             <Text style={styles.trainerStat}> · {trainer.experienceYears}yr exp</Text>
           ) : null}
           {trainer.hourlyRate ? (
-            <Text style={styles.trainerStatPrice}> · ${trainer.hourlyRate}/hr</Text>
+            <Text style={styles.trainerStatPrice}> · {trainer.hourlyRate} lei/hr</Text>
           ) : null}
           <Text style={styles.trainerViewLink}> · {t("viewDetails")}</Text>
         </View>
@@ -935,20 +987,83 @@ export default function MapScreen() {
   // ── Render ────────────────────────────────────────────────
   return (
     <View style={styles.container}>
-      <TouchableOpacity
-        style={[styles.backButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]}
-        onPress={() => router.back()}
-        activeOpacity={0.8}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel="Go back"
-      >
-        <Ionicons name="arrow-back" size={24} color={theme.colors.text} />
-      </TouchableOpacity>
-
-      {locationGranted && (
+      {/* ── Floating search bar + filter button ───────────── */}
+      <View style={[styles.topBar, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]}>
         <TouchableOpacity
-          style={[styles.centerButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) }]}
+          style={styles.iconBtn}
+          onPress={() => router.back()}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+        </TouchableOpacity>
+
+        <View style={styles.searchPill}>
+          <Ionicons name="search" size={20} color={theme.colors.textSecondary} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t("mapSearchPlaceholder")}
+            placeholderTextColor={theme.colors.textSecondary}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")} hitSlop={8} accessibilityRole="button" accessibilityLabel={t("clearFilters")}>
+              <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.iconBtn, hasActiveFilters && styles.iconBtnActive]}
+          onPress={() => setFiltersVisible(true)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel={t("mapFilters")}
+        >
+          <Ionicons name="options-outline" size={22} color={hasActiveFilters ? "#fff" : theme.colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      {/* ── Search results dropdown ────────────────────────── */}
+      {searchQuery.trim().length > 0 && (
+        <View style={[styles.resultsCard, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) + 56 }]}>
+          {searchResults.length === 0 ? (
+            <Text style={styles.resultsEmpty}>{t("noGymsFound")}</Text>
+          ) : (
+            <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+              {searchResults.map((gym) => (
+                <TouchableOpacity
+                  key={gym.id}
+                  style={styles.resultRow}
+                  onPress={() => handleResultPress(gym)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="business-outline" size={18} color={theme.colors.primary} />
+                  <View style={styles.resultMeta}>
+                    <Text style={styles.resultName} numberOfLines={1}>{gym.name}</Text>
+                    <Text style={styles.resultCity} numberOfLines={1}>
+                      {gym.city}{gym.state ? `, ${gym.state}` : ""}
+                    </Text>
+                  </View>
+                  {gym.availableTrainerCount > 0 && (
+                    <View style={styles.resultBadge}>
+                      <Text style={styles.resultBadgeText}>{gym.availableTrainerCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+        </View>
+      )}
+
+      {locationGranted && searchQuery.trim().length === 0 && (
+        <TouchableOpacity
+          style={[styles.centerButton, { top: Math.max(insets.top + theme.spacing.sm, theme.spacing.lg) + 56 }]}
           onPress={handleCenterOnUser}
           activeOpacity={0.8}
           accessibilityRole="button"
@@ -991,15 +1106,23 @@ export default function MapScreen() {
         </MapView>
       )}
 
-      {(hiddenMapItemCount > 0 || hiddenGymsCount > 0) && (
-        <View style={styles.mapWarningPill} pointerEvents="none">
-          <Text style={styles.mapWarningText}>
-            {hiddenMapItemCount > 0
-              ? `${hiddenMapItemCount} markers hidden for performance. Zoom in for more.`
-              : `${hiddenGymsCount} gyms skipped outside viewport buffer for performance.`}
-          </Text>
-        </View>
-      )}
+      <TouchableOpacity
+        style={styles.requestGymBtn}
+        onPress={() =>
+          router.push({
+            pathname: "/request-gym",
+            params: {
+              lat: String(mapRegion.latitude),
+              lng: String(mapRegion.longitude),
+            },
+          })
+        }
+        activeOpacity={0.85}
+        accessibilityRole="button"
+        accessibilityLabel={t("requestGymCta")}
+      >
+        <Text style={styles.requestGymBtnText}>{t("requestGymCta")}</Text>
+      </TouchableOpacity>
 
       {/* ── Bottom sheet ───────────────────────────────── */}
       <Animated.View
@@ -1121,21 +1244,176 @@ export default function MapScreen() {
           </ScrollView>
         )}
       </Animated.View>
+
+      {/* ── Filter panel ───────────────────────────────────── */}
+      <Modal
+        visible={filtersVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFiltersVisible(false)}
+      >
+        <Pressable style={styles.filterBackdrop} onPress={() => setFiltersVisible(false)}>
+          <Pressable style={styles.filterCard} onPress={() => {}}>
+            <Text style={styles.filterTitle}>{t("mapFilters")}</Text>
+
+            <Text style={styles.filterLabel}>{t("mapMinRating")}</Text>
+            <View style={styles.chipRow}>
+              {RATING_OPTIONS.map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={[styles.chip, minRating === r && styles.chipActive]}
+                  onPress={() => setMinRating(r)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.chipText, minRating === r && styles.chipTextActive]}>
+                    {r === 0 ? t("mapAnyRating") : `${r}+`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <View style={styles.filterSwitchRow}>
+              <Text style={styles.filterLabel}>{t("mapOnlyAvailable")}</Text>
+              <Switch
+                value={onlyAvailable}
+                onValueChange={setOnlyAvailable}
+                trackColor={{ true: theme.colors.primary, false: "#CBD5E1" }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            <View style={styles.filterActions}>
+              <TouchableOpacity style={styles.filterResetBtn} onPress={resetFilters} activeOpacity={0.8}>
+                <Text style={styles.filterResetText}>{t("mapReset")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.filterApplyBtn} onPress={() => setFiltersVisible(false)} activeOpacity={0.8}>
+                <Text style={styles.filterApplyText}>{t("mapApply")}</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  backButton: {
+  topBar: {
     position: "absolute",
     left: theme.spacing.lg,
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.sm,
-    borderRadius: theme.roundness,
+    right: theme.spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     zIndex: 10,
+  },
+  iconBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: theme.colors.surface,
+    justifyContent: "center",
+    alignItems: "center",
     ...theme.shadows.medium,
   },
+  iconBtnActive: { backgroundColor: theme.colors.primary },
+  searchPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    height: 44,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 22,
+    paddingHorizontal: 14,
+    ...theme.shadows.medium,
+  },
+  searchInput: {
+    flex: 1,
+    ...typography.body2,
+    color: theme.colors.text,
+    paddingVertical: 0,
+  },
+  resultsCard: {
+    position: "absolute",
+    left: theme.spacing.lg,
+    right: theme.spacing.lg,
+    maxHeight: 280,
+    backgroundColor: theme.colors.surface,
+    borderRadius: 16,
+    paddingVertical: 6,
+    zIndex: 9,
+    ...theme.shadows.large,
+  },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  resultMeta: { flex: 1 },
+  resultName: { ...typography.body2, fontWeight: "700", color: theme.colors.text },
+  resultCity: { ...typography.caption, color: theme.colors.textSecondary },
+  resultBadge: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  resultBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  resultsEmpty: {
+    ...typography.body2,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    paddingVertical: 16,
+  },
+  filterBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
+  filterCard: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xl,
+    gap: 14,
+  },
+  filterTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.text },
+  filterLabel: { ...typography.body2, fontWeight: "600", color: theme.colors.text },
+  chipRow: { flexDirection: "row", gap: 8 },
+  chip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+  },
+  chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  chipText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  chipTextActive: { color: "#fff" },
+  filterSwitchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  filterActions: { flexDirection: "row", gap: 12, marginTop: 6 },
+  filterResetBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    alignItems: "center",
+  },
+  filterResetText: { ...typography.body2, fontWeight: "700", color: theme.colors.text },
+  filterApplyBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: theme.colors.primary,
+    alignItems: "center",
+  },
+  filterApplyText: { ...typography.body2, fontWeight: "700", color: "#fff" },
   centerButton: {
     position: "absolute",
     right: theme.spacing.lg,
@@ -1145,6 +1423,18 @@ const styles = StyleSheet.create({
     zIndex: 10,
     ...theme.shadows.medium,
   },
+  requestGymBtn: {
+    position: "absolute",
+    bottom: 24,
+    alignSelf: "center",
+    backgroundColor: theme.colors.primary,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    zIndex: 5,
+    ...theme.shadows.medium,
+  },
+  requestGymBtnText: { color: "#fff", fontWeight: "700" },
   map: { flex: 1 },
   mapLoading: {
     flex: 1,
@@ -1426,7 +1716,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginLeft: 8,
   },
-  availBadgeOn:  { backgroundColor: "#D1FAE5" },
+  availBadgeOn: { backgroundColor: "#D1FAE5" },
   availBadgeOff: { backgroundColor: "#FEE2E2" },
   availBadgeText: { fontSize: 11, fontWeight: "700", color: "#374151" },
   trainerBio: {
