@@ -80,6 +80,19 @@ export const createIssue = async (
       return;
     }
 
+    if (targetType === IssueTargetType.GYM) {
+      if (trainerId || bookingId) {
+        sendError(res, 400, "Gym requests should not include trainerId or bookingId");
+        return;
+      }
+      const lat = Number((metadata as Record<string, unknown> | undefined)?.latitude);
+      const lng = Number((metadata as Record<string, unknown> | undefined)?.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        sendError(res, 400, "Gym requests require metadata.latitude and metadata.longitude");
+        return;
+      }
+    }
+
     const duplicateWindowStart = new Date(Date.now() - 10 * 60 * 1000);
     const duplicateWhere: Record<string, unknown> = {
       reporterId: user.id,

@@ -44,6 +44,49 @@ describe("Issue API", () => {
       expect(res.body.data.targetType).toBe("trainer");
     });
 
+    it("should create a gym request", async () => {
+      const { token } = await createTestUser();
+
+      const res = await request(app)
+        .post("/issues")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          targetType: "gym",
+          category: "gym_request",
+          title: "World Class Pipera",
+          description: "Str. Dimitrie Pompeiu 5, Bucharest — please add this gym",
+          metadata: {
+            address: "Str. Dimitrie Pompeiu 5, Bucharest",
+            city: "Bucharest",
+            latitude: 44.4796,
+            longitude: 26.1213,
+          },
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.targetType).toBe("gym");
+      expect(res.body.data.metadata.latitude).toBe(44.4796);
+    });
+
+    it("should reject a gym request without coordinates", async () => {
+      const { token } = await createTestUser();
+
+      const res = await request(app)
+        .post("/issues")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          targetType: "gym",
+          category: "gym_request",
+          title: "Nameless Gym Request",
+          description: "I forgot to drop a pin on the map for this one",
+          metadata: { address: "Somewhere" },
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
     it("should reject invalid data", async () => {
       const { token } = await createTestUser();
 
