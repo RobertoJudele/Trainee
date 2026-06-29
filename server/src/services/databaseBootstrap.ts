@@ -168,4 +168,13 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
   await sequelize.query(
     "ALTER TABLE client_preferences DROP COLUMN IF EXISTS longitude;"
   );
+
+  // Gym-request ticket type: add new enum values to existing issue enums.
+  // sync({ alter:false }) won't add enum values, so do it explicitly. Idempotent.
+  await sequelize.query(
+    "ALTER TYPE enum_issues_target_type ADD VALUE IF NOT EXISTS 'gym';"
+  ).catch((err) => console.warn("Could not add 'gym' target_type enum value:", err.message));
+  await sequelize.query(
+    "ALTER TYPE enum_issues_category ADD VALUE IF NOT EXISTS 'gym_request';"
+  ).catch((err) => console.warn("Could not add 'gym_request' category enum value:", err.message));
 };

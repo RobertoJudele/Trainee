@@ -3,6 +3,7 @@ export enum IssueCategory {
   BOOKING_NO_SHOW = "booking_no_show",
   TECHNICAL_BUG = "technical_bug",
   PAYMENT_ISSUE = "payment_issue",
+  GYM_REQUEST = "gym_request",
   OTHER = "other",
 }
 
@@ -10,6 +11,7 @@ export enum IssueTargetType {
   TRAINER = "trainer",
   BOOKING = "booking",
   APP = "app",
+  GYM = "gym",
 }
 
 export enum IssueStatus {
