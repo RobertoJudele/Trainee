@@ -1,6 +1,7 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
+import { Platform, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { Provider } from "react-redux";
 import { useSelector } from "react-redux";
 import { StripeProvider } from "@stripe/stripe-react-native";
@@ -93,6 +94,24 @@ function RevenueCatIdentityBridge() {
   return null;
 }
 
+// ponytail: JS back button replaces the native-stack back arrow, which is
+// unresponsive on the first header screen pushed over a headerShown:false
+// screen (react-native-screens hit-test glitch) until another screen re-layouts.
+function HeaderBackButton({ tintColor }: { tintColor?: string }) {
+  const router = useRouter();
+  return (
+    <Pressable
+      onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+      style={{ paddingRight: 16, paddingVertical: 4 }}
+    >
+      <Ionicons name="arrow-back" size={24} color={tintColor ?? "#fff"} />
+    </Pressable>
+  );
+}
+
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
@@ -117,6 +136,8 @@ export default function RootLayout() {
             animation: "slide_from_right",
             animationDuration: 280,
             contentStyle: { backgroundColor: theme.colors.background },
+            headerLeft: ({ canGoBack, tintColor }) =>
+              canGoBack === false ? null : <HeaderBackButton tintColor={tintColor} />,
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />

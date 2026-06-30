@@ -35,6 +35,8 @@ type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
   url: string;
   fallbackUrl?: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  color: string;
 };
 
 type TrainerRouteParams = {
@@ -301,12 +303,12 @@ export default function TrainerDetailsScreen() {
 
     const instagramUrl = normalizeSocialUrl(trainer?.instagramUrl);
     if (instagramUrl) {
-      options.push({ label: "Instagram", url: instagramUrl });
+      options.push({ label: "Instagram", url: instagramUrl, icon: "logo-instagram", color: "#E1306C" });
     }
 
     const facebookUrl = normalizeSocialUrl(trainer?.facebookUrl);
     if (facebookUrl) {
-      options.push({ label: "Facebook", url: facebookUrl });
+      options.push({ label: "Facebook", url: facebookUrl, icon: "logo-facebook", color: "#1877F2" });
     }
 
     const whatsappContactUrls = getWhatsAppContactUrls(trainer?.whatsappUrl);
@@ -315,6 +317,8 @@ export default function TrainerDetailsScreen() {
         label: "WhatsApp",
         url: whatsappContactUrls.appUrl,
         fallbackUrl: whatsappContactUrls.webUrl,
+        icon: "logo-whatsapp",
+        color: "#25D366",
       });
     }
 
@@ -342,24 +346,6 @@ export default function TrainerDetailsScreen() {
       Alert.alert(t("error"), t("failedOpenSocial"));
     }
   }, [t]);
-
-  const handleContactPress = React.useCallback(() => {
-    if (contactOptions.length === 0) {
-      return;
-    }
-
-    Alert.alert(
-      t("contactTrainer"),
-      t("choosePlatform"),
-      contactOptions.slice(0, 3).map((option) => ({
-        text: option.label,
-        onPress: () => {
-          void openContactUrl(option.url, option.fallbackUrl);
-        },
-      })),
-      { cancelable: true }
-    );
-  }, [contactOptions, openContactUrl, t]);
 
   if (!hasValidTrainerId) {
     return (
@@ -660,15 +646,20 @@ export default function TrainerDetailsScreen() {
       </TouchableOpacity>
 
       {contactOptions.length > 0 && (
-        <TouchableOpacity
-          style={styles.contactButton}
-          onPress={handleContactPress}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={t("contactTrainer")}
-        >
-          <Text style={styles.contactButtonText}>{t("contact")}</Text>
-        </TouchableOpacity>
+        <View style={styles.socialRow}>
+          {contactOptions.map((option) => (
+            <TouchableOpacity
+              key={option.label}
+              style={styles.socialIconButton}
+              onPress={() => void openContactUrl(option.url, option.fallbackUrl)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+            >
+              <Ionicons name={option.icon} size={28} color={option.color} />
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
 
       <TouchableOpacity
@@ -877,18 +868,22 @@ const styles = StyleSheet.create({
     color: "#B91C1C",
     fontWeight: "700",
   },
-  contactButton: {
+  socialRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 14,
     marginTop: 2,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: 14,
-    alignItems: "center",
-    ...theme.shadows.medium,
   },
-  contactButtonText: {
-    ...typography.body1,
-    color: "#fff",
-    fontWeight: "700",
+  socialIconButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+    ...theme.shadows.small,
   },
   reviewCard: {
     borderTopWidth: 1,

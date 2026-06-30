@@ -352,9 +352,13 @@ export default function Home() {
             accessibilityRole="button"
             accessibilityLabel={user ? t("myProfile") : t("signIn")}
           >
-            <View style={styles.profileAvatar}>
-              <Text style={styles.profileInitials}>{user?.firstName?.[0] ?? "U"}</Text>
-            </View>
+            {user?.profileImageUrl ? (
+              <Image source={{ uri: user.profileImageUrl }} style={styles.profileAvatar} />
+            ) : (
+              <View style={styles.profileAvatar}>
+                <Text style={styles.profileInitials}>{user?.firstName?.[0] ?? "U"}</Text>
+              </View>
+            )}
           </TouchableOpacity>
         </View>
       </LinearGradient>
