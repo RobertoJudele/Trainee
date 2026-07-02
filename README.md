@@ -286,6 +286,7 @@ All API routers are mounted from backend root router:
 - `/billing`
 - `/issues`
 - `/trainer-schedule`
+- `/version` (public force-update check)
 
 Trainer profile browsing behavior:
 
@@ -432,6 +433,20 @@ npm run typecheck
 - Public trainer details (`/trainers/[id]`) show a single Contact button only when at least one social link is available.
 - Tapping Contact opens a chooser with available platforms; WhatsApp tries to open direct in-app chat with the trainer first.
 - Backend validation enforces safe platform formats: URL/domain checks for Instagram/Facebook and phone-or-WhatsApp-link checks for WhatsApp.
+
+## Force Update (Current)
+
+- Users below a configured minimum version are blocked by a non-dismissible "Update Required" wall that deep-links to the App Store / Google Play.
+- Minimum version + message live in the `app_min_version` DB table (one row per platform), so you force an update with a single SQL `UPDATE` — no redeploy.
+- The launch check fails **open**: any network/server error lets the app boot normally, so an outage never locks users out.
+- To require a new release (after it's live in the stores):
+
+```sql
+UPDATE app_min_version SET min_version='1.3.0', message='...' WHERE platform='android'; -- and 'ios'
+```
+
+- Endpoint: `GET /version/check?platform=<ios|android>&version=<x.y.z>`.
+- Full guide, verification steps, and code map: [docs/force-update.md](docs/force-update.md).
 
 ## Auth Model
 
