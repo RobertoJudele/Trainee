@@ -833,15 +833,9 @@ export const searchTrainers = async (
       limit = "20",
     } = req.query;
 
-    const trainerWhere: any = {
-      [Op.or]: [
-        { subscriptionStatus: subStatus.ACTIVE },
-        {
-          subscriptionStatus: subStatus.TRIAL,
-          trialEndsAt: { [Op.gt]: new Date() },
-        },
-      ],
-    };
+    // Active-subscription filtering is applied via Trainer.scope("active") on
+    // every query below — do not hand-roll it here (keeps one source of truth).
+    const trainerWhere: any = {};
     const userWhere: any = {};
 
     const latValue = toFiniteNumber(lat);
@@ -1002,7 +996,7 @@ export const searchTrainers = async (
       });
       const userIds = userMatches.map((u: any) => u.id);
 
-      const trainersByName = await Trainer.findAll({
+      const trainersByName = await Trainer.scope("active").findAll({
         where: { userId: { [Op.in]: userIds } },
         attributes: ["id"],
       });
@@ -1012,7 +1006,7 @@ export const searchTrainers = async (
       const { [Op.or]: bioOr, ...restWhere } = trainerWhere;
       const bioTrainerWhere = { ...restWhere, [Op.or]: bioOr };
 
-      const trainersByBio = await Trainer.findAll({
+      const trainersByBio = await Trainer.scope("active").findAll({
         where: bioTrainerWhere,
         attributes: ["id"],
       });
@@ -1044,13 +1038,6 @@ export const searchTrainers = async (
       }
 
       // Re-apply non-text filters
-      finalTrainerWhere[Op.or] = [
-        { subscriptionStatus: subStatus.ACTIVE },
-        {
-          subscriptionStatus: subStatus.TRIAL,
-          trialEndsAt: { [Op.gt]: new Date() },
-        },
-      ];
       if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
       if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
       if (city) finalTrainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
@@ -1106,7 +1093,7 @@ export const searchTrainers = async (
         ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["totalRating", "DESC"]]
         : [[resolvedSortBy, safeSortOrder]];
 
-    const { count, rows } = await Trainer.findAndCountAll({
+    const { count, rows } = await Trainer.scope("active").findAndCountAll({
       where: finalTrainerWhere,
       limit: parseInt(limit),
       offset,
