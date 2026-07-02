@@ -12,6 +12,7 @@ import {
   ensureSpatialAndSearchInfrastructure,
 } from "./services/databaseBootstrap";
 import { seedSpecializations } from "./seeds/specializationSeed";
+import { seedAppMinVersion } from "./seeds/appMinVersionSeed";
 import { getMissingRequiredSecurityEnv, securityConfig } from "./config/security";
 import {
   publicReadRateLimit,
@@ -99,6 +100,7 @@ const startServer = async () => {
     console.log("✅ Database synchronized and optimized.");
 
     await seedSpecializations();
+    await seedAppMinVersion();
     verifyEmailConnection();
 
     app.listen(PORT, "0.0.0.0", () => {
