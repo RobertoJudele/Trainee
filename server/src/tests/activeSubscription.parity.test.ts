@@ -76,7 +76,7 @@ describe("activeSubscriptionWhere ⇄ resolveEntitlement parity", () => {
   }
 });
 
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 
 describe("Trainer.scope('active') merge safety", () => {
   it("keeps the active filter when the caller adds its own Op.or (text search)", async () => {
@@ -95,5 +95,26 @@ describe("Trainer.scope('active') merge safety", () => {
 
     expect(ids).toContain(active.id);      // active + bio match → included
     expect(ids).not.toContain(canceled.id); // canceled → filtered despite bio match
+  });
+
+  // Regression: applyGeoFilters (trainer.ts) sets a TOP-LEVEL Op.and (the
+  // ST_DWithin radius literal) — the SAME symbol key the scope uses. Under
+  // Sequelize's default whereMergeStrategy the query's Op.and overwrites the
+  // scope's, silently dropping the active filter on every radius search. The
+  // Op.or test above can't catch this because Op.or is a different key.
+  it("keeps the active filter when the caller adds its own Op.and (geo/radius)", async () => {
+    const active = created.find((c) => c.state.subscriptionStatus === subStatus.ACTIVE
+      && c.state.billingProvider === BillingProvider.APPLE
+      && c.state.iapExpiresAt)!;
+    const canceled = created.find((c) => c.state.subscriptionStatus === subStatus.CANCELED)!;
+
+    const rows = await Trainer.scope("active").findAll({
+      where: { id: [active.id, canceled.id] as any, [Op.and]: [Sequelize.literal("1=1")] },
+      attributes: ["id"],
+    });
+    const ids = rows.map((r) => r.id);
+
+    expect(ids).toContain(active.id);       // active + passes radius → included
+    expect(ids).not.toContain(canceled.id); // canceled must NOT leak in
   });
 });

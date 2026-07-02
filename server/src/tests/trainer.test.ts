@@ -3,6 +3,9 @@ import request from "supertest";
 import { app } from "../index";
 import { createTestUser, createTestTrainer } from "./helpers";
 import { Specialization } from "../models/specialization";
+import { Trainer } from "../models/trainer";
+import { buildPointFromLatLng } from "../utils/geo";
+import { subStatus } from "../types/trainer";
 
 describe("Trainer API", () => {
   describe("POST /trainer/create", () => {
@@ -98,6 +101,50 @@ describe("Trainer API", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
+    });
+
+    // Regression for the whereMergeStrategy bug: the radius path adds a
+    // TOP-LEVEL Op.and (ST_DWithin literal) to the same where object the
+    // active-subscription scope also keys off Op.and for. Under the default
+    // "overwrite" merge strategy the query's Op.and clobbers the scope's,
+    // silently dropping the active filter — see src/db.ts whereMergeStrategy.
+    it("excludes inactive trainers from a radius (geo) search", async () => {
+      const lat = 44.4268;
+      const lng = 26.1025;
+      const point = buildPointFromLatLng(lat, lng);
+
+      const { user: activeUser } = await createTestUser({ role: "trainer" });
+      const activeTrainer = await Trainer.create({
+        userId: activeUser.id,
+        bio: "Active geo trainer",
+        experienceYears: 5,
+        locationCity: "Bucharest",
+        locationState: "Bucharest",
+        location: point,
+        subscriptionStatus: subStatus.TRIAL,
+        trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      } as any);
+
+      const { user: inactiveUser } = await createTestUser({ role: "trainer" });
+      const inactiveTrainer = await Trainer.create({
+        userId: inactiveUser.id,
+        bio: "Inactive geo trainer",
+        experienceYears: 5,
+        locationCity: "Bucharest",
+        locationState: "Bucharest",
+        location: point,
+        subscriptionStatus: subStatus.CANCELED,
+      } as any);
+
+      const res = await request(app)
+        .get("/trainer/search")
+        .query({ lat, lng, radiusKm: 10 });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      const ids = res.body.data.trainers.map((t: any) => t.internalId);
+      expect(ids).toContain(activeTrainer.id);
+      expect(ids).not.toContain(inactiveTrainer.id);
     });
   });
 

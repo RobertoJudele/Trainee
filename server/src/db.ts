@@ -58,6 +58,11 @@ const sequelize = new Sequelize({
     acquire: 30000,
     idle: 10000,
   },
+  // AND-merge query-level where clauses with scope where clauses (e.g. Trainer.scope("active"))
+  // instead of the default "overwrite" strategy, which lets a query's own top-level Op.and
+  // (applyGeoFilters' ST_DWithin radius filter) silently clobber the scope's Op.and and drop
+  // the active-subscription filter entirely.
+  define: { whereMergeStrategy: "and" },
 });
 
 export default sequelize;
