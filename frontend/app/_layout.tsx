@@ -15,6 +15,7 @@ import { TourProvider } from "../src/components/onboarding/TourContext";
 import CoachMark from "../src/components/onboarding/CoachMark";
 import TourGate from "../src/components/onboarding/TourGate";
 import { LanguageProvider } from "../src/lib/i18n/LanguageContext";
+import UpdateGate from "../src/components/UpdateGate";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -127,6 +128,7 @@ export default function RootLayout() {
         <TourProvider>
         <RevenueCatIdentityBridge />
         <StatusBar style="light" />
+        <UpdateGate>
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: theme.colors.primary },
@@ -164,6 +166,7 @@ export default function RootLayout() {
           <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
           <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />
         </Stack>
+        </UpdateGate>
         <CoachMark />
         <TourGate />
         </TourProvider>
