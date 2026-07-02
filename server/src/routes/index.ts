@@ -12,6 +12,7 @@ import gymRouter from "./gym";
 import billingRouter from "./billing";
 import issueRouter from "./issue";
 import trainerScheduleRouter from "./trainerSchedule";
+import clientSessionPacksRouter from "./clientSessionPacks";
 import recommendationRouter from "./recommendation";
 import appVersionRouter from "./appVersion";
 import {
@@ -39,6 +40,7 @@ router.use("/trainer-specializations", trainerSpecializationRouter);
 router.use("/billing", billingRouter);
 router.use("/issues", issueRouter);
 router.use("/trainer-schedule", trainerScheduleRouter);
+router.use("/client-packs", clientSessionPacksRouter);
 router.use("/recommendations", recommendationRouter);
 router.use("/version", appVersionRouter);
 

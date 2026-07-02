@@ -140,7 +140,8 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         method: "POST",
         body: { code },
       }),
-      invalidatesTags: ["TrainerSlots", "MySchedule"],
+      // Check-in consumes a session from the client's pack — refresh pack counts too.
+      invalidatesTags: ["TrainerSlots", "MySchedule", "ClientPacks"],
     }),
     assignSlotByClientCode: builder.mutation<
       ApiResp<{ slot: ScheduleSlot }>,

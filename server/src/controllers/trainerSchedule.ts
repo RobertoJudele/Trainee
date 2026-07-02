@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Request, Response } from "express";
 import { Op } from "sequelize";
 import { ClientCheckInCode } from "../models/clientCheckInCode";
+import { ClientSessionPack } from "../models/clientSessionPack";
 import { Trainer } from "../models/trainer";
 import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
 import { TrainerWorkingHour } from "../models/trainerWorkingHour";
@@ -725,6 +726,23 @@ export const trainerCheckInSlot = async (req: Request<{ slotId: string }>, res: 
       checkInCodeExpiresAt: null,
       checkInAttempts: 0,
     });
+
+    // A confirmed check-in consumes one session from the client's oldest open pack.
+    try {
+      if (slot.clientId) {
+        const packs = await ClientSessionPack.findAll({
+          where: { trainerId: trainer.id, clientId: slot.clientId },
+          order: [["createdAt", "ASC"]],
+        });
+        const openPack = packs.find((p) => p.usedSessions < p.totalSessions);
+        if (openPack) {
+          await openPack.increment("usedSessions");
+        }
+      }
+    } catch (packError) {
+      // ponytail: a pack-count failure must never undo a confirmed check-in; trainer can adjust counts manually
+      console.error("Failed to decrement client session pack:", packError);
+    }
 
     sendSuccess(res, 200, "Client check-in confirmed", slot);
   } catch (error) {

@@ -411,6 +411,42 @@ export const updateTrainerPackageValidation = [
   }),
 ];
 
+export const createClientPackValidation = [
+  body("clientId")
+    .isInt({ min: 1 })
+    .withMessage("Client id must be a positive integer."),
+  body("totalSessions")
+    .isInt({ min: 1, max: 500 })
+    .withMessage("Total sessions must be between 1 and 500."),
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Name must be between 1 and 100 characters."),
+  strictSchema({
+    body: ["clientId", "totalSessions", "name"],
+  }),
+];
+
+export const updateClientPackValidation = [
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Name must be between 1 and 100 characters."),
+  body("totalSessions")
+    .optional()
+    .isInt({ min: 1, max: 500 })
+    .withMessage("Total sessions must be between 1 and 500."),
+  body("usedSessions")
+    .optional()
+    .isInt({ min: 0, max: 500 })
+    .withMessage("Used sessions must be between 0 and 500."),
+  strictSchema({
+    body: ["name", "totalSessions", "usedSessions"],
+  }),
+];
+
 export const createIssueValidation = [
   body("targetType")
     .isIn(Object.values(IssueTargetType))

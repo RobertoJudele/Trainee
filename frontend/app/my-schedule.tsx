@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from "react-native";
 import { useGenerateMyCheckInCodeMutation, useGetMyScheduleQuery, useUnassignClientFromSlotMutation } from "../features/schedule/scheduleApiSlice";
+import { useGetMyPacksQuery } from "../features/schedule/clientPackApiSlice";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
@@ -22,6 +23,8 @@ export default function MyScheduleScreen() {
   const [cancellingSlotId, setCancellingSlotId] = useState<number | null>(null);
   const [generatedCode, setGeneratedCode] = useState<{ code: string; expiresAt: string } | null>(null);
   const slots = data?.data || [];
+  const { data: packsResp } = useGetMyPacksQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
+  const myPacks = packsResp?.data ?? [];
 
   // Onboarding tour targets.
   const codeCardTourRef = useTourTarget("client-code-card");
@@ -116,6 +119,7 @@ export default function MyScheduleScreen() {
       onRefresh={refetch}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
+        <>
         <View ref={codeCardTourRef} collapsable={false}>
         <FadeInUp style={styles.codeCard}>
           <View style={styles.codeCardHeader}>
@@ -143,6 +147,33 @@ export default function MyScheduleScreen() {
           )}
         </FadeInUp>
         </View>
+        {myPacks.length > 0 && (
+          <FadeInUp style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.sessionIconWrap}>
+                <Ionicons name="ticket-outline" size={16} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.title}>{t("packMyPacksTitle")}</Text>
+            </View>
+            {myPacks.map((pack) => {
+              const trainerName = pack.trainer?.user
+                ? `${pack.trainer.user.firstName} ${pack.trainer.user.lastName}`
+                : "";
+              const remaining = pack.totalSessions - pack.usedSessions;
+              return (
+                <View key={pack.id} style={styles.timeRow}>
+                  <Ionicons name="barbell-outline" size={15} color={theme.colors.textSecondary} />
+                  <Text style={styles.text}>
+                    {t("packLeftWithTrainer")
+                      .replace("{count}", `${remaining}/${pack.totalSessions}`)
+                      .replace("{trainer}", trainerName)}
+                  </Text>
+                </View>
+              );
+            })}
+          </FadeInUp>
+        )}
+        </>
       }
       ListEmptyComponent={
         <FadeInUp delay={theme.motion.stagger} style={styles.emptyState}>
