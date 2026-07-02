@@ -48,9 +48,8 @@ One row per platform.
 Seeded with two rows on bootstrap (follow `databaseBootstrap.ts` /
 seed patterns). Initial values:
 - `android`: `store_url` = `https://play.google.com/store/apps/details?id=com.juroctech.frontend`, `min_version` = `1.0.0`.
-- `ios`: `store_url` = `https://apps.apple.com/app/id<APPLE_APP_ID>` (fill real
-  Apple app id when known; placeholder acceptable at seed time since it's
-  editable via SQL), `min_version` = `1.0.0`.
+- `ios`: `store_url` = `https://apps.apple.com/app/id6775085258` (Apple app id
+  `6775085258`), `min_version` = `1.0.0`.
 
 Bumping the requirement is a plain `UPDATE app_min_version SET min_version=...,
 message=... WHERE platform=...`.
