@@ -44,28 +44,12 @@ import {
 import { resolveEntitlement } from "../services/billing/domain";
 import { SystemClock } from "../services/billing/adapters/SystemClock";
 import { isRevenueCatOnlyMode } from "../config/billingMode";
-import type { BillingState } from "../services/billing/types";
+import { toBillingState } from "../services/billing/trainerBillingState";
 
 const billingClock = new SystemClock();
 
-const trainerToBillingState = (trainer: Trainer): BillingState => ({
-  trainerId: trainer.id,
-  userId: trainer.userId,
-  billingProvider: (trainer.billingProvider as BillingProvider) || BillingProvider.NONE,
-  subscriptionStatus: (trainer.subscriptionStatus as subStatus) || subStatus.CANCELED,
-  stripeCustomerId: trainer.stripeCustomerId || undefined,
-  stripeSubscriptionId: trainer.stripeSubscriptionId || undefined,
-  trialEndsAt: trainer.trialEndsAt || undefined,
-  currentPeriodEndsAt: trainer.currentPeriodEndsAt || undefined,
-  iapProductId: trainer.iapProductId || undefined,
-  iapExpiresAt: trainer.iapExpiresAt || undefined,
-  iapLastVerifiedAt: trainer.iapLastVerifiedAt || undefined,
-  appleOriginalTransactionId: trainer.appleOriginalTransactionId || undefined,
-  googlePurchaseToken: trainer.googlePurchaseToken || undefined,
-});
-
 const resolveTrainerEntitlement = (trainer: Trainer) =>
-  resolveEntitlement(trainerToBillingState(trainer), {
+  resolveEntitlement(toBillingState(trainer), {
     isRevenueCatOnly: isRevenueCatOnlyMode(),
     clock: billingClock,
   });
