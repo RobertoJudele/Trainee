@@ -75,3 +75,25 @@ describe("activeSubscriptionWhere ⇄ resolveEntitlement parity", () => {
     });
   }
 });
+
+import { Op } from "sequelize";
+
+describe("Trainer.scope('active') merge safety", () => {
+  it("keeps the active filter when the caller adds its own Op.or (text search)", async () => {
+    // Two trainers with a shared bio token: one active (apple-future), one canceled.
+    const active = created.find((c) => c.state.subscriptionStatus === subStatus.ACTIVE
+      && c.state.billingProvider === BillingProvider.APPLE
+      && c.state.iapExpiresAt)!;
+    const canceled = created.find((c) => c.state.subscriptionStatus === subStatus.CANCELED)!;
+    await Trainer.update({ bio: "zzmergecheck" }, { where: { id: [active.id, canceled.id] as any } });
+
+    const rows = await Trainer.scope("active").findAll({
+      where: { [Op.or]: [{ bio: { [Op.iLike]: "%zzmergecheck%" } }] },
+      attributes: ["id"],
+    });
+    const ids = rows.map((r) => r.id);
+
+    expect(ids).toContain(active.id);      // active + bio match → included
+    expect(ids).not.toContain(canceled.id); // canceled → filtered despite bio match
+  });
+});

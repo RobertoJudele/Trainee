@@ -16,6 +16,7 @@ import {
   Validate,
   CreatedAt,
   UpdatedAt,
+  Scopes,
 } from "sequelize-typescript";
 import { User } from "./user";
 import { TrainerSpecialization } from "./trainerSpecialization";
@@ -23,7 +24,13 @@ import type { Specialization } from "./specialization";
 import { TrainerImage } from "./trainerImage";
 import { TrainerPackage } from "./trainerPackage";
 import { Review } from "./review";
+import { activeSubscriptionWhere } from "../services/billing/activeSubscriptionScope";
 
+@Scopes(() => ({
+  // Only trainers whose subscription is active per resolveEntitlement.
+  // Function scope → evaluated per query, so `now` is always fresh.
+  active: () => ({ where: activeSubscriptionWhere() }),
+}))
 @Table({
   tableName: "trainer_profiles",
   timestamps: true,
