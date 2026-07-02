@@ -8,7 +8,6 @@ import { ClientPreference } from "../models/clientPreference";
 import { Gym } from "../models/gym";
 import { TrainerGym } from "../models/trainerGym";
 import { User } from "../models/user";
-import { subStatus } from "../types/trainer";
 import { sendError, sendSuccess } from "../utils/response";
 import { toFiniteNumber } from "../utils/geo";
 
@@ -88,13 +87,7 @@ export const suggestTrainers = async (req: Request<{}, {}, {}, SuggestQuery>, re
       include: [{ model: Gym }],
     });
 
-    const trainers = await Trainer.findAll({
-      where: {
-        [Op.or]: [
-          { subscriptionStatus: subStatus.ACTIVE },
-          { subscriptionStatus: subStatus.TRIAL, trialEndsAt: { [Op.gt]: new Date() } },
-        ],
-      },
+    const trainers = await Trainer.scope("active").findAll({
       attributes: [
         "id",
         "publicId",
