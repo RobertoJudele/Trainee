@@ -13,6 +13,7 @@ import billingRouter from "./billing";
 import issueRouter from "./issue";
 import trainerScheduleRouter from "./trainerSchedule";
 import recommendationRouter from "./recommendation";
+import appVersionRouter from "./appVersion";
 import {
 	createCheckoutSession,
 	createPortalSession,
@@ -39,6 +40,7 @@ router.use("/billing", billingRouter);
 router.use("/issues", issueRouter);
 router.use("/trainer-schedule", trainerScheduleRouter);
 router.use("/recommendations", recommendationRouter);
+router.use("/version", appVersionRouter);
 
 // Backward-compatible paths used by the existing checkout screen.
 router.post(
