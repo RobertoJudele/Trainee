@@ -35,6 +35,39 @@ const PROTECTED_SLOT_STATUSES = [
   SlotStatus.NO_SHOW,
 ];
 
+// Booking a slot consumes a session from the client's oldest open pack;
+// cancelling refunds it to the newest pack with used sessions (the one the
+// last consume landed in). Pack bookkeeping must never fail the booking itself.
+const consumePackSession = async (trainerId: number, clientId: number): Promise<void> => {
+  try {
+    const packs = await ClientSessionPack.findAll({
+      where: { trainerId, clientId },
+      order: [["createdAt", "ASC"]],
+    });
+    const openPack = packs.find((p) => p.usedSessions < p.totalSessions);
+    if (openPack) {
+      await openPack.increment("usedSessions");
+    }
+  } catch (error) {
+    console.error("Failed to consume pack session:", error);
+  }
+};
+
+const refundPackSession = async (trainerId: number, clientId: number): Promise<void> => {
+  try {
+    const packs = await ClientSessionPack.findAll({
+      where: { trainerId, clientId },
+      order: [["createdAt", "DESC"]],
+    });
+    const usedPack = packs.find((p) => p.usedSessions > 0);
+    if (usedPack) {
+      await usedPack.decrement("usedSessions");
+    }
+  } catch (error) {
+    console.error("Failed to refund pack session:", error);
+  }
+};
+
 // Two [start, end) ranges overlap if each starts before the other ends.
 const rangesOverlap = (
   aStart: Date,
@@ -452,6 +485,8 @@ export const assignClientToSlot = async (req: Request<{ slotId: string }>, res: 
       checkedInAt: null,
     });
 
+    await consumePackSession(trainer.id, clientId);
+
     sendSuccess(res, 200, "Client assigned to slot", {
       slot,
     });
@@ -510,6 +545,8 @@ export const unassignClientFromSlot = async (
       return;
     }
 
+    const previousClientId = slot.clientId;
+
     await slot.update({
       clientId: null,
       note: null,
@@ -519,6 +556,10 @@ export const unassignClientFromSlot = async (
       checkInAttempts: 0,
       checkedInAt: null,
     } as any);
+
+    if (previousClientId) {
+      await refundPackSession(slot.trainerId, previousClientId);
+    }
 
     sendSuccess(res, 200, "Client unassigned from slot", { slot });
   } catch (error) {
@@ -659,6 +700,8 @@ export const assignSlotByClientCode = async (
       consumedByUserId: user.id,
     });
 
+    await consumePackSession(trainer.id, generatedCode.clientId);
+
     sendSuccess(res, 200, "Slot assigned using client code", {
       slot,
     });
@@ -727,22 +770,7 @@ export const trainerCheckInSlot = async (req: Request<{ slotId: string }>, res: 
       checkInAttempts: 0,
     });
 
-    // A confirmed check-in consumes one session from the client's oldest open pack.
-    try {
-      if (slot.clientId) {
-        const packs = await ClientSessionPack.findAll({
-          where: { trainerId: trainer.id, clientId: slot.clientId },
-          order: [["createdAt", "ASC"]],
-        });
-        const openPack = packs.find((p) => p.usedSessions < p.totalSessions);
-        if (openPack) {
-          await openPack.increment("usedSessions");
-        }
-      }
-    } catch (packError) {
-      // ponytail: a pack-count failure must never undo a confirmed check-in; trainer can adjust counts manually
-      console.error("Failed to decrement client session pack:", packError);
-    }
+    // Pack consumption happens at booking time (assign/unassign), not at check-in.
 
     sendSuccess(res, 200, "Client check-in confirmed", slot);
   } catch (error) {
@@ -929,6 +957,8 @@ export const assignSlotByCodeId = async (
       consumedAt: now,
       consumedByUserId: user.id,
     });
+
+    await consumePackSession(trainer.id, codeRecord.clientId);
 
     sendSuccess(res, 200, "Slot assigned using pending client code", {
       slot,

@@ -124,15 +124,17 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         method: "POST",
         body,
       }),
-      // Refresh both the trainer's view AND the client's schedule
-      invalidatesTags: ["TrainerSlots", "MySchedule"],
+      // Refresh both the trainer's view AND the client's schedule.
+      // Booking consumes a pack session — refresh pack counts too.
+      invalidatesTags: ["TrainerSlots", "MySchedule", "ClientPacks"],
     }),
     unassignClientFromSlot: builder.mutation<ApiResp<{ slot: ScheduleSlot }>, { slotId: number }>({
       query: ({ slotId }) => ({
         url: `/trainer-schedule/slots/${slotId}/unassign-client`,
         method: "POST",
       }),
-      invalidatesTags: ["TrainerSlots", "MySchedule"],
+      // Cancelling refunds a pack session.
+      invalidatesTags: ["TrainerSlots", "MySchedule", "ClientPacks"],
     }),
     trainerCheckInSlot: builder.mutation<ApiResp<ScheduleSlot>, { slotId: number; code: string }>({
       query: ({ slotId, code }) => ({
@@ -140,8 +142,7 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         method: "POST",
         body: { code },
       }),
-      // Check-in consumes a session from the client's pack — refresh pack counts too.
-      invalidatesTags: ["TrainerSlots", "MySchedule", "ClientPacks"],
+      invalidatesTags: ["TrainerSlots", "MySchedule"],
     }),
     assignSlotByClientCode: builder.mutation<
       ApiResp<{ slot: ScheduleSlot }>,
@@ -153,7 +154,7 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         body,
       }),
       // This is the drag-and-drop one — refresh both sides!
-      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes"],
+      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks"],
     }),
     getPendingClientCodes: builder.query<ApiResp<PendingClientCode[]>, void>({
       query: () => "/trainer-schedule/client-codes/pending",
@@ -176,7 +177,7 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         body,
       }),
       // Also the drag-and-drop variant — refresh both sides!
-      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes"],
+      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks"],
     }),
     getBlockedDates: builder.query<
       ApiResp<BlockedDate[]>,
