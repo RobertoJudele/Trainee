@@ -1,7 +1,8 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, View } from "react-native";
 import { useGenerateMyCheckInCodeMutation, useGetMyScheduleQuery, useUnassignClientFromSlotMutation } from "../features/schedule/scheduleApiSlice";
 import { useGetMyPacksQuery } from "../features/schedule/clientPackApiSlice";
+import { useGetMyTrainersQuery, useRedeemTrainerInviteMutation } from "../features/trainer/trainerInviteApiSlice";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
@@ -25,6 +26,33 @@ export default function MyScheduleScreen() {
   const slots = data?.data || [];
   const { data: packsResp } = useGetMyPacksQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
   const myPacks = packsResp?.data ?? [];
+  const [trainerCode, setTrainerCode] = useState("");
+  const [redeemInvite, { isLoading: isRedeeming }] = useRedeemTrainerInviteMutation();
+  const { data: myTrainersResp } = useGetMyTrainersQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
+  const myTrainers = myTrainersResp?.data ?? [];
+
+  const onRedeemCode = async () => {
+    const code = trainerCode.trim();
+    if (!code) return;
+    try {
+      const resp = await redeemInvite({ code }).unwrap();
+      setTrainerCode("");
+      const name = `${resp.data.firstName} ${resp.data.lastName}`.trim();
+      Alert.alert(
+        t("inviteConnectedTitle"),
+        t("inviteConnectedMsg").replace("{trainer}", name),
+        [
+          { text: t("inviteLater"), style: "cancel" },
+          {
+            text: t("inviteLeaveReview"),
+            onPress: () => router.push(`/trainers/${resp.data.trainerId}`),
+          },
+        ]
+      );
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("inviteFailed")));
+    }
+  };
 
   // Onboarding tour targets.
   const codeCardTourRef = useTourTarget("client-code-card");
@@ -147,6 +175,51 @@ export default function MyScheduleScreen() {
           )}
         </FadeInUp>
         </View>
+        <FadeInUp style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.sessionIconWrap}>
+              <Ionicons name="person-add-outline" size={16} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.title}>{t("inviteEnterTitle")}</Text>
+          </View>
+          <Text style={styles.text}>{t("inviteEnterHint")}</Text>
+          <View style={styles.inviteRow}>
+            <TextInput
+              style={styles.inviteInput}
+              value={trainerCode}
+              onChangeText={setTrainerCode}
+              placeholder={t("inviteCodePh")}
+              placeholderTextColor={theme.colors.textSecondary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <GradientButton
+              title={isRedeeming ? t("inviteConnecting") : t("inviteConnectBtn")}
+              onPress={onRedeemCode}
+              loading={isRedeeming}
+            />
+          </View>
+          {myTrainers.length > 0 && (
+            <View style={styles.myTrainersWrap}>
+              <Text style={styles.myTrainersLabel}>{t("inviteYourTrainers")}</Text>
+              {myTrainers.map((trainer) => (
+                <PressableScale
+                  key={trainer.trainerId}
+                  style={styles.myTrainerRow}
+                  onPress={() => router.push(`/trainers/${trainer.trainerId}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${trainer.firstName} ${trainer.lastName}`}
+                >
+                  <Ionicons name="barbell-outline" size={15} color={theme.colors.primary} />
+                  <Text style={styles.myTrainerName}>
+                    {trainer.firstName} {trainer.lastName}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={15} color={theme.colors.textSecondary} />
+                </PressableScale>
+              ))}
+            </View>
+          )}
+        </FadeInUp>
         {myPacks.length > 0 && (
           <FadeInUp style={styles.card}>
             <View style={styles.cardHeader}>
@@ -322,4 +395,19 @@ const styles = StyleSheet.create({
   },
   cancelBtnDisabled: { opacity: 0.5 },
   cancelBtnText: { ...typography.caption, color: theme.colors.error, fontWeight: "700", textTransform: "none" },
+  inviteRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  myTrainersWrap: { marginTop: theme.spacing.sm, gap: 6 },
+  myTrainersLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  myTrainerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  myTrainerName: { ...typography.body2, color: theme.colors.text, fontWeight: "600", flex: 1 },
+  inviteInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#CFD8E6",
+    borderRadius: theme.roundness,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    ...typography.body2,
+    color: theme.colors.text,
+  },
 });

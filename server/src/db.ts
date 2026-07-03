@@ -15,6 +15,8 @@ import { TrainerScheduleSlot } from "./models/trainerScheduleSlot";
 import { TrainerBlockedDate } from "./models/trainerBlockedDate";
 import { ClientCheckInCode } from "./models/clientCheckInCode";
 import { ClientSessionPack } from "./models/clientSessionPack";
+import { TrainerInviteCode } from "./models/trainerInviteCode";
+import { TrainerClient } from "./models/trainerClient";
 import { BillingWebhookEvent } from "./models/billingWebhookEvent";
 import { ProfileViewEvent } from "./models/profileViewEvent";
 import { BillingTransaction } from "./models/billingTransaction";
@@ -46,6 +48,8 @@ const sequelize = new Sequelize({
     TrainerBlockedDate,
     ClientCheckInCode,
     ClientSessionPack,
+    TrainerInviteCode,
+    TrainerClient,
     BillingWebhookEvent,
     ProfileViewEvent,
     BillingTransaction,

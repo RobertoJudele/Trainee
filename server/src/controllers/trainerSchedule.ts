@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import { Op } from "sequelize";
 import { ClientCheckInCode } from "../models/clientCheckInCode";
 import { ClientSessionPack } from "../models/clientSessionPack";
+import { TrainerClient } from "../models/trainerClient";
 import { Trainer } from "../models/trainer";
 import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
 import { TrainerWorkingHour } from "../models/trainerWorkingHour";
@@ -34,6 +35,19 @@ const PROTECTED_SLOT_STATUSES = [
   SlotStatus.CANCELED,
   SlotStatus.NO_SHOW,
 ];
+
+// Every client-acquisition path (manual assign, code resolve, code assign)
+// adds the client to the trainer's server-side roster. Never fatal.
+const connectTrainerClient = async (trainerId: number, clientId: number): Promise<void> => {
+  try {
+    await TrainerClient.findOrCreate({
+      where: { trainerId, clientId },
+      defaults: { trainerId, clientId },
+    });
+  } catch (error) {
+    console.error("Failed to connect trainer and client:", error);
+  }
+};
 
 // Booking a slot consumes a session from the client's oldest open pack;
 // cancelling refunds it to the newest pack with used sessions (the one the
@@ -485,6 +499,7 @@ export const assignClientToSlot = async (req: Request<{ slotId: string }>, res: 
       checkedInAt: null,
     });
 
+    await connectTrainerClient(trainer.id, clientId);
     await consumePackSession(trainer.id, clientId);
 
     sendSuccess(res, 200, "Client assigned to slot", {
@@ -700,6 +715,7 @@ export const assignSlotByClientCode = async (
       consumedByUserId: user.id,
     });
 
+    await connectTrainerClient(trainer.id, generatedCode.clientId);
     await consumePackSession(trainer.id, generatedCode.clientId);
 
     sendSuccess(res, 200, "Slot assigned using client code", {
@@ -857,6 +873,11 @@ export const resolveClientCode = async (req: Request, res: Response): Promise<vo
       return;
     }
 
+    const trainer = await getTrainerByUserId(user.id);
+    if (trainer) {
+      await connectTrainerClient(trainer.id, client.id);
+    }
+
     sendSuccess(res, 200, "Client code resolved", {
       checkInCodeId: record.id,
       expiresAt: record.expiresAt,
@@ -958,6 +979,7 @@ export const assignSlotByCodeId = async (
       consumedByUserId: user.id,
     });
 
+    await connectTrainerClient(trainer.id, codeRecord.clientId);
     await consumePackSession(trainer.id, codeRecord.clientId);
 
     sendSuccess(res, 200, "Slot assigned using pending client code", {

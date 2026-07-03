@@ -10,6 +10,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -45,6 +46,10 @@ import {
   useGetClientPacksQuery,
   useUpdateClientPackMutation,
 } from "../../features/schedule/clientPackApiSlice";
+import {
+  useGetMyConnectedClientsQuery,
+  useGetMyInviteCodeQuery,
+} from "../../features/trainer/trainerInviteApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import {
@@ -281,6 +286,20 @@ export default function TrainerDayScheduleScreen() {
   const [newSlotStart, setNewSlotStart] = useState("");
   const [newSlotEnd, setNewSlotEnd] = useState("");
 
+  // Trainer invite code + server-side client roster.
+  const { data: inviteResp } = useGetMyInviteCodeQuery();
+  const { data: connectedResp } = useGetMyConnectedClientsQuery();
+
+  const onInviteClient = async () => {
+    const code = inviteResp?.data?.code;
+    if (!code) return;
+    try {
+      await Share.share({ message: t("inviteShareMessage").replace("{code}", code) });
+    } catch {
+      // User dismissed the share sheet.
+    }
+  };
+
   // Session-pack state.
   const [packSheetClient, setPackSheetClient] = useState<PublicClient | null>(null);
   const [newPackSessions, setNewPackSessions] = useState("");
@@ -503,6 +522,10 @@ export default function TrainerDayScheduleScreen() {
   const availableClients = useMemo(() => {
     const byId = new Map<number, PublicClient>();
 
+    for (const client of connectedResp?.data || []) {
+      byId.set(client.id, client);
+    }
+
     for (const item of pendingResp?.data || []) {
       byId.set(item.client.id, item.client);
     }
@@ -523,7 +546,7 @@ export default function TrainerDayScheduleScreen() {
     }
 
     return Array.from(byId.values()).sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
-  }, [pendingResp?.data, savedClients, assignedSlots]);
+  }, [connectedResp?.data, pendingResp?.data, savedClients, assignedSlots]);
 
   const selectedClient = availableClients.find((client) => client.id === selectedClientId) || null;
   const contentBottomPadding = keyboardHeight > 0 ? keyboardHeight + 90 : 24;
@@ -1091,6 +1114,16 @@ export default function TrainerDayScheduleScreen() {
             <Text style={styles.clientPoolHint}>{t("dayClientsHint")}</Text>
           </View>
 
+          <Pressable
+            style={styles.inviteBtn}
+            onPress={onInviteClient}
+            accessibilityRole="button"
+            accessibilityLabel={t("inviteClientBtn")}
+          >
+            <Ionicons name="person-add-outline" size={16} color={theme.colors.primary} />
+            <Text style={styles.inviteBtnText}>{t("inviteClientBtn")}</Text>
+          </Pressable>
+
           <View style={styles.clientInputRow} onLayout={(event) => setClientInputY(event.nativeEvent.layout.y)}>
             <TextInput
               style={[styles.input, styles.codeInput]}
@@ -1570,5 +1603,17 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
+  },
+  inviteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
+  inviteBtnText: {
+    ...typography.body2,
+    color: theme.colors.primary,
+    fontWeight: "600",
   },
 });

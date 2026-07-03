@@ -411,6 +411,18 @@ export const updateTrainerPackageValidation = [
   }),
 ];
 
+export const redeemInviteValidation = [
+  body("code")
+    .trim()
+    .isLength({ min: 4, max: 12 })
+    .withMessage("Code must be between 4 and 12 characters.")
+    .isAlphanumeric()
+    .withMessage("Code must be alphanumeric."),
+  strictSchema({
+    body: ["code"],
+  }),
+];
+
 export const createClientPackValidation = [
   body("clientId")
     .isInt({ min: 1 })

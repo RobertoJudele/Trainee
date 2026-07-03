@@ -125,8 +125,8 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         body,
       }),
       // Refresh both the trainer's view AND the client's schedule.
-      // Booking consumes a pack session — refresh pack counts too.
-      invalidatesTags: ["TrainerSlots", "MySchedule", "ClientPacks"],
+      // Booking consumes a pack session and connects the client to the roster.
+      invalidatesTags: ["TrainerSlots", "MySchedule", "ClientPacks", "TrainerClients"],
     }),
     unassignClientFromSlot: builder.mutation<ApiResp<{ slot: ScheduleSlot }>, { slotId: number }>({
       query: ({ slotId }) => ({
@@ -154,7 +154,7 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         body,
       }),
       // This is the drag-and-drop one — refresh both sides!
-      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks"],
+      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks", "TrainerClients"],
     }),
     getPendingClientCodes: builder.query<ApiResp<PendingClientCode[]>, void>({
       query: () => "/trainer-schedule/client-codes/pending",
@@ -166,6 +166,8 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         method: "POST",
         body,
       }),
+      // Resolving a code also adds the client to the server-side roster.
+      invalidatesTags: ["TrainerClients"],
     }),
     assignSlotByCodeId: builder.mutation<
       ApiResp<{ slot: ScheduleSlot }>,
@@ -177,7 +179,7 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
         body,
       }),
       // Also the drag-and-drop variant — refresh both sides!
-      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks"],
+      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks", "TrainerClients"],
     }),
     getBlockedDates: builder.query<
       ApiResp<BlockedDate[]>,

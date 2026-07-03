@@ -51,6 +51,15 @@ export const checkoutRateLimit = createRateLimitMiddleware({
   identityExtractor: (req) => extractEmailIdentity(req.body),
 });
 
+// Reuses the auth window/max: guessing invite codes ≈ guessing credentials.
+export const inviteRedeemRateLimit = createRateLimitMiddleware({
+  keyPrefix: "inviteRedeem",
+  message: "Too many invite attempts. Please try again later.",
+  windowMs: securityConfig.rateLimit.auth.windowMs,
+  max: securityConfig.rateLimit.auth.max,
+  keyStrategy: "userOrIp",
+});
+
 export const webhookRateLimit = createRateLimitMiddleware({
   keyPrefix: "webhook",
   message: "Too many webhook requests. Please retry later.",

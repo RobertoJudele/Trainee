@@ -13,6 +13,7 @@ import billingRouter from "./billing";
 import issueRouter from "./issue";
 import trainerScheduleRouter from "./trainerSchedule";
 import clientSessionPacksRouter from "./clientSessionPacks";
+import trainerInvitesRouter from "./trainerInvites";
 import recommendationRouter from "./recommendation";
 import appVersionRouter from "./appVersion";
 import {
@@ -41,6 +42,7 @@ router.use("/billing", billingRouter);
 router.use("/issues", issueRouter);
 router.use("/trainer-schedule", trainerScheduleRouter);
 router.use("/client-packs", clientSessionPacksRouter);
+router.use("/trainer-invites", trainerInvitesRouter);
 router.use("/recommendations", recommendationRouter);
 router.use("/version", appVersionRouter);
 
