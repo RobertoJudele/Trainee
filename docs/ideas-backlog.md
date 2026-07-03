@@ -122,7 +122,8 @@ prove people care.
 ## Priority order
 
 1. ~~Session-package tracking~~ — **done** (booking consumes, cancel refunds)
-2. Trainer → client invite link + review prompt (pre-launch)
+2. ~~Trainer → client invite + review prompt~~ — **done** (share-code flow;
+   URL deep links deferred until a web domain exists, see public profiles)
 3. Check-in streaks + shareable monthly card
 4. Public trainer profile pages
 5. Session reminders
