@@ -68,10 +68,10 @@ Private notes field per client: injuries, goals, last weights, "knee acting up".
 Today this lives across WhatsApp threads. A text field on the trainer↔client
 relationship. Compounds with packs into "my whole client book is in here."
 
-### Automatic session reminders (small build)
-Push/email to the client the evening before ("Session with Andrei tomorrow at
-18:00"). No-shows are trainers' #2 pain. Schedule data + `emailService` already
-exist. Outreach framing: "the app chases your clients so you don't have to."
+### ~~Automatic session reminders~~ — done (push-only, client toggle)
+Hourly server sweep pushes "Tomorrow at 18:00 with Andrei" via Expo push to
+clients who opted in (toggle on My Schedule). Email variant skipped by choice.
+Needs FCM credentials configured in EAS for Android production builds.
 
 ### Public web profile link (moderate build)
 Server-rendered `trainee.app/t/andrei-popescu` (photo, bio, reviews, book-me CTA)
@@ -126,7 +126,7 @@ prove people care.
    URL deep links deferred until a web domain exists, see public profiles)
 3. Check-in streaks + shareable monthly card
 4. Public trainer profile pages
-5. Session reminders
+5. ~~Session reminders~~ — **done** (push-only with client toggle)
 6. Per-client notes
 7. Attendance stats
 8. Progress tracking
