@@ -1,8 +1,13 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useGenerateMyCheckInCodeMutation, useGetMyScheduleQuery, useUnassignClientFromSlotMutation } from "../features/schedule/scheduleApiSlice";
 import { useGetMyPacksQuery } from "../features/schedule/clientPackApiSlice";
 import { useGetMyTrainersQuery, useRedeemTrainerInviteMutation } from "../features/trainer/trainerInviteApiSlice";
+import {
+  useGetNotificationSettingsQuery,
+  useUpdateNotificationSettingsMutation,
+} from "../features/notifications/notificationApiSlice";
+import { registerForPushToken } from "../src/lib/pushNotifications";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
@@ -30,6 +35,30 @@ export default function MyScheduleScreen() {
   const [redeemInvite, { isLoading: isRedeeming }] = useRedeemTrainerInviteMutation();
   const { data: myTrainersResp } = useGetMyTrainersQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
   const myTrainers = myTrainersResp?.data ?? [];
+  const { data: notifResp } = useGetNotificationSettingsQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
+  const [updateNotificationSettings, { isLoading: savingReminders }] = useUpdateNotificationSettingsMutation();
+  const remindersOn = Boolean(notifResp?.data.remindersEnabled && notifResp?.data.hasToken);
+
+  const onToggleReminders = async (value: boolean) => {
+    try {
+      if (value) {
+        const token = await registerForPushToken();
+        if (!token) {
+          Alert.alert(t("error"), t("remindersPermissionDenied"));
+          return;
+        }
+        await updateNotificationSettings({
+          expoPushToken: token,
+          remindersEnabled: true,
+          locale: language,
+        }).unwrap();
+      } else {
+        await updateNotificationSettings({ remindersEnabled: false }).unwrap();
+      }
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("error")));
+    }
+  };
 
   const onRedeemCode = async () => {
     const code = trainerCode.trim();
@@ -175,6 +204,22 @@ export default function MyScheduleScreen() {
           )}
         </FadeInUp>
         </View>
+        <FadeInUp style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={styles.sessionIconWrap}>
+              <Ionicons name="notifications-outline" size={16} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.title}>{t("remindersTitle")}</Text>
+            <Switch
+              value={remindersOn}
+              onValueChange={onToggleReminders}
+              disabled={savingReminders}
+              trackColor={{ true: theme.colors.primary }}
+              style={{ marginLeft: "auto" }}
+            />
+          </View>
+          <Text style={styles.text}>{t("remindersHint")}</Text>
+        </FadeInUp>
         <FadeInUp style={styles.card}>
           <View style={styles.cardHeader}>
             <View style={styles.sessionIconWrap}>

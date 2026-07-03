@@ -14,6 +14,7 @@ import issueRouter from "./issue";
 import trainerScheduleRouter from "./trainerSchedule";
 import clientSessionPacksRouter from "./clientSessionPacks";
 import trainerInvitesRouter from "./trainerInvites";
+import notificationsRouter from "./notifications";
 import recommendationRouter from "./recommendation";
 import appVersionRouter from "./appVersion";
 import {
@@ -43,6 +44,7 @@ router.use("/issues", issueRouter);
 router.use("/trainer-schedule", trainerScheduleRouter);
 router.use("/client-packs", clientSessionPacksRouter);
 router.use("/trainer-invites", trainerInvitesRouter);
+router.use("/notifications", notificationsRouter);
 router.use("/recommendations", recommendationRouter);
 router.use("/version", appVersionRouter);
 

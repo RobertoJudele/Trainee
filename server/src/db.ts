@@ -17,6 +17,8 @@ import { ClientCheckInCode } from "./models/clientCheckInCode";
 import { ClientSessionPack } from "./models/clientSessionPack";
 import { TrainerInviteCode } from "./models/trainerInviteCode";
 import { TrainerClient } from "./models/trainerClient";
+import { UserPushToken } from "./models/userPushToken";
+import { SlotReminder } from "./models/slotReminder";
 import { BillingWebhookEvent } from "./models/billingWebhookEvent";
 import { ProfileViewEvent } from "./models/profileViewEvent";
 import { BillingTransaction } from "./models/billingTransaction";
@@ -50,6 +52,8 @@ const sequelize = new Sequelize({
     ClientSessionPack,
     TrainerInviteCode,
     TrainerClient,
+    UserPushToken,
+    SlotReminder,
     BillingWebhookEvent,
     ProfileViewEvent,
     BillingTransaction,

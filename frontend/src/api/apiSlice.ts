@@ -118,6 +118,7 @@ export const apiSlice = createApi({
     "ClientPacks",
     "TrainerClients",
     "MyTrainers",
+    "NotificationSettings",
   ],
   endpoints: (builder) => ({}),
 });

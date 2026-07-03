@@ -12,6 +12,7 @@ import {
   ensureSpatialAndSearchInfrastructure,
 } from "./services/databaseBootstrap";
 import { seedSpecializations } from "./seeds/specializationSeed";
+import { startSessionReminderScheduler } from "./services/sessionReminders";
 import { seedAppMinVersion } from "./seeds/appMinVersionSeed";
 import { getMissingRequiredSecurityEnv, securityConfig } from "./config/security";
 import {
@@ -106,6 +107,8 @@ const startServer = async () => {
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server listening on port ${PORT}`);
     });
+
+    startSessionReminderScheduler();
   } catch (error) {
     console.error("❌ Database startup failed:", error);
     process.exit(1);

@@ -411,6 +411,25 @@ export const updateTrainerPackageValidation = [
   }),
 ];
 
+export const updateNotificationSettingsValidation = [
+  body("expoPushToken")
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ max: 200 })
+    .withMessage("Push token must be at most 200 characters."),
+  body("remindersEnabled")
+    .optional()
+    .isBoolean()
+    .withMessage("remindersEnabled must be a boolean."),
+  body("locale")
+    .optional()
+    .isIn(["en", "ro"])
+    .withMessage("locale must be en or ro."),
+  strictSchema({
+    body: ["expoPushToken", "remindersEnabled", "locale"],
+  }),
+];
+
 export const redeemInviteValidation = [
   body("code")
     .trim()
