@@ -42,8 +42,8 @@ added since (session packs, invites, push reminders) are covered here.
     `noTrainersFound` with clear-filters CTA), Map (`noGymsFound`), My Schedule
     (`noUpcomingSessions` + `canGenerateCode`), reviews (`noReviewsYet`). Suggested
     trainers hook exists but is not wired to any screen — no surface, nothing to fix.
-  - [ ] (c) explain the geography in the App Review notes ("marketplace launching in
-    Cluj-Napoca, Romania — use the demo accounts to see populated data")
+  - [~] (c) App Review notes drafted 2026-07-09 in `APP_STORE_REVIEW_NOTES.md` —
+    paste into App Store Connect at submission; still need to fill contact phone/email.
 
 ## 2. Apple account & agreements
 
@@ -103,9 +103,14 @@ real functionality.
 ### In-app copy
 
 - [x] ✅ EN + RO translations across all 25 screens
-- [ ] ⚠️ Sweep for untranslated/dev-ish strings — known example: `Session #{id}`
-  hardcoded in English on My Schedule; also check Alert titles like "Unavailable",
-  "No Active Subscription" in checkout.tsx (English-only)
+- [x] ✅ Untranslated strings fixed (2026-07-09): `Session #{id}` on My Schedule now
+  `sessionLabel`; checkout screen's native IAP path fully localized (EN+RO) — IAP
+  notice, all purchase/restore alerts, status banners, "Paid" badge, trial note, and
+  the required auto-renewal disclosure; store period words ("month"/"months") also
+  localized. ~35 new keys. tsc clean.
+  Residuals left intentionally: Stripe web-checkout-only strings (ProductDisplay,
+  WebBillingModeNotice, "Order canceled…") never render on iOS; one rare thrown
+  "entitlement not active yet" error message stays English (diagnostic edge case).
 - [ ] ☐ No "TODO", "test", lorem ipsum, or debug text anywhere in UI
 - [ ] ☐ Romanian diacritics render correctly in the shipped font
 
@@ -128,11 +133,13 @@ real functionality.
 Raw icon sizes in the codebase are below 44pt and rely on `hitSlop` — verify the
 *effective* target reaches 44pt:
 
-- [ ] ⚠️ Pack sheet +/− buttons: 24pt icons + `hitSlop 8` = 40pt effective — bump
-  hitSlop to 10+
-- [ ] ⚠️ Slot delete trash icon: 18pt + `hitSlop 8` = 34pt — bump hitSlop to 13+
-- [ ] ⚠️ Pack badge on slot card: `hitSlop 6` — bump
-- [ ] ☐ Audit remaining small Pressables (3-dots menus, chevrons) the same way
+- [x] ✅ Pack sheet +/−/delete buttons (2026-07-09): now 44×44 centered hit boxes
+  (`packActionBtn` style), hitSlop removed so adjacent targets don't overlap.
+- [x] ✅ Slot delete trash icon: hitSlop bumped 8→13 (18pt icon → 44pt effective).
+- [x] ✅ Pack badge on slot card: `minHeight: 44` centered (was hitSlop 6) — can't
+  overlap the unassign button below it.
+- [x] ✅ Audited the rest: the day kebab menu is already a 40×40 box + hitSlop (~56pt);
+  the collapsible-card chevron wraps its full-width header row, so both are fine.
 
 ### Type & layout
 

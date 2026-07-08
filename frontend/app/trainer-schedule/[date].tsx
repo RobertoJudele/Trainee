@@ -922,7 +922,7 @@ export default function TrainerDayScheduleScreen() {
                     <Pressable
                       onPress={() => onAdjustPack(pack.id, pack.usedSessions - 1)}
                       disabled={pack.usedSessions <= 0}
-                      hitSlop={8}
+                      style={styles.packActionBtn}
                       accessibilityRole="button"
                       accessibilityLabel={t("packMarkUnused")}
                     >
@@ -935,7 +935,7 @@ export default function TrainerDayScheduleScreen() {
                     <Pressable
                       onPress={() => onAdjustPack(pack.id, pack.usedSessions + 1)}
                       disabled={pack.usedSessions >= pack.totalSessions}
-                      hitSlop={8}
+                      style={styles.packActionBtn}
                       accessibilityRole="button"
                       accessibilityLabel={t("packMarkUsed")}
                     >
@@ -951,7 +951,7 @@ export default function TrainerDayScheduleScreen() {
                     </Pressable>
                     <Pressable
                       onPress={() => onDeletePack(pack.id)}
-                      hitSlop={8}
+                      style={styles.packActionBtn}
                       accessibilityRole="button"
                       accessibilityLabel={t("packDelete")}
                     >
@@ -1032,7 +1032,7 @@ export default function TrainerDayScheduleScreen() {
                           <StatusBadge status={slot.status} />
                           <Pressable
                             onPress={() => onDeleteSlot(slot.id)}
-                            hitSlop={8}
+                            hitSlop={13}
                             accessibilityRole="button"
                             accessibilityLabel={`Delete slot at ${shortTime(slot.startsAt)}`}
                           >
@@ -1072,7 +1072,6 @@ export default function TrainerDayScheduleScreen() {
                           <Pressable
                             style={styles.packRow}
                             onPress={() => setPackSheetClient(client)}
-                            hitSlop={6}
                             accessibilityRole="button"
                             accessibilityLabel={t("packTitle")}
                           >
@@ -1580,6 +1579,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     alignSelf: "flex-start",
+    minHeight: 44,
     marginTop: 4,
     marginBottom: 4,
   },
@@ -1602,7 +1602,13 @@ const styles = StyleSheet.create({
   packItemActions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+    gap: 4,
+  },
+  packActionBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   inviteBtn: {
     flexDirection: "row",

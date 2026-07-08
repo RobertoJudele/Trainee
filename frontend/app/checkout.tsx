@@ -95,11 +95,14 @@ type RevenueCatPurchaseResult = {
 	customerInfo?: RevenueCatCustomerInfo;
 };
 
-// Turns a store period (e.g. unit "MONTH", count 1) into "1 month" / "2 weeks".
-const describePeriod = (unit?: string, count?: number): string => {
+type Translate = (key: string) => string;
+
+// Turns a store period (e.g. unit "MONTH", count 1) into "1 month" / "2 weeks",
+// localized via the passed translator.
+const describePeriod = (t: Translate, unit?: string, count?: number): string => {
 	const n = Number(count) > 0 ? Number(count) : 1;
 	const normalized = String(unit || "").trim().toUpperCase().replace(/^P/, "");
-	const word =
+	const base =
 		normalized.startsWith("DAY") || normalized === "D"
 			? "day"
 			: normalized.startsWith("WEEK") || normalized === "W"
@@ -107,12 +110,12 @@ const describePeriod = (unit?: string, count?: number): string => {
 				: normalized.startsWith("YEAR") || normalized === "Y"
 					? "year"
 					: "month";
-	return `${n} ${word}${n === 1 ? "" : "s"}`;
+	return `${n} ${t(`period_${base}_${n === 1 ? "one" : "other"}`)}`;
 };
 
 // Returns a free-trial label (e.g. "1 month free") if the package's product carries a
 // free introductory offer, otherwise null. Apple/Google decide actual eligibility.
-const getFreeTrialLabel = (pkg?: RevenueCatPackage | null): string | null => {
+const getFreeTrialLabel = (t: Translate, pkg?: RevenueCatPackage | null): string | null => {
 	const product = pkg?.product;
 	if (!product) {
 		return null;
@@ -120,12 +123,12 @@ const getFreeTrialLabel = (pkg?: RevenueCatPackage | null): string | null => {
 
 	const intro = product.introPrice;
 	if (intro && Number(intro.price) === 0) {
-		return `${describePeriod(intro.periodUnit, intro.periodNumberOfUnits)} free`;
+		return `${describePeriod(t, intro.periodUnit, intro.periodNumberOfUnits)} ${t("freeSuffix")}`;
 	}
 
 	const freePhase = product.defaultOption?.freePhase;
 	if (freePhase?.billingPeriod) {
-		return `${describePeriod(freePhase.billingPeriod.unit ?? undefined, freePhase.billingPeriod.value ?? undefined)} free`;
+		return `${describePeriod(t, freePhase.billingPeriod.unit ?? undefined, freePhase.billingPeriod.value ?? undefined)} ${t("freeSuffix")}`;
 	}
 
 	return null;
@@ -248,15 +251,15 @@ const Message = ({ message }: MessageProps) => (
 	</View>
 );
 
-const NativeIapNotice = () => (
-	<View style={styles.section}>
-		<Text style={styles.title}>RevenueCat Billing</Text>
-		<Text style={styles.message}>
-			Subscriptions are handled through Apple App Store / Google Play via RevenueCat
-			 in this release.
-		</Text>
-	</View>
-);
+const NativeIapNotice = () => {
+	const { t } = useLanguage();
+	return (
+		<View style={styles.section}>
+			<Text style={styles.title}>{t("iapNoticeTitle")}</Text>
+			<Text style={styles.message}>{t("iapNoticeBody")}</Text>
+		</View>
+	);
+};
 
 const WebBillingModeNotice = () => (
 	<View style={styles.section}>
@@ -390,18 +393,18 @@ export default function CheckoutScreen() {
 			|| selectedPackage
 			|| packages[0];
 		if (monthlyPkg?.product?.priceString) {
-			return `${monthlyPkg.product.priceString} / month`;
+			return `${monthlyPkg.product.priceString} ${t("perMonthSuffix")}`;
 		}
 		const latestTx = transactions[0]; // best-effort fallback
 		if (latestTx) {
-			return `${Number(latestTx.amount).toFixed(2)} ${latestTx.currency} / month`;
+			return `${Number(latestTx.amount).toFixed(2)} ${latestTx.currency} ${t("perMonthSuffix")}`;
 		}
 		return "—";
-	}, [packages, selectedPackage, transactions]);
+	}, [packages, selectedPackage, transactions, t]);
 
 	const selectedTrialLabel = useMemo(
-		() => getFreeTrialLabel(selectedPackage || packages[0]),
-		[selectedPackage, packages]
+		() => getFreeTrialLabel(t, selectedPackage || packages[0]),
+		[selectedPackage, packages, t]
 	);
 
 	const subscribeLabel = selectedTrialLabel ? t("startFreeTrial") : t("subscribeNow");
@@ -577,12 +580,12 @@ export default function CheckoutScreen() {
 	const startCheckout = async () => {
 		if (isNativeApp) {
 			if (!user) {
-				Alert.alert("Login Required", "Please sign in before starting a subscription.");
+				Alert.alert(t("loginRequired"), t("loginRequiredMsg"));
 				return;
 			}
 
 			if (!selectedPackage) {
-				Alert.alert("Selection Required", "Please choose a subscription package.");
+				Alert.alert(t("selectionRequired"), t("selectionRequiredMsg"));
 				return;
 			}
 
@@ -616,7 +619,7 @@ export default function CheckoutScreen() {
 				});
 
 				setSuccess(true);
-				setMessage("Subscription activated successfully.");
+				setMessage(t("subscriptionActivatedMsg"));
 				void refetchEntitlement();
 			} catch (error) {
 				const typedError = error as { userCancelled?: boolean; code?: string; message?: string };
@@ -625,15 +628,11 @@ export default function CheckoutScreen() {
 				const isAlreadyLinked = errorCode.includes("receiptalreadyinuse") || errorCode === "36" || errorCode.includes("already in use");
 
 				if (wasCancelled) {
-					setMessage("Purchase cancelled.");
+					setMessage(t("purchaseCancelledMsg"));
 				} else if (isAlreadyLinked) {
-					Alert.alert(
-						"Subscription Already Linked",
-						"This App Store subscription is already active on another Trainee account. Please sign in with that account, or use a different Apple ID to subscribe."
-					);
+					Alert.alert(t("subscriptionAlreadyLinked"), t("subscriptionAlreadyLinkedMsg"));
 				} else {
-					const fallback = "Unable to complete purchase. Please try again.";
-					Alert.alert("Purchase Error", typedError.message || fallback);
+					Alert.alert(t("purchaseErrorTitle"), typedError.message || t("purchaseErrorMsg"));
 				}
 			} finally {
 				setLoading(false);
@@ -737,7 +736,7 @@ export default function CheckoutScreen() {
 		}
 
 		if (!user) {
-			Alert.alert("Login Required", "Please sign in before restoring purchases.");
+			Alert.alert(t("loginRequired"), t("loginRequiredMsg"));
 			return;
 		}
 
@@ -749,7 +748,7 @@ export default function CheckoutScreen() {
 			const entitlement = resolveEntitlement(customerInfo);
 
 			if (!entitlement) {
-				Alert.alert("No Active Subscription", "No active subscription was found to restore.");
+				Alert.alert(t("noActiveSubscription"), t("noActiveSubscriptionMsg"));
 				return;
 			}
 
@@ -761,7 +760,7 @@ export default function CheckoutScreen() {
 			});
 
 			setSuccess(true);
-			setMessage("Purchases restored successfully.");
+			setMessage(t("purchasesRestoredMsg"));
 			void refetchEntitlement();
 		} catch (error) {
 			const typedError = error as { code?: string; message?: string };
@@ -769,15 +768,9 @@ export default function CheckoutScreen() {
 			const isAlreadyLinked = errorCode.includes("receiptalreadyinuse") || errorCode === "36" || errorCode.includes("already in use");
 
 			if (isAlreadyLinked) {
-				Alert.alert(
-					"Subscription Already Linked",
-					"This App Store subscription is already active on another Trainee account. Please sign in with that account to use it."
-				);
+				Alert.alert(t("subscriptionAlreadyLinked"), t("subscriptionAlreadyLinkedMsg"));
 			} else {
-				Alert.alert(
-					"Restore Error",
-					typedError.message || "Unable to restore purchases. Please try again."
-				);
+				Alert.alert(t("restoreErrorTitle"), typedError.message || t("restoreErrorMsg"));
 			}
 		} finally {
 			setIsRestoring(false);
@@ -812,7 +805,7 @@ export default function CheckoutScreen() {
 							<View style={styles.errorBanner}>
 								<Ionicons name="warning" size={20} color={theme.colors.error} style={{ marginRight: 8 }} />
 								<Text style={styles.errorBannerText}>
-									Payment failed. Please update your billing method in your store settings to avoid loss of access.
+									{t("paymentFailedBanner")}
 								</Text>
 							</View>
 						)}
@@ -821,7 +814,7 @@ export default function CheckoutScreen() {
 							<View style={styles.warningBanner}>
 								<Ionicons name="alert-circle" size={20} color={theme.colors.warning} style={{ marginRight: 8 }} />
 								<Text style={styles.warningBannerText}>
-									Your subscription is canceled and will expire on {formatDateString(entitlement.expiresAt)}.
+									{t("subscriptionCanceledExpires").replace("{date}", formatDateString(entitlement.expiresAt))}
 								</Text>
 							</View>
 						)}
@@ -830,7 +823,7 @@ export default function CheckoutScreen() {
 							<View style={styles.infoBanner}>
 								<Ionicons name="information-circle" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
 								<Text style={styles.infoBannerText}>
-									Your subscription is set to renew on {formatDateString(entitlement.expiresAt)}.
+									{t("subscriptionRenewsOn").replace("{date}", formatDateString(entitlement.expiresAt))}
 								</Text>
 							</View>
 						)}
@@ -884,7 +877,7 @@ export default function CheckoutScreen() {
 							<View style={styles.infoBanner}>
 								<Ionicons name="information-circle" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
 								<Text style={styles.infoBannerText}>
-									Your subscription was purchased on {getProviderLabel(entitlement?.source || "none")}. You'll be redirected there to manage it.
+									{t("crossPlatformNotice").replace("{provider}", getProviderLabel(entitlement?.source || "none"))}
 								</Text>
 							</View>
 						)}
@@ -946,7 +939,7 @@ export default function CheckoutScreen() {
 											</Text>
 											<View style={[styles.smallBadge, { backgroundColor: tx.status === "paid" ? theme.colors.success + "15" : theme.colors.error + "15" }]}>
 												<Text style={[styles.smallBadgeText, { color: tx.status === "paid" ? theme.colors.success : theme.colors.error }]}>
-													{tx.status === "paid" ? "Paid" : tx.status}
+													{tx.status === "paid" ? t("paidStatus") : tx.status}
 												</Text>
 											</View>
 										</View>
@@ -1039,7 +1032,9 @@ export default function CheckoutScreen() {
 
 									{selectedTrialLabel && (
 										<Text style={styles.trialNote}>
-											{selectedTrialLabel.charAt(0).toUpperCase() + selectedTrialLabel.slice(1)}, then {monthlyPriceLabel}. Cancel anytime before the trial ends and you won't be charged.
+											{t("trialThenPrice")
+												.replace("{trial}", selectedTrialLabel.charAt(0).toUpperCase() + selectedTrialLabel.slice(1))
+												.replace("{price}", monthlyPriceLabel)}
 										</Text>
 									)}
 
@@ -1090,8 +1085,10 @@ export default function CheckoutScreen() {
 
 									<Text style={styles.legalDisclaimer}>
 										{selectedTrialLabel
-											? `Your ${selectedTrialLabel} starts today. After it ends, the subscription automatically renews at ${monthlyPriceLabel} unless auto-renew is turned off at least 24 hours before the end of the current period. You can manage or cancel anytime in your App Store account settings.`
-											: "Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel your subscription in your App Store account settings after purchase."}
+											? t("autoRenewTrialDisclosure")
+												.replace("{trial}", selectedTrialLabel)
+												.replace("{price}", monthlyPriceLabel)
+											: t("autoRenewDisclosure")}
 									</Text>
 									<View style={styles.legalLinksRow}>
 										<Pressable

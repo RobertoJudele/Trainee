@@ -424,6 +424,51 @@ const en: Record<string, string> = {
   subscriptionSuccessful: "Subscription successful!",
   manageBilling: "Manage Billing Information",
 
+  // ─── Checkout alerts, notices & IAP disclosures ──────────
+  iapNoticeTitle: "Subscription Billing",
+  iapNoticeBody: "Subscriptions are managed securely through the App Store.",
+  loginRequired: "Login Required",
+  loginRequiredMsg: "Please sign in to continue.",
+  selectionRequired: "Selection Required",
+  selectionRequiredMsg: "Please choose a subscription package.",
+  purchaseErrorTitle: "Purchase Error",
+  purchaseErrorMsg: "Unable to complete purchase. Please try again.",
+  restoreErrorTitle: "Restore Error",
+  restoreErrorMsg: "Unable to restore purchases. Please try again.",
+  subscriptionAlreadyLinked: "Subscription Already Linked",
+  subscriptionAlreadyLinkedMsg:
+    "This App Store subscription is already active on another Trainee account. Please sign in with that account, or use a different Apple ID to subscribe.",
+  noActiveSubscription: "No Active Subscription",
+  noActiveSubscriptionMsg: "No active subscription was found to restore.",
+  purchaseCancelledMsg: "Purchase cancelled.",
+  subscriptionActivatedMsg: "Subscription activated successfully.",
+  purchasesRestoredMsg: "Purchases restored successfully.",
+  perMonthSuffix: "/ month",
+  paidStatus: "Paid",
+  paymentFailedBanner:
+    "Payment failed. Please update your billing method in your store settings to avoid loss of access.",
+  subscriptionCanceledExpires:
+    "Your subscription is canceled and will expire on {date}.",
+  subscriptionRenewsOn: "Your subscription is set to renew on {date}.",
+  crossPlatformNotice:
+    "Your subscription was purchased on {provider}. You'll be redirected there to manage it.",
+  trialThenPrice:
+    "{trial}, then {price}. Cancel anytime before the trial ends and you won't be charged.",
+  autoRenewTrialDisclosure:
+    "Your {trial} starts today. After it ends, the subscription automatically renews at {price} unless auto-renew is turned off at least 24 hours before the end of the current period. You can manage or cancel anytime in your App Store account settings.",
+  autoRenewDisclosure:
+    "Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel your subscription in your App Store account settings after purchase.",
+  period_day_one: "day",
+  period_day_other: "days",
+  period_week_one: "week",
+  period_week_other: "weeks",
+  period_month_one: "month",
+  period_month_other: "months",
+  period_year_one: "year",
+  period_year_other: "years",
+  freeSuffix: "free",
+  sessionLabel: "Session #{id}",
+
   // ─── Legal screen ────────────────────────────────────────
   settings: "Settings",
   reviewLegalSubtitle: "Review the service terms and privacy policy from one place.",
@@ -1153,6 +1198,51 @@ const ro: Record<string, string> = {
   privacyPolicy: "Politica de confidențialitate",
   subscriptionSuccessful: "Abonament realizat cu succes!",
   manageBilling: "Gestionează informațiile de facturare",
+
+  // ─── Checkout alerts, notices & IAP disclosures ──────────
+  iapNoticeTitle: "Facturare abonament",
+  iapNoticeBody: "Abonamentele sunt gestionate în siguranță prin App Store.",
+  loginRequired: "Autentificare necesară",
+  loginRequiredMsg: "Te rugăm să te autentifici pentru a continua.",
+  selectionRequired: "Selecție necesară",
+  selectionRequiredMsg: "Te rugăm să alegi un pachet de abonament.",
+  purchaseErrorTitle: "Eroare la achiziție",
+  purchaseErrorMsg: "Nu am putut finaliza achiziția. Te rugăm să încerci din nou.",
+  restoreErrorTitle: "Eroare la restaurare",
+  restoreErrorMsg: "Nu am putut restaura achizițiile. Te rugăm să încerci din nou.",
+  subscriptionAlreadyLinked: "Abonament deja asociat",
+  subscriptionAlreadyLinkedMsg:
+    "Acest abonament App Store este deja activ pe alt cont Trainee. Te rugăm să te autentifici cu acel cont sau să folosești un alt Apple ID pentru abonare.",
+  noActiveSubscription: "Niciun abonament activ",
+  noActiveSubscriptionMsg: "Nu s-a găsit niciun abonament activ de restaurat.",
+  purchaseCancelledMsg: "Achiziție anulată.",
+  subscriptionActivatedMsg: "Abonament activat cu succes.",
+  purchasesRestoredMsg: "Achiziții restaurate cu succes.",
+  perMonthSuffix: "/ lună",
+  paidStatus: "Plătit",
+  paymentFailedBanner:
+    "Plata a eșuat. Te rugăm să îți actualizezi metoda de plată în setările magazinului pentru a evita pierderea accesului.",
+  subscriptionCanceledExpires:
+    "Abonamentul tău este anulat și va expira pe {date}.",
+  subscriptionRenewsOn: "Abonamentul tău se va reînnoi pe {date}.",
+  crossPlatformNotice:
+    "Abonamentul tău a fost achiziționat pe {provider}. Vei fi redirecționat acolo pentru a-l gestiona.",
+  trialThenPrice:
+    "{trial}, apoi {price}. Anulează oricând înainte de finalul perioadei de probă și nu vei fi taxat.",
+  autoRenewTrialDisclosure:
+    "{trial} începe astăzi. După ce se termină, abonamentul se reînnoiește automat la {price} dacă reînnoirea automată nu este dezactivată cu cel puțin 24 de ore înainte de finalul perioadei curente. Poți gestiona sau anula oricând din setările contului App Store.",
+  autoRenewDisclosure:
+    "Abonamentul se reînnoiește automat dacă reînnoirea automată nu este dezactivată cu cel puțin 24 de ore înainte de finalul perioadei curente. Contul tău este taxat pentru reînnoire în ultimele 24 de ore ale perioadei curente. Poți gestiona sau anula abonamentul din setările contului App Store după achiziție.",
+  period_day_one: "zi",
+  period_day_other: "zile",
+  period_week_one: "săptămână",
+  period_week_other: "săptămâni",
+  period_month_one: "lună",
+  period_month_other: "luni",
+  period_year_one: "an",
+  period_year_other: "ani",
+  freeSuffix: "gratis",
+  sessionLabel: "Sesiune #{id}",
 
   // ─── Legal screen ────────────────────────────────────────
   settings: "Setări",

@@ -321,7 +321,7 @@ export default function MyScheduleScreen() {
                 <View style={styles.sessionIconWrap}>
                   <Ionicons name="calendar" size={16} color={theme.colors.primary} />
                 </View>
-                <Text style={styles.title}>Session #{item.id}</Text>
+                <Text style={styles.title}>{t("sessionLabel").replace("{id}", String(item.id))}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: `${statusColor}18` }]}>
                   <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
                 </View>
