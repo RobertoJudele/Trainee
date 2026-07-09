@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useGenerateMyCheckInCodeMutation, useGetMyScheduleQuery, useUnassignClientFromSlotMutation } from "../features/schedule/scheduleApiSlice";
 import { useGetMyPacksQuery } from "../features/schedule/clientPackApiSlice";
 import { useGetMyTrainersQuery, useRedeemTrainerInviteMutation } from "../features/trainer/trainerInviteApiSlice";
@@ -9,12 +9,13 @@ import {
 } from "../features/notifications/notificationApiSlice";
 import { registerForPushToken } from "../src/lib/pushNotifications";
 import { useSelector } from "react-redux";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, GradientButton, PressableScale } from "../src/components/ui";
+import ProfileMenuModal, { type ProfileMenuItem } from "../src/components/ProfileMenuModal";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
@@ -28,6 +29,8 @@ export default function MyScheduleScreen() {
   const [unassignSlot] = useUnassignClientFromSlotMutation();
   const [cancellingSlotId, setCancellingSlotId] = useState<number | null>(null);
   const [generatedCode, setGeneratedCode] = useState<{ code: string; expiresAt: string } | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [connectVisible, setConnectVisible] = useState(false);
   const slots = data?.data || [];
   const { data: packsResp } = useGetMyPacksQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
   const myPacks = packsResp?.data ?? [];
@@ -124,6 +127,33 @@ export default function MyScheduleScreen() {
     );
   }, [unassignSlot]);
 
+  const menuItems: ProfileMenuItem[] = [
+    {
+      key: "reminders",
+      icon: "notifications-outline",
+      label: t("remindersTitle"),
+      onPress: () => {},
+      disabled: savingReminders,
+      trailing: (
+        <Switch
+          value={remindersOn}
+          onValueChange={onToggleReminders}
+          disabled={savingReminders}
+          trackColor={{ true: theme.colors.primary }}
+        />
+      ),
+    },
+    {
+      key: "connect",
+      icon: "person-add-outline",
+      label: t("inviteEnterTitle"),
+      onPress: () => {
+        setMenuVisible(false);
+        setConnectVisible(true);
+      },
+    },
+  ];
+
   if (user?.role !== UserRole.CLIENT) {
     return (
       <View style={styles.centered}>
@@ -167,6 +197,21 @@ export default function MyScheduleScreen() {
   }
 
   return (
+    <>
+    <Stack.Screen
+      options={{
+        headerRight: () => (
+          <PressableScale
+            onPress={() => setMenuVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t("openProfileMenu")}
+            style={{ paddingHorizontal: 4, paddingVertical: 4 }}
+          >
+            <Ionicons name="ellipsis-vertical" size={22} color={theme.colors.text} />
+          </PressableScale>
+        ),
+      }}
+    />
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -204,67 +249,6 @@ export default function MyScheduleScreen() {
           )}
         </FadeInUp>
         </View>
-        <FadeInUp style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.sessionIconWrap}>
-              <Ionicons name="notifications-outline" size={16} color={theme.colors.primary} />
-            </View>
-            <Text style={styles.title}>{t("remindersTitle")}</Text>
-            <Switch
-              value={remindersOn}
-              onValueChange={onToggleReminders}
-              disabled={savingReminders}
-              trackColor={{ true: theme.colors.primary }}
-              style={{ marginLeft: "auto" }}
-            />
-          </View>
-          <Text style={styles.text}>{t("remindersHint")}</Text>
-        </FadeInUp>
-        <FadeInUp style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.sessionIconWrap}>
-              <Ionicons name="person-add-outline" size={16} color={theme.colors.primary} />
-            </View>
-            <Text style={styles.title}>{t("inviteEnterTitle")}</Text>
-          </View>
-          <Text style={styles.text}>{t("inviteEnterHint")}</Text>
-          <View style={styles.inviteRow}>
-            <TextInput
-              style={styles.inviteInput}
-              value={trainerCode}
-              onChangeText={setTrainerCode}
-              placeholder={t("inviteCodePh")}
-              placeholderTextColor={theme.colors.textSecondary}
-              autoCapitalize="characters"
-              autoCorrect={false}
-            />
-            <GradientButton
-              title={isRedeeming ? t("inviteConnecting") : t("inviteConnectBtn")}
-              onPress={onRedeemCode}
-              loading={isRedeeming}
-            />
-          </View>
-          {myTrainers.length > 0 && (
-            <View style={styles.myTrainersWrap}>
-              <Text style={styles.myTrainersLabel}>{t("inviteYourTrainers")}</Text>
-              {myTrainers.map((trainer) => (
-                <PressableScale
-                  key={trainer.trainerId}
-                  style={styles.myTrainerRow}
-                  onPress={() => router.push(`/trainers/${trainer.trainerId}`)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${trainer.firstName} ${trainer.lastName}`}
-                >
-                  <Ionicons name="barbell-outline" size={15} color={theme.colors.primary} />
-                  <Text style={styles.myTrainerName}>
-                    {trainer.firstName} {trainer.lastName}
-                  </Text>
-                  <Ionicons name="chevron-forward" size={15} color={theme.colors.textSecondary} />
-                </PressableScale>
-              ))}
-            </View>
-          )}
-        </FadeInUp>
         {myPacks.length > 0 && (
           <FadeInUp style={styles.card}>
             <View style={styles.cardHeader}>
@@ -353,6 +337,77 @@ export default function MyScheduleScreen() {
         );
       }}
     />
+    <ProfileMenuModal
+      visible={menuVisible}
+      onClose={() => setMenuVisible(false)}
+      items={menuItems}
+    />
+    <Modal
+      visible={connectVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setConnectVisible(false)}
+    >
+      <Pressable style={styles.sheetOverlay} onPress={() => setConnectVisible(false)}>
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <View style={styles.cardHeader}>
+            <View style={styles.sessionIconWrap}>
+              <Ionicons name="person-add-outline" size={16} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.title}>{t("inviteEnterTitle")}</Text>
+            <PressableScale
+              onPress={() => setConnectVisible(false)}
+              style={{ marginLeft: "auto" }}
+              accessibilityRole="button"
+              accessibilityLabel={t("close")}
+            >
+              <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
+            </PressableScale>
+          </View>
+          <Text style={styles.text}>{t("inviteEnterHint")}</Text>
+          <View style={styles.inviteRow}>
+            <TextInput
+              style={styles.inviteInput}
+              value={trainerCode}
+              onChangeText={setTrainerCode}
+              placeholder={t("inviteCodePh")}
+              placeholderTextColor={theme.colors.textSecondary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <GradientButton
+              title={isRedeeming ? t("inviteConnecting") : t("inviteConnectBtn")}
+              onPress={onRedeemCode}
+              loading={isRedeeming}
+            />
+          </View>
+          {myTrainers.length > 0 && (
+            <View style={styles.myTrainersWrap}>
+              <Text style={styles.myTrainersLabel}>{t("inviteYourTrainers")}</Text>
+              {myTrainers.map((trainer) => (
+                <PressableScale
+                  key={trainer.trainerId}
+                  style={styles.myTrainerRow}
+                  onPress={() => {
+                    setConnectVisible(false);
+                    router.push(`/trainers/${trainer.trainerId}`);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${trainer.firstName} ${trainer.lastName}`}
+                >
+                  <Ionicons name="barbell-outline" size={15} color={theme.colors.primary} />
+                  <Text style={styles.myTrainerName}>
+                    {trainer.firstName} {trainer.lastName}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={15} color={theme.colors.textSecondary} />
+                </PressableScale>
+              ))}
+            </View>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </>
   );
 }
 
@@ -440,6 +495,16 @@ const styles = StyleSheet.create({
   },
   cancelBtnDisabled: { opacity: 0.5 },
   cancelBtnText: { ...typography.caption, color: theme.colors.error, fontWeight: "700", textTransform: "none" },
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxl,
+    gap: 6,
+    ...theme.shadows.medium,
+  },
   inviteRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
   myTrainersWrap: { marginTop: theme.spacing.sm, gap: 6 },
   myTrainersLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
