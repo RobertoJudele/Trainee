@@ -5,6 +5,7 @@ import { selectCurrentToken, selectCurrentTrainer, selectCurrentUser, setCredent
 import { requestTrainerTour } from "../../features/onboarding/onboardingSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
+import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   useGetSpecializationsQuery,
   SpecializationItem,
@@ -270,15 +271,10 @@ export default function CreateTrainer() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8}}>
-              <Ionicons name="sparkles" size={24} color={theme.colors.primary} style={{marginRight: 8}} />
-              <Text style={[styles.title, {marginBottom: 0}]}>{t("createTrainerProfile")}</Text>
-            </View>
-            <Text style={styles.subtitle}>
-              {t("createTrainerSubtitle")}
-            </Text>
-          </View>
+          <ScreenHeader
+            title={t("createTrainerProfile")}
+            subtitle={t("createTrainerSubtitle")}
+          />
 
           <View style={styles.form}>
             {/* Error Message */}
@@ -515,28 +511,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 30,
-    backgroundColor: "white",
-    borderBottomLeftRadius: theme.roundness,
-    borderBottomRightRadius: theme.roundness,
-    ...theme.shadows.medium,
-  },
-  title: {
-    ...typography.h2,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 22,
   },
   form: {
     padding: 24,

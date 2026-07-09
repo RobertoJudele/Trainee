@@ -19,8 +19,8 @@ import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { FadeInUp, PressableScale } from "../src/components/ui";
+import ScreenHeader from "../src/components/ScreenHeader";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -269,6 +269,7 @@ export default function SearchScreen() {
 
   return (
     <View style={styles.container}>
+      <ScreenHeader title={t("findTrainers")} />
       {/* ── Search bar ── */}
       <View style={styles.topBar}>
         <View style={styles.searchRow}>

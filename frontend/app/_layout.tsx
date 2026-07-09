@@ -148,7 +148,8 @@ export default function RootLayout() {
           <Stack.Screen name="UserProfile" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
-          <Stack.Screen name="search" options={{ title: "Find Trainers", headerBackButtonDisplayMode: "minimal" }} />
+          <Stack.Screen name="search" options={{ headerShown: false }} />
+          <Stack.Screen name="create-trainer" options={{ headerShown: false }} />
           <Stack.Screen name="map" options={{ headerShown: false }} />
           <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details", headerBackButtonDisplayMode: "minimal" }} />
           <Stack.Screen name="my-gyms" options={{ title: "My Gyms" }} />
