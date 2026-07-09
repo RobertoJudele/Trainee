@@ -83,6 +83,7 @@ const styles = StyleSheet.create({
   },
   backButton: { position: "absolute", top: 0, left: 16, padding: 8, marginTop: 48 },
   menuButton: { position: "absolute", top: 0, right: 16, padding: 8, marginTop: 48 },
-  title: { ...typography.h2, color: "#fff", marginBottom: 8, textAlign: "center" },
-  subtitle: { ...typography.body2, color: "rgba(255,255,255,0.9)", textAlign: "center", marginTop: -4, marginBottom: 4 },
+  // Horizontal padding keeps long/centered titles clear of the absolute corner buttons.
+  title: { ...typography.h2, color: "#fff", marginBottom: 8, textAlign: "center", paddingHorizontal: 40 },
+  subtitle: { ...typography.body2, color: "rgba(255,255,255,0.9)", textAlign: "center", marginTop: -4, marginBottom: 4, paddingHorizontal: 24 },
 });
