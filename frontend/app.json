@@ -165,7 +165,8 @@
             "newArchEnabled": false
           }
         }
-      ]
+      ],
+      "./plugins/withFmtFix"
     ],
     "extra": {
       "router": {},
