@@ -17,6 +17,7 @@ import trainerInvitesRouter from "./trainerInvites";
 import notificationsRouter from "./notifications";
 import recommendationRouter from "./recommendation";
 import appVersionRouter from "./appVersion";
+import blockRouter from "./userBlock";
 import {
 	createCheckoutSession,
 	createPortalSession,
@@ -47,6 +48,7 @@ router.use("/trainer-invites", trainerInvitesRouter);
 router.use("/notifications", notificationsRouter);
 router.use("/recommendations", recommendationRouter);
 router.use("/version", appVersionRouter);
+router.use("/blocks", blockRouter);
 
 // Backward-compatible paths used by the existing checkout screen.
 router.post(

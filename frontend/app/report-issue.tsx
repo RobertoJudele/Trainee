@@ -25,24 +25,12 @@ export default function ReportIssueScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
 
-  const categories: Array<{ value: IssueCategory; label: string }> = [
-    { value: "trainer_behavior", label: t("trainerBehavior") },
-    { value: "booking_no_show", label: t("bookingNoShow") },
-    { value: "technical_bug", label: t("technicalBug") },
-    { value: "payment_issue", label: t("paymentIssue") },
-    { value: "other", label: t("other") },
-  ];
-
-  const targetLabels: Partial<Record<IssueTargetType, string>> = {
-    app: t("generalAppIssue"),
-    trainer: t("trainerIssue"),
-    booking: t("bookingIssue"),
-  };
   const params = useLocalSearchParams<{
     targetType?: IssueTargetType;
     trainerId?: string;
     trainerPublicId?: string;
     bookingId?: string;
+    reviewId?: string;
   }>();
 
   const [createIssue, { isLoading }] = useCreateIssueMutation();
@@ -50,9 +38,31 @@ export default function ReportIssueScreen() {
   const targetType: IssueTargetType =
     params.targetType === "trainer" ||
     params.targetType === "booking" ||
-    params.targetType === "app"
+    params.targetType === "app" ||
+    params.targetType === "review"
       ? params.targetType
       : "app";
+
+  const categories: Array<{ value: IssueCategory; label: string }> =
+    targetType === "review"
+      ? [
+          { value: "objectionable_content", label: t("objectionableContent") },
+          { value: "other", label: t("other") },
+        ]
+      : [
+          { value: "trainer_behavior", label: t("trainerBehavior") },
+          { value: "booking_no_show", label: t("bookingNoShow") },
+          { value: "technical_bug", label: t("technicalBug") },
+          { value: "payment_issue", label: t("paymentIssue") },
+          { value: "other", label: t("other") },
+        ];
+
+  const targetLabels: Partial<Record<IssueTargetType, string>> = {
+    app: t("generalAppIssue"),
+    trainer: t("trainerIssue"),
+    booking: t("bookingIssue"),
+    review: t("reviewIssue"),
+  };
 
   const trainerId = useMemo(() => {
     const value = Number(params.trainerId);
@@ -70,8 +80,15 @@ export default function ReportIssueScreen() {
     return Number.isFinite(value) && value > 0 ? value : undefined;
   }, [params.bookingId]);
 
+  const reviewId = useMemo(() => {
+    const value = Number(params.reviewId);
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+  }, [params.reviewId]);
+
   const [category, setCategory] = useState<IssueCategory>(
-    targetType === "trainer"
+    targetType === "review"
+      ? "objectionable_content"
+      : targetType === "trainer"
       ? "trainer_behavior"
       : targetType === "booking"
       ? "booking_no_show"
@@ -91,15 +108,24 @@ export default function ReportIssueScreen() {
       return;
     }
 
-    const payload: CreateIssueRequest = {
-      targetType,
-      category,
-      title: title.trim(),
-      description: description.trim(),
-      trainerId,
-      trainerPublicId,
-      bookingId,
-    };
+    const payload: CreateIssueRequest =
+      targetType === "review"
+        ? {
+            targetType,
+            category,
+            title: title.trim(),
+            description: description.trim(),
+            metadata: { reviewId, trainerId },
+          }
+        : {
+            targetType,
+            category,
+            title: title.trim(),
+            description: description.trim(),
+            trainerId,
+            trainerPublicId,
+            bookingId,
+          };
 
     try {
       await createIssue(payload).unwrap();

@@ -202,6 +202,25 @@ const en: Record<string, string> = {
   reportIssueTitle: "Report Issue",
   reportIssueSubtitle: "Help us resolve problems faster.",
 
+  // ─── Moderation: report & block (App Store guideline 1.2) ──
+  objectionableContent: "Objectionable content",
+  reviewIssue: "Review report",
+  reportReview: "Report review",
+  reviewOptions: "Review options",
+  blockUser: "Block this user",
+  blockTrainer: "Block trainer",
+  blockTrainerTitle: "Block this trainer?",
+  blockTrainerConfirm: "You won't see this trainer's profile or reviews until you unblock them.",
+  block: "Block",
+  unblock: "Unblock",
+  couldNotBlockUser: "Could not block this user. Please try again.",
+  couldNotUnblockUser: "Could not unblock this user. Please try again.",
+  trainerBlocked: "You blocked this trainer",
+  trainerBlockedHint: "Unblock to see their profile and reviews again.",
+  blockedAccounts: "Blocked accounts",
+  noBlockedAccounts: "You haven't blocked anyone.",
+  blockedUserFallback: "Blocked user",
+
   // ─── Gym requests ─────────────────────────────────────────
   requestGymTitle: "Request a Gym",
   requestGymSubtitle: "Can't find your gym? Tell us about it and we'll add it.",
@@ -976,6 +995,25 @@ const ro: Record<string, string> = {
   // ─── Report Issue screen ─────────────────────────────────
   reportIssueTitle: "Raportează o problemă",
   reportIssueSubtitle: "Ajută-ne să rezolvăm problemele mai repede.",
+
+  // ─── Moderare: raportare & blocare (ghid App Store 1.2) ────
+  objectionableContent: "Conținut neadecvat",
+  reviewIssue: "Raportare recenzie",
+  reportReview: "Raportează recenzia",
+  reviewOptions: "Opțiuni recenzie",
+  blockUser: "Blochează utilizatorul",
+  blockTrainer: "Blochează antrenorul",
+  blockTrainerTitle: "Blochezi acest antrenor?",
+  blockTrainerConfirm: "Nu vei mai vedea profilul sau recenziile acestui antrenor până nu îl deblochezi.",
+  block: "Blochează",
+  unblock: "Deblochează",
+  couldNotBlockUser: "Nu am putut bloca acest utilizator. Încearcă din nou.",
+  couldNotUnblockUser: "Nu am putut debloca acest utilizator. Încearcă din nou.",
+  trainerBlocked: "Ai blocat acest antrenor",
+  trainerBlockedHint: "Deblochează pentru a-i vedea din nou profilul și recenziile.",
+  blockedAccounts: "Conturi blocate",
+  noBlockedAccounts: "Nu ai blocat pe nimeni.",
+  blockedUserFallback: "Utilizator blocat",
 
   // ─── Solicitări săli ──────────────────────────────────────
   requestGymTitle: "Solicită o sală",

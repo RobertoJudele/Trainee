@@ -64,6 +64,10 @@ export default function UserProfile() {
       onPress: () => { setMenuVisible(false); router.push({ pathname: "/report-issue", params: { targetType: "app" } }); },
     },
     {
+      key: "blocked", icon: "ban-outline", label: t("blockedAccounts"),
+      onPress: () => { setMenuVisible(false); router.push("/blocked-accounts"); },
+    },
+    {
       key: "tour", icon: "help-circle-outline", label: t("showTutorial"),
       onPress: () => { setMenuVisible(false); startTour(clientTour); },
     },

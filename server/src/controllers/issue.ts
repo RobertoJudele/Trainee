@@ -93,6 +93,14 @@ export const createIssue = async (
       }
     }
 
+    if (targetType === IssueTargetType.REVIEW) {
+      const reviewId = Number((metadata as Record<string, unknown> | undefined)?.reviewId);
+      if (!Number.isFinite(reviewId) || reviewId <= 0) {
+        sendError(res, 400, "Review reports require metadata.reviewId");
+        return;
+      }
+    }
+
     const duplicateWindowStart = new Date(Date.now() - 10 * 60 * 1000);
     const duplicateWhere: Record<string, unknown> = {
       reporterId: user.id,

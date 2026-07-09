@@ -177,4 +177,28 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
   await sequelize.query(
     "ALTER TYPE enum_issues_category ADD VALUE IF NOT EXISTS 'gym_request';"
   ).catch((err) => console.warn("Could not add 'gym_request' category enum value:", err.message));
+
+  // Report-a-review ticket type (App Store guideline 1.2 UGC moderation).
+  await sequelize.query(
+    "ALTER TYPE enum_issues_target_type ADD VALUE IF NOT EXISTS 'review';"
+  ).catch((err) => console.warn("Could not add 'review' target_type enum value:", err.message));
+  await sequelize.query(
+    "ALTER TYPE enum_issues_category ADD VALUE IF NOT EXISTS 'objectionable_content';"
+  ).catch((err) => console.warn("Could not add 'objectionable_content' category enum value:", err.message));
+
+  // Create user_blocks table if not exists (block abusive users — guideline 1.2)
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS user_blocks (
+      id SERIAL PRIMARY KEY,
+      blocker_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      blocked_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TIMESTAMP WITH TIME ZONE NOT NULL,
+      updated_at TIMESTAMP WITH TIME ZONE NOT NULL
+    );
+  `);
+
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_blocks_pair
+    ON user_blocks (blocker_id, blocked_id);
+  `);
 };

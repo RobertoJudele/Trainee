@@ -17,6 +17,12 @@ import {
 const portrait = (g: "men" | "women", n: number) =>
   `https://randomuser.me/api/portraits/${g}/${n}.jpg`;
 
+// Comped access for demo/review accounts: a long-running trial. The entitlement
+// rule (activeSubscriptionScope.ts) treats status 'trial' with a future trialEndsAt
+// as active regardless of provider — so no real purchase is needed to unlock
+// gated trainer features or to show the trainer in search.
+const COMP_UNTIL = new Date(Date.now() + 10 * 365 * 24 * 60 * 60 * 1000);
+
 type DemoTrainer = {
   email: string;
   firstName: string;
@@ -161,7 +167,8 @@ async function seed() {
           locationCountry: "Romania",
           isAvailable: true,
           isFeatured: d.featured,
-          subscriptionStatus: "active", // ensures it shows in search
+          subscriptionStatus: "trial", // comped trial → counts as active in search + gated features
+          trialEndsAt: COMP_UNTIL,
           billingProvider: "none",
         } as any,
       });
@@ -169,7 +176,7 @@ async function seed() {
         bio: d.bio, experienceYears: d.experienceYears, hourlyRate: d.hourlyRate,
         sessionRate: d.sessionRate, locationCity: d.city, locationState: d.state,
         locationCountry: "Romania", isAvailable: true, isFeatured: d.featured,
-        subscriptionStatus: "active", billingProvider: "none",
+        subscriptionStatus: "trial", trialEndsAt: COMP_UNTIL, billingProvider: "none",
       } as any);
 
       // assign 2 specializations

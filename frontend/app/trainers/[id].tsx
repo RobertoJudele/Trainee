@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  AlertButton,
   Linking,
   TextInput,
   Pressable,
@@ -23,6 +24,11 @@ import {
   Review,
 } from "../../features/review/reviewApiSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
+import {
+  useGetBlockedUsersQuery,
+  useBlockUserMutation,
+  useUnblockUserMutation,
+} from "../../features/block/blockApiSlice";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../../src/lib/theme";
@@ -178,10 +184,26 @@ export default function TrainerDetailsScreen() {
 
   const trainerInternalId = trainer?.internalId;
 
+  const { data: blockedData } = useGetBlockedUsersQuery();
+  const blockedIds = React.useMemo(
+    () => new Set((blockedData?.data ?? []).map((u) => u.id)),
+    [blockedData]
+  );
+  const [blockUser] = useBlockUserMutation();
+  const [unblockUser] = useUnblockUserMutation();
+  const trainerUserId = trainer?.userId;
+  const isTrainerBlocked =
+    typeof trainerUserId === "number" && blockedIds.has(trainerUserId);
+
   const { data: reviewsData } = useGetTrainerReviewsQuery(trainerInternalId!, {
     skip: !trainerInternalId,
   });
-  const reviews = reviewsData?.data ?? [];
+  // ponytail: block filtering is client-side. Reviews are served from a public
+  // (unauthenticated) endpoint, so the blocker's identity isn't known server-side.
+  // Move to server-side (optional-auth on GET /reviews) if network-level hiding is needed.
+  const reviews = (reviewsData?.data ?? []).filter(
+    (r) => !r.client || !blockedIds.has(r.client.id)
+  );
 
   const { data: packagesResponse } = useGetTrainerPackagesQuery(trainerInternalId!, {
     skip: !trainerInternalId,
@@ -272,6 +294,60 @@ export default function TrainerDetailsScreen() {
       },
     ]);
   }, [trainerInternalId, deleteReview, t]);
+
+  const doBlockUser = useCallback(async (userId: number) => {
+    try {
+      await blockUser({ blockedUserId: userId }).unwrap();
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotBlockUser")));
+    }
+  }, [blockUser, t]);
+
+  const handleUnblockTrainer = useCallback(async () => {
+    const userId = trainer?.userId;
+    if (typeof userId !== "number") return;
+    try {
+      await unblockUser(userId).unwrap();
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotUnblockUser")));
+    }
+  }, [trainer?.userId, unblockUser, t]);
+
+  const handleBlockTrainer = useCallback(() => {
+    const userId = trainer?.userId;
+    if (typeof userId !== "number") return;
+    Alert.alert(t("blockTrainerTitle"), t("blockTrainerConfirm"), [
+      { text: t("cancel"), style: "cancel" },
+      { text: t("block"), style: "destructive", onPress: () => void doBlockUser(userId) },
+    ]);
+  }, [trainer?.userId, doBlockUser, t]);
+
+  const handleReviewOptions = useCallback((review: Review) => {
+    const authorId = review.client?.id;
+    const buttons: AlertButton[] = [
+      {
+        text: t("reportReview"),
+        onPress: () =>
+          router.push({
+            pathname: "/report-issue",
+            params: {
+              targetType: "review",
+              reviewId: String(review.id),
+              trainerId: trainerInternalId ? String(trainerInternalId) : "",
+            },
+          }),
+      },
+    ];
+    if (typeof authorId === "number") {
+      buttons.push({
+        text: t("blockUser"),
+        style: "destructive",
+        onPress: () => void doBlockUser(authorId),
+      });
+    }
+    buttons.push({ text: t("cancel"), style: "cancel" });
+    Alert.alert(t("reviewOptions"), undefined, buttons);
+  }, [t, router, trainerInternalId, doBlockUser]);
 
   const fullName =
     [trainer?.user?.firstName ?? params.firstName, trainer?.user?.lastName ?? params.lastName]
@@ -385,6 +461,34 @@ export default function TrainerDetailsScreen() {
           accessibilityLabel={t("tryAgain")}
         >
           <Text style={styles.primaryButtonText}>{t("tryAgain")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (isTrainerBlocked) {
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="ban-outline" size={48} color={theme.colors.textSecondary} />
+        <Text style={styles.errorText}>{t("trainerBlocked")}</Text>
+        <Text style={styles.loadingText}>{t("trainerBlockedHint")}</Text>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleUnblockTrainer}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={t("unblock")}
+        >
+          <Text style={styles.primaryButtonText}>{t("unblock")}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={t("goBackButton")}
+          style={{ marginTop: 12 }}
+        >
+          <Text style={{ color: theme.colors.textSecondary }}>{t("goBackButton")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -553,6 +657,17 @@ export default function TrainerDetailsScreen() {
                     </Pressable>
                   </View>
                 )}
+                {!isOwn && (
+                  <Pressable
+                    onPress={() => handleReviewOptions(review)}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={t("reviewOptions")}
+                    style={styles.reviewActionBtn}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textSecondary} />
+                  </Pressable>
+                )}
               </View>
               {review.reviewText ? (
                 <Text style={styles.reviewText}>{review.reviewText}</Text>
@@ -679,6 +794,16 @@ export default function TrainerDetailsScreen() {
         accessibilityLabel={t("reportIssue")}
       >
         <Text style={styles.secondaryButtonText}>{t("reportIssue")}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={handleBlockTrainer}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={t("blockTrainer")}
+      >
+        <Text style={styles.secondaryButtonText}>{t("blockTrainer")}</Text>
       </TouchableOpacity>
     </ScrollView>
   );

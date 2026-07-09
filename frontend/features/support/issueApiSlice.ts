@@ -1,12 +1,13 @@
 import { apiSlice } from "../../src/api/apiSlice";
 
-export type IssueTargetType = "trainer" | "booking" | "app" | "gym";
+export type IssueTargetType = "trainer" | "booking" | "app" | "gym" | "review";
 export type IssueCategory =
   | "trainer_behavior"
   | "booking_no_show"
   | "technical_bug"
   | "payment_issue"
   | "gym_request"
+  | "objectionable_content"
   | "other";
 
 export interface CreateIssueRequest {
