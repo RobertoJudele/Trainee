@@ -346,6 +346,7 @@ export default function MyScheduleScreen() {
       visible={menuVisible}
       onClose={() => setMenuVisible(false)}
       items={menuItems}
+      scrollable={false}
     />
     <Modal
       visible={connectVisible}
