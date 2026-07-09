@@ -11,6 +11,7 @@ import { registerForPushToken } from "../src/lib/pushNotifications";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
@@ -157,33 +158,34 @@ export default function MyScheduleScreen() {
   ];
 
   const renderHeader = (withMenu: boolean) => (
-    <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-      <PressableScale
+    <LinearGradient
+      colors={[theme.colors.primary, theme.colors.tertiary]}
+      style={[styles.headerGradient, { paddingTop: Math.max(insets.top + 12, 48) }]}
+    >
+      <Pressable
+        style={styles.backButton}
         onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-        hitSlop={8}
+        accessible
         accessibilityRole="button"
         accessibilityLabel="Go back"
-        style={styles.headerBtn}
       >
         <Ionicons name="arrow-back" size={24} color="#fff" />
-      </PressableScale>
-      <Text style={styles.headerTitle} numberOfLines={1}>{t("mySchedule")}</Text>
-      {withMenu ? (
-        <PressableScale
+      </Pressable>
+
+      {withMenu && (
+        <Pressable
+          style={styles.menuButton}
           onPress={() => setMenuVisible(true)}
-          hitSlop={8}
+          accessible
           accessibilityRole="button"
           accessibilityLabel={t("openProfileMenu")}
-          style={styles.headerBtn}
         >
           <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-        </PressableScale>
-      ) : (
-        <View style={styles.headerBtn}>
-          <Ionicons name="ellipsis-vertical" size={22} color="transparent" />
-        </View>
+        </Pressable>
       )}
-    </View>
+
+      <Text style={styles.headerName}>{t("mySchedule")}</Text>
+    </LinearGradient>
   );
 
   if (user?.role !== UserRole.CLIENT) {
@@ -441,16 +443,32 @@ export default function MyScheduleScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.background },
-  header: {
-    flexDirection: "row",
+  headerGradient: {
+    paddingBottom: 32,
+    paddingHorizontal: 20,
     alignItems: "center",
-    backgroundColor: theme.colors.primary,
-    paddingHorizontal: theme.spacing.xs,
-    paddingBottom: 12,
-    gap: 4,
+    position: "relative",
   },
-  headerBtn: { padding: 8 },
-  headerTitle: { flex: 1, textAlign: "center", color: "#fff", fontWeight: "bold", fontSize: 18 },
+  backButton: {
+    position: "absolute",
+    top: 0,
+    left: 16,
+    padding: 8,
+    marginTop: 48,
+  },
+  menuButton: {
+    position: "absolute",
+    top: 0,
+    right: 16,
+    padding: 8,
+    marginTop: 48,
+  },
+  headerName: {
+    ...typography.h2,
+    color: "#fff",
+    marginBottom: 8,
+    textAlign: "center",
+  },
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background, padding: theme.spacing.lg },
