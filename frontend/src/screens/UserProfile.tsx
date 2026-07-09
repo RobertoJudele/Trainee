@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
-  Pressable,
   StyleSheet,
   ScrollView,
 } from "react-native";
@@ -12,19 +11,17 @@ import { useDeleteProfileMutation } from "../../features/users/usersApiSlicet";
 import { useRouter } from "expo-router";
 import { theme, typography } from "../lib/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import EditableAvatar from "../components/EditableAvatar";
 import { useProfilePictureUpload } from "../lib/useProfilePictureUpload";
 import { useTour } from "../components/onboarding/TourContext";
 import { clientTour } from "../components/onboarding/clientTour";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import ProfileMenuModal, { type ProfileMenuItem } from "../components/ProfileMenuModal";
+import ScreenHeader from "../components/ScreenHeader";
 import { useAccountActions } from "../hooks/useAccountActions";
 
 export default function UserProfile() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const user = useSelector(selectCurrentUser);
   const { t, language, setLanguage } = useLanguage();
 
@@ -87,30 +84,10 @@ export default function UserProfile() {
     <>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         {/* Header */}
-        <LinearGradient
-          colors={[theme.colors.primary, theme.colors.tertiary]}
-          style={[styles.headerGradient, { paddingTop: Math.max(insets.top + 12, 48) }]}
+        <ScreenHeader
+          onMenuPress={() => setMenuVisible(true)}
+          menuAccessibilityLabel={t("openProfileMenu")}
         >
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.back()}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </Pressable>
-
-          <Pressable
-            style={styles.menuButton}
-            onPress={() => setMenuVisible(true)}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={t("openProfileMenu")}
-          >
-            <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-          </Pressable>
-
           <View style={styles.avatarWrap}>
             <EditableAvatar
               imageUrl={user?.profileImageUrl}
@@ -126,7 +103,7 @@ export default function UserProfile() {
           <View style={styles.roleBadge}>
             <Text style={styles.roleBadgeText}>{t("member")}</Text>
           </View>
-        </LinearGradient>
+        </ScreenHeader>
 
         {/* Info Card */}
         <View style={styles.card}>
@@ -177,26 +154,6 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: 40,
-  },
-  headerGradient: {
-    paddingBottom: 32,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    position: "relative",
-  },
-  backButton: {
-    position: "absolute",
-    top: 0,
-    left: 16,
-    padding: 8,
-    marginTop: 48,
-  },
-  menuButton: {
-    position: "absolute",
-    top: 0,
-    right: 16,
-    padding: 8,
-    marginTop: 48,
   },
   avatarWrap: {
     marginTop: 16,

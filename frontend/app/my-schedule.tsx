@@ -10,14 +10,13 @@ import {
 import { registerForPushToken } from "../src/lib/pushNotifications";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, GradientButton, PressableScale } from "../src/components/ui";
 import ProfileMenuModal, { type ProfileMenuItem } from "../src/components/ProfileMenuModal";
+import ScreenHeader from "../src/components/ScreenHeader";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
@@ -25,7 +24,6 @@ import { getApiErrorMessage } from "../src/lib/errors";
 export default function MyScheduleScreen() {
   const { t, language } = useLanguage();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const user = useSelector(selectCurrentUser);
   const { data, isLoading, isError, refetch, isFetching } = useGetMyScheduleQuery();
   const [generateCode, { isLoading: isGeneratingCode }] = useGenerateMyCheckInCodeMutation();
@@ -158,34 +156,11 @@ export default function MyScheduleScreen() {
   ];
 
   const renderHeader = (withMenu: boolean) => (
-    <LinearGradient
-      colors={[theme.colors.primary, theme.colors.tertiary]}
-      style={[styles.headerGradient, { paddingTop: Math.max(insets.top + 12, 48) }]}
-    >
-      <Pressable
-        style={styles.backButton}
-        onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
-        accessible
-        accessibilityRole="button"
-        accessibilityLabel="Go back"
-      >
-        <Ionicons name="arrow-back" size={24} color="#fff" />
-      </Pressable>
-
-      {withMenu && (
-        <Pressable
-          style={styles.menuButton}
-          onPress={() => setMenuVisible(true)}
-          accessible
-          accessibilityRole="button"
-          accessibilityLabel={t("openProfileMenu")}
-        >
-          <Ionicons name="ellipsis-vertical" size={22} color="#fff" />
-        </Pressable>
-      )}
-
-      <Text style={styles.headerName}>{t("mySchedule")}</Text>
-    </LinearGradient>
+    <ScreenHeader
+      title={t("mySchedule")}
+      onMenuPress={withMenu ? () => setMenuVisible(true) : undefined}
+      menuAccessibilityLabel={t("openProfileMenu")}
+    />
   );
 
   if (user?.role !== UserRole.CLIENT) {
@@ -443,32 +418,6 @@ export default function MyScheduleScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.background },
-  headerGradient: {
-    paddingBottom: 32,
-    paddingHorizontal: 20,
-    alignItems: "center",
-    position: "relative",
-  },
-  backButton: {
-    position: "absolute",
-    top: 0,
-    left: 16,
-    padding: 8,
-    marginTop: 48,
-  },
-  menuButton: {
-    position: "absolute",
-    top: 0,
-    right: 16,
-    padding: 8,
-    marginTop: 48,
-  },
-  headerName: {
-    ...typography.h2,
-    color: "#fff",
-    marginBottom: 8,
-    textAlign: "center",
-  },
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background, padding: theme.spacing.lg },
