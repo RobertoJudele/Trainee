@@ -9,6 +9,8 @@ import { theme, typography } from "../lib/theme";
 interface ScreenHeaderProps {
   /** Centered title. Omit when passing richer content via children (e.g. an avatar block). */
   title?: string;
+  /** Optional centered subtitle under the title. */
+  subtitle?: string;
   /** Show the back arrow (top-left). Default true. */
   showBack?: boolean;
   /** Override back behavior. Defaults to router.back() with a home fallback. */
@@ -24,6 +26,7 @@ interface ScreenHeaderProps {
 /** Brand gradient header shared across screens with `headerShown: false`. */
 export default function ScreenHeader({
   title,
+  subtitle,
   showBack = true,
   onBack,
   onMenuPress,
@@ -65,6 +68,7 @@ export default function ScreenHeader({
       )}
 
       {title ? <Text style={styles.title}>{title}</Text> : null}
+      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {children}
     </LinearGradient>
   );
@@ -80,4 +84,5 @@ const styles = StyleSheet.create({
   backButton: { position: "absolute", top: 0, left: 16, padding: 8, marginTop: 48 },
   menuButton: { position: "absolute", top: 0, right: 16, padding: 8, marginTop: 48 },
   title: { ...typography.h2, color: "#fff", marginBottom: 8, textAlign: "center" },
+  subtitle: { ...typography.body2, color: "rgba(255,255,255,0.9)", textAlign: "center", marginTop: -4, marginBottom: 4 },
 });

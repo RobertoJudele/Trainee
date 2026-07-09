@@ -12,11 +12,10 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../src/lib/theme";
 import { GradientButton } from "../src/components/ui";
+import ScreenHeader from "../src/components/ScreenHeader";
 import { useGetSpecializationsQuery, SpecializationItem } from "../features/trainer/trainerApiSlice";
 import { useGetAllGymsQuery, GymMarker } from "../features/gym/gymApiSlice";
 import {
@@ -39,7 +38,6 @@ const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => 
 
 export default function PreferencesScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { t, language } = useLanguage();
 
   const GOAL_OPTIONS = [
@@ -193,22 +191,10 @@ export default function PreferencesScreen() {
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <LinearGradient
-          colors={[theme.colors.primary, theme.colors.tertiary]}
-          style={[styles.headerGradient, { paddingTop: Math.max(insets.top + 12, 48) }]}
-        >
-          <Pressable
-            style={styles.backButton}
-            onPress={() => router.back()}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="arrow-back" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>{t("editPreferencesTitle")}</Text>
-          <Text style={styles.headerSubtitle}>{t("editPreferencesSubtitle")}</Text>
-        </LinearGradient>
+        <ScreenHeader
+          title={t("editPreferencesTitle")}
+          subtitle={t("editPreferencesSubtitle")}
+        />
 
         {preferencesLoading ? (
           <View style={styles.loadingContainer}>
@@ -457,23 +443,6 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { paddingBottom: theme.spacing.xxl },
-  headerGradient: {
-    paddingBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.lg,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    ...theme.shadows.medium,
-  },
-  backButton: {
-    position: "absolute",
-    top: 0,
-    left: 16,
-    padding: 8,
-    marginTop: 48,
-  },
-  headerTitle: { ...typography.h2, color: "#fff", marginTop: theme.spacing.xl, marginBottom: theme.spacing.xs },
-  headerSubtitle: { ...typography.body2, color: "rgba(255,255,255,0.85)" },
-
   loadingContainer: { paddingVertical: theme.spacing.xxl, alignItems: "center" },
 
   form: { padding: theme.spacing.lg, gap: theme.spacing.lg },

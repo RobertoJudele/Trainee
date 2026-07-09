@@ -3,7 +3,6 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -12,9 +11,8 @@ import {
 } from "react-native";
 import { useSelector } from "react-redux";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ScreenHeader from "../src/components/ScreenHeader";
 import {
   deviceTimeZone,
   useGenerateSlotsMutation,
@@ -42,7 +40,6 @@ const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
 export default function TrainerScheduleScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const user = useSelector(selectCurrentUser);
   const { t, language } = useLanguage();
 
@@ -194,28 +191,7 @@ export default function TrainerScheduleScreen() {
     >
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View ref={heroTourRef} collapsable={false}>
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.hero, { paddingTop: Math.max(insets.top + 12, 48) }]}
-          >
-            <View style={styles.headerRow}>
-              <Pressable
-                style={styles.backButton}
-                onPress={() => router.back()}
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-              >
-                <Ionicons name="arrow-back" size={24} color="#fff" />
-              </Pressable>
-              <Text style={styles.headerTitle}>{t("scheduleTitle")}</Text>
-              <View style={styles.backButton} />
-            </View>
-            <Text style={styles.heroSubtitle}>
-              {t("scheduleSubtitle")}
-            </Text>
-          </LinearGradient>
+          <ScreenHeader title={t("scheduleTitle")} subtitle={t("scheduleSubtitle")} />
         </View>
 
         <View style={styles.body}>
@@ -358,30 +334,6 @@ const styles = StyleSheet.create({
   },
   lockTitle: { ...typography.h3, color: theme.colors.text },
   lockText: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
-
-  hero: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingBottom: theme.spacing.lg,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    ...theme.shadows.medium,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  backButton: {
-    padding: 4,
-    width: 32,
-  },
-  headerTitle: {
-    ...typography.h1,
-    color: "#FFFFFF",
-    flex: 1,
-    textAlign: "center",
-  },
-  heroTitle: { ...typography.h1, color: "#FFFFFF" },
-  heroSubtitle: { ...typography.body2, color: "rgba(255,255,255,0.9)", marginTop: 4 },
 
   body: { padding: theme.spacing.lg, gap: theme.spacing.md },
 
