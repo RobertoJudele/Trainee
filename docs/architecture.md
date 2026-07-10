@@ -1,4 +1,4 @@
-# Trainee App - System Architecture
+# Salvio App - System Architecture
 
 ## Technical Stack
 * **Frontend**: React Native, Expo, Redux Toolkit (RTK Query), `redux-persist` for session retention.
@@ -9,7 +9,7 @@
 ## Directory Structure Map
 
 ```text
-Trainee-dev/
+Salvio-dev/
 ├── docs/                     # Global project documentation
 ├── frontend/                 # Expo React Native App
 │   ├── app/                  # Expo Router file-based screens

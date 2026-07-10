@@ -1,4 +1,4 @@
-# Trainee — Project Map
+# Salvio — Project Map
 
 Fitness trainer marketplace: React Native (Expo) frontend + Node.js/Express backend.
 Monorepo at `C:\dev\Trainee` with two main directories.

@@ -45,7 +45,7 @@
 ## App Configuration
 
 ### Display Name & Icons ✅
-- ✅ App name: "Trainee" (clear and concise)
+- ✅ App name: "Salvio" (clear and concise)
 - ✅ App icon: ./assets/icon.png
 - ✅ Splash screen: ./assets/splash-icon.png
 - ✅ Adaptive icon (Android): ./assets/adaptive-icon.png

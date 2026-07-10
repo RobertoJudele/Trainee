@@ -1,7 +1,7 @@
 # App Store & Google Play Screenshots — Strategy & Caption Copy
 
 **Date:** 2026-06-23
-**App:** Trainee (fitness trainer marketplace)
+**App:** Salvio (fitness trainer marketplace)
 **Deliverable:** Screenshot strategy + caption copy (no tooling/build)
 
 ## Goal & audience

@@ -192,7 +192,7 @@ it **must** use Apple IAP. Source: `app/checkout.tsx`, `features/billing/billing
 
 ### 5g. App Name & Bundle ID — 🟢 / 🟡
 
-- Display name: `Trainee` (7 chars) — well within 30-char limit. ✅
+- Display name: `Salvio` (7 chars) — well within 30-char limit. ✅
 - Bundle ID: `com.juroctech.frontend` — the `.frontend` suffix is unusual and user-facing in
   some contexts (Keychain groups, iCloud containers). Not a rejection risk but consider a cleaner
   ID like `com.juroctech.trainee` for future builds. **Cannot change after first submission

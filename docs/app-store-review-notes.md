@@ -1,4 +1,4 @@
-# App Store Review Notes — Trainee
+# App Store Review Notes — Salvio
 
 > Paste the block below into **App Store Connect → your version → App Review Information → Notes**.
 > Fill every `‹FILL IN›` first. Keep the pasted text under the 4000-character ASC limit
@@ -7,7 +7,7 @@
 
 ---
 
-Trainee — Review Notes (bundle: com.juroctech.frontend)
+Salvio — Review Notes (bundle: com.juroctech.frontend)
 
 1) SCREEN RECORDING
 Demo video (captured on a physical ‹device model, e.g. iPhone 13›): ‹PASTE VIDEO URL›
@@ -18,7 +18,7 @@ user-generated-content safety tools (report a review, block a user, unblock).
 Location, camera and photo-library permission prompts also appear in the recording.
 
 2) APP PURPOSE
-Trainee is a marketplace that connects people looking for a fitness/sports coach with
+Salvio is a marketplace that connects people looking for a fitness/sports coach with
 independent trainers. Clients discover and search trainers, view profiles, ratings and
 reviews, see nearby gyms on a map, and manage their session schedule and check-in codes.
 Trainers create a public profile, manage gyms, set working hours and a schedule, and
@@ -60,7 +60,7 @@ Romanian (auto-selected, user-switchable); features and content are identical ev
 Trainer/gym results depend on the user's location, not on region-gated functionality.
 
 6) REGULATED INDUSTRY
-Trainee is a discovery-and-scheduling marketplace for independent fitness trainers. It is
+Salvio is a discovery-and-scheduling marketplace for independent fitness trainers. It is
 not a medical, healthcare or telehealth service, does not provide diagnoses or treatment,
 and does not integrate HealthKit. The operator is Juroc Tech Solutions SRL (Romania);
 Terms of Use and Privacy Policy are available in-app (Profile ⋯ → Legal & policies) and

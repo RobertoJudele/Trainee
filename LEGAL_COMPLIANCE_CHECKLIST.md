@@ -87,7 +87,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Trainee</title>
+    <title>Privacy Policy - Salvio</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -107,12 +107,12 @@
     <p class="updated"><strong>Effective date:</strong> April 18, 2026</p>
     
     <h2>1. Who We Are and How to Contact Us</h2>
-    <p>Trainee operates the Service as a platform for discovering trainers...</p>
+    <p>Salvio operates the Service as a platform for discovering trainers...</p>
     
     <!-- Copy content from PRIVACY_POLICY.md -->
     
     <footer>
-        <p>&copy; 2026 Trainee. All rights reserved.</p>
+        <p>&copy; 2026 Salvio. All rights reserved.</p>
     </footer>
 </body>
 </html>
@@ -231,7 +231,7 @@
 - [ ] ✅ Acknowledges legal jurisdiction
 
 **Termination:**
-- [ ] ✅ When Trainee can terminate
+- [ ] ✅ When Salvio can terminate
 - [ ] ✅ Effect of termination
 - [ ] ✅ Appeal process
 
@@ -254,7 +254,7 @@
    - Could be separate for detail
 
 3. **Data Processing Agreement (DPA)**
-   - Required if users are in EU and Trainee processes data
+   - Required if users are in EU and Salvio processes data
    - Use standard template from lawyer
    - Plan for v1.1
 
@@ -339,7 +339,7 @@ You can request your data package anytime by replying
 to this email.
 
 Best regards,
-Trainee Support Team
+Salvio Support Team
 larisasfirlea@gmail.com
 ```
 

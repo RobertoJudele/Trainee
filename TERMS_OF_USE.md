@@ -2,7 +2,7 @@
 
 **Effective date:** April 18, 2026
 
-These Terms of Use govern your access to and use of Trainee's mobile app, website, and related services (together, the "Service"). The Service is a fitness and sports-coaching marketplace that helps users discover trainers, coaches, gyms, and related services. By accessing or using the Service, you agree to these Terms. If you do not agree, do not use the Service.
+These Terms of Use govern your access to and use of Salvio's mobile app, website, and related services (together, the "Service"). The Service is a fitness and sports-coaching marketplace that helps users discover trainers, coaches, gyms, and related services. By accessing or using the Service, you agree to these Terms. If you do not agree, do not use the Service.
 
 ## 1. Eligibility
 
@@ -92,7 +92,7 @@ We do not provide medical, fitness, legal, accounting, or professional advice. A
 
 ## 15. Limitation of Liability
 
-To the maximum extent permitted by law, Trainee and its affiliates, officers, directors, employees, contractors, and agents will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenues, data, goodwill, or business opportunities, arising out of or related to your use of the Service.
+To the maximum extent permitted by law, Salvio and its affiliates, officers, directors, employees, contractors, and agents will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenues, data, goodwill, or business opportunities, arising out of or related to your use of the Service.
 
 To the maximum extent permitted by law, our total liability for any claim relating to the Service will not exceed the greater of the amount you paid to us for the Service during the twelve months before the event giving rise to the claim or the minimum amount required by applicable law.
 
@@ -100,7 +100,7 @@ Some jurisdictions do not allow certain limitations, so some of the above limita
 
 ## 16. Indemnity
 
-You agree to indemnify and hold harmless Trainee and its affiliates, officers, directors, employees, contractors, and agents from and against claims, liabilities, damages, losses, and expenses, including reasonable legal fees, arising out of or related to your use of the Service, your User Content, your violation of these Terms, or your violation of any law or third-party right.
+You agree to indemnify and hold harmless Salvio and its affiliates, officers, directors, employees, contractors, and agents from and against claims, liabilities, damages, losses, and expenses, including reasonable legal fees, arising out of or related to your use of the Service, your User Content, your violation of these Terms, or your violation of any law or third-party right.
 
 ## 17. Changes to the Service or These Terms
 

@@ -25,7 +25,7 @@ export default function Welcome() {
           <View style={styles.iconContainer}>
             <Ionicons name="barbell" size={64} color="#FFFFFF" />
           </View>
-          <Text style={styles.title}>Trainee</Text>
+          <Text style={styles.title}>Salvio</Text>
           <Text style={styles.subtitle}>
             {t("welcomeTagline")}
           </Text>

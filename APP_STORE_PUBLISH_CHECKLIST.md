@@ -1,4 +1,4 @@
-# App Store Publishing Checklist — Trainee
+# App Store Publishing Checklist — Salvio
 
 Full pre-submission checklist, verified against the actual codebase on 2026-07-03.
 Legend: ✅ verified OK today · ⚠️ needs action · ☐ manual step (can't verify from code)
@@ -116,8 +116,8 @@ real functionality.
 
 ### Store listing copy rules (Guideline 2.3)
 
-- [ ] ☐ App name ≤ **30 chars** ("Trainee" ✅ — but check name availability; single
-  common words often collide; consider "Trainee – Găsește-ți antrenor" style subtitle)
+- [ ] ☐ App name ≤ **30 chars** ("Salvio" ✅ — but check name availability; single
+  common words often collide; consider "Salvio – Găsește-ți antrenor" style subtitle)
 - [ ] ☐ Subtitle ≤ **30 chars**, value proposition, no prices
 - [ ] ☐ Description: **no prices** (they vary by region), **no "also on Android"**,
   no competitor names, accurately describes trainer-subscription model

@@ -5,14 +5,17 @@ import { UserPushToken } from "../models/userPushToken";
 import { Trainer } from "../models/trainer";
 import { User } from "../models/user";
 import { SlotStatus } from "../types/schedule";
+import { addDaysToKey, utcInstantToDateKey, zonedDayBoundsUtc } from "../utils/scheduleTime";
 
 const EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send";
 const EXPO_PUSH_CHUNK = 100;
 const SWEEP_INTERVAL_MS = 60 * 60 * 1000; // hourly
-// Slots starting 20-28h from now — "tomorrow" for an hourly sweep, with
-// enough overlap that a missed run doesn't skip anyone.
-const WINDOW_START_MS = 20 * 60 * 60 * 1000;
-const WINDOW_END_MS = 28 * 60 * 60 * 1000;
+// Reminders go out at 19:00 Bucharest time for all of tomorrow's sessions.
+// The sweep still runs hourly: sweeps before 19:00 do nothing, and the
+// 20:00-23:00 sweeps act as catch-up (dedup table prevents doubles) if the
+// server was down at 19:00.
+const REMINDER_TIME_ZONE = "Europe/Bucharest";
+const REMINDER_HOUR = 19;
 
 const MESSAGES: Record<string, { title: string; body: (time: string, trainer: string) => string }> = {
   en: {
@@ -55,13 +58,25 @@ const formatSlotTime = (startsAt: Date, locale: string): string =>
 
 export async function runSessionReminderSweep(): Promise<void> {
   try {
-    const now = Date.now();
+    const now = new Date();
+    const localHour = Number(
+      new Intl.DateTimeFormat("en-GB", {
+        hour: "2-digit",
+        hour12: false,
+        timeZone: REMINDER_TIME_ZONE,
+      }).format(now)
+    );
+    if (localHour < REMINDER_HOUR) return;
+
+    const todayKey = utcInstantToDateKey(now, REMINDER_TIME_ZONE);
+    const tomorrow = zonedDayBoundsUtc(addDaysToKey(todayKey, 1), REMINDER_TIME_ZONE);
+
     const found = await TrainerScheduleSlot.findAll({
       where: {
         status: SlotStatus.ASSIGNED,
         startsAt: {
-          [Op.gte]: new Date(now + WINDOW_START_MS),
-          [Op.lt]: new Date(now + WINDOW_END_MS),
+          [Op.gte]: tomorrow.start,
+          [Op.lte]: tomorrow.end,
         },
       },
       include: [

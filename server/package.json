@@ -14,7 +14,8 @@
     "seed:gyms:prod": "node dist/seeds/gymSeed.js",
     "seed:specializations": "ts-node src/seeds/specializationSeed.ts",
     "seed:trainer-specializations": "ts-node src/seeds/trainerSpecializationSeed.ts",
-    "seed:demo": "ts-node src/seeds/demoScreenshotSeed.ts"
+    "seed:demo": "ts-node src/seeds/demoScreenshotSeed.ts",
+    "seed:demo:prod": "node dist/seeds/demoScreenshotSeed.js"
   },
   "author": "fsniraj",
   "license": "ISC",

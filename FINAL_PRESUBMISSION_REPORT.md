@@ -1,6 +1,6 @@
-# 🚀 Trainee — Final Pre-Submission Report
+# 🚀 Salvio — Final Pre-Submission Report
 
-**App:** Trainee (iOS / React Native + Expo SDK 54)
+**App:** Salvio (iOS / React Native + Expo SDK 54)
 **Bundle ID:** `com.juroctech.frontend`
 **Version:** 1.0.0
 **Report Date:** June 6, 2026

@@ -1,4 +1,4 @@
-# Trainee App - API Map
+# Salvio App - API Map
 
 A comprehensive checklist map of the backend REST endpoints.
 

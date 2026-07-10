@@ -1,4 +1,4 @@
-# Trainee — Idea Backlog
+# Salvio — Idea Backlog
 
 Everything from the cold-start / feature brainstorm (2026-07-03). Session-package
 tracking is already built (booking consumes a session, cancel refunds it) — the
@@ -35,7 +35,7 @@ notebook). Seed trainers with the free scheduling tool; each trainer brings
   distribution channel.
 
 ### 4. Trainer → client invite link (the one real pre-launch build)
-- Deep link from the schedule screen: "Your trainer Andrei uses Trainee — sign up
+- Deep link from the schedule screen: "Your trainer Andrei uses Salvio — sign up
   to see your sessions and check-in code." Client lands already connected.
 - 30 trainers × 15 clients ≈ 400+ real Cluj users at zero acquisition cost.
 - At invite-accept, prompt the client to review the trainer ("How long have you
@@ -51,7 +51,7 @@ notebook). Seed trainers with the free scheduling tool; each trainer brings
 
 ### 6. Demand-side tactics (Cluj, ongoing, mostly non-build)
 - **Gym partnerships**: poster + QR per gym ("Find a trainer at [Gym] on
-  Trainee"); gyms want busy trainers. Gym map already gives each gym a presence.
+  Salvio"); gyms want busy trainers. Gym map already gives each gym a presence.
 - **Romanian Facebook groups**: Cluj city groups, student groups (UBB, UTCN,
   UMF), fitness groups. Post as a person, not a brand.
 - **Micro-influencer trainers**: give each founding trainer a story-ready
@@ -69,9 +69,10 @@ Today this lives across WhatsApp threads. A text field on the trainer↔client
 relationship. Compounds with packs into "my whole client book is in here."
 
 ### ~~Automatic session reminders~~ — done (push-only, client toggle)
-Hourly server sweep pushes "Tomorrow at 18:00 with Andrei" via Expo push to
-clients who opted in (toggle on My Schedule). Email variant skipped by choice.
-Needs FCM credentials configured in EAS for Android production builds.
+At 19:00 Bucharest time the server pushes "Tomorrow at 18:00 with Andrei" via
+Expo push for all of tomorrow's sessions, to clients who opted in (toggle on
+My Schedule). Email variant skipped by choice. Needs FCM credentials
+configured in EAS for Android production builds.
 
 ### Public web profile link (moderate build)
 Server-rendered `trainee.app/t/andrei-popescu` (photo, bio, reviews, book-me CTA)
@@ -88,7 +89,7 @@ exists. Feeds the reminders story.
 ### Check-in streaks + monthly stats (small build — the "mini-game" done right)
 Streaks ("6 weeks in a row"), monthly counts ("11 workouts in March"), simple
 badges — aggregation over existing check-in rows, tied to REAL gym visits.
-Shareable month-summary card ("11 workouts 💪 Trainee") = free Instagram-story
+Shareable month-summary card ("11 workouts 💪 Salvio") = free Instagram-story
 marketing. Highest-priority client-side idea.
 
 ### Simple progress tracking (moderate build)

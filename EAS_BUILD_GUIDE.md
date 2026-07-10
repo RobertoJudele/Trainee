@@ -46,7 +46,7 @@ eas whoami
 - [ ] Add iOS build number: `"buildNumber": "1"`
 - [ ] Set minimum iOS: `"deploymentTarget": "13.4"`
 - [ ] Verify bundle ID: `com.juroctech.frontend`
-- [ ] Verify app name: "Trainee"
+- [ ] Verify app name: "Salvio"
 - [ ] Verify all environment variables are set
 
 ### Environment Variables

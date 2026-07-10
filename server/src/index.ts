@@ -53,7 +53,7 @@ app.use(errorHandler);
 app.get("/", publicReadRateLimit, (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Trainee API is running",
+    message: "Salvio API is running",
     data: {
       service: "trainee-api",
       uptimeSeconds: Math.floor(process.uptime()),

@@ -439,7 +439,7 @@ git commit -m "chore: add raw RO screenshots (iPhone 6.7 + iPad 13)"
 ### Task 5: Build the Figma framing template
 
 **Files:**
-- Create: Figma file `Trainee Store Screenshots` (not in git; export targets are committed in later tasks)
+- Create: Figma file `Salvio Store Screenshots` (not in git; export targets are committed in later tasks)
 
 **Interfaces:**
 - Produces: a reusable 1290×2796 frame component (gradient + caption block + device mockup slot) used to compose every iPhone frame in Task 6, and copied/relaid-out for iPad in Task 6b.
@@ -551,7 +551,7 @@ In Figma, select the Task 6 iPhone frames and export them resized to **1080×192
 
 - [ ] **Step 2: Create the feature graphic (1024×500)**
 
-New 1024×500 frame: brand gradient, the Trainee logo/barbell mark, and the tagline `Găsește antrenorul perfect`. Export as `store-assets/final/play-feature-graphic.png`.
+New 1024×500 frame: brand gradient, the Salvio logo/barbell mark, and the tagline `Găsește antrenorul perfect`. Export as `store-assets/final/play-feature-graphic.png`.
 
 - [ ] **Step 3: Verify**
 

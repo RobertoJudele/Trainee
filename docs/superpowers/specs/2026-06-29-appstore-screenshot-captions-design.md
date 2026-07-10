@@ -1,7 +1,7 @@
 # App Store Screenshot Captions & Order — Design
 
 **Date:** 2026-06-29
-**App:** Trainee (fitness trainer marketplace)
+**App:** Salvio (fitness trainer marketplace)
 **Scope:** Titles, subtitles, and ordering for the App Store listing screenshots.
 
 ## Decisions

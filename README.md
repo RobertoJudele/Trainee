@@ -1,10 +1,10 @@
-# Trainee
+# Salvio
 
 Full-stack fitness trainer marketplace with a React Native (Expo) client and a Node.js/Express + PostgreSQL backend.
 
 ## Overview
 
-Trainee connects clients with trainers. Core capabilities include:
+Salvio connects clients with trainers. Core capabilities include:
 
 - Authentication and role-based access (client, trainer, admin)
 - Public endpoint rate limiting with graceful `429` responses and `Retry-After` headers

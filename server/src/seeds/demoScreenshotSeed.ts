@@ -42,35 +42,35 @@ type DemoTrainer = {
 
 const DEMO_TRAINERS: DemoTrainer[] = [
   {
-    email: "andrei.popescu.demo@trainee.app",
+    email: "andrei.popescu.demo@salvio.app",
     firstName: "Andrei", lastName: "Popescu", sex: "male", photo: portrait("men", 32),
     bio: "Antrenor de forță și hipertrofie. Te ajut să construiești mușchi și să ridici corect, în siguranță.",
     experienceYears: 8, hourlyRate: 120, sessionRate: 40,
     city: "București", state: "Ilfov", rating: 4.9, reviewCount: 42, featured: true,
   },
   {
-    email: "maria.ionescu.demo@trainee.app",
+    email: "maria.ionescu.demo@salvio.app",
     firstName: "Maria", lastName: "Ionescu", sex: "female", photo: portrait("women", 44),
     bio: "Fitness funcțional și nutriție. Programe personalizate pentru energie și echilibru.",
     experienceYears: 6, hourlyRate: 110, sessionRate: 45,
     city: "București", state: "Ilfov", rating: 5.0, reviewCount: 28, featured: false,
   },
   {
-    email: "elena.dumitru.demo@trainee.app",
+    email: "elena.dumitru.demo@salvio.app",
     firstName: "Elena", lastName: "Dumitru", sex: "female", photo: portrait("women", 68),
     bio: "Yoga și mobilitate. Recâștigă-ți flexibilitatea și scapă de tensiune.",
     experienceYears: 5, hourlyRate: 95, sessionRate: 38,
     city: "Cluj-Napoca", state: "Cluj", rating: 4.8, reviewCount: 31, featured: false,
   },
   {
-    email: "cristian.stan.demo@trainee.app",
+    email: "cristian.stan.demo@salvio.app",
     firstName: "Cristian", lastName: "Stan", sex: "male", photo: portrait("men", 51),
     bio: "CrossFit și condiție fizică. Antrenamente intense, rezultate vizibile.",
     experienceYears: 7, hourlyRate: 115, sessionRate: 42,
     city: "Timișoara", state: "Timiș", rating: 4.7, reviewCount: 19, featured: false,
   },
   {
-    email: "alexandru.radu.demo@trainee.app",
+    email: "alexandru.radu.demo@salvio.app",
     firstName: "Alexandru", lastName: "Radu", sex: "male", photo: portrait("men", 12),
     bio: "Slăbire și cardio. Te aduc în cea mai bună formă a ta, pas cu pas.",
     experienceYears: 4, hourlyRate: 90, sessionRate: 35,
@@ -79,9 +79,9 @@ const DEMO_TRAINERS: DemoTrainer[] = [
 ];
 
 const DEMO_CLIENTS = [
-  { email: "client1.demo@trainee.app", firstName: "Ioana", lastName: "Marin", sex: "female" as const, photo: portrait("women", 21) },
-  { email: "client2.demo@trainee.app", firstName: "Vlad", lastName: "Georgescu", sex: "male" as const, photo: portrait("men", 5) },
-  { email: "client3.demo@trainee.app", firstName: "Diana", lastName: "Petre", sex: "female" as const, photo: portrait("women", 9) },
+  { email: "client1.demo@salvio.app", firstName: "Ioana", lastName: "Marin", sex: "female" as const, photo: portrait("women", 21) },
+  { email: "client2.demo@salvio.app", firstName: "Vlad", lastName: "Georgescu", sex: "male" as const, photo: portrait("men", 5) },
+  { email: "client3.demo@salvio.app", firstName: "Diana", lastName: "Petre", sex: "female" as const, photo: portrait("women", 9) },
 ];
 
 // Reviews shown on the flagship trainer detail (frame 2). review_text must be 10–100 chars.

@@ -5,10 +5,10 @@ Connect. Fill in the two `<...>` placeholders (contact phone) before submitting.
 
 ---
 
-Thank you for reviewing Trainee.
+Thank you for reviewing Salvio.
 
 WHAT THE APP DOES
-Trainee is a two-sided fitness-trainer marketplace. Trainers pay a subscription to
+Salvio is a two-sided fitness-trainer marketplace. Trainers pay a subscription to
 be listed; clients browse, contact, and book trainers for free. Payment for the
 actual training sessions happens off-app, in person — the app never processes
 client-to-trainer payments. The trainer subscription is the only in-app purchase and
@@ -21,10 +21,10 @@ see populated data, please sign in with the demo accounts below, or search by ci
 name ("București", "Cluj-Napoca", "Timișoara") or use the Map screen.
 
 DEMO ACCOUNTS (password for both: DemoPass123!)
-- Trainer:  andrei.popescu.demo@trainee.app
+- Trainer:  andrei.popescu.demo@salvio.app
     Featured trainer with profile photo, reviews, and session packages — best account
     to see a fully populated trainer profile and the trainer-side schedule.
-- Client:   client1.demo@trainee.app
+- Client:   client1.demo@salvio.app
     Use to browse/search trainers, view the map, and try the client flows below.
 
 FLOWS THAT AREN'T OBVIOUS

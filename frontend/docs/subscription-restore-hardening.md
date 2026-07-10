@@ -32,7 +32,7 @@ self-healing instead of a dead end.
     } else if (isAlreadyLinked) {
         Alert.alert(
             "Subscription Already Linked",
-            "This App Store subscription is already active on another Trainee account. Please sign in with that account, or use a different Apple ID to subscribe."
+            "This App Store subscription is already active on another Salvio account. Please sign in with that account, or use a different Apple ID to subscribe."
         );
     } else {
         const fallback = "Unable to complete purchase. Please try again.";
@@ -65,13 +65,13 @@ Replace the `isAlreadyLinked` branch with an attempt to restore/transfer, then r
             // belongs to a different, still-active account).
             Alert.alert(
                 "Subscription Already Linked",
-                "This App Store subscription is active on another Trainee account. Sign in with that account, or use a different Apple ID."
+                "This App Store subscription is active on another Salvio account. Sign in with that account, or use a different Apple ID."
             );
         }
     } catch {
         Alert.alert(
             "Subscription Already Linked",
-            "This App Store subscription is active on another Trainee account. Sign in with that account, or use a different Apple ID."
+            "This App Store subscription is active on another Salvio account. Sign in with that account, or use a different Apple ID."
         );
     }
 }

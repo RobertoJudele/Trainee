@@ -23,7 +23,7 @@ const legalDocuments: LegalDocument[] = [
   {
     id: "terms",
     title: "Terms of Use",
-    subtitle: "Rules for using Trainee and the marketplace features.",
+    subtitle: "Rules for using Salvio and the marketplace features.",
     effectiveDate: "June 18, 2026",
     sections: [
       {
@@ -96,18 +96,18 @@ const legalDocuments: LegalDocument[] = [
   {
     id: "privacy",
     title: "Privacy Policy",
-    subtitle: "How Trainee collects, uses, shares, and protects personal data.",
+    subtitle: "How Salvio collects, uses, shares, and protects personal data.",
     effectiveDate: "June 18, 2026",
     sections: [
       {
         heading: "Introduction",
         body:
-          "Trainee is a fitness and sports-coaching marketplace that connects trainers, sports coaches, and other service providers with potential clients. This Privacy Policy explains how we collect, use, disclose, protect, and retain personal data when you use our mobile app, website, and related services (together, the “Service”). Trainee is operated from Romania (European Union), and we treat the EU General Data Protection Regulation (GDPR) and Romanian data protection law as the primary framework governing this Policy. We also describe rights that may apply to you under other laws, such as the CCPA/CPRA (for California residents), PIPEDA (for Canada), and similar laws.\n\nBy using the Service, you acknowledge that you have read this Privacy Policy. If you do not agree with it, you should not use the Service.",
+          "Salvio is a fitness and sports-coaching marketplace that connects trainers, sports coaches, and other service providers with potential clients. This Privacy Policy explains how we collect, use, disclose, protect, and retain personal data when you use our mobile app, website, and related services (together, the “Service”). Salvio is operated from Romania (European Union), and we treat the EU General Data Protection Regulation (GDPR) and Romanian data protection law as the primary framework governing this Policy. We also describe rights that may apply to you under other laws, such as the CCPA/CPRA (for California residents), PIPEDA (for Canada), and similar laws.\n\nBy using the Service, you acknowledge that you have read this Privacy Policy. If you do not agree with it, you should not use the Service.",
       },
       {
         heading: "1. Who we are and how to contact us",
         body:
-          "The Service is operated by Juroc Tech Solutions SRL, a company organized under the laws of Romania (registered office: Str. Luminii nr. 37, Faurei, Vrancea, Romania). Juroc Tech Solutions SRL (“Trainee,” “we,” “us,” or “our”) is the data controller for personal data that we collect directly through the Service, unless a third party is independently acting as a controller for its own services.\n\nIf you have privacy questions, requests, or complaints, you can contact us at robertojudele@juroc.tech, or through the support and contact options provided in the Service.",
+          "The Service is operated by Juroc Tech Solutions SRL, a company organized under the laws of Romania (registered office: Str. Luminii nr. 37, Faurei, Vrancea, Romania). Juroc Tech Solutions SRL (“Salvio,” “we,” “us,” or “our”) is the data controller for personal data that we collect directly through the Service, unless a third party is independently acting as a controller for its own services.\n\nIf you have privacy questions, requests, or complaints, you can contact us at robertojudele@juroc.tech, or through the support and contact options provided in the Service.",
       },
       {
         heading: "2. Personal data we collect",
@@ -162,12 +162,12 @@ const legalDocuments: LegalDocument[] = [
       {
         heading: "12. California privacy notice",
         body:
-          "If you are a California resident, you may have rights under the CCPA/CPRA, including the right to know, the right to delete, the right to correct, the right to limit the use of sensitive personal information where applicable, and the right to opt out of certain data disclosures that may be considered “sharing” for cross-context behavioral advertising. Trainee does not intentionally sell personal information in the ordinary sense, but certain data flows may still be considered a disclosure under California law.",
+          "If you are a California resident, you may have rights under the CCPA/CPRA, including the right to know, the right to delete, the right to correct, the right to limit the use of sensitive personal information where applicable, and the right to opt out of certain data disclosures that may be considered “sharing” for cross-context behavioral advertising. Salvio does not intentionally sell personal information in the ordinary sense, but certain data flows may still be considered a disclosure under California law.",
       },
       {
         heading: "13. GDPR, PIPEDA, and similar laws",
         body:
-          "If you are covered by GDPR, you may have the right to access, rectify, erase, restrict processing, object to processing, and data portability, as well as the right to lodge a complaint with a supervisory authority. Because Trainee is established in Romania, our lead supervisory authority is the Romanian National Supervisory Authority for Personal Data Processing (ANSPDCP), www.dataprotection.ro. If you are in the EEA or the UK, you may also lodge a complaint with the data protection authority in your country of residence or work. Please contact us at robertojudele@juroc.tech before filing a complaint so we can address your concerns directly.\n\nIf you are covered by PIPEDA or similar Canadian privacy laws, you may have rights to access and challenge the accuracy or completeness of your information. Where local laws provide additional rights, we will honor them as required.",
+          "If you are covered by GDPR, you may have the right to access, rectify, erase, restrict processing, object to processing, and data portability, as well as the right to lodge a complaint with a supervisory authority. Because Salvio is established in Romania, our lead supervisory authority is the Romanian National Supervisory Authority for Personal Data Processing (ANSPDCP), www.dataprotection.ro. If you are in the EEA or the UK, you may also lodge a complaint with the data protection authority in your country of residence or work. Please contact us at robertojudele@juroc.tech before filing a complaint so we can address your concerns directly.\n\nIf you are covered by PIPEDA or similar Canadian privacy laws, you may have rights to access and challenge the accuracy or completeness of your information. Where local laws provide additional rights, we will honor them as required.",
       },
       {
         heading: "14. Minors and age restrictions",

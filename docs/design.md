@@ -1,7 +1,7 @@
-# Trainee App - High Level Design
+# Salvio App - High Level Design
 
 ## System Overview
-Trainee is a full-stack application designed to connect fitness trainers with clients. The platform enables discovery, profile management, subscription-based billing, scheduling, review management, and administrative tracking.
+Salvio is a full-stack application designed to connect fitness trainers with clients. The platform enables discovery, profile management, subscription-based billing, scheduling, review management, and administrative tracking.
 
 ## Core Roles & Personas
 
