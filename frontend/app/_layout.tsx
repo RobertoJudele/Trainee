@@ -48,6 +48,12 @@ function RevenueCatIdentityBridge() {
       try {
         const apiKey = getRevenueCatApiKey();
         if (!apiKey) {
+          // ponytail: warn instead of returning silently — a missing key here is
+          // invisible until the paywall says "could not load plans" in production.
+          console.warn(
+            "[RevenueCat] No API key for this platform. Purchases are disabled. " +
+              "Set EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY / _GOOGLE_API_KEY in eas.json."
+          );
           return;
         }
 

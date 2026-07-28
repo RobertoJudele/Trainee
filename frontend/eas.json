@@ -11,7 +11,12 @@
     "preview": {
       "distribution": "internal",
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.juroc.tech"
+        "EXPO_PUBLIC_API_URL": "https://api.juroc.tech",
+        "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY": "appl_WBEjvRjkJUuDDsqRDZqueSuGYok",
+        "EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY": "goog_hSVpTLEPbhpMJdEIdjWNGnydMqT",
+        "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
+        "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
+        "EXPO_PUBLIC_REVENUECAT_DEBUG": "1"
       }
     },
     "production": {
@@ -20,7 +25,12 @@
         "image": "latest"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.juroc.tech"
+        "EXPO_PUBLIC_API_URL": "https://api.juroc.tech",
+        "EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY": "appl_WBEjvRjkJUuDDsqRDZqueSuGYok",
+        "EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY": "goog_hSVpTLEPbhpMJdEIdjWNGnydMqT",
+        "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
+        "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
+        "EXPO_PUBLIC_REVENUECAT_DEBUG": "0"
       }
     }
   },
