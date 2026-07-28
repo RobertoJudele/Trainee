@@ -39,7 +39,7 @@ export default function SignUp() {
   const handleSignup = async () => {
     setErrMsg('');
 
-    if (!firstName || !lastName || !email || !password) {
+    if (!firstName || !lastName || !email || !password || !phone) {
       setErrMsg(t('fillRequiredFields'));
       return;
     }
@@ -135,7 +135,9 @@ export default function SignUp() {
           <FadeInUp delay={theme.motion.stagger * 3}>
             <Field
               label={t("phoneNumber")}
-              placeholder="(555) 123-4567"
+              // Romanian mobile format — a US example here left an App Store
+              // reviewer unable to sign up (rejection 04b9a669).
+              placeholder="0712 345 678"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"

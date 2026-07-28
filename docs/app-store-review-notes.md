@@ -34,6 +34,12 @@ Client account (browse, review, report/block):
 Trainer account (already subscribed — shows all gated trainer features):
   Email: ‹TRAINER DEMO EMAIL›  Password: ‹TRAINER DEMO PASSWORD›
 
+If you would like to create a new account instead: Salvio operates only in
+Romania, so the sign-up form requires a Romanian mobile number. Please enter
+0712 345 678 (or any number in the format 07XX XXX XXX). No SMS is sent and the
+number is not verified, so any number in that format will work. All other fields
+accept ordinary values.
+
 Subscriptions: only trainers subscribe; clients use the app free. The paywall
 (Checkout screen) is reachable from the trainer account. In-app purchases are handled
 by Apple IAP via RevenueCat — please test purchase in the sandbox. "Restore Purchases"

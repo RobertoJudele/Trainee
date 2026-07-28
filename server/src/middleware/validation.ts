@@ -171,9 +171,14 @@ export const registerValidation = [
     .withMessage("First name must be between 2 and 50 charachters long"),
   body("role").optional().isIn([UserRole.CLIENT, UserRole.TRAINER]),
   body("phone")
-    .optional()
+    .notEmpty()
+    .withMessage("Phone number is required.")
+    // Romanian mobile numbers only — deliberate, the service operates in Romania.
+    // The message must name the expected format: App Review rejected the app
+    // (04b9a669, guideline 2.1(a)) after a generic "invalid" error left the tester
+    // unable to sign up. Accepts 0712345678 and +40712345678; landlines are not.
     .isMobilePhone("ro-RO")
-    .withMessage("The phone number entered is invalid"),
+    .withMessage("Enter a Romanian mobile number, for example 0712 345 678."),
   strictSchema({
     body: ["email", "password", "firstName", "lastName", "role", "phone"],
   }),
@@ -220,10 +225,13 @@ export const updateProfileValidation = [
     .isLength({ min: 2, max: 50 })
     .withMessage("Last name must be between 2 and 50 characters."),
   body("phone")
+    // Bare .optional() is deliberate on this partial-update route: an omitted
+    // phone leaves it untouched, but "" is validated and rejected — phone is
+    // required at sign-up, so it must not be clearable here.
     .optional()
     .trim()
     .isMobilePhone("ro-RO")
-    .withMessage("Invalid phone number"),
+    .withMessage("Enter a Romanian mobile number, for example 0712 345 678."),
   body("birthDate")
     .optional()
     .isISO8601()

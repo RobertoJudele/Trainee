@@ -24,6 +24,39 @@ describe("Auth API", () => {
       expect(res.body.data.user.password).toBeUndefined();
     });
 
+    const registerWithPhone = (phone: string) =>
+      request(app)
+        .post("/auth/register")
+        .send({
+          email: `phone${Date.now()}${Math.random().toString(36).slice(2, 8)}@test.com`,
+          password: "Test123!",
+          firstName: "John",
+          lastName: "Doe",
+          phone,
+        });
+
+    it.each([["local format", "0712345678"], ["international format", "+40712345678"]])(
+      "should accept a Romanian mobile number in %s",
+      async (_label, phone) => {
+        const res = await registerWithPhone(phone);
+        expect(res.status).toBe(201);
+        expect(res.body.success).toBe(true);
+      }
+    );
+
+    // Phone is mandatory and Romanian-only by design. The error must name the
+    // expected format — a generic "invalid" message contributed to App Review
+    // rejection 04b9a669 (guideline 2.1(a)).
+    it.each([
+      ["blank", ""],
+      ["a non-Romanian number", "+14155552671"],
+      ["a landline", "0212345678"],
+    ])("should reject %s", async (_label, phone) => {
+      const res = await registerWithPhone(phone);
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+    });
+
     it("should reject duplicate email", async () => {
       const email = `dup${Date.now()}@test.com`;
       await request(app)
