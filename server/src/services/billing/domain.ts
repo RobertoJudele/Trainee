@@ -174,6 +174,11 @@ export function resolveRevenueCatSnapshot(
     entitlementId: string;
     platform?: IapPlatform;
     fallbackProductId?: string;
+    /**
+     * Expiry to trust when RevenueCat's subscriber API has not caught up yet. Only
+     * pass this from a RevenueCat-authenticated source (webhook events) — it can
+     * activate an entitlement on its own. Never pass a value supplied by a client.
+     */
     fallbackExpiresAt?: Date;
     fallbackStore?: string;
     fallbackOriginalTransactionId?: string;
@@ -196,7 +201,15 @@ export function resolveRevenueCatSnapshot(
     ? inferred
     : mapPlatformToProvider(opts.platform);
 
-  const isActive = !expiresAt || expiresAt.getTime() > opts.clock.nowMs();
+  // RevenueCat reports a null expiry for non-expiring (lifetime) entitlements, so a
+  // missing date may only be read as "active" when RevenueCat actually returned a
+  // record for this subscriber. With no entitlement and no subscription there is
+  // nothing to verify against, and falling through to `!expiresAt` would hand out
+  // open-ended access to anyone who can reach this code path.
+  const hasRevenueCatRecord = Boolean(entitlement) || Boolean(subscription);
+  const isActive = hasRevenueCatRecord
+    ? !expiresAt || expiresAt.getTime() > opts.clock.nowMs()
+    : Boolean(expiresAt && expiresAt.getTime() > opts.clock.nowMs());
 
   return {
     isActive,
