@@ -134,6 +134,39 @@ const getFreeTrialLabel = (t: Translate, pkg?: RevenueCatPackage | null): string
 	return null;
 };
 
+// What an active subscription actually unlocks. Shown on the paywall before the
+// price so the offer is self-describing (App Store Guideline 3.1.2), and again on
+// the subscribed screen so the value stays visible after purchase.
+const SUBSCRIPTION_BENEFITS = [
+	{ icon: "search", titleKey: "benefitVisibilityTitle", bodyKey: "benefitVisibilityBody" },
+	{ icon: "person-circle", titleKey: "benefitProfileTitle", bodyKey: "benefitProfileBody" },
+	{ icon: "calendar", titleKey: "benefitScheduleTitle", bodyKey: "benefitScheduleBody" },
+	{ icon: "barbell", titleKey: "benefitGymsTitle", bodyKey: "benefitGymsBody" },
+	{ icon: "stats-chart", titleKey: "benefitAnalyticsTitle", bodyKey: "benefitAnalyticsBody" },
+	{ icon: "star", titleKey: "benefitReviewsTitle", bodyKey: "benefitReviewsBody" },
+] as const;
+
+const SubscriptionBenefits = () => {
+	const { t } = useLanguage();
+	return (
+		<View style={styles.benefitsBlock}>
+			<Text style={styles.benefitsHeading}>{t("whatsIncluded")}</Text>
+			<Text style={styles.benefitsNote}>{t("subscriptionIncludesNote")}</Text>
+			{SUBSCRIPTION_BENEFITS.map((benefit) => (
+				<View key={benefit.titleKey} style={styles.benefitRow}>
+					<View style={styles.benefitIcon}>
+						<Ionicons name={benefit.icon} size={16} color={theme.colors.primary} />
+					</View>
+					<View style={styles.benefitText}>
+						<Text style={styles.benefitTitle}>{t(benefit.titleKey)}</Text>
+						<Text style={styles.benefitBody}>{t(benefit.bodyKey)}</Text>
+					</View>
+				</View>
+			))}
+		</View>
+	);
+};
+
 type SuccessDisplayProps = {
 	sessionId: string;
 	onManageBilling: () => Promise<void>;
@@ -526,30 +559,40 @@ export default function CheckoutScreen() {
 		};
 	}, [isNativeApp]);
 
+	const isUnexpired = (entitlement: RevenueCatEntitlement): boolean => {
+		if (!entitlement.expirationDate) {
+			return true;
+		}
+		const expiration = new Date(entitlement.expirationDate);
+		return Number.isFinite(expiration.getTime()) && expiration.getTime() > Date.now();
+	};
+
+	// Prefer the configured entitlement ID, but fall back to any other active one. A
+	// mismatch between EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID and the RevenueCat
+	// dashboard must not make a completed purchase look like a failure — the server
+	// re-verifies against RevenueCat's API and is the authority on access. Mirrors
+	// resolveRevenueCatSnapshot() on the backend, which falls back the same way.
 	const resolveEntitlement = (
 		customerInfo: RevenueCatCustomerInfo
 	): RevenueCatEntitlement | undefined => {
-		const activeEntitlement =
-			customerInfo.entitlements?.active?.[REVENUECAT_ENTITLEMENT_ID];
-		if (activeEntitlement) {
-			return activeEntitlement;
+		const active = customerInfo.entitlements?.active ?? {};
+		const configuredActive = active[REVENUECAT_ENTITLEMENT_ID];
+		if (configuredActive) {
+			return configuredActive;
 		}
 
-		const allEntitlement = customerInfo.entitlements?.all?.[REVENUECAT_ENTITLEMENT_ID];
-		if (!allEntitlement) {
-			return undefined;
+		const anyActive = Object.values(active)[0];
+		if (anyActive) {
+			return anyActive;
 		}
 
-		if (!allEntitlement.expirationDate) {
-			return allEntitlement;
+		const all = customerInfo.entitlements?.all ?? {};
+		const configuredAll = all[REVENUECAT_ENTITLEMENT_ID];
+		if (configuredAll && isUnexpired(configuredAll)) {
+			return configuredAll;
 		}
 
-		const expiration = new Date(allEntitlement.expirationDate);
-		if (Number.isFinite(expiration.getTime()) && expiration.getTime() > Date.now()) {
-			return allEntitlement;
-		}
-
-		return undefined;
+		return Object.values(all).find(isUnexpired);
 	};
 
 	const syncRevenueCatToBackend = async (payload: {
@@ -557,15 +600,19 @@ export default function CheckoutScreen() {
 		expiresAt?: string;
 		purchaseToken?: string;
 		originalTransactionId?: string;
-	}) => {
+	}): Promise<boolean> => {
 		const platform = Platform.OS === "ios" ? "ios" : "android";
-		await validateIapSubscription({
+		const result = await validateIapSubscription({
 			platform,
 			productId: payload.productId,
 			expiresAt: payload.expiresAt,
 			purchaseToken: payload.purchaseToken,
 			originalTransactionId: payload.originalTransactionId,
 		}).unwrap();
+
+		// The server verifies with RevenueCat before granting access, so its answer —
+		// not the local store receipt — decides whether the subscription is live.
+		return Boolean(result.data?.entitlement?.isActive);
 	};
 
 	const openExternalUrl = async (url: string) => {
@@ -593,34 +640,48 @@ export default function CheckoutScreen() {
 			setMessage("");
 			setSuccess(false);
 
+			// Once the store call returns without throwing, the user has been charged.
+			// Anything that fails after this point is a sync problem, not a failed
+			// purchase, and must not be reported as "unable to complete purchase".
+			let storePurchaseCompleted = false;
+
 			try {
 				const purchaseResult = (await Purchases.purchasePackage(
 					selectedPackage as any
 				)) as unknown as RevenueCatPurchaseResult;
 
+				storePurchaseCompleted = true;
+
 				const customerInfo = purchaseResult.customerInfo || {};
 				const entitlement = resolveEntitlement(customerInfo);
-				if (!entitlement) {
-					throw new Error(
-						"Purchase completed but entitlement is not active yet. Try Restore Purchases."
-					);
-				}
 
+				// The entitlement may not be visible in this response yet (store
+				// propagation delay). Hand the purchase to the server regardless — it
+				// verifies with RevenueCat's API before granting access.
 				const selectedProductId =
 					selectedPackage.product?.identifier
-					|| entitlement.productIdentifier
+					|| entitlement?.productIdentifier
 					|| REVENUECAT_MONTHLY_PRODUCT_ID;
 
-				await syncRevenueCatToBackend({
+				const activated = await syncRevenueCatToBackend({
 					productId: selectedProductId,
-					expiresAt: entitlement.expirationDate || undefined,
+					expiresAt: entitlement?.expirationDate || undefined,
 					purchaseToken: `rc-purchase-${Date.now()}`,
 					originalTransactionId: customerInfo.originalAppUserId,
 				});
 
+				void refetchEntitlement();
+
+				if (!activated) {
+					// Charged at the store, but RevenueCat has not surfaced the purchase to
+					// our server yet. Recoverable via Restore Purchases — don't call it a
+					// failed purchase or claim an activation that hasn't happened.
+					Alert.alert(t("purchaseSyncErrorTitle"), t("purchaseSyncErrorMsg"));
+					return;
+				}
+
 				setSuccess(true);
 				setMessage(t("subscriptionActivatedMsg"));
-				void refetchEntitlement();
 			} catch (error) {
 				const typedError = error as { userCancelled?: boolean; code?: string; message?: string };
 				const errorCode = String(typedError.code || "").toLowerCase();
@@ -631,6 +692,8 @@ export default function CheckoutScreen() {
 					setMessage(t("purchaseCancelledMsg"));
 				} else if (isAlreadyLinked) {
 					Alert.alert(t("subscriptionAlreadyLinked"), t("subscriptionAlreadyLinkedMsg"));
+				} else if (storePurchaseCompleted) {
+					Alert.alert(t("purchaseSyncErrorTitle"), t("purchaseSyncErrorMsg"));
 				} else {
 					Alert.alert(t("purchaseErrorTitle"), typedError.message || t("purchaseErrorMsg"));
 				}
@@ -752,16 +815,22 @@ export default function CheckoutScreen() {
 				return;
 			}
 
-			await syncRevenueCatToBackend({
+			const activated = await syncRevenueCatToBackend({
 				productId: entitlement.productIdentifier || REVENUECAT_MONTHLY_PRODUCT_ID,
 				expiresAt: entitlement.expirationDate || undefined,
 				purchaseToken: `rc-restore-${Date.now()}`,
 				originalTransactionId: customerInfo.originalAppUserId,
 			});
 
+			void refetchEntitlement();
+
+			if (!activated) {
+				Alert.alert(t("noActiveSubscription"), t("noActiveSubscriptionMsg"));
+				return;
+			}
+
 			setSuccess(true);
 			setMessage(t("purchasesRestoredMsg"));
-			void refetchEntitlement();
 		} catch (error) {
 			const typedError = error as { code?: string; message?: string };
 			const errorCode = String(typedError.code || "").toLowerCase();
@@ -861,6 +930,8 @@ export default function CheckoutScreen() {
 								</Text>
 							</View>
 						</View>
+
+						<SubscriptionBenefits />
 
 						<Pressable
 							style={({ pressed }) => [styles.button, { marginTop: 16 }, pressed && styles.buttonPressed]}
@@ -1037,6 +1108,8 @@ export default function CheckoutScreen() {
 												.replace("{price}", monthlyPriceLabel)}
 										</Text>
 									)}
+
+									<SubscriptionBenefits />
 
 									<Pressable
 										style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
@@ -1304,6 +1377,53 @@ const styles = StyleSheet.create({
 		height: 10,
 		borderRadius: 5,
 		backgroundColor: theme.colors.primary,
+	},
+	benefitsBlock: {
+		marginTop: 4,
+		marginBottom: 20,
+		paddingTop: 16,
+		borderTopWidth: 1,
+		borderTopColor: theme.colors.border,
+	},
+	benefitsHeading: {
+		...typography.body1,
+		color: theme.colors.text,
+		fontWeight: "700",
+	},
+	benefitsNote: {
+		...typography.caption,
+		color: theme.colors.textSecondary,
+		lineHeight: 16,
+		marginTop: 4,
+		marginBottom: 14,
+	},
+	benefitRow: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		marginBottom: 14,
+	},
+	benefitIcon: {
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		backgroundColor: theme.colors.primary + "15",
+		alignItems: "center",
+		justifyContent: "center",
+		marginRight: 12,
+	},
+	benefitText: {
+		flex: 1,
+	},
+	benefitTitle: {
+		...typography.body2,
+		color: theme.colors.text,
+		fontWeight: "700",
+	},
+	benefitBody: {
+		...typography.caption,
+		color: theme.colors.textSecondary,
+		lineHeight: 17,
+		marginTop: 2,
 	},
 	trialNote: {
 		...typography.body2,
