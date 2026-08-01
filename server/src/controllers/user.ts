@@ -2,9 +2,21 @@ import { NextFunction, Request, Response } from "express";
 import { User } from "../models/user";
 import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
+import { getSequelizeValidationErrors } from "../utils/errors";
 import { uploadImageMemory, generateS3key } from "../config/s3";
 import { S3ImageService } from "../services/s3ImageService";
 import { processProfileImage } from "../services/imageProcessor";
+import sequelize from "../db";
+import { Trainer } from "../models/trainer";
+import { RefreshToken } from "../models/refreshToken";
+import { UserPushToken } from "../models/userPushToken";
+import { ClientPreference } from "../models/clientPreference";
+import { ClientCheckInCode } from "../models/clientCheckInCode";
+import { Review } from "../models/review";
+import { Issue } from "../models/issue";
+import { ProfileViewEvent } from "../models/profileViewEvent";
+import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
+import { cascadeDeleteTrainer } from "./trainer";
 
 export const updateProfile = async (
   req: AuthenticatedRequest,
@@ -30,14 +42,11 @@ export const updateProfile = async (
     });
 
     sendSuccess(res, 200, "Profile updated succesfully!");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Update profile error:", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation failed", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Failed to update profile.");
@@ -137,17 +146,50 @@ export const deleteProfile = async (req: Request, res: Response) => {
       return;
     }
 
-    await user.destroy();
+    // Tear down everything that references the account, in one transaction, before
+    // destroying the user row. ponytail: S3 images (profile picture, trainer gallery)
+    // are not purged here — add a best-effort S3 sweep if orphaned objects matter.
+    await sequelize.transaction(async (t) => {
+      // The account's own trainer profile (if any) and all of its children.
+      const trainer = await Trainer.findOne({ where: { userId }, transaction: t });
+      if (trainer) await cascadeDeleteTrainer(trainer.id, t);
+
+      // Rows this user owns as a client — delete outright.
+      await RefreshToken.destroy({ where: { userId }, transaction: t });
+      // The push token is a device identifier, so erasure has to reach it too.
+      await UserPushToken.destroy({ where: { userId }, transaction: t });
+      await ClientPreference.destroy({ where: { userId }, transaction: t });
+      await ClientCheckInCode.destroy({ where: { clientId: userId }, transaction: t });
+      // ponytail: bulk destroy skips Review's afterDestroy hook, so trainers this user
+      // reviewed keep a slightly stale totalRating until their next review. Recompute the
+      // affected trainers here if that drift matters.
+      await Review.destroy({ where: { clientId: userId }, transaction: t });
+      await Issue.destroy({ where: { reporterId: userId }, transaction: t });
+      await ProfileViewEvent.destroy({ where: { viewerUserId: userId }, transaction: t });
+
+      // Rows owned by others that merely point back at this user — keep the row, drop the link.
+      await TrainerScheduleSlot.update(
+        { clientId: null as unknown as undefined },
+        { where: { clientId: userId }, transaction: t }
+      );
+      await ClientCheckInCode.update(
+        { consumedByUserId: null },
+        { where: { consumedByUserId: userId }, transaction: t }
+      );
+      await Issue.update(
+        { resolvedBy: null as unknown as undefined },
+        { where: { resolvedBy: userId }, transaction: t }
+      );
+
+      await user.destroy({ transaction: t });
+    });
 
     sendSuccess(res, 200, "Succesfully deleted user");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error while deleting profile: ", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        fields: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation failed", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown error while deleting user");

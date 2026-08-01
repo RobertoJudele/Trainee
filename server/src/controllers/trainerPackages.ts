@@ -16,7 +16,7 @@ async function recalculateSessionRate(trainerId: number): Promise<void> {
   if (!trainer) return;
 
   if (packages.length === 0) {
-    trainer.sessionRate = undefined;
+    trainer.setDataValue("sessionRate", null as any);
     await trainer.save();
     return;
   }

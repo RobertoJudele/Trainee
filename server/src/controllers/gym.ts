@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { Op, Sequelize } from "sequelize";
+import { Op, Sequelize, FindAttributeOptions, Order } from "sequelize";
 import { Gym } from "../models/gym";
 import { TrainerGym } from "../models/trainerGym";
 import { Trainer } from "../models/trainer";
@@ -51,7 +51,7 @@ export const getAllGyms = async (req: Request, res: Response) => {
     }
 
     const where: Record<string | symbol, unknown> = { isActive: true };
-    const attributes: any[] = [
+    const attributes: FindAttributeOptions = [
       "id",
       "name",
       "address",
@@ -66,7 +66,7 @@ export const getAllGyms = async (req: Request, res: Response) => {
       "imageUrl",
     ];
 
-    let order: any[] = [["name", "ASC"]];
+    let order: Order = [["name", "ASC"]];
     let distanceLiteral: string | null = null;
 
     if (hasGeoReference) {

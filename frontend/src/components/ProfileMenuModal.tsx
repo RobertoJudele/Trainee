@@ -16,7 +16,7 @@ const { height: SCREEN_H } = Dimensions.get("window");
 
 export interface ProfileMenuItem {
   key: string;
-  icon: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
   label: string;
   onPress: () => void;
   destructive?: boolean;
@@ -30,6 +30,8 @@ interface ProfileMenuModalProps {
   onClose: () => void;
   items: ProfileMenuItem[];
   dividerAfter?: number[];
+  /** Cap height and scroll when items overflow. Off = size to content (short menus). Default true. */
+  scrollable?: boolean;
 }
 
 export default function ProfileMenuModal({
@@ -37,48 +39,55 @@ export default function ProfileMenuModal({
   onClose,
   items,
   dividerAfter = [],
+  scrollable = true,
 }: ProfileMenuModalProps) {
+  const rows = items.map((item, index) => (
+    <React.Fragment key={item.key}>
+      <Pressable
+        style={styles.item}
+        onPress={item.onPress}
+        disabled={item.disabled}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={item.label}
+      >
+        {item.loading ? (
+          <ActivityIndicator
+            size="small"
+            color={item.destructive ? theme.colors.error : theme.colors.text}
+          />
+        ) : (
+          <Ionicons
+            name={item.icon}
+            size={18}
+            color={item.destructive ? theme.colors.error : theme.colors.text}
+          />
+        )}
+        <Text
+          style={[
+            styles.itemText,
+            item.destructive && { color: theme.colors.error },
+          ]}
+        >
+          {item.label}
+        </Text>
+        {item.trailing}
+      </Pressable>
+      {dividerAfter.includes(index) && <View style={styles.divider} />}
+    </React.Fragment>
+  ));
+
   return (
     <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={styles.menu}>
-          <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-            {items.map((item, index) => (
-              <React.Fragment key={item.key}>
-                <Pressable
-                  style={styles.item}
-                  onPress={item.onPress}
-                  disabled={item.disabled}
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel={item.label}
-                >
-                  {item.loading ? (
-                    <ActivityIndicator
-                      size="small"
-                      color={item.destructive ? theme.colors.error : theme.colors.text}
-                    />
-                  ) : (
-                    <Ionicons
-                      name={item.icon as any}
-                      size={18}
-                      color={item.destructive ? theme.colors.error : theme.colors.text}
-                    />
-                  )}
-                  <Text
-                    style={[
-                      styles.itemText,
-                      item.destructive && { color: theme.colors.error },
-                    ]}
-                  >
-                    {item.label}
-                  </Text>
-                  {item.trailing}
-                </Pressable>
-                {dividerAfter.includes(index) && <View style={styles.divider} />}
-              </React.Fragment>
-            ))}
-          </ScrollView>
+        <View style={[styles.menu, scrollable && { maxHeight: SCREEN_H * 0.7 }]}>
+          {scrollable ? (
+            <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
+              {rows}
+            </ScrollView>
+          ) : (
+            rows
+          )}
         </View>
       </Pressable>
     </Modal>
@@ -99,7 +108,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 6,
     minWidth: 200,
-    maxHeight: SCREEN_H * 0.7,
     ...theme.shadows.medium,
   },
   item: {

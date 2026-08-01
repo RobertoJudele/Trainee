@@ -1,6 +1,6 @@
 # Architectural Decision Records (ADR)
 
-This document tracks technical decisions, justifications, and implications for the Trainee project.
+This document tracks technical decisions, justifications, and implications for the Salvio project.
 
 ---
 
@@ -17,10 +17,10 @@ This document tracks technical decisions, justifications, and implications for t
 
 ## ADR 2: Subscription Sharing Prevention
 * **Status**: Approved
-* **Context**: Subscriptions bought on iOS/Android could be shared across multiple Trainee accounts if a device was shared or logged out.
+* **Context**: Subscriptions bought on iOS/Android could be shared across multiple Salvio accounts if a device was shared or logged out.
 * **Decision**: Configured RevenueCat **Restore Behavior** to **Keep with original App User ID**.
 * **Rationale**:
-  * Safely ties the Apple ID/Google Play subscription receipt permanently to the first Trainee App User ID.
+  * Safely ties the Apple ID/Google Play subscription receipt permanently to the first Salvio App User ID.
   * Attempts to restore/purchase using the same device receipt on a different logged-in email profile throws `ReceiptAlreadyInUseError`.
   * Frontend caught cases show standard prompts instructing the user to log back into their primary subscription account.
 

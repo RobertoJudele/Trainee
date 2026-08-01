@@ -1,7 +1,7 @@
 # App Store Connect Setup Guide
 
 **Date:** June 6, 2026  
-**App Name:** Trainee  
+**App Name:** Salvio  
 **Bundle ID:** com.juroctech.frontend
 
 ---
@@ -18,7 +18,7 @@
 3. Click "+" → "New App"
 4. Select:
    - Platform: iOS
-   - Name: "Trainee"
+   - Name: "Salvio"
    - Primary Language: English
    - Bundle ID: com.juroctech.frontend (from Xcode)
    - SKU: trainee-ios-v1 (any unique identifier)
@@ -32,12 +32,12 @@
 
 #### App Name & Subtitle
 ```
-Name: Trainee
+Name: Salvio
 Subtitle: Discover & Book Premium Trainers
 ```
 
 **Tips:**
-- Name max 30 characters: "Trainee" ✅ (7 chars)
+- Name max 30 characters: "Salvio" ✅ (7 chars)
 - Subtitle max 30 characters: Keep under limit
 - Don't include keywords (use Keywords field instead)
 
@@ -49,7 +49,7 @@ Promotional Text (170 max):
 
 #### Description (1000 char max)
 ```
-Trainee connects you with certified fitness trainers and coaches 
+Salvio connects you with certified fitness trainers and coaches 
 in your area. Browse profiles, check availability, book sessions, 
 and transform your fitness goals.
 
@@ -187,7 +187,7 @@ Start your fitness transformation today!
 ```
 Feedback Email: larisasfirlea@gmail.com
 Test Notes:
-"Thank you for testing Trainee! We'd love your feedback. 
+"Thank you for testing Salvio! We'd love your feedback. 
 Please test:
 - User registration and login
 - Trainer search and filtering  
@@ -274,7 +274,7 @@ RON 50.00 (or equivalent)
 
 **Answer:** No (unless you're exporting encryption technology)
 
-**For Trainee:**
+**For Salvio:**
 - HTTPS is standard, not special encryption
 - Answer: **NO** (correct)
 - Fills in automatically
@@ -314,7 +314,7 @@ RON 50.00 (or equivalent)
 - [ ] Count: 5-10 total
 
 ### Text Content
-- [ ] App Name: "Trainee"
+- [ ] App Name: "Salvio"
 - [ ] Subtitle: "Discover & Book Premium Trainers"
 - [ ] Description (1000 char)
 - [ ] Keywords
@@ -383,7 +383,7 @@ RON 50.00 (or equivalent)
 ## Checklist Before Hitting "Submit for Review"
 
 ### App Information
-- [ ] Name: "Trainee"
+- [ ] Name: "Salvio"
 - [ ] Subtitle: Set and appropriate
 - [ ] Description: Compelling, 1000 char
 - [ ] Keywords: Relevant

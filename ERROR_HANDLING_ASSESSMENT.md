@@ -41,7 +41,7 @@ Alert.alert("Purchase Error", "Unable to complete purchase. Please try again.")
 // Good - Specific and helpful
 Alert.alert(
   "Subscription Already Linked",
-  "This App Store subscription is already active on another Trainee account..."
+  "This App Store subscription is already active on another Salvio account..."
 )
 
 // Good - Graceful fallback

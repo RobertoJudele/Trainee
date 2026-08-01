@@ -1,6 +1,7 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
-import { Platform } from "react-native";
+import { Platform, Pressable } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { Provider } from "react-redux";
 import { useSelector } from "react-redux";
 import { StripeProvider } from "@stripe/stripe-react-native";
@@ -14,6 +15,7 @@ import { TourProvider } from "../src/components/onboarding/TourContext";
 import CoachMark from "../src/components/onboarding/CoachMark";
 import TourGate from "../src/components/onboarding/TourGate";
 import { LanguageProvider } from "../src/lib/i18n/LanguageContext";
+import UpdateGate from "../src/components/UpdateGate";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -46,6 +48,12 @@ function RevenueCatIdentityBridge() {
       try {
         const apiKey = getRevenueCatApiKey();
         if (!apiKey) {
+          // ponytail: warn instead of returning silently — a missing key here is
+          // invisible until the paywall says "could not load plans" in production.
+          console.warn(
+            "[RevenueCat] No API key for this platform. Purchases are disabled. " +
+              "Set EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY / _GOOGLE_API_KEY in eas.json."
+          );
           return;
         }
 
@@ -93,6 +101,24 @@ function RevenueCatIdentityBridge() {
   return null;
 }
 
+// ponytail: JS back button replaces the native-stack back arrow, which is
+// unresponsive on the first header screen pushed over a headerShown:false
+// screen (react-native-screens hit-test glitch) until another screen re-layouts.
+function HeaderBackButton({ tintColor }: { tintColor?: string }) {
+  const router = useRouter();
+  return (
+    <Pressable
+      onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+      hitSlop={12}
+      accessibilityRole="button"
+      accessibilityLabel="Go back"
+      style={{ paddingRight: 16, paddingVertical: 4 }}
+    >
+      <Ionicons name="arrow-back" size={24} color={tintColor ?? "#fff"} />
+    </Pressable>
+  );
+}
+
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
@@ -108,6 +134,7 @@ export default function RootLayout() {
         <TourProvider>
         <RevenueCatIdentityBridge />
         <StatusBar style="light" />
+        <UpdateGate>
         <Stack
           screenOptions={{
             headerStyle: { backgroundColor: theme.colors.primary },
@@ -117,6 +144,8 @@ export default function RootLayout() {
             animation: "slide_from_right",
             animationDuration: 280,
             contentStyle: { backgroundColor: theme.colors.background },
+            headerLeft: ({ canGoBack, tintColor }) =>
+              canGoBack === false ? null : <HeaderBackButton tintColor={tintColor} />,
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
@@ -125,23 +154,26 @@ export default function RootLayout() {
           <Stack.Screen name="UserProfile" options={{ headerShown: false }} />
           <Stack.Screen name="login" options={{ headerShown: false }} />
           <Stack.Screen name="signup" options={{ headerShown: false }} />
-          <Stack.Screen name="search" options={{ title: "Find Trainers" }} />
+          <Stack.Screen name="search" options={{ headerShown: false }} />
+          <Stack.Screen name="create-trainer" options={{ headerShown: false }} />
           <Stack.Screen name="map" options={{ headerShown: false }} />
-          <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details" }} />
+          <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details", headerBackButtonDisplayMode: "minimal" }} />
           <Stack.Screen name="my-gyms" options={{ title: "My Gyms" }} />
           <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
           <Stack.Screen name="report-issue" options={{ title: "Report Issue" }} />
+          <Stack.Screen name="request-gym" options={{ title: "Request a Gym" }} />
           <Stack.Screen name="admin-issues" options={{ title: "Admin Issues" }} />
-          <Stack.Screen name="trainer-schedule" options={{ title: "Trainer Schedule" }} />
-          <Stack.Screen name="trainer-schedule/[date]" options={{ title: "Day Schedule" }} />
+          <Stack.Screen name="trainer-schedule" options={{ headerShown: false }} />
+          <Stack.Screen name="trainer-schedule/[date]" options={{ headerShown: false }} />
           <Stack.Screen name="trainer-schedule/week-snapshot" options={{ title: "Week Snapshot" }} />
           <Stack.Screen name="trainer-analytics" options={{ title: "Trainer Analytics" }} />
-          <Stack.Screen name="my-schedule" options={{ title: "My Schedule" }} />
+          <Stack.Screen name="my-schedule" options={{ headerShown: false }} />
           <Stack.Screen name="preferences" options={{ headerShown: false }} />
           <Stack.Screen name="legal" options={{ title: "Legal & Policies" }} />
           <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
           <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />
         </Stack>
+        </UpdateGate>
         <CoachMark />
         <TourGate />
         </TourProvider>

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Trainee",
+    "name": "Salvio",
     "slug": "frontend",
     "scheme": "trainee",
     "version": "1.0.0",
@@ -11,17 +11,17 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0a2e1a"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
+      "buildNumber": "45",
       "bundleIdentifier": "com.juroctech.frontend",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Your app needs access to your photo library to upload profile pictures and workout photos.",
-        "NSPhotoLibraryAddOnlyUsageDescription": "Allow saving workout and profile photos you create to your photo library.",
-        "NSLocationWhenInUseUsageDescription": "Your app uses your location to find nearby gyms and trainers.",
-        "NSCameraUsageDescription": "Your app needs access to the camera to take profile pictures and workout photos."
+        "NSPhotoLibraryUsageDescription": "Salvio needs access to your photo library so you can upload a profile picture and, for trainers, gallery and credential photos.",
+        "NSLocationWhenInUseUsageDescription": "Salvio uses your location to find nearby gyms and trainers.",
+        "NSCameraUsageDescription": "Salvio uses the camera to take a profile picture or trainer gallery photos."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -90,6 +90,14 @@
             "NSPrivacyCollectedDataTypePurposes": [
               "NSPrivacyCollectedDataTypePurposeAppFunctionality"
             ]
+          },
+          {
+            "NSPrivacyCollectedDataType": "NSPrivacyCollectedDataTypeDeviceID",
+            "NSPrivacyCollectedDataTypeLinked": true,
+            "NSPrivacyCollectedDataTypeTracking": false,
+            "NSPrivacyCollectedDataTypePurposes": [
+              "NSPrivacyCollectedDataTypePurposeAppFunctionality"
+            ]
           }
         ],
         "NSPrivacyAccessedAPITypes": [
@@ -111,7 +119,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#0a2e1a"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
@@ -135,19 +143,17 @@
     },
     "plugins": [
       "expo-router",
+      "expo-notifications",
       [
         "@stripe/stripe-react-native",
-        {
-          "merchantIdentifier": "merchant.com.example.trainee",
-          "enableGooglePay": true
-        }
+        {}
       ],
       "expo-font",
       [
         "expo-image-picker",
         {
-          "photosPermission": "Your app needs access to your photo library to upload profile pictures and workout photos.",
-          "cameraPermission": "Your app needs access to the camera to take profile pictures and workout photos."
+          "photosPermission": "Salvio needs access to your photo library so you can upload a profile picture and, for trainers, gallery and credential photos.",
+          "cameraPermission": "Salvio uses the camera to take a profile picture or trainer gallery photos."
         }
       ],
       [
@@ -160,7 +166,8 @@
             "newArchEnabled": false
           }
         }
-      ]
+      ],
+      "./plugins/withFmtFix"
     ],
     "extra": {
       "router": {},

@@ -2,9 +2,10 @@ import { Request, Response } from "express";
 import { randomUUID } from "crypto";
 import { TrainerProfileCreationAttributes, subStatus, BillingProvider } from "../types/trainer";
 import { sendError, sendSuccess } from "../utils/response";
+import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
-import { Op } from "sequelize";
+import { Op, FindAttributeOptions, Order, Transaction } from "sequelize";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
 import { S3ImageService } from "../services/s3ImageService";
@@ -26,6 +27,14 @@ import { Gym } from "../models/gym";
 import { stripe } from "../config/stripe";
 import { trackTrainerProfileView } from "../services/profileViewTracking";
 import { ProfileViewEvent } from "../models/profileViewEvent";
+import sequelize from "../db";
+import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
+import { TrainerWorkingHour } from "../models/trainerWorkingHour";
+import { TrainerBlockedDate } from "../models/trainerBlockedDate";
+import { TrainerPackage } from "../models/trainerPackage";
+import { Review } from "../models/review";
+import { BillingTransaction } from "../models/billingTransaction";
+import { Issue } from "../models/issue";
 import {
   buildPointFromLatLng,
   isValidLatitude,
@@ -35,28 +44,12 @@ import {
 import { resolveEntitlement } from "../services/billing/domain";
 import { SystemClock } from "../services/billing/adapters/SystemClock";
 import { isRevenueCatOnlyMode } from "../config/billingMode";
-import type { BillingState } from "../services/billing/types";
+import { toBillingState } from "../services/billing/trainerBillingState";
 
 const billingClock = new SystemClock();
 
-const trainerToBillingState = (trainer: Trainer): BillingState => ({
-  trainerId: trainer.id,
-  userId: trainer.userId,
-  billingProvider: (trainer.billingProvider as BillingProvider) || BillingProvider.NONE,
-  subscriptionStatus: (trainer.subscriptionStatus as subStatus) || subStatus.CANCELED,
-  stripeCustomerId: trainer.stripeCustomerId || undefined,
-  stripeSubscriptionId: trainer.stripeSubscriptionId || undefined,
-  trialEndsAt: trainer.trialEndsAt || undefined,
-  currentPeriodEndsAt: trainer.currentPeriodEndsAt || undefined,
-  iapProductId: trainer.iapProductId || undefined,
-  iapExpiresAt: trainer.iapExpiresAt || undefined,
-  iapLastVerifiedAt: trainer.iapLastVerifiedAt || undefined,
-  appleOriginalTransactionId: trainer.appleOriginalTransactionId || undefined,
-  googlePurchaseToken: trainer.googlePurchaseToken || undefined,
-});
-
 const resolveTrainerEntitlement = (trainer: Trainer) =>
-  resolveEntitlement(trainerToBillingState(trainer), {
+  resolveEntitlement(toBillingState(trainer), {
     isRevenueCatOnly: isRevenueCatOnlyMode(),
     clock: billingClock,
   });
@@ -407,14 +400,11 @@ export const createTrainer = async (
       "Trainer profile created succesfully",
       (trainerWithSpecializations?.toJSON() as any) || trainerData
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at creating trainer profile", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        field: err.path,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation trainer error");
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation trainer error", validationErrors);
       return;
     }
     sendError(res, 500, "Unexpected error while creating trainer happened");
@@ -542,10 +532,36 @@ export const getTrainer = async (
     };
 
     res.json(payload);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error while fetching public trainer details", error);
     sendError(res, 500, "Failed to retrieve trainer details");
   }
+};
+
+// Deletes every row that references a trainer profile (FK-safe order) and the profile
+// itself, inside the caller's transaction. Shared by trainer-only deletion and full
+// account deletion. Order matters: schedule slots FK both the trainer and
+// trainer_working_hours, so they go first. Issues keep their history — only the
+// trainer link is nulled.
+export const cascadeDeleteTrainer = async (
+  trainerId: number,
+  t: Transaction
+) => {
+  await TrainerScheduleSlot.destroy({ where: { trainerId }, transaction: t });
+  await TrainerWorkingHour.destroy({ where: { trainerId }, transaction: t });
+  await TrainerBlockedDate.destroy({ where: { trainerId }, transaction: t });
+  await TrainerGym.destroy({ where: { trainerId }, transaction: t });
+  await TrainerImage.destroy({ where: { trainerId }, transaction: t });
+  await TrainerSpecialization.destroy({ where: { trainerId }, transaction: t });
+  await TrainerPackage.destroy({ where: { trainerId }, transaction: t });
+  await Review.destroy({ where: { trainerId }, transaction: t });
+  await ProfileViewEvent.destroy({ where: { trainerId }, transaction: t });
+  await BillingTransaction.destroy({ where: { trainerId }, transaction: t });
+  await Issue.update(
+    { trainerId: null as unknown as undefined },
+    { where: { trainerId }, transaction: t }
+  );
+  await Trainer.destroy({ where: { id: trainerId }, transaction: t });
 };
 
 export const deleteTrainer = async (req: Request, res: Response) => {
@@ -564,68 +580,45 @@ export const deleteTrainer = async (req: Request, res: Response) => {
       sendError(res, 404, "No trainer found");
       return;
     }
+    // Best-effort: clear the trainer's profile pictures from S3 before dropping the row.
     const profilePictureUrl = user.profileImageUrl;
     if (profilePictureUrl) {
-      const folderPrefix = `profilePicture/${userId}/`;
-
-      const listCommand = new ListObjectsV2Command({
-        Bucket: S3_CONFIG.bucket,
-        Prefix: folderPrefix,
-      });
-      const listResponse = await s3.send(listCommand);
-      console.log("📋 S3 list response:", listResponse);
-
-      if (!listResponse.Contents || listResponse.Contents.length === 0) {
-        console.log(`No files found for user ${userId}`);
-
-        console.log("Destroying trainer with no files");
-        await trainer.destroy();
-
-        user.role = UserRole.CLIENT;
-        await user.save();
-
-        sendSuccess(res, 200, "Trainer deleted succesfully");
-        return;
-      }
-
-      // Prepare objects for batch deletion
-      const objectsToDelete = listResponse.Contents.map((obj) => ({
+      const listResponse = await s3.send(
+        new ListObjectsV2Command({
+          Bucket: S3_CONFIG.bucket,
+          Prefix: `profilePicture/${userId}/`,
+        })
+      );
+      const objectsToDelete = (listResponse.Contents ?? []).map((obj) => ({
         Key: obj.Key!,
       }));
-
-      // Delete all objects in batch (more efficient)
-      const deleteCommand = new DeleteObjectsCommand({
-        Bucket: S3_CONFIG.bucket,
-        Delete: {
-          Objects: objectsToDelete,
-        },
-      });
-
-      const deleteResponse = await s3.send(deleteCommand);
-
-      console.log(
-        `✅ Deleted ${objectsToDelete.length} files for user ${userId}`
-      );
-
-      if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
-        console.warn("Some files failed to delete:", deleteResponse.Errors);
+      if (objectsToDelete.length > 0) {
+        const deleteResponse = await s3.send(
+          new DeleteObjectsCommand({
+            Bucket: S3_CONFIG.bucket,
+            Delete: { Objects: objectsToDelete },
+          })
+        );
+        if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
+          console.warn("Some files failed to delete:", deleteResponse.Errors);
+        }
       }
     }
-    console.log("Destroying trainer");
-    await trainer.destroy();
 
-    user.role = UserRole.CLIENT;
-    await user.save();
+    // Clear every row referencing this trainer, then the profile, in one transaction
+    // so a mid-way failure can't leave the trainer half-deleted.
+    await sequelize.transaction(async (t) => {
+      await cascadeDeleteTrainer(trainer.id, t);
+      user.role = UserRole.CLIENT;
+      await user.save({ transaction: t });
+    });
 
     sendSuccess(res, 200, "Trainer deleted succesfully");
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at deleting trainer", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        path: err.fields,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation error: ", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation error: ", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown errot at deleting trainer");
@@ -757,14 +750,11 @@ export const updateTrainer = async (req: Request, res: Response) => {
       "Trainer updated succesfully",
       updatedTrainer?.toJSON() as any
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at updating trainer", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        path: err.fields,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation error: ", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation error: ", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown errot at updating trainer");
@@ -781,7 +771,7 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
 
     const trainer = await Trainer.findOne({
       where: { userId: userId },
-      attributes: { exclude: ["id", "userId"] },
+      attributes: { exclude: ["userId"] },
       include: [
         {
           model: Specialization,
@@ -803,14 +793,11 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
     };
 
     sendSuccess(res, 200, "Trainer profile retrieved successfully", responsePayload);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error at  getting self trainer", error);
-    if (error.name === "SequelizeValidationError") {
-      const errors = error.errors.map((err: any) => ({
-        path: err.fields,
-        message: err.message,
-      }));
-      sendError(res, 400, "Validation error: ", errors);
+    const validationErrors = getSequelizeValidationErrors(error);
+    if (validationErrors) {
+      sendError(res, 400, "Validation error: ", validationErrors);
       return;
     }
     sendError(res, 500, "Unknown errot at getting self trainer");
@@ -846,15 +833,9 @@ export const searchTrainers = async (
       limit = "20",
     } = req.query;
 
-    const trainerWhere: any = {
-      [Op.or]: [
-        { subscriptionStatus: subStatus.ACTIVE },
-        {
-          subscriptionStatus: subStatus.TRIAL,
-          trialEndsAt: { [Op.gt]: new Date() },
-        },
-      ],
-    };
+    // Active-subscription filtering is applied via Trainer.scope("active") on
+    // every query below — do not hand-roll it here (keeps one source of truth).
+    const trainerWhere: any = {};
     const userWhere: any = {};
 
     const latValue = toFiniteNumber(lat);
@@ -1015,7 +996,7 @@ export const searchTrainers = async (
       });
       const userIds = userMatches.map((u: any) => u.id);
 
-      const trainersByName = await Trainer.findAll({
+      const trainersByName = await Trainer.scope("active").findAll({
         where: { userId: { [Op.in]: userIds } },
         attributes: ["id"],
       });
@@ -1025,7 +1006,7 @@ export const searchTrainers = async (
       const { [Op.or]: bioOr, ...restWhere } = trainerWhere;
       const bioTrainerWhere = { ...restWhere, [Op.or]: bioOr };
 
-      const trainersByBio = await Trainer.findAll({
+      const trainersByBio = await Trainer.scope("active").findAll({
         where: bioTrainerWhere,
         attributes: ["id"],
       });
@@ -1057,13 +1038,6 @@ export const searchTrainers = async (
       }
 
       // Re-apply non-text filters
-      finalTrainerWhere[Op.or] = [
-        { subscriptionStatus: subStatus.ACTIVE },
-        {
-          subscriptionStatus: subStatus.TRIAL,
-          trialEndsAt: { [Op.gt]: new Date() },
-        },
-      ];
       if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
       if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
       if (city) finalTrainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
@@ -1085,7 +1059,7 @@ export const searchTrainers = async (
       applyGeoFilters(finalTrainerWhere);
     }
 
-    const trainerAttributes: any[] = [
+    const trainerAttributes: FindAttributeOptions = [
       "id",
       "publicId",
       "bio",
@@ -1114,12 +1088,12 @@ export const searchTrainers = async (
     }
 
     const resolvedSortBy = safeSortBy === "distance" && !distanceExpression ? "totalRating" : safeSortBy;
-    const orderClause: any[] =
+    const orderClause: Order =
       resolvedSortBy === "distance" && distanceExpression
         ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["totalRating", "DESC"]]
         : [[resolvedSortBy, safeSortOrder]];
 
-    const { count, rows } = await Trainer.findAndCountAll({
+    const { count, rows } = await Trainer.scope("active").findAndCountAll({
       where: finalTrainerWhere,
       limit: parseInt(limit),
       offset,
@@ -1194,7 +1168,7 @@ export const searchTrainers = async (
         hasPreviousPage: parseInt(page) > 1,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Search trainers error:", error);
     sendError(res, 500, "Search failed");
   }

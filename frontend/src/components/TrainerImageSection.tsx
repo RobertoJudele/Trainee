@@ -110,6 +110,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
     gap: 10,
+    marginBottom: 20,
     ...theme.shadows.small,
   },
   headerRow: {

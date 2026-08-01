@@ -25,7 +25,7 @@ export default function Welcome() {
           <View style={styles.iconContainer}>
             <Ionicons name="barbell" size={64} color="#FFFFFF" />
           </View>
-          <Text style={styles.title}>Trainee</Text>
+          <Text style={styles.title}>Salvio</Text>
           <Text style={styles.subtitle}>
             {t("welcomeTagline")}
           </Text>
@@ -66,7 +66,7 @@ export default function Welcome() {
   );
 }
 
-function FeatureItem({ icon, text, delay }: { icon: any; text: string; delay: number }) {
+function FeatureItem({ icon, text, delay }: { icon: React.ComponentProps<typeof Ionicons>["name"]; text: string; delay: number }) {
   return (
     <FadeInUp delay={delay} style={styles.featureItem}>
       <Ionicons name={icon} size={22} color="#FFFFFF" />

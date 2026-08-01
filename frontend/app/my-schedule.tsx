@@ -1,6 +1,13 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, Alert, FlatList, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Switch, Text, TextInput, View } from "react-native";
 import { useGenerateMyCheckInCodeMutation, useGetMyScheduleQuery, useUnassignClientFromSlotMutation } from "../features/schedule/scheduleApiSlice";
+import { useGetMyPacksQuery } from "../features/schedule/clientPackApiSlice";
+import { useGetMyTrainersQuery, useRedeemTrainerInviteMutation } from "../features/trainer/trainerInviteApiSlice";
+import {
+  useGetNotificationSettingsQuery,
+  useUpdateNotificationSettingsMutation,
+} from "../features/notifications/notificationApiSlice";
+import { registerForPushToken } from "../src/lib/pushNotifications";
 import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
@@ -8,8 +15,11 @@ import { UserRole } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, GradientButton, PressableScale } from "../src/components/ui";
+import ProfileMenuModal, { type ProfileMenuItem } from "../src/components/ProfileMenuModal";
+import ScreenHeader from "../src/components/ScreenHeader";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function MyScheduleScreen() {
   const { t, language } = useLanguage();
@@ -20,7 +30,62 @@ export default function MyScheduleScreen() {
   const [unassignSlot] = useUnassignClientFromSlotMutation();
   const [cancellingSlotId, setCancellingSlotId] = useState<number | null>(null);
   const [generatedCode, setGeneratedCode] = useState<{ code: string; expiresAt: string } | null>(null);
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [connectVisible, setConnectVisible] = useState(false);
   const slots = data?.data || [];
+  const { data: packsResp } = useGetMyPacksQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
+  const myPacks = packsResp?.data ?? [];
+  const [trainerCode, setTrainerCode] = useState("");
+  const [redeemInvite, { isLoading: isRedeeming }] = useRedeemTrainerInviteMutation();
+  const { data: myTrainersResp } = useGetMyTrainersQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
+  const myTrainers = myTrainersResp?.data ?? [];
+  const { data: notifResp } = useGetNotificationSettingsQuery(undefined, { skip: user?.role !== UserRole.CLIENT });
+  const [updateNotificationSettings, { isLoading: savingReminders }] = useUpdateNotificationSettingsMutation();
+  const remindersOn = Boolean(notifResp?.data.remindersEnabled && notifResp?.data.hasToken);
+
+  const onToggleReminders = async (value: boolean) => {
+    try {
+      if (value) {
+        const token = await registerForPushToken();
+        if (!token) {
+          Alert.alert(t("error"), t("remindersPermissionDenied"));
+          return;
+        }
+        await updateNotificationSettings({
+          expoPushToken: token,
+          remindersEnabled: true,
+          locale: language,
+        }).unwrap();
+      } else {
+        await updateNotificationSettings({ remindersEnabled: false }).unwrap();
+      }
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("error")));
+    }
+  };
+
+  const onRedeemCode = async () => {
+    const code = trainerCode.trim();
+    if (!code) return;
+    try {
+      const resp = await redeemInvite({ code }).unwrap();
+      setTrainerCode("");
+      const name = `${resp.data.firstName} ${resp.data.lastName}`.trim();
+      Alert.alert(
+        t("inviteConnectedTitle"),
+        t("inviteConnectedMsg").replace("{trainer}", name),
+        [
+          { text: t("inviteLater"), style: "cancel" },
+          {
+            text: t("inviteLeaveReview"),
+            onPress: () => router.push(`/trainers/${resp.data.trainerId}`),
+          },
+        ]
+      );
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("inviteFailed")));
+    }
+  };
 
   // Onboarding tour targets.
   const codeCardTourRef = useTourTarget("client-code-card");
@@ -33,8 +98,8 @@ export default function MyScheduleScreen() {
         code: resp.data.code,
         expiresAt: resp.data.expiresAt,
       });
-    } catch (error: any) {
-      Alert.alert(t("error"), error?.data?.message || t("error"));
+    } catch (error: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(error, t("error")));
     }
   };
 
@@ -52,8 +117,8 @@ export default function MyScheduleScreen() {
             setCancellingSlotId(slotId);
             try {
               await unassignSlot({ slotId }).unwrap();
-            } catch (err: any) {
-              Alert.alert(t("error"), err?.data?.message || t("couldNotCancelBooking"));
+            } catch (err: unknown) {
+              Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotCancelBooking")));
             } finally {
               setCancellingSlotId(null);
             }
@@ -63,8 +128,45 @@ export default function MyScheduleScreen() {
     );
   }, [unassignSlot]);
 
+  const menuItems: ProfileMenuItem[] = [
+    {
+      key: "reminders",
+      icon: "notifications-outline",
+      label: t("remindersTitle"),
+      onPress: () => {},
+      disabled: savingReminders,
+      trailing: (
+        <Switch
+          value={remindersOn}
+          onValueChange={onToggleReminders}
+          disabled={savingReminders}
+          trackColor={{ true: theme.colors.primary }}
+        />
+      ),
+    },
+    {
+      key: "connect",
+      icon: "person-add-outline",
+      label: t("inviteEnterTitle"),
+      onPress: () => {
+        setMenuVisible(false);
+        setConnectVisible(true);
+      },
+    },
+  ];
+
+  const renderHeader = (withMenu: boolean) => (
+    <ScreenHeader
+      title={t("mySchedule")}
+      onMenuPress={withMenu ? () => setMenuVisible(true) : undefined}
+      menuAccessibilityLabel={t("openProfileMenu")}
+    />
+  );
+
   if (user?.role !== UserRole.CLIENT) {
     return (
+      <View style={styles.screen}>
+        {renderHeader(false)}
       <View style={styles.centered}>
         <FadeInUp style={styles.centeredInner}>
           <View style={styles.emptyIconWrap}>
@@ -80,32 +182,41 @@ export default function MyScheduleScreen() {
           />
         </FadeInUp>
       </View>
+      </View>
     );
   }
 
   if (isLoading || isFetching) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={theme.colors.primary} />
+      <View style={styles.screen}>
+        {renderHeader(false)}
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+        </View>
       </View>
     );
   }
 
   if (isError) {
     return (
-      <View style={styles.centered}>
-        <FadeInUp style={styles.centeredInner}>
-          <View style={[styles.emptyIconWrap, { backgroundColor: `${theme.colors.error}15` }]}>
-            <Ionicons name="cloud-offline-outline" size={36} color={theme.colors.error} />
-          </View>
-          <Text style={styles.emptyText}>{t("couldNotLoadSchedule")}</Text>
-          <GradientButton title={t("tryAgain")} icon="refresh" onPress={refetch} style={{ marginTop: theme.spacing.md }} />
-        </FadeInUp>
+      <View style={styles.screen}>
+        {renderHeader(false)}
+        <View style={styles.centered}>
+          <FadeInUp style={styles.centeredInner}>
+            <View style={[styles.emptyIconWrap, { backgroundColor: `${theme.colors.error}15` }]}>
+              <Ionicons name="cloud-offline-outline" size={36} color={theme.colors.error} />
+            </View>
+            <Text style={styles.emptyText}>{t("couldNotLoadSchedule")}</Text>
+            <GradientButton title={t("tryAgain")} icon="refresh" onPress={refetch} style={{ marginTop: theme.spacing.md }} />
+          </FadeInUp>
+        </View>
       </View>
     );
   }
 
   return (
+    <View style={styles.screen}>
+    {renderHeader(true)}
     <FlatList
       style={styles.container}
       contentContainerStyle={styles.content}
@@ -115,6 +226,7 @@ export default function MyScheduleScreen() {
       onRefresh={refetch}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
+        <>
         <View ref={codeCardTourRef} collapsable={false}>
         <FadeInUp style={styles.codeCard}>
           <View style={styles.codeCardHeader}>
@@ -142,6 +254,33 @@ export default function MyScheduleScreen() {
           )}
         </FadeInUp>
         </View>
+        {myPacks.length > 0 && (
+          <FadeInUp style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={styles.sessionIconWrap}>
+                <Ionicons name="ticket-outline" size={16} color={theme.colors.primary} />
+              </View>
+              <Text style={styles.title}>{t("packMyPacksTitle")}</Text>
+            </View>
+            {myPacks.map((pack) => {
+              const trainerName = pack.trainer?.user
+                ? `${pack.trainer.user.firstName} ${pack.trainer.user.lastName}`
+                : "";
+              const remaining = pack.totalSessions - pack.usedSessions;
+              return (
+                <View key={pack.id} style={styles.timeRow}>
+                  <Ionicons name="barbell-outline" size={15} color={theme.colors.textSecondary} />
+                  <Text style={styles.text}>
+                    {t("packLeftWithTrainer")
+                      .replace("{count}", `${remaining}/${pack.totalSessions}`)
+                      .replace("{trainer}", trainerName)}
+                  </Text>
+                </View>
+              );
+            })}
+          </FadeInUp>
+        )}
+        </>
       }
       ListEmptyComponent={
         <FadeInUp delay={theme.motion.stagger} style={styles.emptyState}>
@@ -171,7 +310,7 @@ export default function MyScheduleScreen() {
                 <View style={styles.sessionIconWrap}>
                   <Ionicons name="calendar" size={16} color={theme.colors.primary} />
                 </View>
-                <Text style={styles.title}>Session #{item.id}</Text>
+                <Text style={styles.title}>{t("sessionLabel").replace("{id}", String(item.id))}</Text>
                 <View style={[styles.statusBadge, { backgroundColor: `${statusColor}18` }]}>
                   <Text style={[styles.statusText, { color: statusColor }]}>{item.status}</Text>
                 </View>
@@ -203,10 +342,83 @@ export default function MyScheduleScreen() {
         );
       }}
     />
+    <ProfileMenuModal
+      visible={menuVisible}
+      onClose={() => setMenuVisible(false)}
+      items={menuItems}
+      scrollable={false}
+    />
+    <Modal
+      visible={connectVisible}
+      transparent
+      animationType="slide"
+      onRequestClose={() => setConnectVisible(false)}
+    >
+      <Pressable style={styles.sheetOverlay} onPress={() => setConnectVisible(false)}>
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <View style={styles.cardHeader}>
+            <View style={styles.sessionIconWrap}>
+              <Ionicons name="person-add-outline" size={16} color={theme.colors.primary} />
+            </View>
+            <Text style={styles.title}>{t("inviteEnterTitle")}</Text>
+            <PressableScale
+              onPress={() => setConnectVisible(false)}
+              style={{ marginLeft: "auto" }}
+              accessibilityRole="button"
+              accessibilityLabel={t("close")}
+            >
+              <Ionicons name="close" size={20} color={theme.colors.textSecondary} />
+            </PressableScale>
+          </View>
+          <Text style={styles.text}>{t("inviteEnterHint")}</Text>
+          <View style={styles.inviteRow}>
+            <TextInput
+              style={styles.inviteInput}
+              value={trainerCode}
+              onChangeText={setTrainerCode}
+              placeholder={t("inviteCodePh")}
+              placeholderTextColor={theme.colors.textSecondary}
+              autoCapitalize="characters"
+              autoCorrect={false}
+            />
+            <GradientButton
+              title={isRedeeming ? t("inviteConnecting") : t("inviteConnectBtn")}
+              onPress={onRedeemCode}
+              loading={isRedeeming}
+            />
+          </View>
+          {myTrainers.length > 0 && (
+            <View style={styles.myTrainersWrap}>
+              <Text style={styles.myTrainersLabel}>{t("inviteYourTrainers")}</Text>
+              {myTrainers.map((trainer) => (
+                <PressableScale
+                  key={trainer.trainerId}
+                  style={styles.myTrainerRow}
+                  onPress={() => {
+                    setConnectVisible(false);
+                    router.push(`/trainers/${trainer.trainerId}`);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${trainer.firstName} ${trainer.lastName}`}
+                >
+                  <Ionicons name="barbell-outline" size={15} color={theme.colors.primary} />
+                  <Text style={styles.myTrainerName}>
+                    {trainer.firstName} {trainer.lastName}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={15} color={theme.colors.textSecondary} />
+                </PressableScale>
+              ))}
+            </View>
+          )}
+        </Pressable>
+      </Pressable>
+    </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: theme.colors.background },
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   centered: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: theme.colors.background, padding: theme.spacing.lg },
@@ -290,4 +502,29 @@ const styles = StyleSheet.create({
   },
   cancelBtnDisabled: { opacity: 0.5 },
   cancelBtnText: { ...typography.caption, color: theme.colors.error, fontWeight: "700", textTransform: "none" },
+  sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
+  sheet: {
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: theme.spacing.lg,
+    paddingBottom: theme.spacing.xxl,
+    gap: 6,
+    ...theme.shadows.medium,
+  },
+  inviteRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  myTrainersWrap: { marginTop: theme.spacing.sm, gap: 6 },
+  myTrainersLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  myTrainerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  myTrainerName: { ...typography.body2, color: theme.colors.text, fontWeight: "600", flex: 1 },
+  inviteInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#CFD8E6",
+    borderRadius: theme.roundness,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    ...typography.body2,
+    color: theme.colors.text,
+  },
 });

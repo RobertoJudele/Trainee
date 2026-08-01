@@ -15,6 +15,7 @@ import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -43,8 +44,8 @@ export default function ForgotPasswordScreen() {
       const res = await forgotPassword({ email: normalized }).unwrap();
       Alert.alert(t("checkYourEmail"), res.message);
       router.push({ pathname: "/reset-password", params: { email: normalized } });
-    } catch (err: any) {
-      const msg = err?.data?.message || t("couldNotSendReset");
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, t("couldNotSendReset"));
       Alert.alert(t("requestFailed"), msg);
     }
   };

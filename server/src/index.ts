@@ -12,6 +12,8 @@ import {
   ensureSpatialAndSearchInfrastructure,
 } from "./services/databaseBootstrap";
 import { seedSpecializations } from "./seeds/specializationSeed";
+import { startSessionReminderScheduler } from "./services/sessionReminders";
+import { seedAppMinVersion } from "./seeds/appMinVersionSeed";
 import { getMissingRequiredSecurityEnv, securityConfig } from "./config/security";
 import {
   publicReadRateLimit,
@@ -51,7 +53,7 @@ app.use(errorHandler);
 app.get("/", publicReadRateLimit, (req, res) => {
   res.status(200).json({
     success: true,
-    message: "Trainee API is running",
+    message: "Salvio API is running",
     data: {
       service: "trainee-api",
       uptimeSeconds: Math.floor(process.uptime()),
@@ -99,15 +101,22 @@ const startServer = async () => {
     console.log("✅ Database synchronized and optimized.");
 
     await seedSpecializations();
+    await seedAppMinVersion();
     verifyEmailConnection();
 
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server listening on port ${PORT}`);
     });
+
+    startSessionReminderScheduler();
   } catch (error) {
     console.error("❌ Database startup failed:", error);
     process.exit(1);
   }
 };
 
-startServer();
+if (process.env.NODE_ENV !== "test") {
+  startServer();
+}
+
+export { app };

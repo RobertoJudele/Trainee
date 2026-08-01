@@ -171,9 +171,14 @@ export const registerValidation = [
     .withMessage("First name must be between 2 and 50 charachters long"),
   body("role").optional().isIn([UserRole.CLIENT, UserRole.TRAINER]),
   body("phone")
-    .optional()
+    .notEmpty()
+    .withMessage("Phone number is required.")
+    // Romanian mobile numbers only — deliberate, the service operates in Romania.
+    // The message must name the expected format: App Review rejected the app
+    // (04b9a669, guideline 2.1(a)) after a generic "invalid" error left the tester
+    // unable to sign up. Accepts 0712345678 and +40712345678; landlines are not.
     .isMobilePhone("ro-RO")
-    .withMessage("The phone number entered is invalid"),
+    .withMessage("Enter a Romanian mobile number, for example 0712 345 678."),
   strictSchema({
     body: ["email", "password", "firstName", "lastName", "role", "phone"],
   }),
@@ -220,10 +225,13 @@ export const updateProfileValidation = [
     .isLength({ min: 2, max: 50 })
     .withMessage("Last name must be between 2 and 50 characters."),
   body("phone")
+    // Bare .optional() is deliberate on this partial-update route: an omitted
+    // phone leaves it untouched, but "" is validated and rejected — phone is
+    // required at sign-up, so it must not be clearable here.
     .optional()
     .trim()
     .isMobilePhone("ro-RO")
-    .withMessage("Invalid phone number"),
+    .withMessage("Enter a Romanian mobile number, for example 0712 345 678."),
   body("birthDate")
     .optional()
     .isISO8601()
@@ -408,6 +416,73 @@ export const updateTrainerPackageValidation = [
     .withMessage("Sort order must be a non-negative integer."),
   strictSchema({
     body: ["name", "price", "sessionCount", "sortOrder"],
+  }),
+];
+
+export const updateNotificationSettingsValidation = [
+  body("expoPushToken")
+    .optional({ nullable: true })
+    .isString()
+    .isLength({ max: 200 })
+    .withMessage("Push token must be at most 200 characters."),
+  body("remindersEnabled")
+    .optional()
+    .isBoolean()
+    .withMessage("remindersEnabled must be a boolean."),
+  body("locale")
+    .optional()
+    .isIn(["en", "ro"])
+    .withMessage("locale must be en or ro."),
+  strictSchema({
+    body: ["expoPushToken", "remindersEnabled", "locale"],
+  }),
+];
+
+export const redeemInviteValidation = [
+  body("code")
+    .trim()
+    .isLength({ min: 4, max: 12 })
+    .withMessage("Code must be between 4 and 12 characters.")
+    .isAlphanumeric()
+    .withMessage("Code must be alphanumeric."),
+  strictSchema({
+    body: ["code"],
+  }),
+];
+
+export const createClientPackValidation = [
+  body("clientId")
+    .isInt({ min: 1 })
+    .withMessage("Client id must be a positive integer."),
+  body("totalSessions")
+    .isInt({ min: 1, max: 500 })
+    .withMessage("Total sessions must be between 1 and 500."),
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Name must be between 1 and 100 characters."),
+  strictSchema({
+    body: ["clientId", "totalSessions", "name"],
+  }),
+];
+
+export const updateClientPackValidation = [
+  body("name")
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 100 })
+    .withMessage("Name must be between 1 and 100 characters."),
+  body("totalSessions")
+    .optional()
+    .isInt({ min: 1, max: 500 })
+    .withMessage("Total sessions must be between 1 and 500."),
+  body("usedSessions")
+    .optional()
+    .isInt({ min: 0, max: 500 })
+    .withMessage("Used sessions must be between 0 and 500."),
+  strictSchema({
+    body: ["name", "totalSessions", "usedSessions"],
   }),
 ];
 

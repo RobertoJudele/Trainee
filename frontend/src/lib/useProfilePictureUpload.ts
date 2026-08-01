@@ -10,6 +10,7 @@ import {
   useDeleteProfilePictureMutation,
 } from "../../features/users/usersApiSlicet";
 import { pickProfileImage, toImageFormData } from "./imageUpload";
+import { getApiErrorMessage } from "./errors";
 
 export function useProfilePictureUpload() {
   const [upload, { isLoading: isUploading }] = useUploadProfilePictureMutation();
@@ -21,16 +22,16 @@ export function useProfilePictureUpload() {
     try {
       const form = toImageFormData("profileImage", [picked]);
       await upload(form).unwrap();
-    } catch (err: any) {
-      Alert.alert("Upload failed", err?.data?.message || "Could not upload your photo.");
+    } catch (err: unknown) {
+      Alert.alert("Upload failed", getApiErrorMessage(err, "Could not upload your photo."));
     }
   }, [upload]);
 
   const deletePicture = useCallback(async () => {
     try {
       await remove().unwrap();
-    } catch (err: any) {
-      Alert.alert("Error", err?.data?.message || "Could not remove your photo.");
+    } catch (err: unknown) {
+      Alert.alert("Error", getApiErrorMessage(err, "Could not remove your photo."));
     }
   }, [remove]);
 

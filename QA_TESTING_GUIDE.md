@@ -27,7 +27,7 @@
 ```bash
 # Option A: From TestFlight (if already distributed)
 1. Open TestFlight app
-2. Find "Trainee"
+2. Find "Salvio"
 3. Install and update to latest build
 
 # Option B: From local build (if EAS build available)

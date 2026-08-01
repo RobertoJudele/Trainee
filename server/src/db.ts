@@ -14,11 +14,18 @@ import { TrainerWorkingHour } from "./models/trainerWorkingHour";
 import { TrainerScheduleSlot } from "./models/trainerScheduleSlot";
 import { TrainerBlockedDate } from "./models/trainerBlockedDate";
 import { ClientCheckInCode } from "./models/clientCheckInCode";
+import { ClientSessionPack } from "./models/clientSessionPack";
+import { TrainerInviteCode } from "./models/trainerInviteCode";
+import { TrainerClient } from "./models/trainerClient";
+import { UserPushToken } from "./models/userPushToken";
+import { SlotReminder } from "./models/slotReminder";
 import { BillingWebhookEvent } from "./models/billingWebhookEvent";
 import { ProfileViewEvent } from "./models/profileViewEvent";
 import { BillingTransaction } from "./models/billingTransaction";
 import { RefreshToken } from "./models/refreshToken";
 import { ClientPreference } from "./models/clientPreference";
+import { AppMinVersion } from "./models/appMinVersion";
+import { UserBlock } from "./models/userBlock";
 dotenv.config();
 
 const sequelize = new Sequelize({
@@ -43,19 +50,31 @@ const sequelize = new Sequelize({
     TrainerScheduleSlot,
     TrainerBlockedDate,
     ClientCheckInCode,
+    ClientSessionPack,
+    TrainerInviteCode,
+    TrainerClient,
+    UserPushToken,
+    SlotReminder,
     BillingWebhookEvent,
     ProfileViewEvent,
     BillingTransaction,
     RefreshToken,
     ClientPreference,
+    AppMinVersion,
+    UserBlock,
   ],
-  logging: (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
+  logging: process.env.NODE_ENV === "test" ? false : (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {
     max: 5,
     min: 0,
     acquire: 30000,
     idle: 10000,
   },
+  // AND-merge query-level where clauses with scope where clauses (e.g. Trainer.scope("active"))
+  // instead of the default "overwrite" strategy, which lets a query's own top-level Op.and
+  // (applyGeoFilters' ST_DWithin radius filter) silently clobber the scope's Op.and and drop
+  // the active-subscription filter entirely.
+  define: { whereMergeStrategy: "and" },
 });
 
 export default sequelize;

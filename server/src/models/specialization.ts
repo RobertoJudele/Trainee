@@ -67,5 +67,5 @@ export class Specialization extends Model<
     },
     "specialization_id"
   ) // Explicitly specify foreign key
-  trainers!: any[];
+  trainers!: Trainer[];
 }

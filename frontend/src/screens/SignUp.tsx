@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { useSignupMutation, UserRole } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../../features/auth/authSlice';
+import { getApiErrorMessage } from '../lib/errors';
 import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,7 +39,7 @@ export default function SignUp() {
   const handleSignup = async () => {
     setErrMsg('');
 
-    if (!firstName || !lastName || !email || !password) {
+    if (!firstName || !lastName || !email || !password || !phone) {
       setErrMsg(t('fillRequiredFields'));
       return;
     }
@@ -58,8 +59,8 @@ export default function SignUp() {
       }
 
       router.replace('/');
-    } catch (error: any) {
-      const errorMessage = error?.data?.message || t('signupFailed');
+    } catch (error: unknown) {
+      const errorMessage = getApiErrorMessage(error, t('signupFailed'));
       setErrMsg(errorMessage);
     }
   };
@@ -134,7 +135,9 @@ export default function SignUp() {
           <FadeInUp delay={theme.motion.stagger * 3}>
             <Field
               label={t("phoneNumber")}
-              placeholder="(555) 123-4567"
+              // Romanian mobile format — a US example here left an App Store
+              // reviewer unable to sign up (rejection 04b9a669).
+              placeholder="0712 345 678"
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"

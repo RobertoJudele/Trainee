@@ -1,7 +1,7 @@
 # App Store Review Guidelines Compliance
 
 **Date:** June 6, 2026  
-**App:** Trainee v1.0.0  
+**App:** Salvio v1.0.0  
 **Status:** COMPLIANT ✅
 
 ---
@@ -89,7 +89,7 @@ Your app is a trainer discovery marketplace. Verify:
 
 **Your Copy:**
 ```
-Name: Trainee ✅
+Name: Salvio ✅
 Subtitle: Discover & Book Premium Trainers ✅
 Description: Honest and factual ✅
 ```
@@ -185,7 +185,7 @@ NSLocationWhenInUseUsageDescription:
 
 **Your Assets:**
 - ✅ Custom UI design
-- ✅ Original app name "Trainee"
+- ✅ Original app name "Salvio"
 - ✅ Custom icons/graphics
 - ✅ Original legal text
 

@@ -1,0 +1,15 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Salvio S monogram">
+  <title>Salvio monogram (secondary icon — favicon / tight spaces)</title>
+  <defs>
+    <linearGradient id="salvioGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#10B981"/>
+      <stop offset="1" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="232" ry="232" fill="url(#salvioGrad)"/>
+  <!-- NOTE: text element depends on the Inter font at render time.
+       Convert to outlines (Inter ExtraBold / 800) before shipping. -->
+  <text x="512" y="512" fill="#FFFFFF"
+        font-family="Inter, 'Segoe UI', Arial, sans-serif" font-weight="800"
+        font-size="660" text-anchor="middle" dominant-baseline="central">S</text>
+</svg>

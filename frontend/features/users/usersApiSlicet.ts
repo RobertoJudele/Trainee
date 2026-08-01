@@ -1,12 +1,14 @@
 import { apiSlice } from "../../src/api/apiSlice";
 import { setCredentials } from "../auth/authSlice";
+import type { User } from "../auth/authSlice";
+import type { AppDispatch, RootState } from "../../app/store";
 
 interface ProfileRequest {}
 
 interface ProfilePictureResponse {
   success: boolean;
   message: string;
-  data?: { user: any };
+  data?: { user: User };
 }
 
 // After a profile-picture change the server returns the updated user. Patch it
@@ -14,14 +16,14 @@ interface ProfilePictureResponse {
 // everywhere immediately, without a re-login or full profile refetch.
 async function syncUserAfterPicture(
   queryFulfilled: Promise<{ data: ProfilePictureResponse }>,
-  dispatch: any,
-  getState: any
+  dispatch: AppDispatch,
+  getState: () => unknown
 ) {
   try {
     const { data } = await queryFulfilled;
     const updatedUser = data?.data?.user;
     if (!updatedUser) return;
-    const state = getState();
+    const state = getState() as RootState;
     dispatch(
       setCredentials({
         user: updatedUser,

@@ -27,6 +27,7 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function MyGymsScreen() {
   const { t } = useLanguage();
@@ -75,8 +76,8 @@ export default function MyGymsScreen() {
         await joinGym(gymId).unwrap();
         Alert.alert(t("joinedGym"), t("joinedGymMessage").replace("{name}", gymName));
         setShowBrowser(false);
-      } catch (err: any) {
-        Alert.alert(t("error"), err?.data?.message ?? t("error"));
+      } catch (err: unknown) {
+        Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
       }
     },
     [joinGym]
@@ -86,8 +87,8 @@ export default function MyGymsScreen() {
     async (gymId: number, current: boolean) => {
       try {
         await setAvailability({ gymId, isAvailable: !current }).unwrap();
-      } catch (err: any) {
-        Alert.alert(t("error"), err?.data?.message ?? t("error"));
+      } catch (err: unknown) {
+        Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
       }
     },
     [setAvailability]
@@ -106,8 +107,8 @@ export default function MyGymsScreen() {
             onPress: async () => {
               try {
                 await leaveGym(gymId).unwrap();
-              } catch (err: any) {
-                Alert.alert(t("error"), err?.data?.message ?? t("error"));
+              } catch (err: unknown) {
+                Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
               }
             },
           },
@@ -330,6 +331,19 @@ export default function MyGymsScreen() {
               maxToRenderPerBatch={12}
               windowSize={11}
               ListEmptyComponent={<Text style={styles.noResults}>{t("noGymsFound")}</Text>}
+              ListFooterComponent={
+                <TouchableOpacity
+                  style={styles.requestGymLink}
+                  onPress={() => {
+                    setShowBrowser(false);
+                    router.push("/request-gym");
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("requestGymCta")}
+                >
+                  <Text style={styles.requestGymLinkText}>{t("requestGymCta")}</Text>
+                </TouchableOpacity>
+              }
             />
           )}
         </View>
@@ -447,6 +461,15 @@ const styles = StyleSheet.create({
   searchIcon: { fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, ...typography.body1, color: theme.colors.text },
   browserList: { paddingHorizontal: theme.spacing.md, paddingBottom: 40 },
+  requestGymLink: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.roundness,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  requestGymLinkText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
   noResults: {
     ...typography.body2,
     color: theme.colors.textSecondary,

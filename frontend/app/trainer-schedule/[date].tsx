@@ -10,6 +10,7 @@ import {
   Platform,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -21,6 +22,7 @@ import { useSelector } from "react-redux";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
+import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   PublicClient,
   deviceTimeZone,
@@ -36,6 +38,17 @@ import {
   useUnassignClientFromSlotMutation,
   useUnblockDateMutation,
 } from "../../features/schedule/scheduleApiSlice";
+import {
+  ClientSessionPack,
+  useCreateClientPackMutation,
+  useDeleteClientPackMutation,
+  useGetClientPacksQuery,
+  useUpdateClientPackMutation,
+} from "../../features/schedule/clientPackApiSlice";
+import {
+  useGetMyConnectedClientsQuery,
+  useGetMyInviteCodeQuery,
+} from "../../features/trainer/trainerInviteApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import {
@@ -62,6 +75,24 @@ type ApiErrorShape = {
     message?: string;
   };
 };
+
+interface SlotConflict {
+  client?: { firstName: string; lastName: string } | null;
+}
+
+function getConflicts(error: unknown): SlotConflict[] | undefined {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "data" in error &&
+    typeof (error as { data?: unknown }).data === "object" &&
+    (error as { data?: unknown }).data !== null
+  ) {
+    const data = (error as { data: { conflicts?: unknown } }).data;
+    return Array.isArray(data.conflicts) ? (data.conflicts as SlotConflict[]) : undefined;
+  }
+  return undefined;
+}
 
 const getErrorMessage = (error: unknown, fallback: string) => {
   if (error && typeof error === "object") {
@@ -253,6 +284,75 @@ export default function TrainerDayScheduleScreen() {
   const [newSlotStart, setNewSlotStart] = useState("");
   const [newSlotEnd, setNewSlotEnd] = useState("");
 
+  // Trainer invite code + server-side client roster.
+  const { data: inviteResp } = useGetMyInviteCodeQuery();
+  const { data: connectedResp } = useGetMyConnectedClientsQuery();
+
+  const onInviteClient = async () => {
+    const code = inviteResp?.data?.code;
+    if (!code) return;
+    try {
+      await Share.share({ message: t("inviteShareMessage").replace("{code}", code) });
+    } catch {
+      // User dismissed the share sheet.
+    }
+  };
+
+  // Session-pack state.
+  const [packSheetClient, setPackSheetClient] = useState<PublicClient | null>(null);
+  const [newPackSessions, setNewPackSessions] = useState("");
+  const { data: packsResp } = useGetClientPacksQuery();
+  const [createClientPack, { isLoading: creatingPack }] = useCreateClientPackMutation();
+  const [updateClientPack] = useUpdateClientPackMutation();
+  const [deleteClientPack] = useDeleteClientPackMutation();
+
+  // Oldest open pack per client (server returns packs ordered by createdAt ASC).
+  const activePackByClient = useMemo(() => {
+    const map = new Map<number, ClientSessionPack>();
+    for (const pack of packsResp?.data ?? []) {
+      if (!map.has(pack.clientId) && pack.usedSessions < pack.totalSessions) {
+        map.set(pack.clientId, pack);
+      }
+    }
+    return map;
+  }, [packsResp]);
+
+  const packSheetPacks = useMemo(
+    () => (packsResp?.data ?? []).filter((p) => p.clientId === packSheetClient?.id),
+    [packsResp, packSheetClient]
+  );
+
+  const onCreatePack = async () => {
+    if (!packSheetClient) return;
+    const total = Number.parseInt(newPackSessions, 10);
+    if (!Number.isFinite(total) || total < 1) {
+      Alert.alert(t("validation"), t("packSessionsPh"));
+      return;
+    }
+    try {
+      await createClientPack({ clientId: packSheetClient.id, totalSessions: total }).unwrap();
+      setNewPackSessions("");
+    } catch (error) {
+      Alert.alert(t("error"), getErrorMessage(error, t("packCreateFailed")));
+    }
+  };
+
+  const onAdjustPack = async (packId: number, usedSessions: number) => {
+    try {
+      await updateClientPack({ id: packId, usedSessions }).unwrap();
+    } catch (error) {
+      Alert.alert(t("error"), getErrorMessage(error, t("packUpdateFailed")));
+    }
+  };
+
+  const onDeletePack = async (packId: number) => {
+    try {
+      await deleteClientPack(packId).unwrap();
+    } catch (error) {
+      Alert.alert(t("error"), getErrorMessage(error, t("packUpdateFailed")));
+    }
+  };
+
   const onRegenerateDay = async () => {
     const hasCustom = regenStart.trim() !== "" || regenEnd.trim() !== "";
     if (hasCustom && !(/^([01]\d|2[0-3]):([0-5]\d)$/.test(regenStart) && /^([01]\d|2[0-3]):([0-5]\d)$/.test(regenEnd))) {
@@ -338,9 +438,7 @@ export default function TrainerDayScheduleScreen() {
     try {
       await blockDate({ date: routeDate, timeZone: deviceTimeZone }).unwrap();
     } catch (error: unknown) {
-      const conflicts = (error as any)?.data?.conflicts as
-        | { client?: { firstName: string; lastName: string } | null }[]
-        | undefined;
+      const conflicts = getConflicts(error);
       if (conflicts && conflicts.length > 0) {
         const names = conflicts
           .map((c) => (c.client ? `${c.client.firstName} ${c.client.lastName}` : t("dayAClient")))
@@ -422,6 +520,10 @@ export default function TrainerDayScheduleScreen() {
   const availableClients = useMemo(() => {
     const byId = new Map<number, PublicClient>();
 
+    for (const client of connectedResp?.data || []) {
+      byId.set(client.id, client);
+    }
+
     for (const item of pendingResp?.data || []) {
       byId.set(item.client.id, item.client);
     }
@@ -442,7 +544,7 @@ export default function TrainerDayScheduleScreen() {
     }
 
     return Array.from(byId.values()).sort((a, b) => `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`));
-  }, [pendingResp?.data, savedClients, assignedSlots]);
+  }, [connectedResp?.data, pendingResp?.data, savedClients, assignedSlots]);
 
   const selectedClient = availableClients.find((client) => client.id === selectedClientId) || null;
   const contentBottomPadding = keyboardHeight > 0 ? keyboardHeight + 90 : 24;
@@ -648,6 +750,7 @@ export default function TrainerDayScheduleScreen() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={0}
     >
+      <ScreenHeader title={t("dayPlannerEyebrow")} />
       <ScrollView
         ref={scrollRef}
         style={styles.container}
@@ -782,6 +885,83 @@ export default function TrainerDayScheduleScreen() {
           )}
         </BottomSheet>
 
+        <BottomSheet
+          visible={packSheetClient !== null}
+          title={t("packTitle")}
+          subtitle={packSheetClient ? `${packSheetClient.firstName} ${packSheetClient.lastName}` : undefined}
+          onClose={() => setPackSheetClient(null)}
+        >
+          <View style={styles.packSheetBody}>
+            {packSheetPacks.length === 0 ? (
+              <Text style={styles.emptyText}>{t("packNoPacks")}</Text>
+            ) : (
+              packSheetPacks.map((pack) => (
+                <View key={pack.id} style={styles.packItemRow}>
+                  <Text style={styles.packItemText}>
+                    {pack.usedSessions}/{pack.totalSessions} {t("packUsedLabel")}
+                  </Text>
+                  <View style={styles.packItemActions}>
+                    <Pressable
+                      onPress={() => onAdjustPack(pack.id, pack.usedSessions - 1)}
+                      disabled={pack.usedSessions <= 0}
+                      style={styles.packActionBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("packMarkUnused")}
+                    >
+                      <Ionicons
+                        name="remove-circle-outline"
+                        size={24}
+                        color={pack.usedSessions <= 0 ? theme.colors.textSecondary : theme.colors.primary}
+                      />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => onAdjustPack(pack.id, pack.usedSessions + 1)}
+                      disabled={pack.usedSessions >= pack.totalSessions}
+                      style={styles.packActionBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("packMarkUsed")}
+                    >
+                      <Ionicons
+                        name="add-circle-outline"
+                        size={24}
+                        color={
+                          pack.usedSessions >= pack.totalSessions
+                            ? theme.colors.textSecondary
+                            : theme.colors.primary
+                        }
+                      />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => onDeletePack(pack.id)}
+                      style={styles.packActionBtn}
+                      accessibilityRole="button"
+                      accessibilityLabel={t("packDelete")}
+                    >
+                      <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+                    </Pressable>
+                  </View>
+                </View>
+              ))
+            )}
+
+            <View style={styles.controlRow}>
+              <TextInput
+                style={[styles.input, styles.controlField]}
+                value={newPackSessions}
+                onChangeText={setNewPackSessions}
+                placeholder={t("packSessionsPh")}
+                placeholderTextColor={theme.colors.textSecondary}
+                keyboardType="number-pad"
+              />
+              <GradientActionButton
+                label={creatingPack ? t("dayAdding") : t("packCreate")}
+                onPress={onCreatePack}
+                disabled={creatingPack}
+              />
+            </View>
+          </View>
+        </BottomSheet>
+
         {isBlocked ? (
           <View style={styles.blockedBanner}>
             <Text style={styles.blockedBannerText}>
@@ -834,7 +1014,7 @@ export default function TrainerDayScheduleScreen() {
                           <StatusBadge status={slot.status} />
                           <Pressable
                             onPress={() => onDeleteSlot(slot.id)}
-                            hitSlop={8}
+                            hitSlop={13}
                             accessibilityRole="button"
                             accessibilityLabel={`Delete slot at ${shortTime(slot.startsAt)}`}
                           >
@@ -866,6 +1046,30 @@ export default function TrainerDayScheduleScreen() {
                   <Text style={styles.assignedClientText}>
                     {slot.client ? `${slot.client.firstName} ${slot.client.lastName}` : t("dayNoClient")}
                   </Text>
+                  {slot.client
+                    ? (() => {
+                        const client = slot.client;
+                        const pack = activePackByClient.get(client.id);
+                        return (
+                          <Pressable
+                            style={styles.packRow}
+                            onPress={() => setPackSheetClient(client)}
+                            accessibilityRole="button"
+                            accessibilityLabel={t("packTitle")}
+                          >
+                            <Ionicons name="ticket-outline" size={14} color={theme.colors.primary} />
+                            <Text style={styles.packRowText}>
+                              {pack
+                                ? t("packLeft").replace(
+                                    "{count}",
+                                    `${pack.totalSessions - pack.usedSessions}/${pack.totalSessions}`
+                                  )
+                                : t("packAddLabel")}
+                            </Text>
+                          </Pressable>
+                        );
+                      })()
+                    : null}
                   {slot.status === "assigned" ? (
                     <Pressable
                       style={styles.unassignBtn}
@@ -890,6 +1094,16 @@ export default function TrainerDayScheduleScreen() {
             <Text style={styles.clientPoolTitle}>{t("dayClientsArea")}</Text>
             <Text style={styles.clientPoolHint}>{t("dayClientsHint")}</Text>
           </View>
+
+          <Pressable
+            style={styles.inviteBtn}
+            onPress={onInviteClient}
+            accessibilityRole="button"
+            accessibilityLabel={t("inviteClientBtn")}
+          >
+            <Ionicons name="person-add-outline" size={16} color={theme.colors.primary} />
+            <Text style={styles.inviteBtnText}>{t("inviteClientBtn")}</Text>
+          </Pressable>
 
           <View style={styles.clientInputRow} onLayout={(event) => setClientInputY(event.nativeEvent.layout.y)}>
             <TextInput
@@ -1323,5 +1537,53 @@ const styles = StyleSheet.create({
   emptyText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
+  },
+  packRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    alignSelf: "flex-start",
+    minHeight: 44,
+    marginTop: 4,
+    marginBottom: 4,
+  },
+  packRowText: {
+    ...typography.body2,
+    color: theme.colors.primary,
+  },
+  packSheetBody: {
+    gap: 12,
+  },
+  packItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  packItemText: {
+    ...typography.body1,
+    color: theme.colors.text,
+  },
+  packItemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  packActionBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inviteBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+    marginBottom: 8,
+  },
+  inviteBtnText: {
+    ...typography.body2,
+    color: theme.colors.primary,
+    fontWeight: "600",
   },
 });

@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   Alert,
+  AlertButton,
   Linking,
   TextInput,
   Pressable,
@@ -23,17 +24,25 @@ import {
   Review,
 } from "../../features/review/reviewApiSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
+import {
+  useGetBlockedUsersQuery,
+  useBlockUserMutation,
+  useUnblockUserMutation,
+} from "../../features/block/blockApiSlice";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
+import { getApiErrorMessage } from "../../src/lib/errors";
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
   url: string;
   fallbackUrl?: string;
+  icon: React.ComponentProps<typeof Ionicons>["name"];
+  color: string;
 };
 
 type TrainerRouteParams = {
@@ -175,10 +184,26 @@ export default function TrainerDetailsScreen() {
 
   const trainerInternalId = trainer?.internalId;
 
+  const { data: blockedData } = useGetBlockedUsersQuery();
+  const blockedIds = React.useMemo(
+    () => new Set((blockedData?.data ?? []).map((u) => u.id)),
+    [blockedData]
+  );
+  const [blockUser] = useBlockUserMutation();
+  const [unblockUser] = useUnblockUserMutation();
+  const trainerUserId = trainer?.userId;
+  const isTrainerBlocked =
+    typeof trainerUserId === "number" && blockedIds.has(trainerUserId);
+
   const { data: reviewsData } = useGetTrainerReviewsQuery(trainerInternalId!, {
     skip: !trainerInternalId,
   });
-  const reviews = reviewsData?.data ?? [];
+  // ponytail: block filtering is client-side. Reviews are served from a public
+  // (unauthenticated) endpoint, so the blocker's identity isn't known server-side.
+  // Move to server-side (optional-auth on GET /reviews) if network-level hiding is needed.
+  const reviews = (reviewsData?.data ?? []).filter(
+    (r) => !r.client || !blockedIds.has(r.client.id)
+  );
 
   const { data: packagesResponse } = useGetTrainerPackagesQuery(trainerInternalId!, {
     skip: !trainerInternalId,
@@ -247,8 +272,8 @@ export default function TrainerDetailsScreen() {
       }
       setReviewMode("idle");
       setEditingReviewId(null);
-    } catch (err: any) {
-      Alert.alert(t("error"), err?.data?.message || t("couldNotSaveReview"));
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotSaveReview")));
     }
   }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview, t]);
 
@@ -262,13 +287,67 @@ export default function TrainerDetailsScreen() {
         onPress: async () => {
           try {
             await deleteReview({ reviewId, trainerId: trainerInternalId }).unwrap();
-          } catch (err: any) {
-            Alert.alert(t("error"), err?.data?.message || t("couldNotDeleteReview"));
+          } catch (err: unknown) {
+            Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotDeleteReview")));
           }
         },
       },
     ]);
   }, [trainerInternalId, deleteReview, t]);
+
+  const doBlockUser = useCallback(async (userId: number) => {
+    try {
+      await blockUser({ blockedUserId: userId }).unwrap();
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotBlockUser")));
+    }
+  }, [blockUser, t]);
+
+  const handleUnblockTrainer = useCallback(async () => {
+    const userId = trainer?.userId;
+    if (typeof userId !== "number") return;
+    try {
+      await unblockUser(userId).unwrap();
+    } catch (err: unknown) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotUnblockUser")));
+    }
+  }, [trainer?.userId, unblockUser, t]);
+
+  const handleBlockTrainer = useCallback(() => {
+    const userId = trainer?.userId;
+    if (typeof userId !== "number") return;
+    Alert.alert(t("blockTrainerTitle"), t("blockTrainerConfirm"), [
+      { text: t("cancel"), style: "cancel" },
+      { text: t("block"), style: "destructive", onPress: () => void doBlockUser(userId) },
+    ]);
+  }, [trainer?.userId, doBlockUser, t]);
+
+  const handleReviewOptions = useCallback((review: Review) => {
+    const authorId = review.client?.id;
+    const buttons: AlertButton[] = [
+      {
+        text: t("reportReview"),
+        onPress: () =>
+          router.push({
+            pathname: "/report-issue",
+            params: {
+              targetType: "review",
+              reviewId: String(review.id),
+              trainerId: trainerInternalId ? String(trainerInternalId) : "",
+            },
+          }),
+      },
+    ];
+    if (typeof authorId === "number") {
+      buttons.push({
+        text: t("blockUser"),
+        style: "destructive",
+        onPress: () => void doBlockUser(authorId),
+      });
+    }
+    buttons.push({ text: t("cancel"), style: "cancel" });
+    Alert.alert(t("reviewOptions"), undefined, buttons);
+  }, [t, router, trainerInternalId, doBlockUser]);
 
   const fullName =
     [trainer?.user?.firstName ?? params.firstName, trainer?.user?.lastName ?? params.lastName]
@@ -300,12 +379,12 @@ export default function TrainerDetailsScreen() {
 
     const instagramUrl = normalizeSocialUrl(trainer?.instagramUrl);
     if (instagramUrl) {
-      options.push({ label: "Instagram", url: instagramUrl });
+      options.push({ label: "Instagram", url: instagramUrl, icon: "logo-instagram", color: "#E1306C" });
     }
 
     const facebookUrl = normalizeSocialUrl(trainer?.facebookUrl);
     if (facebookUrl) {
-      options.push({ label: "Facebook", url: facebookUrl });
+      options.push({ label: "Facebook", url: facebookUrl, icon: "logo-facebook", color: "#1877F2" });
     }
 
     const whatsappContactUrls = getWhatsAppContactUrls(trainer?.whatsappUrl);
@@ -314,6 +393,8 @@ export default function TrainerDetailsScreen() {
         label: "WhatsApp",
         url: whatsappContactUrls.appUrl,
         fallbackUrl: whatsappContactUrls.webUrl,
+        icon: "logo-whatsapp",
+        color: "#25D366",
       });
     }
 
@@ -341,24 +422,6 @@ export default function TrainerDetailsScreen() {
       Alert.alert(t("error"), t("failedOpenSocial"));
     }
   }, [t]);
-
-  const handleContactPress = React.useCallback(() => {
-    if (contactOptions.length === 0) {
-      return;
-    }
-
-    Alert.alert(
-      t("contactTrainer"),
-      t("choosePlatform"),
-      contactOptions.slice(0, 3).map((option) => ({
-        text: option.label,
-        onPress: () => {
-          void openContactUrl(option.url, option.fallbackUrl);
-        },
-      })),
-      { cancelable: true }
-    );
-  }, [contactOptions, openContactUrl, t]);
 
   if (!hasValidTrainerId) {
     return (
@@ -398,6 +461,34 @@ export default function TrainerDetailsScreen() {
           accessibilityLabel={t("tryAgain")}
         >
           <Text style={styles.primaryButtonText}>{t("tryAgain")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (isTrainerBlocked) {
+    return (
+      <View style={styles.centered}>
+        <Ionicons name="ban-outline" size={48} color={theme.colors.textSecondary} />
+        <Text style={styles.errorText}>{t("trainerBlocked")}</Text>
+        <Text style={styles.loadingText}>{t("trainerBlockedHint")}</Text>
+        <TouchableOpacity
+          style={styles.primaryButton}
+          onPress={handleUnblockTrainer}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={t("unblock")}
+        >
+          <Text style={styles.primaryButtonText}>{t("unblock")}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={t("goBackButton")}
+          style={{ marginTop: 12 }}
+        >
+          <Text style={{ color: theme.colors.textSecondary }}>{t("goBackButton")}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -463,7 +554,7 @@ export default function TrainerDetailsScreen() {
                   {pkg.sessionCount} {t("sessions")}
                 </Text>
               </View>
-              <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>${Number(pkg.price).toFixed(2)}</Text>
+              <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>{Number(pkg.price).toFixed(2)} lei</Text>
             </View>
           ))}
         </View>
@@ -497,12 +588,12 @@ export default function TrainerDetailsScreen() {
       </View>
 
       {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
-        <TrainerImageCarousel title="Gallery" images={trainer.galleryImages} />
+        <TrainerImageCarousel title={t("gallery")} images={trainer.galleryImages} />
       )}
 
       {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
         <TrainerImageCarousel
-          title="Certifications & Awards"
+          title={t("certificationsAwards")}
           images={trainer.credentialImages}
           resizeMode="contain"
         />
@@ -565,6 +656,17 @@ export default function TrainerDetailsScreen() {
                       <Ionicons name="trash-outline" size={16} color={theme.colors.error} />
                     </Pressable>
                   </View>
+                )}
+                {!isOwn && (
+                  <Pressable
+                    onPress={() => handleReviewOptions(review)}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={t("reviewOptions")}
+                    style={styles.reviewActionBtn}
+                  >
+                    <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textSecondary} />
+                  </Pressable>
                 )}
               </View>
               {review.reviewText ? (
@@ -659,15 +761,20 @@ export default function TrainerDetailsScreen() {
       </TouchableOpacity>
 
       {contactOptions.length > 0 && (
-        <TouchableOpacity
-          style={styles.contactButton}
-          onPress={handleContactPress}
-          accessible={true}
-          accessibilityRole="button"
-          accessibilityLabel={t("contactTrainer")}
-        >
-          <Text style={styles.contactButtonText}>{t("contact")}</Text>
-        </TouchableOpacity>
+        <View style={styles.socialRow}>
+          {contactOptions.map((option) => (
+            <TouchableOpacity
+              key={option.label}
+              style={styles.socialIconButton}
+              onPress={() => void openContactUrl(option.url, option.fallbackUrl)}
+              accessible={true}
+              accessibilityRole="button"
+              accessibilityLabel={option.label}
+            >
+              <Ionicons name={option.icon} size={28} color={option.color} />
+            </TouchableOpacity>
+          ))}
+        </View>
       )}
 
       <TouchableOpacity
@@ -687,6 +794,16 @@ export default function TrainerDetailsScreen() {
         accessibilityLabel={t("reportIssue")}
       >
         <Text style={styles.secondaryButtonText}>{t("reportIssue")}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.secondaryButton}
+        onPress={handleBlockTrainer}
+        accessible={true}
+        accessibilityRole="button"
+        accessibilityLabel={t("blockTrainer")}
+      >
+        <Text style={styles.secondaryButtonText}>{t("blockTrainer")}</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -876,18 +993,22 @@ const styles = StyleSheet.create({
     color: "#B91C1C",
     fontWeight: "700",
   },
-  contactButton: {
+  socialRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 14,
     marginTop: 2,
-    backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: 14,
-    alignItems: "center",
-    ...theme.shadows.medium,
   },
-  contactButtonText: {
-    ...typography.body1,
-    color: "#fff",
-    fontWeight: "700",
+  socialIconButton: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    justifyContent: "center",
+    alignItems: "center",
+    ...theme.shadows.small,
   },
   reviewCard: {
     borderTopWidth: 1,

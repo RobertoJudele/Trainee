@@ -19,29 +19,18 @@ import {
 } from "../features/support/issueApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function ReportIssueScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
 
-  const categories: Array<{ value: IssueCategory; label: string }> = [
-    { value: "trainer_behavior", label: t("trainerBehavior") },
-    { value: "booking_no_show", label: t("bookingNoShow") },
-    { value: "technical_bug", label: t("technicalBug") },
-    { value: "payment_issue", label: t("paymentIssue") },
-    { value: "other", label: t("other") },
-  ];
-
-  const targetLabels: Record<IssueTargetType, string> = {
-    app: t("generalAppIssue"),
-    trainer: t("trainerIssue"),
-    booking: t("bookingIssue"),
-  };
   const params = useLocalSearchParams<{
     targetType?: IssueTargetType;
     trainerId?: string;
     trainerPublicId?: string;
     bookingId?: string;
+    reviewId?: string;
   }>();
 
   const [createIssue, { isLoading }] = useCreateIssueMutation();
@@ -49,9 +38,31 @@ export default function ReportIssueScreen() {
   const targetType: IssueTargetType =
     params.targetType === "trainer" ||
     params.targetType === "booking" ||
-    params.targetType === "app"
+    params.targetType === "app" ||
+    params.targetType === "review"
       ? params.targetType
       : "app";
+
+  const categories: Array<{ value: IssueCategory; label: string }> =
+    targetType === "review"
+      ? [
+          { value: "objectionable_content", label: t("objectionableContent") },
+          { value: "other", label: t("other") },
+        ]
+      : [
+          { value: "trainer_behavior", label: t("trainerBehavior") },
+          { value: "booking_no_show", label: t("bookingNoShow") },
+          { value: "technical_bug", label: t("technicalBug") },
+          { value: "payment_issue", label: t("paymentIssue") },
+          { value: "other", label: t("other") },
+        ];
+
+  const targetLabels: Partial<Record<IssueTargetType, string>> = {
+    app: t("generalAppIssue"),
+    trainer: t("trainerIssue"),
+    booking: t("bookingIssue"),
+    review: t("reviewIssue"),
+  };
 
   const trainerId = useMemo(() => {
     const value = Number(params.trainerId);
@@ -69,8 +80,15 @@ export default function ReportIssueScreen() {
     return Number.isFinite(value) && value > 0 ? value : undefined;
   }, [params.bookingId]);
 
+  const reviewId = useMemo(() => {
+    const value = Number(params.reviewId);
+    return Number.isFinite(value) && value > 0 ? value : undefined;
+  }, [params.reviewId]);
+
   const [category, setCategory] = useState<IssueCategory>(
-    targetType === "trainer"
+    targetType === "review"
+      ? "objectionable_content"
+      : targetType === "trainer"
       ? "trainer_behavior"
       : targetType === "booking"
       ? "booking_no_show"
@@ -90,23 +108,32 @@ export default function ReportIssueScreen() {
       return;
     }
 
-    const payload: CreateIssueRequest = {
-      targetType,
-      category,
-      title: title.trim(),
-      description: description.trim(),
-      trainerId,
-      trainerPublicId,
-      bookingId,
-    };
+    const payload: CreateIssueRequest =
+      targetType === "review"
+        ? {
+            targetType,
+            category,
+            title: title.trim(),
+            description: description.trim(),
+            metadata: { reviewId, trainerId },
+          }
+        : {
+            targetType,
+            category,
+            title: title.trim(),
+            description: description.trim(),
+            trainerId,
+            trainerPublicId,
+            bookingId,
+          };
 
     try {
       await createIssue(payload).unwrap();
       Alert.alert(t("submitted"), t("issueReported"), [
         { text: "OK", onPress: () => router.back() },
       ]);
-    } catch (error: any) {
-      const message = error?.data?.message || t("error");
+    } catch (error: unknown) {
+      const message = getApiErrorMessage(error, t("error"));
       Alert.alert(t("error"), message);
     }
   };
@@ -119,6 +146,15 @@ export default function ReportIssueScreen() {
       <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Text style={styles.title}>{t("reportIssueTitle")}</Text>
       <Text style={styles.subtitle}>{t("reportIssueSubtitle")}</Text>
+
+      <Pressable
+        style={styles.gymRequestCta}
+        onPress={() => router.push("/request-gym")}
+        accessibilityRole="button"
+        accessibilityLabel={t("requestGymCta")}
+      >
+        <Text style={styles.gymRequestCtaText}>{t("requestGymCta")}</Text>
+      </Pressable>
 
       <View style={styles.card}>
         <Text style={styles.label}>{t("issueType")}</Text>
@@ -203,6 +239,14 @@ const styles = StyleSheet.create({
     ...theme.shadows.small,
   },
   label: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  gymRequestCta: {
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.roundness,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  gymRequestCtaText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
   contextText: { ...typography.caption, color: theme.colors.textSecondary },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {

@@ -5,6 +5,7 @@ import { selectCurrentToken, selectCurrentTrainer, selectCurrentUser, setCredent
 import { requestTrainerTour } from "../../features/onboarding/onboardingSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
+import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   useGetSpecializationsQuery,
   SpecializationItem,
@@ -26,6 +27,7 @@ import React from "react";
 import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
+import { ApiEnvelope, TrainerProfileAttributes } from "../../src/types/api";
 export default function CreateTrainer() {
   const { t } = useLanguage();
   const [bio, setBio] = useState("");
@@ -158,7 +160,7 @@ export default function CreateTrainer() {
 
       const result = await creatingTrainer(trainerData);
 
-      const responseData = (result as any)?.data?.data;
+      const responseData = (result as ApiEnvelope<{ data?: TrainerProfileAttributes }>)?.data?.data;
       if (responseData && user) {
         dispatch(setTrainerProfile(responseData));
         dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
@@ -188,15 +190,22 @@ export default function CreateTrainer() {
           },
         ]
       );
-    } catch (error: any) {
-      if (!error.originalStatus) {
+    } catch (error: unknown) {
+      const err =
+        typeof error === "object" && error !== null
+          ? (error as Record<string, unknown>)
+          : null;
+      if (!err || !err.originalStatus) {
         setErrMsg(t("couldNotLoadTrainer"));
-      } else if (error.response?.status === 400) {
-        setErrMsg(t("invalidInput"));
-      } else if (error.response?.status === 401) {
-        setErrMsg(t("mustBeLoggedIn"));
       } else {
-        setErrMsg(t("updateError"));
+        const resp = (err as { response?: { status?: number } }).response;
+        if (resp?.status === 400) {
+          setErrMsg(t("invalidInput"));
+        } else if (resp?.status === 401) {
+          setErrMsg(t("mustBeLoggedIn"));
+        } else {
+          setErrMsg(t("updateError"));
+        }
       }
       errRef.current;
     }
@@ -262,15 +271,10 @@ export default function CreateTrainer() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <View style={styles.header}>
-            <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8}}>
-              <Ionicons name="sparkles" size={24} color={theme.colors.primary} style={{marginRight: 8}} />
-              <Text style={[styles.title, {marginBottom: 0}]}>{t("createTrainerProfile")}</Text>
-            </View>
-            <Text style={styles.subtitle}>
-              {t("createTrainerSubtitle")}
-            </Text>
-          </View>
+          <ScreenHeader
+            title={t("createTrainerProfile")}
+            subtitle={t("createTrainerSubtitle")}
+          />
 
           <View style={styles.form}>
             {/* Error Message */}
@@ -507,28 +511,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: 24,
-    paddingBottom: 30,
-    backgroundColor: "white",
-    borderBottomLeftRadius: theme.roundness,
-    borderBottomRightRadius: theme.roundness,
-    ...theme.shadows.medium,
-  },
-  title: {
-    ...typography.h2,
-    fontWeight: "bold",
-    color: "#1A1A1A",
-    textAlign: "center",
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    color: "#6B7280",
-    textAlign: "center",
-    lineHeight: 22,
   },
   form: {
     padding: 24,

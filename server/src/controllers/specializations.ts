@@ -12,7 +12,7 @@ export const getSpecializations = async (req: Request, res: Response) => {
     });
 
     sendSuccess(res, 200, "Specializations retrieved successfully", specializations);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error retrieving specializations", error);
     sendError(res, 500, "Could not retrieve specializations");
   }

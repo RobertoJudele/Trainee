@@ -81,11 +81,11 @@ eas build --platform ios --profile preview
 ### Sample Recruitment Email
 
 ```
-Subject: Help Test Trainee Beta - Fitness App
+Subject: Help Test Salvio Beta - Fitness App
 
 Hi [Name],
 
-I'm developing Trainee, a new app to connect 
+I'm developing Salvio, a new app to connect 
 people with fitness trainers. Would you be willing 
 to be a beta tester for 2 weeks?
 
@@ -455,15 +455,15 @@ Fix high-priority bugs, then ready for submission.
 
 ### Initial Invitation Email
 ```
-Subject: Test Trainee Beta - 2-Week Test Drive
+Subject: Test Salvio Beta - 2-Week Test Drive
 
 Hi [Name],
 
-Thank you for agreeing to beta test Trainee! 
+Thank you for agreeing to beta test Salvio! 
 Here's how it works:
 
 1. Check your email for TestFlight invitation
-2. Tap the link and install Trainee from TestFlight
+2. Tap the link and install Salvio from TestFlight
 3. Test the app for 2 weeks
 4. Report any issues via email or in-app feedback
 5. Enjoy using the app!
@@ -483,7 +483,7 @@ Thanks for helping us launch!
 
 ### Mid-Beta Update Email
 ```
-Subject: Trainee Beta - Update & Bug Fix
+Subject: Salvio Beta - Update & Bug Fix
 
 Hi Beta Testers,
 
@@ -501,7 +501,7 @@ Thanks,
 
 ### Final Email
 ```
-Subject: Trainee Beta - Final Week!
+Subject: Salvio Beta - Final Week!
 
 Hi Testers,
 

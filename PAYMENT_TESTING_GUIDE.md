@@ -43,14 +43,14 @@ In App Store Connect:
 
 Using the sandbox account (not your own Apple ID):
 1. Open TestFlight
-2. Install Trainee build
+2. Install Salvio build
 3. Sign out of App Store (if signed in)
 4. Don't sign in with sandbox account yet
 
 ### Test Case 1: Purchase Subscription
 
 **Steps:**
-1. Open Trainee
+1. Open Salvio
 2. Login with regular test account (test.trainer@example.com)
 3. Go to checkout/subscription screen
 4. Tap "Subscribe Now"

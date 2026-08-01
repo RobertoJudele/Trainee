@@ -16,6 +16,7 @@ import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -54,8 +55,8 @@ export default function ResetPasswordScreen() {
       Alert.alert(t("success"), res.message, [
         { text: t("goToLogin"), onPress: () => router.replace("/(auth)/login") },
       ]);
-    } catch (err: any) {
-      const msg = err?.data?.message || t("couldNotResetPassword");
+    } catch (err: unknown) {
+      const msg = getApiErrorMessage(err, t("couldNotResetPassword"));
       Alert.alert(t("resetFailed"), msg);
     }
   };

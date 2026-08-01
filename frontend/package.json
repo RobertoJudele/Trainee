@@ -30,6 +30,7 @@
     "expo-linear-gradient": "~15.0.8",
     "expo-linking": "~8.0.8",
     "expo-location": "~19.0.8",
+    "expo-notifications": "~0.32.17",
     "expo-router": "~6.0.10",
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",
@@ -52,5 +53,12 @@
     "@types/react": "~19.1.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "@stripe/stripe-react-native"
+      ]
+    }
+  }
 }

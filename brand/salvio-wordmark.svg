@@ -1,0 +1,9 @@
+<svg width="760" height="240" viewBox="0 0 760 240" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Salvio">
+  <title>Salvio wordmark</title>
+  <!-- NOTE: depends on the Inter font at render time.
+       Convert to outlines (Inter ExtraBold / 800) before shipping so it renders anywhere. -->
+  <text x="4" y="182" font-family="Inter, 'Segoe UI', Arial, sans-serif"
+        font-weight="800" font-size="200" letter-spacing="-6">
+    <tspan fill="#10B981">S</tspan><tspan fill="#0F172A">alvio</tspan>
+  </text>
+</svg>

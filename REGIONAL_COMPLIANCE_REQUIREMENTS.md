@@ -173,7 +173,7 @@ Timeline: 30 days
 
 **Data Processing Agreement (DPA):**
 - Status: Not formalized
-- When needed: If Trainee acts as processor
+- When needed: If Salvio acts as processor
 - Current model: Data controller
 - **Action:** Plan DPA for v1.1 if needed
 
@@ -354,7 +354,7 @@ Location: Can be sensitive for minors
 **Option 3: Strict Age Gate**
 ```typescript
 // At signup:
-"You must be 16+ to use Trainee"
+"You must be 16+ to use Salvio"
 // Blocks under-age users
 // Requires age verification (payment method)
 ```

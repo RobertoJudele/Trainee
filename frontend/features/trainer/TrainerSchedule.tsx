@@ -7,6 +7,7 @@ import {
   PanResponder,
   SafeAreaView,
   Dimensions,
+  LayoutRectangle,
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -72,7 +73,7 @@ const DraggableClient = ({ client, onDrop }: { client: Client; onDrop: (client: 
 export default function TrainerScheduleScreen() {
   const [unassignedClients, setUnassignedClients] = useState<Client[]>(INITIAL_CLIENTS);
   const [slots, setSlots] = useState<Slot[]>(INITIAL_SLOTS);
-  const [slotLayouts, setSlotLayouts] = useState<{ [key: string]: any }>({});
+  const [slotLayouts, setSlotLayouts] = useState<Record<string, LayoutRectangle>>({});
 
   // Funcția care verifică dacă clientul a picat pe vreun slot liber
   const handleDrop = (client: Client, dropX: number, dropY: number) => {

@@ -33,7 +33,7 @@ every startup (`seedSpecializations()` in `src/index.ts`).
 ```bash
 # 1. Get the code
 git clone <your-repo-url>
-cd Trainee/server
+cd Salvio/server
 
 # 2. Create the production .env (NOT in git — use .env.example as the template)
 #    Fill in real values. Key fields:

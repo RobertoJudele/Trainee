@@ -11,6 +11,7 @@ import {
 } from "../trainerApiSlice";
 import { pickImages, toImageFormData } from "../../../src/lib/imageUpload";
 import { useLanguage } from "../../../src/lib/i18n/LanguageContext";
+import { getApiErrorMessage } from "../../../src/lib/errors";
 
 const MAX_TRAINER_IMAGES = 5;
 
@@ -38,8 +39,8 @@ export function useTrainerImages() {
       try {
         if (category === "gallery") await uploadGallery(form).unwrap();
         else await uploadCredential(form).unwrap();
-      } catch (err: any) {
-        Alert.alert(t("uploadFailed"), err?.data?.message || t("uploadError"));
+      } catch (err: unknown) {
+        Alert.alert(t("uploadFailed"), getApiErrorMessage(err, t("uploadError")));
       }
     },
     [galleryImages.length, credentialImages.length, uploadGallery, uploadCredential, t],
@@ -50,8 +51,8 @@ export function useTrainerImages() {
       setDeletingImageId(id);
       try {
         await deleteTrainerImage(id).unwrap();
-      } catch (err: any) {
-        Alert.alert(t("error"), err?.data?.message || t("deleteImageError"));
+      } catch (err: unknown) {
+        Alert.alert(t("error"), getApiErrorMessage(err, t("deleteImageError")));
       } finally {
         setDeletingImageId(null);
       }

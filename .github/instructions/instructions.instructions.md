@@ -1,5 +1,5 @@
 ---
-description: Use for any work in this Trainee monorepo (frontend Expo app and server Express API) to enforce production-ready changes, safe edits, and mandatory documentation updates.
+description: Use for any work in this Salvio monorepo (frontend Expo app and server Express API) to enforce production-ready changes, safe edits, and mandatory documentation updates.
 applyTo: "**/*.{ts,tsx,js,jsx,json,md,sql}"
 ---
 

@@ -1,11 +1,13 @@
 import { apiSlice } from "../../src/api/apiSlice";
 
-export type IssueTargetType = "trainer" | "booking" | "app";
+export type IssueTargetType = "trainer" | "booking" | "app" | "gym" | "review";
 export type IssueCategory =
   | "trainer_behavior"
   | "booking_no_show"
   | "technical_bug"
   | "payment_issue"
+  | "gym_request"
+  | "objectionable_content"
   | "other";
 
 export interface CreateIssueRequest {
@@ -16,6 +18,7 @@ export interface CreateIssueRequest {
   trainerId?: number;
   trainerPublicId?: string;
   bookingId?: number;
+  metadata?: Record<string, unknown>;
 }
 
 interface IssueRecord {
@@ -27,6 +30,7 @@ interface IssueRecord {
   category: IssueCategory;
   title: string;
   description: string;
+  metadata?: Record<string, unknown>;
   status: "open" | "in_review" | "resolved" | "rejected";
   createdAt: string;
   updatedAt: string;
@@ -77,7 +81,7 @@ export const issueApiSlice = apiSlice.injectEndpoints({
         method: "PATCH",
         body: { status, resolutionNote },
       }),
-      transformResponse: (response: any) => response?.data,
+      transformResponse: (response: { data: IssueRecord }) => response.data,
     }),
   }),
 });

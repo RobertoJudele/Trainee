@@ -95,11 +95,14 @@ type RevenueCatPurchaseResult = {
 	customerInfo?: RevenueCatCustomerInfo;
 };
 
-// Turns a store period (e.g. unit "MONTH", count 1) into "1 month" / "2 weeks".
-const describePeriod = (unit?: string, count?: number): string => {
+type Translate = (key: string) => string;
+
+// Turns a store period (e.g. unit "MONTH", count 1) into "1 month" / "2 weeks",
+// localized via the passed translator.
+const describePeriod = (t: Translate, unit?: string, count?: number): string => {
 	const n = Number(count) > 0 ? Number(count) : 1;
 	const normalized = String(unit || "").trim().toUpperCase().replace(/^P/, "");
-	const word =
+	const base =
 		normalized.startsWith("DAY") || normalized === "D"
 			? "day"
 			: normalized.startsWith("WEEK") || normalized === "W"
@@ -107,12 +110,12 @@ const describePeriod = (unit?: string, count?: number): string => {
 				: normalized.startsWith("YEAR") || normalized === "Y"
 					? "year"
 					: "month";
-	return `${n} ${word}${n === 1 ? "" : "s"}`;
+	return `${n} ${t(`period_${base}_${n === 1 ? "one" : "other"}`)}`;
 };
 
 // Returns a free-trial label (e.g. "1 month free") if the package's product carries a
 // free introductory offer, otherwise null. Apple/Google decide actual eligibility.
-const getFreeTrialLabel = (pkg?: RevenueCatPackage | null): string | null => {
+const getFreeTrialLabel = (t: Translate, pkg?: RevenueCatPackage | null): string | null => {
 	const product = pkg?.product;
 	if (!product) {
 		return null;
@@ -120,15 +123,48 @@ const getFreeTrialLabel = (pkg?: RevenueCatPackage | null): string | null => {
 
 	const intro = product.introPrice;
 	if (intro && Number(intro.price) === 0) {
-		return `${describePeriod(intro.periodUnit, intro.periodNumberOfUnits)} free`;
+		return `${describePeriod(t, intro.periodUnit, intro.periodNumberOfUnits)} ${t("freeSuffix")}`;
 	}
 
 	const freePhase = product.defaultOption?.freePhase;
 	if (freePhase?.billingPeriod) {
-		return `${describePeriod(freePhase.billingPeriod.unit ?? undefined, freePhase.billingPeriod.value ?? undefined)} free`;
+		return `${describePeriod(t, freePhase.billingPeriod.unit ?? undefined, freePhase.billingPeriod.value ?? undefined)} ${t("freeSuffix")}`;
 	}
 
 	return null;
+};
+
+// What an active subscription actually unlocks. Shown on the paywall before the
+// price so the offer is self-describing (App Store Guideline 3.1.2), and again on
+// the subscribed screen so the value stays visible after purchase.
+const SUBSCRIPTION_BENEFITS = [
+	{ icon: "search", titleKey: "benefitVisibilityTitle", bodyKey: "benefitVisibilityBody" },
+	{ icon: "person-circle", titleKey: "benefitProfileTitle", bodyKey: "benefitProfileBody" },
+	{ icon: "calendar", titleKey: "benefitScheduleTitle", bodyKey: "benefitScheduleBody" },
+	{ icon: "barbell", titleKey: "benefitGymsTitle", bodyKey: "benefitGymsBody" },
+	{ icon: "stats-chart", titleKey: "benefitAnalyticsTitle", bodyKey: "benefitAnalyticsBody" },
+	{ icon: "star", titleKey: "benefitReviewsTitle", bodyKey: "benefitReviewsBody" },
+] as const;
+
+const SubscriptionBenefits = () => {
+	const { t } = useLanguage();
+	return (
+		<View style={styles.benefitsBlock}>
+			<Text style={styles.benefitsHeading}>{t("whatsIncluded")}</Text>
+			<Text style={styles.benefitsNote}>{t("subscriptionIncludesNote")}</Text>
+			{SUBSCRIPTION_BENEFITS.map((benefit) => (
+				<View key={benefit.titleKey} style={styles.benefitRow}>
+					<View style={styles.benefitIcon}>
+						<Ionicons name={benefit.icon} size={16} color={theme.colors.primary} />
+					</View>
+					<View style={styles.benefitText}>
+						<Text style={styles.benefitTitle}>{t(benefit.titleKey)}</Text>
+						<Text style={styles.benefitBody}>{t(benefit.bodyKey)}</Text>
+					</View>
+				</View>
+			))}
+		</View>
+	);
 };
 
 type SuccessDisplayProps = {
@@ -248,15 +284,15 @@ const Message = ({ message }: MessageProps) => (
 	</View>
 );
 
-const NativeIapNotice = () => (
-	<View style={styles.section}>
-		<Text style={styles.title}>RevenueCat Billing</Text>
-		<Text style={styles.message}>
-			Subscriptions are handled through Apple App Store / Google Play via RevenueCat
-			 in this release.
-		</Text>
-	</View>
-);
+const NativeIapNotice = () => {
+	const { t } = useLanguage();
+	return (
+		<View style={styles.section}>
+			<Text style={styles.title}>{t("iapNoticeTitle")}</Text>
+			<Text style={styles.message}>{t("iapNoticeBody")}</Text>
+		</View>
+	);
+};
 
 const WebBillingModeNotice = () => (
 	<View style={styles.section}>
@@ -390,18 +426,18 @@ export default function CheckoutScreen() {
 			|| selectedPackage
 			|| packages[0];
 		if (monthlyPkg?.product?.priceString) {
-			return `${monthlyPkg.product.priceString} / month`;
+			return `${monthlyPkg.product.priceString} ${t("perMonthSuffix")}`;
 		}
 		const latestTx = transactions[0]; // best-effort fallback
 		if (latestTx) {
-			return `${Number(latestTx.amount).toFixed(2)} ${latestTx.currency} / month`;
+			return `${Number(latestTx.amount).toFixed(2)} ${latestTx.currency} ${t("perMonthSuffix")}`;
 		}
 		return "—";
-	}, [packages, selectedPackage, transactions]);
+	}, [packages, selectedPackage, transactions, t]);
 
 	const selectedTrialLabel = useMemo(
-		() => getFreeTrialLabel(selectedPackage || packages[0]),
-		[selectedPackage, packages]
+		() => getFreeTrialLabel(t, selectedPackage || packages[0]),
+		[selectedPackage, packages, t]
 	);
 
 	const subscribeLabel = selectedTrialLabel ? t("startFreeTrial") : t("subscribeNow");
@@ -523,30 +559,40 @@ export default function CheckoutScreen() {
 		};
 	}, [isNativeApp]);
 
+	const isUnexpired = (entitlement: RevenueCatEntitlement): boolean => {
+		if (!entitlement.expirationDate) {
+			return true;
+		}
+		const expiration = new Date(entitlement.expirationDate);
+		return Number.isFinite(expiration.getTime()) && expiration.getTime() > Date.now();
+	};
+
+	// Prefer the configured entitlement ID, but fall back to any other active one. A
+	// mismatch between EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID and the RevenueCat
+	// dashboard must not make a completed purchase look like a failure — the server
+	// re-verifies against RevenueCat's API and is the authority on access. Mirrors
+	// resolveRevenueCatSnapshot() on the backend, which falls back the same way.
 	const resolveEntitlement = (
 		customerInfo: RevenueCatCustomerInfo
 	): RevenueCatEntitlement | undefined => {
-		const activeEntitlement =
-			customerInfo.entitlements?.active?.[REVENUECAT_ENTITLEMENT_ID];
-		if (activeEntitlement) {
-			return activeEntitlement;
+		const active = customerInfo.entitlements?.active ?? {};
+		const configuredActive = active[REVENUECAT_ENTITLEMENT_ID];
+		if (configuredActive) {
+			return configuredActive;
 		}
 
-		const allEntitlement = customerInfo.entitlements?.all?.[REVENUECAT_ENTITLEMENT_ID];
-		if (!allEntitlement) {
-			return undefined;
+		const anyActive = Object.values(active)[0];
+		if (anyActive) {
+			return anyActive;
 		}
 
-		if (!allEntitlement.expirationDate) {
-			return allEntitlement;
+		const all = customerInfo.entitlements?.all ?? {};
+		const configuredAll = all[REVENUECAT_ENTITLEMENT_ID];
+		if (configuredAll && isUnexpired(configuredAll)) {
+			return configuredAll;
 		}
 
-		const expiration = new Date(allEntitlement.expirationDate);
-		if (Number.isFinite(expiration.getTime()) && expiration.getTime() > Date.now()) {
-			return allEntitlement;
-		}
-
-		return undefined;
+		return Object.values(all).find(isUnexpired);
 	};
 
 	const syncRevenueCatToBackend = async (payload: {
@@ -554,15 +600,19 @@ export default function CheckoutScreen() {
 		expiresAt?: string;
 		purchaseToken?: string;
 		originalTransactionId?: string;
-	}) => {
+	}): Promise<boolean> => {
 		const platform = Platform.OS === "ios" ? "ios" : "android";
-		await validateIapSubscription({
+		const result = await validateIapSubscription({
 			platform,
 			productId: payload.productId,
 			expiresAt: payload.expiresAt,
 			purchaseToken: payload.purchaseToken,
 			originalTransactionId: payload.originalTransactionId,
 		}).unwrap();
+
+		// The server verifies with RevenueCat before granting access, so its answer —
+		// not the local store receipt — decides whether the subscription is live.
+		return Boolean(result.data?.entitlement?.isActive);
 	};
 
 	const openExternalUrl = async (url: string) => {
@@ -577,12 +627,12 @@ export default function CheckoutScreen() {
 	const startCheckout = async () => {
 		if (isNativeApp) {
 			if (!user) {
-				Alert.alert("Login Required", "Please sign in before starting a subscription.");
+				Alert.alert(t("loginRequired"), t("loginRequiredMsg"));
 				return;
 			}
 
 			if (!selectedPackage) {
-				Alert.alert("Selection Required", "Please choose a subscription package.");
+				Alert.alert(t("selectionRequired"), t("selectionRequiredMsg"));
 				return;
 			}
 
@@ -590,34 +640,48 @@ export default function CheckoutScreen() {
 			setMessage("");
 			setSuccess(false);
 
+			// Once the store call returns without throwing, the user has been charged.
+			// Anything that fails after this point is a sync problem, not a failed
+			// purchase, and must not be reported as "unable to complete purchase".
+			let storePurchaseCompleted = false;
+
 			try {
 				const purchaseResult = (await Purchases.purchasePackage(
 					selectedPackage as any
 				)) as unknown as RevenueCatPurchaseResult;
 
+				storePurchaseCompleted = true;
+
 				const customerInfo = purchaseResult.customerInfo || {};
 				const entitlement = resolveEntitlement(customerInfo);
-				if (!entitlement) {
-					throw new Error(
-						"Purchase completed but entitlement is not active yet. Try Restore Purchases."
-					);
-				}
 
+				// The entitlement may not be visible in this response yet (store
+				// propagation delay). Hand the purchase to the server regardless — it
+				// verifies with RevenueCat's API before granting access.
 				const selectedProductId =
 					selectedPackage.product?.identifier
-					|| entitlement.productIdentifier
+					|| entitlement?.productIdentifier
 					|| REVENUECAT_MONTHLY_PRODUCT_ID;
 
-				await syncRevenueCatToBackend({
+				const activated = await syncRevenueCatToBackend({
 					productId: selectedProductId,
-					expiresAt: entitlement.expirationDate || undefined,
+					expiresAt: entitlement?.expirationDate || undefined,
 					purchaseToken: `rc-purchase-${Date.now()}`,
 					originalTransactionId: customerInfo.originalAppUserId,
 				});
 
-				setSuccess(true);
-				setMessage("Subscription activated successfully.");
 				void refetchEntitlement();
+
+				if (!activated) {
+					// Charged at the store, but RevenueCat has not surfaced the purchase to
+					// our server yet. Recoverable via Restore Purchases — don't call it a
+					// failed purchase or claim an activation that hasn't happened.
+					Alert.alert(t("purchaseSyncErrorTitle"), t("purchaseSyncErrorMsg"));
+					return;
+				}
+
+				setSuccess(true);
+				setMessage(t("subscriptionActivatedMsg"));
 			} catch (error) {
 				const typedError = error as { userCancelled?: boolean; code?: string; message?: string };
 				const errorCode = String(typedError.code || "").toLowerCase();
@@ -625,15 +689,13 @@ export default function CheckoutScreen() {
 				const isAlreadyLinked = errorCode.includes("receiptalreadyinuse") || errorCode === "36" || errorCode.includes("already in use");
 
 				if (wasCancelled) {
-					setMessage("Purchase cancelled.");
+					setMessage(t("purchaseCancelledMsg"));
 				} else if (isAlreadyLinked) {
-					Alert.alert(
-						"Subscription Already Linked",
-						"This App Store subscription is already active on another Trainee account. Please sign in with that account, or use a different Apple ID to subscribe."
-					);
+					Alert.alert(t("subscriptionAlreadyLinked"), t("subscriptionAlreadyLinkedMsg"));
+				} else if (storePurchaseCompleted) {
+					Alert.alert(t("purchaseSyncErrorTitle"), t("purchaseSyncErrorMsg"));
 				} else {
-					const fallback = "Unable to complete purchase. Please try again.";
-					Alert.alert("Purchase Error", typedError.message || fallback);
+					Alert.alert(t("purchaseErrorTitle"), typedError.message || t("purchaseErrorMsg"));
 				}
 			} finally {
 				setLoading(false);
@@ -737,7 +799,7 @@ export default function CheckoutScreen() {
 		}
 
 		if (!user) {
-			Alert.alert("Login Required", "Please sign in before restoring purchases.");
+			Alert.alert(t("loginRequired"), t("loginRequiredMsg"));
 			return;
 		}
 
@@ -749,35 +811,35 @@ export default function CheckoutScreen() {
 			const entitlement = resolveEntitlement(customerInfo);
 
 			if (!entitlement) {
-				Alert.alert("No Active Subscription", "No active subscription was found to restore.");
+				Alert.alert(t("noActiveSubscription"), t("noActiveSubscriptionMsg"));
 				return;
 			}
 
-			await syncRevenueCatToBackend({
+			const activated = await syncRevenueCatToBackend({
 				productId: entitlement.productIdentifier || REVENUECAT_MONTHLY_PRODUCT_ID,
 				expiresAt: entitlement.expirationDate || undefined,
 				purchaseToken: `rc-restore-${Date.now()}`,
 				originalTransactionId: customerInfo.originalAppUserId,
 			});
 
-			setSuccess(true);
-			setMessage("Purchases restored successfully.");
 			void refetchEntitlement();
+
+			if (!activated) {
+				Alert.alert(t("noActiveSubscription"), t("noActiveSubscriptionMsg"));
+				return;
+			}
+
+			setSuccess(true);
+			setMessage(t("purchasesRestoredMsg"));
 		} catch (error) {
 			const typedError = error as { code?: string; message?: string };
 			const errorCode = String(typedError.code || "").toLowerCase();
 			const isAlreadyLinked = errorCode.includes("receiptalreadyinuse") || errorCode === "36" || errorCode.includes("already in use");
 
 			if (isAlreadyLinked) {
-				Alert.alert(
-					"Subscription Already Linked",
-					"This App Store subscription is already active on another Trainee account. Please sign in with that account to use it."
-				);
+				Alert.alert(t("subscriptionAlreadyLinked"), t("subscriptionAlreadyLinkedMsg"));
 			} else {
-				Alert.alert(
-					"Restore Error",
-					typedError.message || "Unable to restore purchases. Please try again."
-				);
+				Alert.alert(t("restoreErrorTitle"), typedError.message || t("restoreErrorMsg"));
 			}
 		} finally {
 			setIsRestoring(false);
@@ -812,7 +874,7 @@ export default function CheckoutScreen() {
 							<View style={styles.errorBanner}>
 								<Ionicons name="warning" size={20} color={theme.colors.error} style={{ marginRight: 8 }} />
 								<Text style={styles.errorBannerText}>
-									Payment failed. Please update your billing method in your store settings to avoid loss of access.
+									{t("paymentFailedBanner")}
 								</Text>
 							</View>
 						)}
@@ -821,7 +883,7 @@ export default function CheckoutScreen() {
 							<View style={styles.warningBanner}>
 								<Ionicons name="alert-circle" size={20} color={theme.colors.warning} style={{ marginRight: 8 }} />
 								<Text style={styles.warningBannerText}>
-									Your subscription is canceled and will expire on {formatDateString(entitlement.expiresAt)}.
+									{t("subscriptionCanceledExpires").replace("{date}", formatDateString(entitlement.expiresAt))}
 								</Text>
 							</View>
 						)}
@@ -830,7 +892,7 @@ export default function CheckoutScreen() {
 							<View style={styles.infoBanner}>
 								<Ionicons name="information-circle" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
 								<Text style={styles.infoBannerText}>
-									Your subscription is set to renew on {formatDateString(entitlement.expiresAt)}.
+									{t("subscriptionRenewsOn").replace("{date}", formatDateString(entitlement.expiresAt))}
 								</Text>
 							</View>
 						)}
@@ -869,6 +931,8 @@ export default function CheckoutScreen() {
 							</View>
 						</View>
 
+						<SubscriptionBenefits />
+
 						<Pressable
 							style={({ pressed }) => [styles.button, { marginTop: 16 }, pressed && styles.buttonPressed]}
 							onPress={handleManageSubscription}
@@ -884,7 +948,7 @@ export default function CheckoutScreen() {
 							<View style={styles.infoBanner}>
 								<Ionicons name="information-circle" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
 								<Text style={styles.infoBannerText}>
-									Your subscription was purchased on {getProviderLabel(entitlement?.source || "none")}. You'll be redirected there to manage it.
+									{t("crossPlatformNotice").replace("{provider}", getProviderLabel(entitlement?.source || "none"))}
 								</Text>
 							</View>
 						)}
@@ -946,7 +1010,7 @@ export default function CheckoutScreen() {
 											</Text>
 											<View style={[styles.smallBadge, { backgroundColor: tx.status === "paid" ? theme.colors.success + "15" : theme.colors.error + "15" }]}>
 												<Text style={[styles.smallBadgeText, { color: tx.status === "paid" ? theme.colors.success : theme.colors.error }]}>
-													{tx.status === "paid" ? "Paid" : tx.status}
+													{tx.status === "paid" ? t("paidStatus") : tx.status}
 												</Text>
 											</View>
 										</View>
@@ -1039,9 +1103,13 @@ export default function CheckoutScreen() {
 
 									{selectedTrialLabel && (
 										<Text style={styles.trialNote}>
-											{selectedTrialLabel.charAt(0).toUpperCase() + selectedTrialLabel.slice(1)}, then {monthlyPriceLabel}. Cancel anytime before the trial ends and you won't be charged.
+											{t("trialThenPrice")
+												.replace("{trial}", selectedTrialLabel.charAt(0).toUpperCase() + selectedTrialLabel.slice(1))
+												.replace("{price}", monthlyPriceLabel)}
 										</Text>
 									)}
+
+									<SubscriptionBenefits />
 
 									<Pressable
 										style={({ pressed }) => [styles.button, pressed && styles.buttonPressed]}
@@ -1090,8 +1158,10 @@ export default function CheckoutScreen() {
 
 									<Text style={styles.legalDisclaimer}>
 										{selectedTrialLabel
-											? `Your ${selectedTrialLabel} starts today. After it ends, the subscription automatically renews at ${monthlyPriceLabel} unless auto-renew is turned off at least 24 hours before the end of the current period. You can manage or cancel anytime in your App Store account settings.`
-											: "Subscription automatically renews unless auto-renew is turned off at least 24 hours before the end of the current period. Your account is charged for renewal within 24 hours prior to the end of the current period. You can manage or cancel your subscription in your App Store account settings after purchase."}
+											? t("autoRenewTrialDisclosure")
+												.replace("{trial}", selectedTrialLabel)
+												.replace("{price}", monthlyPriceLabel)
+											: t("autoRenewDisclosure")}
 									</Text>
 									<View style={styles.legalLinksRow}>
 										<Pressable
@@ -1131,7 +1201,7 @@ export default function CheckoutScreen() {
 					{!success && message === "" && (
 						<ProductDisplay
 							title="MonthlySubscription"
-							subtitle="RON 100.00 / month"
+							subtitle="100.00 lei / month"
 							actionLabel="Checkout"
 							onCheckout={startCheckout}
 							loading={loading}
@@ -1307,6 +1377,53 @@ const styles = StyleSheet.create({
 		height: 10,
 		borderRadius: 5,
 		backgroundColor: theme.colors.primary,
+	},
+	benefitsBlock: {
+		marginTop: 4,
+		marginBottom: 20,
+		paddingTop: 16,
+		borderTopWidth: 1,
+		borderTopColor: theme.colors.border,
+	},
+	benefitsHeading: {
+		...typography.body1,
+		color: theme.colors.text,
+		fontWeight: "700",
+	},
+	benefitsNote: {
+		...typography.caption,
+		color: theme.colors.textSecondary,
+		lineHeight: 16,
+		marginTop: 4,
+		marginBottom: 14,
+	},
+	benefitRow: {
+		flexDirection: "row",
+		alignItems: "flex-start",
+		marginBottom: 14,
+	},
+	benefitIcon: {
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		backgroundColor: theme.colors.primary + "15",
+		alignItems: "center",
+		justifyContent: "center",
+		marginRight: 12,
+	},
+	benefitText: {
+		flex: 1,
+	},
+	benefitTitle: {
+		...typography.body2,
+		color: theme.colors.text,
+		fontWeight: "700",
+	},
+	benefitBody: {
+		...typography.caption,
+		color: theme.colors.textSecondary,
+		lineHeight: 17,
+		marginTop: 2,
 	},
 	trialNote: {
 		...typography.body2,

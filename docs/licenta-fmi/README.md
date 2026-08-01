@@ -1,6 +1,6 @@
 # Licenta FMI - Pachet LaTeX
 
-Acest director contine varianta de lucru pentru lucrarea de licenta pe tema Trainee, redactata in LaTeX si gandita sa se potriveasca fluxului FMI (ghid + template oficial pentru finalizarea studiilor).
+Acest director contine varianta de lucru pentru lucrarea de licenta pe tema Salvio, redactata in LaTeX si gandita sa se potriveasca fluxului FMI (ghid + template oficial pentru finalizarea studiilor).
 
 ## Ce gasesti in folder
 
