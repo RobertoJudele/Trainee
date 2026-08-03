@@ -441,6 +441,29 @@ const en: Record<string, string> = {
   noTransactions: "No transactions recorded yet.",
   chooseYourPlan: "Choose Your Plan",
   choosePlanSubtitle: "Select a subscription length that fits your needs.",
+
+  // ─── What the subscription unlocks ───────────────────────
+  whatsIncluded: "What's included in your subscription",
+  subscriptionIncludesNote:
+    "Every feature below is unlocked for as long as your subscription stays active.",
+  benefitVisibilityTitle: "Appear in client search",
+  benefitVisibilityBody:
+    "Your trainer profile is listed in search results and on the gym map, so clients near you can find and contact you. Without an active subscription your profile stays hidden.",
+  benefitProfileTitle: "Full public trainer profile",
+  benefitProfileBody:
+    "Edit your bio, specializations, years of experience, session packages and prices, plus your photo gallery and certification images.",
+  benefitScheduleTitle: "Scheduling and bookings",
+  benefitScheduleBody:
+    "Set weekly working hours, generate session slots, assign clients to them, block days off, and confirm attendance with client check-in codes.",
+  benefitGymsTitle: "Gym listings",
+  benefitGymsBody:
+    "Link the gyms you train at so clients can find you at the right location on the map.",
+  benefitAnalyticsTitle: "Profile view analytics",
+  benefitAnalyticsBody:
+    "See how many people viewed your profile and how that interest changes over time.",
+  benefitReviewsTitle: "Client ratings and reviews",
+  benefitReviewsBody:
+    "Collect star ratings and written reviews from your clients to build trust with new ones.",
   couldNotLoadPlans: "Could not load subscription plans. Check your internet connection and try again.",
   subscribeNow: "Subscribe Now",
   termsOfUse: "Terms of Use (EULA)",
@@ -457,6 +480,9 @@ const en: Record<string, string> = {
   selectionRequiredMsg: "Please choose a subscription package.",
   purchaseErrorTitle: "Purchase Error",
   purchaseErrorMsg: "Unable to complete purchase. Please try again.",
+  purchaseSyncErrorTitle: "Almost there",
+  purchaseSyncErrorMsg:
+    "Your payment went through, but we couldn't finish activating your subscription. You have not been charged twice. Tap \"Restore Purchases\" in a moment to finish activation.",
   restoreErrorTitle: "Restore Error",
   restoreErrorMsg: "Unable to restore purchases. Please try again.",
   subscriptionAlreadyLinked: "Subscription Already Linked",
@@ -1240,6 +1266,29 @@ const ro: Record<string, string> = {
   noTransactions: "Nicio tranzacție înregistrată încă.",
   chooseYourPlan: "Alege-ți planul",
   choosePlanSubtitle: "Selectează o durată de abonament potrivită nevoilor tale.",
+
+  // ─── Ce deblochează abonamentul ──────────────────────────
+  whatsIncluded: "Ce include abonamentul tău",
+  subscriptionIncludesNote:
+    "Toate funcțiile de mai jos sunt deblocate atât timp cât abonamentul rămâne activ.",
+  benefitVisibilityTitle: "Apari în căutările clienților",
+  benefitVisibilityBody:
+    "Profilul tău de antrenor apare în rezultatele căutării și pe harta sălilor, astfel încât clienții din apropiere te pot găsi și contacta. Fără un abonament activ, profilul rămâne ascuns.",
+  benefitProfileTitle: "Profil public complet de antrenor",
+  benefitProfileBody:
+    "Editează-ți descrierea, specializările, anii de experiență, pachetele de ședințe și prețurile, plus galeria foto și imaginile cu certificările.",
+  benefitScheduleTitle: "Programări și rezervări",
+  benefitScheduleBody:
+    "Setează-ți programul săptămânal, generează intervale de ședințe, atribuie clienți, blochează zilele libere și confirmă prezența cu coduri de check-in.",
+  benefitGymsTitle: "Sălile în care antrenezi",
+  benefitGymsBody:
+    "Asociază sălile în care lucrezi, ca să te găsească clienții la locul potrivit pe hartă.",
+  benefitAnalyticsTitle: "Statistici de vizualizare a profilului",
+  benefitAnalyticsBody:
+    "Vezi câți oameni ți-au vizitat profilul și cum evoluează interesul în timp.",
+  benefitReviewsTitle: "Evaluări și recenzii de la clienți",
+  benefitReviewsBody:
+    "Adună evaluări cu stele și recenzii scrise de la clienți, ca să câștigi încrederea celor noi.",
   couldNotLoadPlans: "Nu s-au putut încărca planurile de abonament. Verifică conexiunea la internet și încearcă din nou.",
   subscribeNow: "Abonează-te acum",
   termsOfUse: "Termeni de utilizare (EULA)",
@@ -1256,6 +1305,9 @@ const ro: Record<string, string> = {
   selectionRequiredMsg: "Te rugăm să alegi un pachet de abonament.",
   purchaseErrorTitle: "Eroare la achiziție",
   purchaseErrorMsg: "Nu am putut finaliza achiziția. Te rugăm să încerci din nou.",
+  purchaseSyncErrorTitle: "Aproape gata",
+  purchaseSyncErrorMsg:
+    "Plata a fost efectuată, dar nu am putut finaliza activarea abonamentului. Nu ai fost taxat de două ori. Apasă „Restaurează achizițiile” în câteva momente pentru a finaliza activarea.",
   restoreErrorTitle: "Eroare la restaurare",
   restoreErrorMsg: "Nu am putut restaura achizițiile. Te rugăm să încerci din nou.",
   subscriptionAlreadyLinked: "Abonament deja asociat",

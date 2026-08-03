@@ -15,6 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
+      "buildNumber": "45",
       "bundleIdentifier": "com.juroctech.frontend",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,

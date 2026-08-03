@@ -60,6 +60,6 @@ export class UserPushToken extends Model<
   @UpdatedAt
   updatedAt!: Date;
 
-  @BelongsTo(() => User)
+  @BelongsTo(() => User, { onDelete: "CASCADE" })
   user!: User;
 }

@@ -73,12 +73,15 @@ export class BillingService {
       throw new BillingError("CONFIG_MISSING", "Missing REVENUECAT_SECRET_API_KEY");
     }
 
+    // RevenueCat's subscriber API is the only authority here. `input` comes from the
+    // app and is used to label the record, never as evidence of a purchase — in
+    // particular `input.expiresAt` is deliberately not forwarded as
+    // `fallbackExpiresAt`, since that value alone can activate an entitlement.
     const subscriberData = await this.revenueCatGw.fetchSubscriber(String(userId));
     const snapshot = domain.resolveRevenueCatSnapshot(subscriberData, {
       entitlementId: this.config.getRevenueCatEntitlementId(),
       platform: input.platform,
       fallbackProductId: input.productId,
-      fallbackExpiresAt: domain.parseIapExpiration(input.expiresAt),
       fallbackOriginalTransactionId: input.originalTransactionId,
       clock: this.clock,
     });

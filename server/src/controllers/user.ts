@@ -9,6 +9,7 @@ import { processProfileImage } from "../services/imageProcessor";
 import sequelize from "../db";
 import { Trainer } from "../models/trainer";
 import { RefreshToken } from "../models/refreshToken";
+import { UserPushToken } from "../models/userPushToken";
 import { ClientPreference } from "../models/clientPreference";
 import { ClientCheckInCode } from "../models/clientCheckInCode";
 import { Review } from "../models/review";
@@ -155,6 +156,8 @@ export const deleteProfile = async (req: Request, res: Response) => {
 
       // Rows this user owns as a client — delete outright.
       await RefreshToken.destroy({ where: { userId }, transaction: t });
+      // The push token is a device identifier, so erasure has to reach it too.
+      await UserPushToken.destroy({ where: { userId }, transaction: t });
       await ClientPreference.destroy({ where: { userId }, transaction: t });
       await ClientCheckInCode.destroy({ where: { clientId: userId }, transaction: t });
       // ponytail: bulk destroy skips Review's afterDestroy hook, so trainers this user
