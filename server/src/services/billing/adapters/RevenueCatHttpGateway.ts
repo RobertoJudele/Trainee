@@ -12,21 +12,23 @@ export class RevenueCatHttpGateway implements RevenueCatGateway {
     },
   ) {}
 
-  async fetchSubscriber(appUserId: string): Promise<RevenueCatSubscriberData> {
+  private async request(
+    path: string,
+    init: { method: string; body?: string },
+  ): Promise<any> {
     if (!this.config.secretApiKey) {
       throw new Error("Missing REVENUECAT_SECRET_API_KEY");
     }
 
     const baseUrl = this.config.apiUrl?.trim() || DEFAULT_API_URL;
-    const endpoint = `${baseUrl}/subscribers/${encodeURIComponent(appUserId)}`;
 
     const fetchImpl = (globalThis as any).fetch;
     if (typeof fetchImpl !== "function") {
       throw new Error("Global fetch is not available for RevenueCat API calls");
     }
 
-    const response = await fetchImpl(endpoint, {
-      method: "GET",
+    const response = await fetchImpl(`${baseUrl}${path}`, {
+      ...init,
       headers: {
         Authorization: `Bearer ${this.config.secretApiKey}`,
         "Content-Type": "application/json",
@@ -38,13 +40,34 @@ export class RevenueCatHttpGateway implements RevenueCatGateway {
       throw new Error(`RevenueCat API request failed (${response.status}): ${errorPayload}`);
     }
 
-    const json = await response.json();
+    return response.json();
+  }
+
+  async fetchSubscriber(appUserId: string): Promise<RevenueCatSubscriberData> {
+    const json = await this.request(
+      `/subscribers/${encodeURIComponent(appUserId)}`,
+      { method: "GET" },
+    );
     const subscriber = json?.subscriber;
 
     return {
       entitlements: subscriber?.entitlements ?? {},
       subscriptions: subscriber?.subscriptions ?? {},
     };
+  }
+
+  // `duration` (incl. the `lifetime` preset) is deprecated by RevenueCat — an
+  // explicit end_time_ms is the supported way to set a promo window.
+  async grantPromotionalEntitlement(
+    appUserId: string,
+    entitlementId: string,
+    endTimeMs: number,
+  ): Promise<void> {
+    await this.request(
+      `/subscribers/${encodeURIComponent(appUserId)}`
+        + `/entitlements/${encodeURIComponent(entitlementId)}/promotional`,
+      { method: "POST", body: JSON.stringify({ end_time_ms: endTimeMs }) },
+    );
   }
 
   isWebhookAuthorized(authorizationHeader: string | undefined): boolean {

@@ -45,6 +45,7 @@ import { resolveEntitlement } from "../services/billing/domain";
 import { SystemClock } from "../services/billing/adapters/SystemClock";
 import { isRevenueCatOnlyMode } from "../config/billingMode";
 import { toBillingState } from "../services/billing/trainerBillingState";
+import { billingService } from "../services/billing";
 
 const billingClock = new SystemClock();
 
@@ -366,6 +367,12 @@ export const createTrainer = async (
       stripeCustomerId,
       stripeSubscriptionId,
       subscriptionStatus,
+    });
+
+    // Founding-trainer free grant. Deliberately not awaited: RevenueCat being
+    // slow or down must never fail signup, and the call is safe to retry.
+    void billingService.grantFoundingEntitlement(userId).catch((grantError) => {
+      console.error("Founding entitlement grant failed", { userId }, grantError);
     });
 
     if (specializationIds && specializationIds.length > 0) {

@@ -109,6 +109,54 @@ export class BillingService {
     };
   }
 
+  // ── Founding-trainer promotional grant ───────────────────────
+
+  /**
+   * Grants the founding trainer a free RevenueCat promotional entitlement — no
+   * store purchase, no auto-charge. Safe to call more than once: a trainer who
+   * already has a running grant is skipped, so retries never stack.
+   *
+   * Callers should not await this on the signup path; a failed grant must not
+   * fail signup.
+   */
+  async grantFoundingEntitlement(userId: number): Promise<boolean> {
+    const deadline = this.config.getFoundingGrantDeadline();
+    const months = this.config.getFoundingGrantMonths();
+    const now = this.clock.now();
+
+    if (!deadline || months <= 0 || now.getTime() > deadline.getTime()) {
+      return false;
+    }
+
+    if (!this.config.hasRevenueCatApiKey()) {
+      throw new BillingError("CONFIG_MISSING", "Missing REVENUECAT_SECRET_API_KEY");
+    }
+
+    const state = await this.requireBillingState(userId);
+
+    // Already covered — either by an earlier grant or a real subscription.
+    if (domain.resolveEntitlement(state, {
+      isRevenueCatOnly: this.config.isRevenueCatOnlyMode(),
+      clock: this.clock,
+    }).isActive) {
+      return false;
+    }
+
+    const grantedUntil = new Date(now);
+    grantedUntil.setMonth(grantedUntil.getMonth() + months);
+
+    await this.revenueCatGw.grantPromotionalEntitlement(
+      String(userId),
+      this.config.getRevenueCatEntitlementId(),
+      grantedUntil.getTime(),
+    );
+
+    // Written locally too: gating reads this row, and the confirming webhook may
+    // be delayed, dropped, or not configured at all.
+    await this.billingRepo.save(domain.applyPromotionalGrant(state, grantedUntil));
+    return true;
+  }
+
   // ── Stripe mobile subscription ───────────────────────────────
 
   async createStripeSubscription(

@@ -14,6 +14,22 @@ export interface Clock {
   nowMs(): number;
 }
 
+// RevenueCat reports granted entitlements with store and period_type PROMOTIONAL.
+const PROMOTIONAL_STORE = "PROMOTIONAL";
+const PERIOD_PROMOTIONAL = "promotional";
+
+/** Free grant with no store purchase behind it — recorded as a running trial. */
+export function applyPromotionalGrant(
+  state: BillingState,
+  grantedUntil: Date,
+): BillingState {
+  return {
+    ...state,
+    subscriptionStatus: subStatus.TRIAL,
+    trialEndsAt: grantedUntil,
+  };
+}
+
 // ── Entitlement resolution (single source of truth) ─────────────────
 
 export function resolveEntitlement(
@@ -191,7 +207,8 @@ export function resolveRevenueCatSnapshot(
     ?? parseIsoDate(subscription?.expiresDate)
     ?? opts.fallbackExpiresAt;
 
-  const inferred = mapStoreToBillingProvider(subscription?.store ?? opts.fallbackStore);
+  const store = String(subscription?.store ?? opts.fallbackStore ?? "").trim().toUpperCase();
+  const inferred = mapStoreToBillingProvider(store);
   const provider = inferred !== BillingProvider.NONE
     ? inferred
     : mapPlatformToProvider(opts.platform);
@@ -204,7 +221,11 @@ export function resolveRevenueCatSnapshot(
     expiresAt,
     provider,
     originalTransactionId: subscription?.originalTransactionId ?? opts.fallbackOriginalTransactionId,
-    periodType: subscription?.periodType ?? undefined,
+    // A granted (promotional) entitlement has no store subscription of its own,
+    // so periodType can arrive empty — derive it from the store instead.
+    periodType: store === PROMOTIONAL_STORE
+      ? PERIOD_PROMOTIONAL
+      : (subscription?.periodType ?? undefined),
   };
 }
 
@@ -223,7 +244,11 @@ export function applyRevenueCatSnapshot(
     ? snapshot.provider
     : mapPlatformToProvider(opts.platform) || state.billingProvider;
 
-  const isTrial = String(snapshot.periodType || "").trim().toLowerCase() === "trial";
+  // Promotional grants ride the TRIAL branch of resolveEntitlement: it is the
+  // only one that grants access without an Apple/Google/Stripe provider, which
+  // a granted entitlement by definition does not have.
+  const periodType = String(snapshot.periodType || "").trim().toLowerCase();
+  const isTrial = periodType === "trial" || periodType === PERIOD_PROMOTIONAL;
 
   let status: subStatus;
   if (!snapshot.isActive) {
