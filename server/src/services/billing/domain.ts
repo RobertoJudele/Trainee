@@ -66,6 +66,9 @@ export function resolveEntitlement(
         status: subStatus.TRIAL,
         source: state.billingProvider,
         expiresAt: state.trialEndsAt,
+        // A store trial carries its store as the provider; a running trial with
+        // no provider at all is a promotional grant.
+        isPromotional: state.billingProvider === BillingProvider.NONE,
       };
     }
     return {

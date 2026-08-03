@@ -20,6 +20,8 @@ interface BillingEntitlement {
   source: BillingSource;
   expiresAt?: string;
   reason?: string;
+  /** Free early-adopter grant rather than a paid or store-trial subscription. */
+  isPromotional?: boolean;
 }
 
 interface BillingEntitlementResponse {

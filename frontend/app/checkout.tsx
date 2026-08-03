@@ -286,6 +286,9 @@ export default function CheckoutScreen() {
 	const { data: entitlementResponse, isLoading: isLoadingEntitlement, refetch: refetchEntitlement } = useGetBillingEntitlementQuery();
 	const entitlement = entitlementResponse?.data;
 	const isSubscribed = entitlement?.isActive;
+	// Free early-adopter grant — no store purchase behind it, so the renewal and
+	// "billed via" wording below would be wrong (and alarming) as-is.
+	const isEarlyAdopter = Boolean(entitlement?.isPromotional);
 
 	const { data: transactionsResponse, isLoading: isLoadingTransactions } = useGetBillingTransactionsQuery(undefined, {
 		skip: !isSubscribed,
@@ -327,7 +330,7 @@ export default function CheckoutScreen() {
 	const getStatusLabel = (status: string) => {
 		switch (status) {
 			case "trial":
-				return t("trialPeriod");
+				return isEarlyAdopter ? t("earlyAdopterStatus") : t("trialPeriod");
 			case "active":
 				return t("activeAutoRenewing");
 			case "canceled":
@@ -801,6 +804,15 @@ export default function CheckoutScreen() {
 							</View>
 						</View>
 						
+						{isEarlyAdopter && (
+							<View style={styles.infoBanner}>
+								<Ionicons name="sparkles" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+								<Text style={styles.infoBannerText}>
+									{t("earlyAdopterBanner").replace("{date}", formatDateString(entitlement?.expiresAt))}
+								</Text>
+							</View>
+						)}
+
 						{showPastDueBanner && (
 							<View style={styles.errorBanner}>
 								<Ionicons name="warning" size={20} color={theme.colors.error} style={{ marginRight: 8 }} />
@@ -847,7 +859,9 @@ export default function CheckoutScreen() {
 
 							<View style={styles.detailsRow}>
 								<Text style={styles.detailsLabel}>
-									{entitlement?.status === "canceled" ? t("expirationDate") : t("nextRenewalDate")}
+									{isEarlyAdopter
+										? t("earlyAdopterFreeUntil")
+										: entitlement?.status === "canceled" ? t("expirationDate") : t("nextRenewalDate")}
 								</Text>
 								<Text style={styles.detailsValue}>
 									{formatDateString(entitlement?.expiresAt)}
@@ -857,21 +871,27 @@ export default function CheckoutScreen() {
 							<View style={styles.detailsRow}>
 								<Text style={styles.detailsLabel}>{t("billedVia")}</Text>
 								<Text style={styles.detailsValue}>
-									{getProviderLabel(entitlement?.source || "none")}
+									{isEarlyAdopter
+										? t("earlyAdopterNoPayment")
+										: getProviderLabel(entitlement?.source || "none")}
 								</Text>
 							</View>
 						</View>
 
-						<Pressable
-							style={({ pressed }) => [styles.button, { marginTop: 16 }, pressed && styles.buttonPressed]}
-							onPress={handleManageSubscription}
-							accessible={true}
-							accessibilityRole="button"
-							accessibilityLabel={t("manageSubscription")}
-						>
-							<Ionicons name="open-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
-							<Text style={styles.buttonText}>{t("manageSubscription")}</Text>
-						</Pressable>
+						{/* An early-adopter grant has no store subscription behind it, so
+						    "Manage" would open an empty App Store / Play page. */}
+						{!isEarlyAdopter && (
+							<Pressable
+								style={({ pressed }) => [styles.button, { marginTop: 16 }, pressed && styles.buttonPressed]}
+								onPress={handleManageSubscription}
+								accessible={true}
+								accessibilityRole="button"
+								accessibilityLabel={t("manageSubscription")}
+							>
+								<Ionicons name="open-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+								<Text style={styles.buttonText}>{t("manageSubscription")}</Text>
+							</Pressable>
+						)}
 
 						{isCrossPlatformSubscription && (
 							<View style={styles.infoBanner}>

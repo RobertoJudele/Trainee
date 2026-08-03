@@ -8,6 +8,8 @@ export interface Entitlement {
   source: BillingProvider;
   expiresAt?: Date;
   reason?: string;
+  /** Free grant (early adopter) rather than a paid or store-trial subscription. */
+  isPromotional?: boolean;
 }
 
 export interface BillingState {

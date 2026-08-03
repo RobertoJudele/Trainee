@@ -423,6 +423,11 @@ const en: Record<string, string> = {
   expirationDate: "Expiration Date",
   billedVia: "Billed Via",
   trialPeriod: "Trial Period",
+  earlyAdopterStatus: "Early Adopter",
+  earlyAdopterFreeUntil: "Free Until",
+  earlyAdopterNoPayment: "No payment required",
+  earlyAdopterBanner:
+    "You're an early adopter — full trainer access free until {date}. No card needed, and nothing is charged automatically. You can subscribe any time before then to continue without interruption.",
   activeAutoRenewing: "Active (Auto-renewing)",
   cancelled: "Cancelled",
   pastDueAction: "Past Due / Action Required",
@@ -1217,6 +1222,11 @@ const ro: Record<string, string> = {
   expirationDate: "Data expirării",
   billedVia: "Facturat prin",
   trialPeriod: "Perioadă de probă",
+  earlyAdopterStatus: "Early Adopter",
+  earlyAdopterFreeUntil: "Gratuit până la",
+  earlyAdopterNoPayment: "Fără plată",
+  earlyAdopterBanner:
+    "Ești early adopter — acces complet de antrenor gratuit până la {date}. Nu ai nevoie de card și nu se percepe automat nicio plată. Poți alege un abonament oricând până atunci pentru a continua fără întrerupere.",
   activeAutoRenewing: "Activ (reînnoire automată)",
   cancelled: "Anulat",
   pastDueAction: "Restant / Acțiune necesară",
