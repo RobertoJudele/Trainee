@@ -277,10 +277,17 @@ export function resolveRevenueCatSnapshot(
     ?? opts.fallbackExpiresAt;
 
   const store = String(subscription?.store ?? opts.fallbackStore ?? "").trim().toUpperCase();
+  const isPromotional = store === PROMOTIONAL_STORE;
   const inferred = mapStoreToBillingProvider(store);
-  const provider = inferred !== BillingProvider.NONE
-    ? inferred
-    : mapPlatformToProvider(opts.platform);
+  // The platform fallback labels a real purchase whose store RevenueCat has not
+  // reported yet. A promotional grant has no store at all, so letting it fall
+  // through would stamp it "apple" purely because the caller happens to be on
+  // iOS — which is what Restore Purchases does.
+  const provider = isPromotional
+    ? BillingProvider.NONE
+    : inferred !== BillingProvider.NONE
+      ? inferred
+      : mapPlatformToProvider(opts.platform);
 
   // RevenueCat reports a null expiry for non-expiring (lifetime) entitlements, so a
   // missing date may only be read as "active" when RevenueCat actually returned a
@@ -300,7 +307,7 @@ export function resolveRevenueCatSnapshot(
     originalTransactionId: subscription?.originalTransactionId ?? opts.fallbackOriginalTransactionId,
     // A granted (promotional) entitlement has no store subscription of its own,
     // so periodType can arrive empty — derive it from the store instead.
-    periodType: store === PROMOTIONAL_STORE
+    periodType: isPromotional
       ? PERIOD_PROMOTIONAL
       : (subscription?.periodType ?? undefined),
   };
@@ -317,15 +324,21 @@ export function applyRevenueCatSnapshot(
     verifiedAt: Date;
   },
 ): BillingState {
-  const provider = snapshot.provider !== BillingProvider.NONE
-    ? snapshot.provider
-    : mapPlatformToProvider(opts.platform) || state.billingProvider;
-
   // Promotional grants ride the TRIAL branch of resolveEntitlement: it is the
   // only one that grants access without an Apple/Google/Stripe provider, which
   // a granted entitlement by definition does not have.
   const periodType = String(snapshot.periodType || "").trim().toLowerCase();
-  const isTrial = periodType === "trial" || periodType === PERIOD_PROMOTIONAL;
+  const isPromotional = periodType === PERIOD_PROMOTIONAL;
+  const isTrial = periodType === "trial" || isPromotional;
+
+  // Same reasoning as in resolveRevenueCatSnapshot: a grant must keep provider
+  // NONE, or resolveEntitlement stops reporting it as promotional and the app
+  // shows "Trial Period, billed via Apple" for something Apple never sold.
+  const provider = isPromotional
+    ? BillingProvider.NONE
+    : snapshot.provider !== BillingProvider.NONE
+      ? snapshot.provider
+      : mapPlatformToProvider(opts.platform) || state.billingProvider;
 
   let status: subStatus;
   if (!snapshot.isActive) {

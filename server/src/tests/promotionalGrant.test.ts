@@ -119,6 +119,30 @@ describe("RevenueCat promotional webhook does not revoke the grant", () => {
     expect(isActive(synced)).toBe(false);
   });
 
+  it("Restore Purchases on iOS does not turn the grant into an Apple subscription", () => {
+    // The restore path calls /billing/iap/validate with platform "ios". The
+    // platform fallback used to stamp the grant "apple", which made
+    // resolveEntitlement report isPromotional false — the app then showed
+    // "Trial Period" and "Billed via Apple App Store" for a free grant.
+    const snapshot = resolveRevenueCatSnapshot(promoSubscriber, {
+      entitlementId: "Trainee Pro",
+      platform: "ios",
+      fallbackProductId: "rc_promo_Trainee Pro_three_month",
+      clock,
+    });
+    const synced = applyRevenueCatSnapshot(freshTrainer, snapshot, {
+      platform: "ios",
+      verifiedAt: now,
+    });
+
+    expect(synced.billingProvider).toBe(BillingProvider.NONE);
+    expect(synced.subscriptionStatus).toBe(subStatus.TRIAL);
+
+    const entitlement = entitlementOf(synced);
+    expect(entitlement.isActive).toBe(true);
+    expect(entitlement.isPromotional).toBe(true);
+  });
+
   it("a real Apple purchase is still not treated as promotional", () => {
     const applePurchase = {
       entitlements: {
