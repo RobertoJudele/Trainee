@@ -310,18 +310,22 @@ export class BillingService {
 
   async handleRevenueCatWebhook(
     authHeader: string | undefined,
-    payload: { event?: Partial<RevenueCatWebhookEvent> },
+    payload: { event?: unknown },
   ): Promise<{ received: boolean; duplicate?: boolean }> {
     if (!this.revenueCatGw.isWebhookAuthorized(authHeader)) {
       throw new BillingError("UNAUTHORIZED", "Unauthorized RevenueCat webhook");
     }
 
-    const event = payload?.event;
-    if (!event || typeof event !== "object") {
+    const rawEvent = payload?.event;
+    if (!rawEvent || typeof rawEvent !== "object") {
       throw new BillingError("INVALID_PAYLOAD", "Invalid RevenueCat webhook payload");
     }
 
-    const eventId = String(event.id || "").trim();
+    // RevenueCat sends snake_case on the wire — normalize before anything reads
+    // a field, or every multi-word field silently resolves to undefined.
+    const event = domain.normalizeRevenueCatEvent(rawEvent as Record<string, unknown>);
+
+    const eventId = event.id;
     if (!eventId) {
       throw new BillingError("INVALID_PAYLOAD", "RevenueCat webhook event id is required");
     }
@@ -335,34 +339,19 @@ export class BillingService {
       await this.webhookRepo.create({
         source: "revenuecat",
         eventId,
-        eventType: String(event.type || "unknown"),
-        appUserId: String(event.appUserId || "").trim() || undefined,
-        eventTimestampMs: typeof event.eventTimestampMs === "number"
-          ? event.eventTimestampMs : undefined,
-        payload: event as unknown as Record<string, unknown>,
+        eventType: event.type,
+        appUserId: event.appUserId,
+        eventTimestampMs: event.eventTimestampMs,
+        // Store the untouched payload — normalization is for reading, not for
+        // deciding what gets kept for debugging.
+        payload: rawEvent as Record<string, unknown>,
       });
     }
 
-    const normalizedEvent: RevenueCatWebhookEvent = {
-      id: eventId,
-      type: String(event.type || "unknown"),
-      appUserId: event.appUserId,
-      eventTimestampMs: event.eventTimestampMs,
-      productId: event.productId,
-      expirationAtMs: event.expirationAtMs,
-      originalTransactionId: event.originalTransactionId,
-      transactionId: event.transactionId,
-      store: event.store,
-      transferredFrom: event.transferredFrom,
-      transferredTo: event.transferredTo,
-      price: event.price,
-      currency: event.currency,
-    };
-
-    if (String(event.type || "").toUpperCase() === "TRANSFER") {
-      await this.handleTransfer(normalizedEvent);
+    if (event.type.toUpperCase() === "TRANSFER") {
+      await this.handleTransfer(event);
     } else {
-      await this.syncFromRevenueCatEvent(normalizedEvent);
+      await this.syncFromRevenueCatEvent(event);
     }
 
     await this.webhookRepo.markProcessed("revenuecat", eventId);

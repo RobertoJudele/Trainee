@@ -5,6 +5,7 @@ import {
   IapPlatform,
   RevenueCatSnapshot,
   RevenueCatSubscriberData,
+  RevenueCatWebhookEvent,
   subStatus,
   TransactionRecord,
 } from "./types";
@@ -185,6 +186,66 @@ export function mapStoreToPlatform(store?: string | null): IapPlatform | undefin
   if (s === "APP_STORE" || s === "MAC_APP_STORE") return "ios";
   if (s === "PLAY_STORE") return "android";
   return undefined;
+}
+
+// ── RevenueCat webhook payload normalization ────────────────────────
+
+/**
+ * RevenueCat sends webhook fields in snake_case (`app_user_id`,
+ * `event_timestamp_ms`, …). Reading them as camelCase yields `undefined` for
+ * every multi-word field, which then drops the event on the floor.
+ *
+ * This stayed invisible for a long time because `id` and `type` are single
+ * words and match under either convention — so events were recorded and marked
+ * processed while carrying no subscriber to act on. Both spellings are accepted
+ * here so hand-written payloads and fixtures keep working.
+ */
+const toSnakeCase = (key: string): string =>
+  key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+
+function readEventField(raw: Record<string, unknown>, camelKey: string): unknown {
+  const camel = raw[camelKey];
+  return camel !== undefined ? camel : raw[toSnakeCase(camelKey)];
+}
+
+function asString(value: unknown): string | undefined {
+  if (typeof value === "string") return value.trim() || undefined;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+  // Number(null) is 0 and Number("") is 0 — both would read as a real value.
+  if (value === null || value === undefined || value === "") return undefined;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function asStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value.map(asString).filter((s): s is string => Boolean(s));
+  return items.length > 0 ? items : undefined;
+}
+
+export function normalizeRevenueCatEvent(
+  raw: Record<string, unknown>,
+): RevenueCatWebhookEvent {
+  const read = (key: string) => readEventField(raw, key);
+  return {
+    id: asString(read("id")) ?? "",
+    type: asString(read("type")) ?? "unknown",
+    appUserId: asString(read("appUserId")),
+    eventTimestampMs: asNumber(read("eventTimestampMs")),
+    productId: asString(read("productId")),
+    expirationAtMs: asNumber(read("expirationAtMs")),
+    originalTransactionId: asString(read("originalTransactionId")),
+    transactionId: asString(read("transactionId")),
+    store: asString(read("store")),
+    transferredFrom: asStringArray(read("transferredFrom")),
+    transferredTo: asStringArray(read("transferredTo")),
+    price: asNumber(read("price")),
+    currency: asString(read("currency")),
+  };
 }
 
 export function resolveRevenueCatSnapshot(
