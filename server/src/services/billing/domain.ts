@@ -264,6 +264,8 @@ export function normalizeRevenueCatSubscriber(raw: {
       storeTransactionId: asString(readField(s, "storeTransactionId")) ?? null,
       purchaseDate: asString(readField(s, "purchaseDate")) ?? null,
       periodType: asString(readField(s, "periodType")) ?? null,
+      priceInPurchasedCurrency: asNumber(readField(s, "priceInPurchasedCurrency")) ?? null,
+      currency: asString(readField(s, "currency")) ?? null,
     })),
   };
 }
@@ -442,12 +444,24 @@ export function extractTransactionsFromRevenueCat(
     if (!txId) continue;
 
     const store = String(sub.store || "").trim().toLowerCase();
+    // A granted entitlement was never paid for. Recording one as a paid
+    // transaction would put a charge the trainer never made in their payment
+    // history — don't rely on the missing-transaction-id check above for this.
+    if (store === PERIOD_PROMOTIONAL) continue;
+
+    // No inventing money. amount/currency are NOT NULL, so a transaction whose
+    // real price RevenueCat did not report is skipped rather than recorded at a
+    // made-up value; it can be backfilled from RevenueCat if it is ever needed.
+    const amount = sub.priceInPurchasedCurrency;
+    const currency = sub.currency;
+    if (typeof amount !== "number" || !currency) continue;
+
     const provider = store === "app_store" ? "apple" : store === "play_store" ? "google" : "none";
 
     records.push({
       trainerId,
-      amount: 100.00,
-      currency: "RON",
+      amount,
+      currency,
       status: "paid",
       provider,
       transactionId: txId,

@@ -77,12 +77,15 @@ export class BillingService {
     // app and is used to label the record, never as evidence of a purchase — in
     // particular `input.expiresAt` is deliberately not forwarded as
     // `fallbackExpiresAt`, since that value alone can activate an entitlement.
+    //
+    // `input.originalTransactionId` is not forwarded either: the real one is read
+    // from the subscriber payload, so accepting the client's would only let any
+    // caller write an arbitrary string into appleOriginalTransactionId.
     const subscriberData = await this.revenueCatGw.fetchSubscriber(String(userId));
     const snapshot = domain.resolveRevenueCatSnapshot(subscriberData, {
       entitlementId: this.config.getRevenueCatEntitlementId(),
       platform: input.platform,
       fallbackProductId: input.productId,
-      fallbackOriginalTransactionId: input.originalTransactionId,
       clock: this.clock,
     });
 
@@ -415,12 +418,21 @@ export class BillingService {
     await this.billingRepo.save(updated);
 
     const eventType = String(event.type).toUpperCase();
-    if ((eventType === "INITIAL_PURCHASE" || eventType === "RENEWAL") && event.transactionId) {
+    // Only real, priced purchases become transaction records. RevenueCat sends
+    // price and currency on these events; without them the row would have to
+    // invent an amount, and a wrong number in a payment history is worse than
+    // a missing row.
+    const hasPrice = typeof event.price === "number" && Boolean(event.currency);
+    if (
+      (eventType === "INITIAL_PURCHASE" || eventType === "RENEWAL")
+      && event.transactionId
+      && hasPrice
+    ) {
       const providerName = platform === "ios" ? "apple" : platform === "android" ? "google" : "none";
       await this.txRepo.findOrCreate({
         trainerId: state.trainerId,
-        amount: event.price ?? 100.00,
-        currency: event.currency || "RON",
+        amount: event.price as number,
+        currency: event.currency as string,
         status: "paid",
         provider: providerName,
         transactionId: event.transactionId,

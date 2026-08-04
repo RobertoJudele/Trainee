@@ -99,6 +99,8 @@ export interface RevenueCatSubscriberData {
     storeTransactionId?: string | null;
     purchaseDate?: string | null;
     periodType?: string | null;
+    priceInPurchasedCurrency?: number | null;
+    currency?: string | null;
   }>;
 }
 

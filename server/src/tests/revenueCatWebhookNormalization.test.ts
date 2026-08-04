@@ -1,5 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 import {
+  extractTransactionsFromRevenueCat,
   normalizeRevenueCatEvent,
   normalizeRevenueCatSubscriber,
 } from "../services/billing/domain";
@@ -169,5 +170,64 @@ describe("normalizeRevenueCatSubscriber", () => {
     expect(normalizeRevenueCatSubscriber({})).toEqual({ entitlements: {}, subscriptions: {} });
     expect(normalizeRevenueCatSubscriber({ entitlements: null, subscriptions: "nope" }))
       .toEqual({ entitlements: {}, subscriptions: {} });
+  });
+});
+
+describe("extractTransactionsFromRevenueCat", () => {
+  it("records the real price and currency RevenueCat reports", () => {
+    const [tx] = extractTransactionsFromRevenueCat(
+      normalizeRevenueCatSubscriber({
+        subscriptions: {
+          "com.trainee.trainer_monthly": {
+            store: "app_store",
+            store_transaction_id: "2000000987654321",
+            purchase_date: "2026-08-04T10:00:00Z",
+            price_in_purchased_currency: 17.99,
+            currency: "USD",
+          },
+        },
+      }),
+      1,
+    );
+
+    // Was hardcoded to 100.00 RON for every transaction, whatever was charged.
+    expect(tx.amount).toBe(17.99);
+    expect(tx.currency).toBe("USD");
+    expect(tx.provider).toBe("apple");
+  });
+
+  it("never records a promotional grant as a paid transaction", () => {
+    const records = extractTransactionsFromRevenueCat(
+      normalizeRevenueCatSubscriber({
+        subscriptions: {
+          "rc_promo_Trainee Pro_custom": {
+            store: "promotional",
+            store_transaction_id: "promo-tx-1",
+            purchase_date: "2026-08-04T10:00:00Z",
+          },
+        },
+      }),
+      1,
+    );
+
+    expect(records).toEqual([]);
+  });
+
+  it("skips a purchase whose price RevenueCat did not report", () => {
+    // amount/currency are NOT NULL, so the choice is a real value or no row —
+    // never an invented one.
+    const records = extractTransactionsFromRevenueCat(
+      normalizeRevenueCatSubscriber({
+        subscriptions: {
+          "com.trainee.trainer_monthly": {
+            store: "app_store",
+            store_transaction_id: "2000000987654321",
+          },
+        },
+      }),
+      1,
+    );
+
+    expect(records).toEqual([]);
   });
 });
