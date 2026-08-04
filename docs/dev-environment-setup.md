@@ -47,8 +47,10 @@ result. Do not do that.
 drops every table. `server/src/db.ts:32` picks the database purely from
 `DB_NAME`. A single mistyped env var is enough to wipe production.
 
-Grant the dev user rights on `trainee_dev` only, and revoke them on `trainee`, so
-a misconfiguration fails with a permission error instead of destroying data.
+Grant the dev user rights on `trainee_dev` only, and revoke `CONNECT` on
+`trainee` from `PUBLIC` (see the SQL in Phase 1 — revoking from `dev_app` alone
+does nothing), so a misconfiguration fails with a permission error instead of
+destroying data.
 
 ### 2.3 Never run `docker compose down -v`
 
@@ -71,7 +73,8 @@ flagged in `server/DEPLOY.md:123`.
 | App build profiles | `frontend/eas.json` |
 
 Compose lives at `~/Trainee/server` on the VPS. DB container is `trainee_db`,
-superuser `admin`, prod database `trainee`.
+superuser `postgres` (compose's `POSTGRES_USER` default — `.env` does not set
+`DB_USER`), prod database `trainee`.
 
 Known wart to fix along the way: `frontend/eas.json`'s `preview` profile points
 at production (`https://api.juroc.tech`) with production RevenueCat keys —
@@ -96,13 +99,18 @@ Ordered so nothing blocks anything after it.
 
 ### Phase 1 — Database
 
-- [ ] As superuser (`docker compose exec db psql -U admin -d trainee`):
+- [ ] As superuser (`docker compose exec db psql -U postgres -d postgres`):
 
 ```sql
-CREATE DATABASE trainee_dev OWNER admin;
+CREATE DATABASE trainee_dev OWNER postgres;
 CREATE USER dev_app WITH PASSWORD '<pick-one>';
 GRANT ALL PRIVILEGES ON DATABASE trainee_dev TO dev_app;
-REVOKE ALL PRIVILEGES ON DATABASE trainee FROM dev_app;   -- §2.2 guardrail
+-- §2.2 guardrail. Must target PUBLIC, not dev_app: Postgres grants CONNECT on
+-- every database to PUBLIC by default, and a privilege held via PUBLIC is not
+-- removed by revoking it from an individual role. Revoking from dev_app alone
+-- leaves it able to connect to prod. Safe for prod: `postgres` is the superuser
+-- and bypasses privilege checks.
+REVOKE CONNECT ON DATABASE trainee FROM PUBLIC;
 ```
 
 - [ ] Reconnect to the new database (`\c trainee_dev`) and run:
@@ -177,7 +185,7 @@ nginx fail to start, taking prod down with it.
 - [ ] `docker compose logs -f app-dev` → DB connect, no missing-env errors
 - [ ] `curl https://api.juroc.tech/` still works — prod unaffected
 - [ ] **Isolation check.** Register a user on dev, then:
-      `docker compose exec db psql -U admin -d trainee -c "SELECT count(*) FROM users WHERE email='<dev-test>';"`
+      `docker compose exec db psql -U postgres -d trainee -c "SELECT count(*) FROM users WHERE email='<dev-test>';"`
       → must be `0`
 - [ ] **Guardrail check.** Confirm `dev_app` cannot read prod:
       `docker compose exec db psql -U dev_app -d trainee -c 'SELECT 1;'` → permission denied

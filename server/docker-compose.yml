@@ -32,6 +32,28 @@ services:
     expose:
       - "8000"
 
+  # Development stack. Same image as `app`, but its own database and secrets
+  # (.env.dev → DB_NAME=trainee_dev, DB_USER=dev_app). NODE_ENV is deliberately
+  # left to .env.dev: an `environment:` entry here would override it.
+  app-dev:
+    build: .
+    container_name: trainee_api_dev
+    restart: unless-stopped
+    # required:false so a VPS that has pulled this file but not yet created
+    # .env.dev still parses — otherwise every compose command, including
+    # `up -d app`, fails on the missing file and takes prod down with it.
+    env_file:
+      - path: .env.dev
+        required: false
+    environment:
+      DB_HOST: db
+    depends_on:
+      db:
+        condition: service_healthy
+    # Same as `app`: nginx is the only public entrypoint.
+    expose:
+      - "8000"
+
   nginx:
     image: nginx:1.27
     container_name: trainee_nginx
