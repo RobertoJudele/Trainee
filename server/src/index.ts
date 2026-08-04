@@ -92,6 +92,16 @@ const startServer = async () => {
       console.warn(`[SECURITY_WARNING] ${errorMessage}`);
     }
 
+    // Not fatal — the rest of billing works without it — but the webhook now
+    // rejects every delivery when it is unset, so say so loudly rather than let
+    // renewals quietly stop arriving.
+    if (!process.env.REVENUECAT_WEBHOOK_AUTH?.trim()) {
+      console.warn(
+        "[SECURITY_WARNING] REVENUECAT_WEBHOOK_AUTH is not set. RevenueCat "
+          + "webhooks will be rejected, so renewals and expirations will not sync."
+      );
+    }
+
     await sequelize.authenticate();
     console.log("Database connection established successfully.");
 

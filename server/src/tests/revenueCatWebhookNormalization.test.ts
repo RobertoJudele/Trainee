@@ -4,6 +4,7 @@ import {
   normalizeRevenueCatEvent,
   normalizeRevenueCatSubscriber,
 } from "../services/billing/domain";
+import { RevenueCatHttpGateway } from "../services/billing/adapters/RevenueCatHttpGateway";
 
 // The shape RevenueCat actually posts: snake_case, with unset numeric fields
 // sent as null rather than omitted. Trimmed to the fields the service reads.
@@ -229,5 +230,30 @@ describe("extractTransactionsFromRevenueCat", () => {
     );
 
     expect(records).toEqual([]);
+  });
+});
+
+describe("RevenueCatHttpGateway.isWebhookAuthorized", () => {
+  const gateway = (webhookAuth?: string) =>
+    new RevenueCatHttpGateway({ secretApiKey: "sk_test", webhookAuth });
+
+  it("rejects everything when no secret is configured", () => {
+    // Used to return true here, so a blank env var left an endpoint that mutates
+    // billing state open to anyone who knew the path.
+    expect(gateway(undefined).isWebhookAuthorized("anything")).toBe(false);
+    expect(gateway("").isWebhookAuthorized("anything")).toBe(false);
+    expect(gateway("   ").isWebhookAuthorized(undefined)).toBe(false);
+  });
+
+  it("accepts the configured secret bare or as a Bearer token", () => {
+    expect(gateway("s3cret").isWebhookAuthorized("s3cret")).toBe(true);
+    expect(gateway("s3cret").isWebhookAuthorized("Bearer s3cret")).toBe(true);
+    expect(gateway("s3cret").isWebhookAuthorized("  s3cret  ")).toBe(true);
+  });
+
+  it("rejects a wrong or missing header", () => {
+    expect(gateway("s3cret").isWebhookAuthorized("nope")).toBe(false);
+    expect(gateway("s3cret").isWebhookAuthorized(undefined)).toBe(false);
+    expect(gateway("s3cret").isWebhookAuthorized("Bearer nope")).toBe(false);
   });
 });

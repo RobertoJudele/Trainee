@@ -331,14 +331,21 @@ export const createTrainer = async (
     await user.save();
     const currentDate = new Date();
     const trialEndsAt = currentDate;
-    const stripeCustomer = await stripe.customers.create({
-      email: user.email,
-      name: `${user.firstName} ${user.lastName}`,
-      metadata: {
-        userId: user.id.toString(), // Pro-tip: Link Stripe back to your DB ID
-      }
-    });
-    const stripeCustomerId = stripeCustomer.id;
+    // In revenuecat_only mode nobody can ever pay through Stripe, so creating a
+    // customer here is an external call on the signup path — one more way signup
+    // can fail — and sends a name and email to a processor that will never bill
+    // them. createStripeSubscription creates one on demand if Stripe is enabled.
+    const stripeCustomerId = isRevenueCatOnlyMode()
+      ? ""
+      : (
+        await stripe.customers.create({
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+          metadata: {
+            userId: user.id.toString(), // Pro-tip: Link Stripe back to your DB ID
+          },
+        })
+      ).id;
     const stripeSubscriptionId = "";
     const subscriptionStatus = subStatus.TRIAL;
     const currentPeriodEndsAt = null;

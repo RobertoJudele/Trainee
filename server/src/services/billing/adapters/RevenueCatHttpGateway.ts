@@ -70,7 +70,10 @@ export class RevenueCatHttpGateway implements RevenueCatGateway {
 
   isWebhookAuthorized(authorizationHeader: string | undefined): boolean {
     const expected = this.config.webhookAuth?.trim();
-    if (!expected) return true;
+    // Fail closed. An unset REVENUECAT_WEBHOOK_AUTH used to accept every caller,
+    // so one blank env var silently left an endpoint that mutates billing state
+    // open to anyone who knew the path. Startup warns when it is missing.
+    if (!expected) return false;
 
     if (typeof authorizationHeader !== "string") return false;
 
