@@ -1,5 +1,6 @@
 import Express from "express";
 import { authenticate } from "../middleware/auth";
+import { subscription } from "../middleware/subscription";
 import {
   getTrainerPackages,
   createTrainerPackage,
@@ -20,12 +21,14 @@ router.use(authenticate);
 
 router.post(
   "/",
+  subscription,
   createTrainerPackageValidation,
   handleValidationErrors,
   createTrainerPackage
 );
 router.put(
   "/:id",
+  subscription,
   updateTrainerPackageValidation,
   handleValidationErrors,
   updateTrainerPackage

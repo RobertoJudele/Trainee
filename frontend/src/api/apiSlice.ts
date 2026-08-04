@@ -5,10 +5,14 @@ import {
   fetchBaseQuery,
   FetchBaseQueryError,
 } from "@reduxjs/toolkit/query/react";
+import { router } from "expo-router";
 import { setCredentials, logOut } from "../../features/auth/authSlice";
 import { RootState } from "../../app/store";
 import { User } from "../types/user";
 import { API_URL } from "../constants/config";
+
+const PAYWALL_REDIRECT_COOLDOWN_MS = 3000;
+let lastPaywallRedirectAt = 0;
 
 interface RefreshResponse {
   success: boolean;
@@ -98,6 +102,20 @@ const baseQueryWithReauth: BaseQueryFn<
       result = await baseQuery(args, api, extraOptions);
     }
   }
+
+  // 402 means the server gated a trainer feature behind an active subscription.
+  // Send them to the paywall instead of surfacing "Payment unsuccessful or
+  // canceled (source=none, status=canceled)" wherever the request happened to
+  // be made. Debounced because a screen can fire several gated requests at once
+  // and each would otherwise push its own route.
+  if (result.error?.status === 402) {
+    const now = Date.now();
+    if (now - lastPaywallRedirectAt > PAYWALL_REDIRECT_COOLDOWN_MS) {
+      lastPaywallRedirectAt = now;
+      router.push("/checkout");
+    }
+  }
+
   return result;
 };
 

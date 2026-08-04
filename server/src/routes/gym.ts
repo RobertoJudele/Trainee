@@ -10,6 +10,7 @@ import {
 } from "../controllers/gym";
 import { authenticate } from "../middleware/auth";
 import { requireAdmin } from "../middleware/authorization";
+import { subscription } from "../middleware/subscription";
 import { publicReadRateLimit } from "../middleware/rateLimitProfiles";
 import {
   createGymValidation,
@@ -42,6 +43,7 @@ router.get(
 router.post(
   "/:gymId/join",
   authenticate,
+  subscription,
   gymIdParamValidation,
   handleValidationErrors,
   joinGym
@@ -49,6 +51,7 @@ router.post(
 router.patch(
   "/:gymId/availability",
   authenticate,
+  subscription,
   gymAvailabilityValidation,
   handleValidationErrors,
   setGymAvailability

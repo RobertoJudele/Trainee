@@ -28,7 +28,10 @@ export const subscription = async (
     next();
   } catch (error) {
     if (error instanceof BillingError && error.code === "NOT_TRAINER") {
-      sendError(res, 400, "Trainer profile not found");
+      // 403, not 400: the request is well-formed, the caller just is not a
+      // trainer. The controllers behind this middleware already answered 403 for
+      // that, and now that it guards them it must not weaken the status.
+      sendError(res, 403, "Trainer profile not found");
       return;
     }
     console.error("Subscription middleware error:", error);
