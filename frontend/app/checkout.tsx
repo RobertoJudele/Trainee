@@ -316,9 +316,38 @@ export default function CheckoutScreen() {
 	const router = useRouter();
 	const [validateIapSubscription] = useValidateIapSubscriptionMutation();
 
-	const { data: entitlementResponse, isLoading: isLoadingEntitlement, refetch: refetchEntitlement } = useGetBillingEntitlementQuery();
+	const onboardingParam = Array.isArray(params.onboarding) ? params.onboarding[0] : params.onboarding;
+	const isOnboarding = onboardingParam === "1";
+
+	// The founding-trainer grant is issued asynchronously after createTrainer
+	// responds, so arriving straight from onboarding can beat its write by a
+	// round trip. Poll briefly rather than leave a founding trainer looking at a
+	// paywall they should not see; `waitingForGrant` caps it so a trainer who
+	// genuinely has no grant stops polling instead of hammering the API.
+	const [waitingForGrant, setWaitingForGrant] = useState(isOnboarding);
+
+	const {
+		data: entitlementResponse,
+		isLoading: isLoadingEntitlement,
+		refetch: refetchEntitlement,
+	} = useGetBillingEntitlementQuery(undefined, {
+		// Without this the cached "not subscribed" from the race above survives
+		// every reopen of this screen.
+		refetchOnMountOrArgChange: true,
+		pollingInterval: waitingForGrant ? 2000 : 0,
+	});
 	const entitlement = entitlementResponse?.data;
 	const isSubscribed = entitlement?.isActive;
+
+	useEffect(() => {
+		if (!waitingForGrant) return;
+		if (isSubscribed) {
+			setWaitingForGrant(false);
+			return;
+		}
+		const timeout = setTimeout(() => setWaitingForGrant(false), 15000);
+		return () => clearTimeout(timeout);
+	}, [waitingForGrant, isSubscribed]);
 	// Free early-adopter grant — no store purchase behind it, so the renewal and
 	// "billed via" wording below would be wrong (and alarming) as-is.
 	const isEarlyAdopter = Boolean(entitlement?.isPromotional);
@@ -444,9 +473,6 @@ export default function CheckoutScreen() {
 	);
 
 	const subscribeLabel = selectedTrialLabel ? t("startFreeTrial") : t("subscribeNow");
-
-	const onboardingParam = Array.isArray(params.onboarding) ? params.onboarding[0] : params.onboarding;
-	const isOnboarding = onboardingParam === "1";
 
 	const skipOnboarding = () => {
 		router.replace("/");
