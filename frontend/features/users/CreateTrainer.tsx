@@ -20,7 +20,6 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import React from "react";
@@ -175,21 +174,7 @@ export default function CreateTrainer() {
         }
       }
 
-      Alert.alert(
-        t("trainerCreated"),
-        t("freeTrialPrompt"),
-        [
-          {
-            text: t("maybeLater"),
-            style: "cancel",
-            onPress: () => router.replace("/"),
-          },
-          {
-            text: t("startFreeTrial"),
-            onPress: () => router.replace("/checkout?onboarding=1"),
-          },
-        ]
-      );
+      router.replace("/");
     } catch (error: unknown) {
       const err =
         typeof error === "object" && error !== null
