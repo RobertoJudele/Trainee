@@ -173,6 +173,9 @@ export const registerValidation = [
   body("phone")
     .notEmpty()
     .withMessage("Phone number is required.")
+    // bail: without it an empty value fails both rules and the client shows
+    // "required" and "invalid format" stacked on top of each other.
+    .bail()
     // Romanian mobile numbers only — deliberate, the service operates in Romania.
     // The message must name the expected format: App Review rejected the app
     // (04b9a669, guideline 2.1(a)) after a generic "invalid" error left the tester
@@ -983,6 +986,13 @@ export const validateIapSubscriptionValidation = [
     .trim()
     .isLength({ max: 500 })
     .withMessage("purchaseToken is invalid."),
+  // expiresAt and originalTransactionId are accepted but deliberately ignored:
+  // validateIapPurchase reads both from RevenueCat's subscriber API instead, so a
+  // client cannot activate itself by claiming an expiry or write an arbitrary
+  // string into appleOriginalTransactionId. They stay in the schema because
+  // strictSchema can run in enforce mode and the shipped builds still send them —
+  // rejecting them here would fail those purchases outright. Drop them once no
+  // supported build sends them.
   body("expiresAt")
     .optional({ nullable: true })
     .custom((value) => {
