@@ -1,5 +1,6 @@
 import { RevenueCatSubscriberData } from "../types";
 import { RevenueCatGateway } from "../ports";
+import { normalizeRevenueCatSubscriber } from "../domain";
 
 const DEFAULT_API_URL = "https://api.revenuecat.com/v1";
 
@@ -48,12 +49,9 @@ export class RevenueCatHttpGateway implements RevenueCatGateway {
       `/subscribers/${encodeURIComponent(appUserId)}`,
       { method: "GET" },
     );
-    const subscriber = json?.subscriber;
-
-    return {
-      entitlements: subscriber?.entitlements ?? {},
-      subscriptions: subscriber?.subscriptions ?? {},
-    };
+    // RevenueCat answers in snake_case; normalize here so the domain only ever
+    // sees the shape it declares.
+    return normalizeRevenueCatSubscriber(json?.subscriber ?? {});
   }
 
   // `duration` (incl. the `lifetime` preset) is deprecated by RevenueCat — an

@@ -203,7 +203,7 @@ export function mapStoreToPlatform(store?: string | null): IapPlatform | undefin
 const toSnakeCase = (key: string): string =>
   key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
 
-function readEventField(raw: Record<string, unknown>, camelKey: string): unknown {
+function readField(raw: Record<string, unknown>, camelKey: string): unknown {
   const camel = raw[camelKey];
   return camel !== undefined ? camel : raw[toSnakeCase(camelKey)];
 }
@@ -227,10 +227,51 @@ function asStringArray(value: unknown): string[] | undefined {
   return items.length > 0 ? items : undefined;
 }
 
+/**
+ * The v1 subscriber API is snake_case as well (`expires_date`,
+ * `product_identifier`, `period_type`, `original_transaction_id`). `store` is
+ * the only single-word field, which is why store-based detection kept working
+ * while every dated field silently read as undefined — leaving a verified
+ * entitlement with no expiry at all.
+ */
+export function normalizeRevenueCatSubscriber(raw: {
+  entitlements?: unknown;
+  subscriptions?: unknown;
+}): RevenueCatSubscriberData {
+  const mapEntries = <T>(
+    src: unknown,
+    map: (entry: Record<string, unknown>) => T,
+  ): Record<string, T> => {
+    const out: Record<string, T> = {};
+    if (!src || typeof src !== "object") return out;
+    for (const [key, value] of Object.entries(src as Record<string, unknown>)) {
+      if (value && typeof value === "object") {
+        out[key] = map(value as Record<string, unknown>);
+      }
+    }
+    return out;
+  };
+
+  return {
+    entitlements: mapEntries(raw?.entitlements, (e) => ({
+      expiresDate: asString(readField(e, "expiresDate")) ?? null,
+      productIdentifier: asString(readField(e, "productIdentifier")) ?? null,
+    })),
+    subscriptions: mapEntries(raw?.subscriptions, (s) => ({
+      expiresDate: asString(readField(s, "expiresDate")) ?? null,
+      store: asString(readField(s, "store")) ?? null,
+      originalTransactionId: asString(readField(s, "originalTransactionId")) ?? null,
+      storeTransactionId: asString(readField(s, "storeTransactionId")) ?? null,
+      purchaseDate: asString(readField(s, "purchaseDate")) ?? null,
+      periodType: asString(readField(s, "periodType")) ?? null,
+    })),
+  };
+}
+
 export function normalizeRevenueCatEvent(
   raw: Record<string, unknown>,
 ): RevenueCatWebhookEvent {
-  const read = (key: string) => readEventField(raw, key);
+  const read = (key: string) => readField(raw, key);
   return {
     id: asString(read("id")) ?? "",
     type: asString(read("type")) ?? "unknown",

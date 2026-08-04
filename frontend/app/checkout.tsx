@@ -696,7 +696,9 @@ export default function CheckoutScreen() {
 					productId: selectedProductId,
 					expiresAt: entitlement?.expirationDate || undefined,
 					purchaseToken: `rc-purchase-${Date.now()}`,
-					originalTransactionId: customerInfo.originalAppUserId,
+					// originalAppUserId is the RevenueCat user id, not a transaction id —
+					// sending it wrote the user id into apple_original_transaction_id. The
+					// server reads the real one from RevenueCat, so send nothing.
 				});
 
 				void refetchEntitlement();
@@ -848,7 +850,7 @@ export default function CheckoutScreen() {
 				productId: entitlement.productIdentifier || REVENUECAT_MONTHLY_PRODUCT_ID,
 				expiresAt: entitlement.expirationDate || undefined,
 				purchaseToken: `rc-restore-${Date.now()}`,
-				originalTransactionId: customerInfo.originalAppUserId,
+				// See the purchase path: the app user id is not a transaction id.
 			});
 
 			void refetchEntitlement();

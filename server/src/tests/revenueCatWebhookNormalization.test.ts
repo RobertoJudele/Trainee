@@ -1,5 +1,8 @@
 import { describe, it, expect } from "@jest/globals";
-import { normalizeRevenueCatEvent } from "../services/billing/domain";
+import {
+  normalizeRevenueCatEvent,
+  normalizeRevenueCatSubscriber,
+} from "../services/billing/domain";
 
 // The shape RevenueCat actually posts: snake_case, with unset numeric fields
 // sent as null rather than omitted. Trimmed to the fields the service reads.
@@ -90,5 +93,81 @@ describe("normalizeRevenueCatEvent", () => {
     expect(event.appUserId).toBeUndefined();
     expect(event.eventTimestampMs).toBeUndefined();
     expect(event.transferredFrom).toBeUndefined();
+  });
+});
+
+// The shape the v1 subscriber endpoint actually returns, snake_case throughout.
+const APPLE_SUBSCRIBER = {
+  entitlements: {
+    "Trainee Pro": {
+      expires_date: "2026-09-04T10:00:00Z",
+      product_identifier: "com.trainee.trainer_monthly",
+      purchase_date: "2026-08-04T10:00:00Z",
+    },
+  },
+  subscriptions: {
+    "com.trainee.trainer_monthly": {
+      expires_date: "2026-09-04T10:00:00Z",
+      purchase_date: "2026-08-04T10:00:00Z",
+      store: "app_store",
+      period_type: "normal",
+      original_transaction_id: "2000000123456789",
+      store_transaction_id: "2000000987654321",
+    },
+  },
+};
+
+describe("normalizeRevenueCatSubscriber", () => {
+  it("reads the dated fields that decide whether an entitlement is active", () => {
+    const data = normalizeRevenueCatSubscriber(APPLE_SUBSCRIBER);
+
+    // The regression: these were undefined, so a verified purchase produced a
+    // snapshot with no expiry and resolveEntitlement reported it expired.
+    expect(data.entitlements["Trainee Pro"].expiresDate).toBe("2026-09-04T10:00:00Z");
+    expect(data.entitlements["Trainee Pro"].productIdentifier).toBe("com.trainee.trainer_monthly");
+
+    const sub = data.subscriptions["com.trainee.trainer_monthly"];
+    expect(sub.expiresDate).toBe("2026-09-04T10:00:00Z");
+    expect(sub.periodType).toBe("normal");
+    expect(sub.originalTransactionId).toBe("2000000123456789");
+    expect(sub.storeTransactionId).toBe("2000000987654321");
+    expect(sub.store).toBe("app_store");
+  });
+
+  it("carries a promotional grant's expiry and period through", () => {
+    const data = normalizeRevenueCatSubscriber({
+      entitlements: {
+        "Trainee Pro": {
+          expires_date: "2026-11-04T10:51:34Z",
+          product_identifier: "rc_promo_Trainee Pro_custom",
+        },
+      },
+      subscriptions: {
+        "rc_promo_Trainee Pro_custom": {
+          expires_date: "2026-11-04T10:51:34Z",
+          store: "promotional",
+          period_type: "promotional",
+        },
+      },
+    });
+
+    expect(data.entitlements["Trainee Pro"].expiresDate).toBe("2026-11-04T10:51:34Z");
+    expect(data.subscriptions["rc_promo_Trainee Pro_custom"].periodType).toBe("promotional");
+  });
+
+  it("still accepts camelCase so existing fixtures keep working", () => {
+    const data = normalizeRevenueCatSubscriber({
+      entitlements: { "Trainee Pro": { expiresDate: "2026-09-04T10:00:00Z" } },
+      subscriptions: { p: { expiresDate: "2026-09-04T10:00:00Z", periodType: "trial" } },
+    });
+
+    expect(data.entitlements["Trainee Pro"].expiresDate).toBe("2026-09-04T10:00:00Z");
+    expect(data.subscriptions.p.periodType).toBe("trial");
+  });
+
+  it("tolerates an empty or malformed subscriber", () => {
+    expect(normalizeRevenueCatSubscriber({})).toEqual({ entitlements: {}, subscriptions: {} });
+    expect(normalizeRevenueCatSubscriber({ entitlements: null, subscriptions: "nope" }))
+      .toEqual({ entitlements: {}, subscriptions: {} });
   });
 });
