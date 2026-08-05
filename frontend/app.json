@@ -15,7 +15,6 @@
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "45",
       "bundleIdentifier": "com.juroctech.frontend",
       "usesAppleSignIn": true,
       "infoPlist": {
