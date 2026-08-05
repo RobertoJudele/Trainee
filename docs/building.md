@@ -34,13 +34,11 @@ wired to the dev database. Check `.env` before every local AAB.
 | `preview` | internal (ad-hoc / APK) | `dev-api.juroc.tech` | Testing against dev, incl. IAP |
 | `production` | store | `api.juroc.tech` | TestFlight + App Store + Play release |
 
-> **Status: `preview` does not point at dev yet.** Its `env` block in
-> `eas.json` is still byte-identical to `production` apart from
-> `EXPO_PUBLIC_REVENUECAT_DEBUG`, so a `preview` build today hits **production**
-> with **production** RevenueCat keys. Repointing it is Phase 5 of
-> [dev-environment-setup.md](dev-environment-setup.md) and is blocked on the dev
-> RevenueCat project's Apple/Google SDK keys. Until that lands, do not use
-> `--profile preview` believing it is isolated.
+`preview` and `production` use **different RevenueCat projects**, not just
+different backends. That is deliberate: the App User ID is `String(user.id)`
+(`_layout.tsx:86`), and dev and prod have independent `id` sequences, so a
+shared project would make dev user 7 and prod trainer 7 the same customer.
+Keep the two projects' keys separate whenever you touch this file.
 
 `preview` is **not** TestFlight. `distribution: internal` means an ad-hoc iOS
 build installable only on devices registered via `eas device:create`, or a
