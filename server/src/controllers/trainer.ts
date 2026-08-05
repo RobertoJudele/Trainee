@@ -11,15 +11,6 @@ import { UserRole } from "../types/common";
 import { S3ImageService } from "../services/s3ImageService";
 import { Sequelize } from "sequelize";
 import "../utils/helper";
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-  PutObjectCommand,
-  ListObjectsV2Command,
-  DeleteObjectsCommand,
-} from "@aws-sdk/client-s3";
-import { s3, S3_CONFIG } from "../config/s3";
 import { TrainerImage } from "../models/trainerImage";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { TrainerGym } from "../models/trainerGym";
@@ -557,10 +548,24 @@ export const getTrainer = async (
 // account deletion. Order matters: schedule slots FK both the trainer and
 // trainer_working_hours, so they go first. Issues keep their history — only the
 // trainer link is nulled.
+/**
+ * Deletes a trainer profile and everything hanging off it, inside the caller's
+ * transaction. Returns the gallery/credential image URLs it removed rows for, so
+ * the caller can purge the objects from storage *after* the transaction commits
+ * — an object deleted inside the transaction would be gone for good if the
+ * transaction then rolled back.
+ */
 export const cascadeDeleteTrainer = async (
   trainerId: number,
   t: Transaction
-) => {
+): Promise<string[]> => {
+  const images = await TrainerImage.findAll({
+    where: { trainerId },
+    attributes: ["imageUrl"],
+    transaction: t,
+  });
+  const imageUrls = images.map((i) => i.imageUrl);
+
   await TrainerScheduleSlot.destroy({ where: { trainerId }, transaction: t });
   await TrainerWorkingHour.destroy({ where: { trainerId }, transaction: t });
   await TrainerBlockedDate.destroy({ where: { trainerId }, transaction: t });
@@ -576,6 +581,8 @@ export const cascadeDeleteTrainer = async (
     { where: { trainerId }, transaction: t }
   );
   await Trainer.destroy({ where: { id: trainerId }, transaction: t });
+
+  return imageUrls;
 };
 
 export const deleteTrainer = async (req: Request, res: Response) => {
@@ -594,38 +601,20 @@ export const deleteTrainer = async (req: Request, res: Response) => {
       sendError(res, 404, "No trainer found");
       return;
     }
-    // Best-effort: clear the trainer's profile pictures from S3 before dropping the row.
-    const profilePictureUrl = user.profileImageUrl;
-    if (profilePictureUrl) {
-      const listResponse = await s3.send(
-        new ListObjectsV2Command({
-          Bucket: S3_CONFIG.bucket,
-          Prefix: `profilePicture/${userId}/`,
-        })
-      );
-      const objectsToDelete = (listResponse.Contents ?? []).map((obj) => ({
-        Key: obj.Key!,
-      }));
-      if (objectsToDelete.length > 0) {
-        const deleteResponse = await s3.send(
-          new DeleteObjectsCommand({
-            Bucket: S3_CONFIG.bucket,
-            Delete: { Objects: objectsToDelete },
-          })
-        );
-        if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
-          console.warn("Some files failed to delete:", deleteResponse.Errors);
-        }
-      }
-    }
-
     // Clear every row referencing this trainer, then the profile, in one transaction
     // so a mid-way failure can't leave the trainer half-deleted.
+    let imageUrls: string[] = [];
     await sequelize.transaction(async (t) => {
-      await cascadeDeleteTrainer(trainer.id, t);
+      imageUrls = await cascadeDeleteTrainer(trainer.id, t);
       user.role = UserRole.CLIENT;
       await user.save({ transaction: t });
     });
+
+    // Only after the transaction commits, so a rollback can't leave the rows
+    // intact while the objects are already gone. The account survives here, so
+    // the profile picture is deliberately left alone — only trainer gallery and
+    // credential images go.
+    await S3ImageService.deleteImagesByUrl(imageUrls);
 
     sendSuccess(res, 200, "Trainer deleted succesfully");
   } catch (error: unknown) {

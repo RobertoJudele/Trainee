@@ -2,8 +2,10 @@ import { sendSuccess } from "src/utils/response";
 import { s3, S3_CONFIG } from "../config/s3";
 import {
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
@@ -35,6 +37,84 @@ export class S3ImageService {
     } catch (error) {
       console.log(`Failed deleting image ${key}`, error);
       throw new Error("Failed to delete image from S3");
+    }
+  }
+
+  /**
+   * Best-effort erasure for a set of stored image URLs.
+   *
+   * Deleting a row only removes the pointer — the object stays in the bucket and,
+   * because the bucket is served publicly, stays fetchable by anyone holding the
+   * URL. Account deletion has to reach the objects too.
+   *
+   * Never throws: it runs after the database transaction has committed, so the
+   * account is already gone and a storage hiccup must not surface as a failed
+   * deletion. Failures are logged for a later sweep.
+   */
+  static async deleteImagesByUrl(urls: (string | null | undefined)[]): Promise<void> {
+    const keys = [...new Set(
+      urls
+        .filter((u): u is string => Boolean(u))
+        .map((u) => this.extractKeyFromUrl(u))
+        .filter((k): k is string => Boolean(k))
+    )];
+    if (keys.length === 0) return;
+
+    // DeleteObjects caps at 1000 keys per call.
+    for (let i = 0; i < keys.length; i += 1000) {
+      const batch = keys.slice(i, i + 1000).map((Key) => ({ Key }));
+      try {
+        const res = await s3.send(
+          new DeleteObjectsCommand({
+            Bucket: S3_CONFIG.bucket,
+            Delete: { Objects: batch },
+          })
+        );
+        if (res.Errors?.length) {
+          console.warn("[s3] some objects failed to delete:", res.Errors);
+        }
+      } catch (error) {
+        console.warn("[s3] batch delete failed:", error);
+      }
+    }
+  }
+
+  /**
+   * Best-effort erasure of everything under a key prefix. Used for profile
+   * pictures, where earlier uploads are superseded rather than removed, so the
+   * row's current URL alone would leave older avatars behind. Never throws.
+   */
+  static async deleteImagesByPrefix(prefix: string): Promise<void> {
+    try {
+      let token: string | undefined;
+      do {
+        const listed = await s3.send(
+          new ListObjectsV2Command({
+            Bucket: S3_CONFIG.bucket,
+            Prefix: prefix,
+            ContinuationToken: token,
+          })
+        );
+        const objects = (listed.Contents ?? [])
+          .map((o) => o.Key)
+          .filter((k): k is string => Boolean(k))
+          .map((Key) => ({ Key }));
+
+        if (objects.length > 0) {
+          const res = await s3.send(
+            new DeleteObjectsCommand({
+              Bucket: S3_CONFIG.bucket,
+              Delete: { Objects: objects },
+            })
+          );
+          if (res.Errors?.length) {
+            console.warn("[s3] some objects failed to delete:", res.Errors);
+          }
+        }
+        token = listed.IsTruncated ? listed.NextContinuationToken : undefined;
+      } while (token);
+    } catch (error) {
+      console.warn(`[s3] prefix delete failed for ${prefix}:`, error);
     }
   }
 
