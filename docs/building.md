@@ -32,6 +32,7 @@ wired to the dev database. Check `.env` before every local AAB.
 |---|---|---|---|
 | `development` | internal, dev client | `frontend/.env` | Native debugging with a dev client |
 | `preview` | internal (ad-hoc / APK) | `dev-api.juroc.tech` | Testing against dev, incl. IAP |
+| `testflight-dev` | store | `dev-api.juroc.tech` | TestFlight testers on the dev backend |
 | `production` | store | `api.juroc.tech` | TestFlight + App Store + Play release |
 
 `preview` and `production` use **different RevenueCat projects**, not just
@@ -45,8 +46,34 @@ build installable only on devices registered via `eas device:create`, or a
 directly-installable Android APK. Anything reaching TestFlight is a
 `production` build and therefore hits prod.
 
-If you want TestFlight testers on the dev backend, that needs a fourth profile
-with store distribution and dev env vars — it does not exist today.
+### TestFlight against dev
+
+```bash
+eas build --profile testflight-dev --platform ios
+eas submit --platform ios --latest
+```
+
+**Read this before using it.** `testflight-dev` and `production` share the
+bundle ID `com.juroctech.frontend`, so both land in the *same* App Store
+Connect app and the *same* TestFlight build list. Nothing in TestFlight's UI
+shows which backend a build points at — the build number is the only
+difference, and both profiles auto-increment the same counter.
+
+The failure that matters: submitting a `testflight-dev` build for App Store
+review would ship the public app pointed at the dev database. Guard against it:
+
+- Put dev builds in their own TestFlight **internal group** (e.g. "Dev
+  backend"), and never add them to the group you promote from.
+- Record the build number when you submit a dev build. `eas build:list
+  --profile testflight-dev` shows them.
+- Only ever run `eas submit` for review from a `--profile production` build.
+
+If TestFlight-against-dev becomes routine rather than occasional, the proper
+fix is a separate bundle ID (`com.juroctech.frontend.dev`) via a dynamic
+`app.config.js`. That gives a distinct App Store Connect app, its own
+TestFlight, and side-by-side install on one device — at the cost of recreating
+the IAP products under the new app, since in-app purchases are per-app in App
+Store Connect.
 
 ---
 
