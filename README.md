@@ -146,7 +146,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 
 REVENUECAT_SECRET_API_KEY=rc_secret_...
 REVENUECAT_WEBHOOK_AUTH=your_webhook_auth_value
-REVENUECAT_ENTITLEMENT_ID=trainer_subscription
+REVENUECAT_ENTITLEMENT_ID=Trainee Pro
 
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
@@ -181,7 +181,7 @@ EXPO_PUBLIC_API_URL_PROD=https://your-production-api.com
 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 EXPO_PUBLIC_REVENUECAT_APPLE_API_KEY=appl_...
 EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY=goog_...
-EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID=trainer_subscription
+EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID="Trainee Pro"
 EXPO_PUBLIC_REVENUECAT_PRODUCT_ID=com.trainee.trainer_monthly
 EXPO_PUBLIC_ENABLE_STRIPE_CHECKOUT=0
 ```
@@ -228,6 +228,25 @@ npm run android
 npm run ios
 npm run web
 ```
+
+## Builds
+
+Which command produces which app, and which backend it talks to:
+
+| Goal | Command |
+|------|---------|
+| Everyday dev (no build) | set `EXPO_PUBLIC_API_URL` in `frontend/.env`, then `npx expo start -c` |
+| Test against dev backend | `eas build --profile preview --platform android\|ios` |
+| App Store / TestFlight | `eas build --profile production --platform ios` then `eas submit --platform ios --latest` |
+| Google Play | `eas build --profile production --platform android`, or `npm run build:aab` locally |
+
+`EXPO_PUBLIC_*` values are baked in at build time, so the backend a build talks
+to is fixed when it is built. EAS builds take them from the profile's `env`
+block in `frontend/eas.json`; `expo start` and `npm run build:aab` take them
+from `frontend/.env` instead — which makes the local AAB path easy to get
+wrong.
+
+Full guide, profile matrix, device registration, and verification steps: [docs/building.md](docs/building.md).
 
 ## Available Scripts
 
