@@ -52,7 +52,22 @@ Grant the dev user rights on `trainee_dev` only, and revoke `CONNECT` on
 does nothing), so a misconfiguration fails with a permission error instead of
 destroying data.
 
-### 2.3 Never run `docker compose down -v`
+### 2.3 Dev and prod share the R2 bucket (accepted, not solved)
+
+`.env.dev` reuses prod's `AWS_*` / `S3_*` values, so images uploaded on dev land
+in the production bucket and are served from the production public URL. This is
+a deliberate trade, not an oversight — but it is the one place where "dev and
+prod share no data" is untrue.
+
+What it does not break: object keys are UUIDs (`config/s3.ts` uses `uuidv4`), so
+there are no collisions and dev cannot overwrite or delete a prod object.
+
+What it does mean: dev test images accumulate in the prod bucket and are
+publicly reachable on the prod CDN domain, and storage cost is shared. If that
+becomes a problem, create a `trainee-assets-dev` bucket and give `.env.dev` its
+own `AWS_S3_BUCKET` and `S3_PUBLIC_URL`. Nothing in the code needs changing.
+
+### 2.4 Never run `docker compose down -v`
 
 It deletes the shared `postgres_data` volume — **both** databases. Already
 flagged in `server/DEPLOY.md:123`.
@@ -139,6 +154,7 @@ that call a harmless no-op.
 | `REVENUECAT_WEBHOOK_AUTH` | a fresh value |
 | `STRIPE_*` | test-mode keys |
 | `SMTP_USER` / `SMTP_PASS` | blank or a throwaway inbox |
+| `AWS_*` / `S3_*` | copied from prod — shared bucket, see §2.3 |
 | `JWT_SECRET`, `JWT_RESET_SECRET`, `CHECKIN_CODE_SECRET` | **different from prod** |
 
 Different JWT secrets matter: shared ones let a dev token authenticate against
@@ -210,7 +226,7 @@ git pull && docker compose build app && docker compose up -d app
 docker compose logs -f app-dev
 ```
 
-Never `docker compose down -v` (§2.3).
+Never `docker compose down -v` (§2.4).
 
 ---
 
