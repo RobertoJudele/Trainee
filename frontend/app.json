@@ -20,8 +20,7 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Salvio needs access to your photo library so you can upload a profile picture and, for trainers, gallery and credential photos.",
-        "NSLocationWhenInUseUsageDescription": "Salvio uses your location to find nearby gyms and trainers.",
-        "NSCameraUsageDescription": "Salvio uses the camera to take a profile picture or trainer gallery photos."
+        "NSLocationWhenInUseUsageDescription": "Salvio uses your location to find nearby gyms and trainers."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -131,13 +130,13 @@
         }
       },
       "permissions": [
-        "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.INTERNET"
       ],
       "blockedPermissions": [
-        "android.permission.READ_MEDIA_IMAGES"
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -155,7 +154,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Salvio needs access to your photo library so you can upload a profile picture and, for trainers, gallery and credential photos.",
-          "cameraPermission": "Salvio uses the camera to take a profile picture or trainer gallery photos."
+          "cameraPermission": false,
+          "microphonePermission": false
         }
       ],
       [
