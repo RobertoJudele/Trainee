@@ -13,11 +13,16 @@ export interface PickedImage {
   mimeType: string;
 }
 
-// Ask for library permission and return true if granted.
-async function ensureLibraryPermission(): Promise<boolean> {
-  const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-  return status === "granted";
-}
+// No permission request here, deliberately. launchImageLibraryAsync goes through
+// the Android system photo picker on 13+ and PHPickerViewController on iOS, both
+// of which run out-of-process and hand back only what the user selected — so
+// neither needs a media permission. Google Play's Photo and Video Permissions
+// policy requires the picker for occasional access like ours (avatars, gallery
+// and credential uploads) and rejects READ_MEDIA_IMAGES declarations for it.
+//
+// Do not reinstate requestMediaLibraryPermissionsAsync without also putting
+// READ_MEDIA_IMAGES back in app.json: with the permission blocked the request is
+// auto-denied, and gating the picker on it stops the picker opening at all.
 
 function assetToPicked(asset: ImagePicker.ImagePickerAsset, index = 0): PickedImage {
   // RN's FormData needs a filename + mime type; expo doesn't always provide them.
@@ -29,7 +34,6 @@ function assetToPicked(asset: ImagePicker.ImagePickerAsset, index = 0): PickedIm
 
 // Pick a single image and crop it to a square (for profile pictures).
 export async function pickProfileImage(): Promise<PickedImage | null> {
-  if (!(await ensureLibraryPermission())) return null;
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: "images",
     allowsEditing: true,
@@ -44,7 +48,6 @@ export async function pickProfileImage(): Promise<PickedImage | null> {
 // selection automatically on platforms that don't support multi-select.
 export async function pickImages(remaining: number): Promise<PickedImage[]> {
   if (remaining <= 0) return [];
-  if (!(await ensureLibraryPermission())) return [];
   const result = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: "images",
     allowsMultipleSelection: true,
