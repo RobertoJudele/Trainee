@@ -10,14 +10,16 @@ type LanguageContextType = {
   t: (key: string) => string;
 };
 
+const DEFAULT_LANGUAGE: Language = "ro";
+
 const LanguageContext = createContext<LanguageContextType>({
-  language: "en",
+  language: DEFAULT_LANGUAGE,
   setLanguage: () => {},
-  t: (key) => translations.en[key] ?? key,
+  t: (key) => translations[DEFAULT_LANGUAGE][key] ?? key,
 });
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<Language>("en");
+  const [language, setLanguageState] = useState<Language>(DEFAULT_LANGUAGE);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
