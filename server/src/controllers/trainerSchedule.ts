@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+import { unaccentILike } from "../utils/search";
 import { ClientCheckInCode } from "../models/clientCheckInCode";
 import { ClientSessionPack } from "../models/clientSessionPack";
 import { TrainerClient } from "../models/trainerClient";
@@ -1040,9 +1041,11 @@ export const searchClientsForTrainer = async (req: Request, res: Response): Prom
         role: "client",
         isActive: true,
         [Op.or]: [
+          // Email stays a plain ILIKE — it never carries diacritics, and this way it
+          // keeps using its trigram index.
           { email: { [Op.iLike]: `%${q}%` } },
-          { firstName: { [Op.iLike]: `%${q}%` } },
-          { lastName: { [Op.iLike]: `%${q}%` } },
+          unaccentILike('"User"."first_name"', q),
+          unaccentILike('"User"."last_name"', q),
         ],
       },
       attributes: ["id", "email", "firstName", "lastName"],

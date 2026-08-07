@@ -3,6 +3,8 @@ import sequelize from "../db";
 export const ensureDatabaseExtensions = async (): Promise<void> => {
   await sequelize.query('CREATE EXTENSION IF NOT EXISTS "postgis";');
   await sequelize.query('CREATE EXTENSION IF NOT EXISTS "pg_trgm";');
+  // Diacritic-insensitive search — see utils/search.ts
+  await sequelize.query('CREATE EXTENSION IF NOT EXISTS "unaccent";');
 };
 
 export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {

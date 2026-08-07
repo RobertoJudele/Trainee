@@ -5,7 +5,8 @@ import { sendError, sendSuccess } from "../utils/response";
 import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
-import { Op, FindAttributeOptions, Order, Transaction } from "sequelize";
+import { Op, FindAttributeOptions, Order, Transaction, Utils } from "sequelize";
+import { unaccentILike } from "../utils/search";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
 import { S3ImageService } from "../services/s3ImageService";
@@ -893,13 +894,22 @@ export const searchTrainers = async (
       }
     };
 
+    // Location filters — diacritic-insensitive, so "bucuresti" finds "București".
+    const applyLocationFilters = (whereClause: any): void => {
+      const conditions: Utils.Where[] = [];
+      if (city) conditions.push(unaccentILike('"Trainer"."location_city"', city));
+      if (state) conditions.push(unaccentILike('"Trainer"."location_state"', state));
+      if (country) conditions.push(unaccentILike('"Trainer"."location_country"', country));
+      if (conditions.length === 0) return;
+
+      const existingAnd = Array.isArray(whereClause[Op.and]) ? whereClause[Op.and] : [];
+      whereClause[Op.and] = [...existingAnd, ...conditions];
+    };
+
     if (isAvailable === "true") trainerWhere.isAvailable = true;
     if (isFeatured === "true") trainerWhere.isFeatured = true;
 
-    // Location filters
-    if (city) trainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
-    if (state) trainerWhere.locationState = { [Op.iLike]: `%${state}%` };
-    if (country) trainerWhere.locationCountry = { [Op.iLike]: `%${country}%` };
+    applyLocationFilters(trainerWhere);
 
     // Rate filters
     if (minRate || maxRate) {
@@ -923,17 +933,21 @@ export const searchTrainers = async (
 
     applyGeoFilters(trainerWhere);
 
-    // Text search — bio on trainer, name on user.
+    // Text search — bio and city/state on trainer, name on user. City is in here and
+    // not just behind the City filter field because typing a place name into the search
+    // bar is the obvious way to look for trainers there.
     // NOTE: publicId is a UUID column; Postgres has no ILIKE operator for uuid
     // (operator does not exist: uuid ~~*), so we must NOT match it with iLike.
     if (q) {
       const normalizedQuery = String(q).trim();
       trainerWhere[Op.or] = [
-        { bio: { [Op.iLike]: `%${normalizedQuery}%` } },
+        unaccentILike('"Trainer"."bio"', normalizedQuery),
+        unaccentILike('"Trainer"."location_city"', normalizedQuery),
+        unaccentILike('"Trainer"."location_state"', normalizedQuery),
       ];
       userWhere[Op.or] = [
-        { firstName: { [Op.iLike]: `%${normalizedQuery}%` } },
-        { lastName: { [Op.iLike]: `%${normalizedQuery}%` } },
+        unaccentILike('"User"."first_name"', normalizedQuery),
+        unaccentILike('"User"."last_name"', normalizedQuery),
       ];
     }
 
@@ -1043,9 +1057,7 @@ export const searchTrainers = async (
       // Re-apply non-text filters
       if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
       if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
-      if (city) finalTrainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
-      if (state) finalTrainerWhere.locationState = { [Op.iLike]: `%${state}%` };
-      if (country) finalTrainerWhere.locationCountry = { [Op.iLike]: `%${country}%` };
+      applyLocationFilters(finalTrainerWhere);
       if (minRate || maxRate) {
         const rateField = rateType === "hourly" ? "hourlyRate" : "sessionRate";
         finalTrainerWhere[rateField] = {};

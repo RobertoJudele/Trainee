@@ -103,6 +103,54 @@ describe("Trainer API", () => {
       expect(res.body.success).toBe(true);
     });
 
+    // Romanians type "bucuresti" and "stefan" while the stored data reads
+    // "București" / "Ștefan" — unaccent() on both sides has to bridge that,
+    // including the cedilla ş (U+015F) Windows keyboards emit for comma-below ș.
+    it("matches city and name regardless of diacritics", async () => {
+      const { user } = await createTestUser({
+        role: "trainer",
+        firstName: "Ștefan",
+        lastName: "Ionescu",
+      });
+      const trainer = await Trainer.create({
+        userId: user.id,
+        bio: "Antrenor personal",
+        experienceYears: 5,
+        locationCity: "București",
+        locationState: "București",
+        subscriptionStatus: subStatus.TRIAL,
+        trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      } as any);
+
+      const idsOf = (res: any) => res.body.data.trainers.map((t: any) => t.internalId);
+
+      const byPlainCity = await request(app)
+        .get("/trainer/search")
+        .query({ city: "bucuresti" });
+      expect(byPlainCity.status).toBe(200);
+      expect(idsOf(byPlainCity)).toContain(trainer.id);
+
+      const byCedillaCity = await request(app)
+        .get("/trainer/search")
+        .query({ city: "Bucureşti" });
+      expect(byCedillaCity.status).toBe(200);
+      expect(idsOf(byCedillaCity)).toContain(trainer.id);
+
+      const byPlainName = await request(app)
+        .get("/trainer/search")
+        .query({ q: "stefan" });
+      expect(byPlainName.status).toBe(200);
+      expect(idsOf(byPlainName)).toContain(trainer.id);
+
+      // Typing a place name into the search bar (q, not the City filter) has to
+      // find trainers based there — neither the bio nor the name says "bucuresti".
+      const byCityInSearchBar = await request(app)
+        .get("/trainer/search")
+        .query({ q: "bucuresti" });
+      expect(byCityInSearchBar.status).toBe(200);
+      expect(idsOf(byCityInSearchBar)).toContain(trainer.id);
+    });
+
     // Regression for the whereMergeStrategy bug: the radius path adds a
     // TOP-LEVEL Op.and (ST_DWithin literal) to the same where object the
     // active-subscription scope also keys off Op.and for. Under the default
