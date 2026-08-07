@@ -123,7 +123,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.juroctech.frontend",
-      "versionCode": 2,
+      "versionCode": 10,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBBMx0F8w8skPumcaC0o9LQ9zYHR6qJJ8U"
