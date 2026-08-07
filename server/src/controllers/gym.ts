@@ -6,6 +6,7 @@ import { Trainer } from "../models/trainer";
 import { User } from "../models/user";
 import { sendError, sendSuccess } from "../utils/response";
 import { AuthenticatedRequest } from "../types/common";
+import { minSessionPriceAttribute } from "../utils/pricing";
 import {
   buildPointFromLatLng,
   isValidLatitude,
@@ -173,6 +174,7 @@ export const getGymById = async (req: Request, res: Response) => {
           attributes: [
             "id", "bio", "experienceYears", "hourlyRate",
             "sessionRate", "totalRating", "reviewCount",
+            minSessionPriceAttribute("trainer"),
           ],
           include: [
             {

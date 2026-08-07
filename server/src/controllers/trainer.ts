@@ -7,6 +7,7 @@ import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
 import { Op, FindAttributeOptions, Order, Transaction, Utils } from "sequelize";
 import { unaccentILike } from "../utils/search";
+import { minSessionPriceAttribute, minSessionPriceExpression } from "../utils/pricing";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
 import { S3ImageService } from "../services/s3ImageService";
@@ -86,6 +87,7 @@ interface SearchQuery {
     | "experienceYears"
     | "hourlyRate"
     | "sessionRate"
+    | "minSessionPrice"
     | "reviewCount"
     | "createdAt"
     | "distance";
@@ -445,6 +447,7 @@ export const getTrainer = async (
         "experienceYears",
         "hourlyRate",
         "sessionRate",
+        minSessionPriceAttribute(),
         "locationCity",
         "locationState",
         "locationCountry",
@@ -958,6 +961,7 @@ export const searchTrainers = async (
       "experienceYears",
       "hourlyRate",
       "sessionRate",
+      "minSessionPrice",
       "reviewCount",
       "createdAt",
       "distance",
@@ -1096,6 +1100,7 @@ export const searchTrainers = async (
       "reviewCount",
       "createdAt",
       "updatedAt",
+      minSessionPriceAttribute(),
     ];
 
     if (distanceExpression) {
@@ -1106,7 +1111,14 @@ export const searchTrainers = async (
     const orderClause: Order =
       resolvedSortBy === "distance" && distanceExpression
         ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["totalRating", "DESC"]]
-        : [[resolvedSortBy, safeSortOrder]];
+        : resolvedSortBy === "minSessionPrice"
+          // Not a real column, so order by the SELECT alias rather than repeating the
+          // expression: pagination wraps the rows in a derived table whose columns are
+          // already aliased to camelCase, and "Trainer"."session_rate" does not exist
+          // out there. Trainers with neither packages nor a session rate come out NULL,
+          // which Postgres sorts last on ASC, so priceless profiles don't head the list.
+          ? [[Sequelize.literal('"minSessionPrice"'), safeSortOrder], ["totalRating", "DESC"]]
+          : [[resolvedSortBy, safeSortOrder]];
 
     const { count, rows } = await Trainer.scope("active").findAndCountAll({
       where: finalTrainerWhere,
@@ -1145,6 +1157,7 @@ export const searchTrainers = async (
         experienceYears: json.experienceYears,
         hourlyRate: json.hourlyRate,
         sessionRate: json.sessionRate,
+        minSessionPrice: json.minSessionPrice,
         locationCity: json.locationCity,
         locationState: json.locationState,
         locationCountry: json.locationCountry,

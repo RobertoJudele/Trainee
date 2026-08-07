@@ -36,6 +36,7 @@ import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
 import { getApiErrorMessage } from "../../src/lib/errors";
+import { formatFromPerSession } from "../../src/lib/price";
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
@@ -360,6 +361,12 @@ export default function TrainerDetailsScreen() {
     trainer?.experienceYears ?? toNumber(params.experienceYears) ?? 0;
   const hourlyRate = trainer?.hourlyRate ?? toNumber(params.hourlyRate);
   const sessionRate = trainer?.sessionRate ?? toNumber(params.sessionRate);
+  // Match the "from" price the card that led here advertised: cheapest per-session
+  // across packages, falling back to the flat session rate.
+  const minSessionPriceLabel = formatFromPerSession(
+    trainer?.minSessionPrice ?? sessionRate,
+    t
+  );
   const bio = trainer?.bio ?? params.bio ?? t("noBioAvailable");
   const locationText = [
     trainer?.locationCity,
@@ -535,10 +542,10 @@ export default function TrainerDetailsScreen() {
           <Text style={styles.infoLabel}>{t("experience")}</Text>
           <Text style={styles.infoValue}>{experienceYears} {t("years")}</Text>
         </View>
-        {sessionRate && (
+        {minSessionPriceLabel && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-            <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(sessionRate))}</Text>
+            <Text style={styles.infoValue}>{minSessionPriceLabel}</Text>
           </View>
         )}
       </View>

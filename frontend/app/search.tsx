@@ -18,6 +18,7 @@ import {
 import { useSearchTrainersQuery, useGetSpecializationsQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { formatFromPerSession } from "../src/lib/price";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { FadeInUp, PressableScale } from "../src/components/ui";
@@ -33,12 +34,14 @@ export default function SearchScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
 
+  // Each option carries its own direction: "Price: Low to High" has to sort ascending
+  // while every other option wants the biggest number first.
   const SORT_OPTIONS = [
-    { value: "totalRating", label: t("topRated") },
-    { value: "reviewCount", label: t("mostReviewed") },
-    { value: "hourlyRate", label: t("priceLowToHigh") },
-    { value: "experienceYears", label: t("mostExperienced") },
-    { value: "createdAt", label: t("newest") },
+    { value: "totalRating", order: "desc", label: t("topRated") },
+    { value: "reviewCount", order: "desc", label: t("mostReviewed") },
+    { value: "minSessionPrice", order: "asc", label: t("priceLowToHigh") },
+    { value: "experienceYears", order: "desc", label: t("mostExperienced") },
+    { value: "createdAt", order: "desc", label: t("newest") },
   ] as const;
 
   // --- search state ---
@@ -230,7 +233,7 @@ export default function SearchScreen() {
             <Text style={styles.ratingCount}>({item.reviewCount})</Text>
           </View>
           <Text style={styles.cardPrice}>
-            {item.hourlyRate ? `${item.hourlyRate} lei/hr` : item.sessionRate ? `${item.sessionRate} lei/ses` : "—"}
+            {formatFromPerSession(item.minSessionPrice, t) ?? "—"}
           </Text>
         </View>
 
@@ -357,7 +360,10 @@ export default function SearchScreen() {
                 <TouchableOpacity
                   key={opt.value}
                   style={[styles.sortChip, sortBy === opt.value && styles.sortChipActive]}
-                  onPress={() => setSortBy(opt.value as SearchParams["sortBy"])}
+                  onPress={() => {
+                    setSortBy(opt.value as SearchParams["sortBy"]);
+                    setSortOrder(opt.order);
+                  }}
                   accessible={true}
                   accessibilityRole="button"
                   accessibilityLabel={`Sort by ${opt.label}`}

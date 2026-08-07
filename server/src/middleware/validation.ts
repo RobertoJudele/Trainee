@@ -785,6 +785,7 @@ export const trainerSearchValidation = [
       "experienceYears",
       "hourlyRate",
       "sessionRate",
+      "minSessionPrice",
       "reviewCount",
       "createdAt",
       "distance",

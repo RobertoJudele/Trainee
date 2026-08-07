@@ -23,6 +23,8 @@ export interface GymTrainer {
   experienceYears?: number;
   hourlyRate?: number;
   sessionRate?: number;
+  /** Cheapest per-session price: best price/session across packages, else sessionRate. */
+  minSessionPrice?: string | number | null;
   totalRating: number;
   reviewCount: number;
   isAvailableAtGym: boolean;

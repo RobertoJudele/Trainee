@@ -10,6 +10,7 @@ import { TrainerGym } from "../models/trainerGym";
 import { User } from "../models/user";
 import { sendError, sendSuccess } from "../utils/response";
 import { toFiniteNumber } from "../utils/geo";
+import { minSessionPriceAttribute } from "../utils/pricing";
 
 interface SuggestQuery {
   page?: string;
@@ -95,6 +96,7 @@ export const suggestTrainers = async (req: Request<{}, {}, {}, SuggestQuery>, re
         "experienceYears",
         "hourlyRate",
         "sessionRate",
+        minSessionPriceAttribute(),
         "locationCity",
         "locationState",
         "locationCountry",
@@ -239,6 +241,7 @@ export const suggestTrainers = async (req: Request<{}, {}, {}, SuggestQuery>, re
         experienceYears: json.experienceYears,
         hourlyRate: json.hourlyRate,
         sessionRate: json.sessionRate,
+        minSessionPrice: json.minSessionPrice,
         locationCity: json.locationCity,
         locationState: json.locationState,
         locationCountry: json.locationCountry,

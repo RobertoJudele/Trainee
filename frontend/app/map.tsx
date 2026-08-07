@@ -38,6 +38,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { formatFromPerSession } from "../src/lib/price";
 import { getApiErrorMessage } from "../src/lib/errors";
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
@@ -950,7 +951,10 @@ export default function MapScreen() {
       />
     ));
 
-  const renderTrainerRow = (trainer: GymTrainer, idx: number) => (
+  const renderTrainerRow = (trainer: GymTrainer, idx: number) => {
+    const priceLabel = formatFromPerSession(trainer.minSessionPrice, t);
+
+    return (
     <TouchableOpacity
       key={idx}
       style={styles.trainerRow}
@@ -1017,14 +1021,15 @@ export default function MapScreen() {
           {trainer.experienceYears ? (
             <Text style={styles.trainerStat}> · {trainer.experienceYears}yr exp</Text>
           ) : null}
-          {trainer.hourlyRate ? (
-            <Text style={styles.trainerStatPrice}> · {trainer.hourlyRate} lei/hr</Text>
+          {priceLabel ? (
+            <Text style={styles.trainerStatPrice}> · {priceLabel}</Text>
           ) : null}
           <Text style={styles.trainerViewLink}> · {t("viewDetails")}</Text>
         </View>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   // ── Render ────────────────────────────────────────────────
   return (
