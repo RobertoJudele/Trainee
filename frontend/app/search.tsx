@@ -1,5 +1,5 @@
 // frontend/app/search.tsx  (or frontend/src/screens/Search.tsx)
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   Platform,
   UIManager,
   Image,
+  Animated,
 } from "react-native";
 import { useSearchTrainersQuery, useGetSpecializationsQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
@@ -118,10 +119,19 @@ export default function SearchScreen() {
     );
   }, []);
 
+  // 0 = closed (gear icon), 1 = open (send arrow). Crossfades + counter-rotates
+  // the two icons so the arrow settles upright.
+  const filterIconAnim = useRef(new Animated.Value(0)).current;
+
   const toggleFilters = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    Animated.timing(filterIconAnim, {
+      toValue: showFilters ? 0 : 1,
+      duration: 180,
+      useNativeDriver: true,
+    }).start();
     setShowFilters((v) => !v);
-  }, []);
+  }, [showFilters, filterIconAnim]);
 
   // Onboarding tour targets.
   const searchBarTourRef = useTourTarget("client-search-bar");
@@ -271,7 +281,7 @@ export default function SearchScreen() {
     <View style={styles.container}>
       <ScreenHeader title={t("findTrainers")} />
       {/* ── Search bar ── */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, showFilters && styles.topBarExpanded]}>
         <View style={styles.searchRow}>
           <View ref={searchBarTourRef} collapsable={false} style={styles.searchBox}>
             <Ionicons name="search" size={20} color={theme.colors.textSecondary} style={styles.searchIcon} />
@@ -298,19 +308,67 @@ export default function SearchScreen() {
           <View ref={filtersTourRef} collapsable={false}>
             <TouchableOpacity
               style={[styles.filterToggle, showFilters && styles.filterToggleActive]}
-              onPress={toggleFilters}
+              onPress={showFilters ? () => { handleSearch(); toggleFilters(); } : toggleFilters}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel={showFilters ? "Hide filters" : "Show filters"}
+              accessibilityLabel={showFilters ? t("applyFilters") : "Show filters"}
             >
-              <Ionicons name="options" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
+              <Animated.View
+                style={[
+                  styles.filterToggleIcon,
+                  {
+                    opacity: filterIconAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+                    transform: [{
+                      rotate: filterIconAnim.interpolate({ inputRange: [0, 1], outputRange: ["0deg", "90deg"] }),
+                    }],
+                  },
+                ]}
+              >
+                <Ionicons name="options" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
+              </Animated.View>
+              <Animated.View
+                style={[
+                  styles.filterToggleIcon,
+                  {
+                    opacity: filterIconAnim,
+                    transform: [{
+                      rotate: filterIconAnim.interpolate({ inputRange: [0, 1], outputRange: ["-90deg", "0deg"] }),
+                    }],
+                  },
+                ]}
+              >
+                <Ionicons name="arrow-forward" size={24} color={showFilters ? "#FFFFFF" : theme.colors.text} />
+              </Animated.View>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* ── Filters panel ── */}
         {showFilters && (
-          <View style={styles.filtersPanel}>
+          <ScrollView
+            style={styles.filtersPanel}
+            showsVerticalScrollIndicator={false}
+            // Without this the first tap on Apply only dismisses the keyboard.
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={styles.filterSection}>{t("sortBy")}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortRow}>
+              {SORT_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[styles.sortChip, sortBy === opt.value && styles.sortChipActive]}
+                  onPress={() => setSortBy(opt.value as SearchParams["sortBy"])}
+                  accessible={true}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Sort by ${opt.label}`}
+                >
+                  <Text style={[styles.sortChipText, sortBy === opt.value && styles.sortChipTextActive]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
             <Text style={styles.filterSection}>{t("locationFilter")}</Text>
             <View style={styles.row}>
               <TextInput
@@ -370,24 +428,6 @@ export default function SearchScreen() {
               })}
             </View>
 
-            <Text style={styles.filterSection}>{t("sortBy")}</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortRow}>
-              {SORT_OPTIONS.map((opt) => (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[styles.sortChip, sortBy === opt.value && styles.sortChipActive]}
-                  onPress={() => setSortBy(opt.value as SearchParams["sortBy"])}
-                  accessible={true}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Sort by ${opt.label}`}
-                >
-                  <Text style={[styles.sortChipText, sortBy === opt.value && styles.sortChipTextActive]}>
-                    {opt.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-
             <View style={styles.filterActions}>
               <TouchableOpacity
                 style={styles.clearFilterBtn}
@@ -408,11 +448,11 @@ export default function SearchScreen() {
                 <Text style={styles.applyBtnText}>{t("applyFilters")}</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         )}
 
-        {/* Active filter chips */}
-        {Object.keys(activeParams).length > 0 && (
+        {/* Active filter chips — redundant while the panel itself is open */}
+        {!showFilters && Object.keys(activeParams).length > 0 && (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.activeChips}>
             {activeParams.q && <ActiveChip label={`"${activeParams.q}"`} onRemove={() => { setQuery(""); setActiveParams(p => { const n = {...p}; delete n.q; return n; }); }} />}
             {activeParams.city && <ActiveChip label={activeParams.city} onRemove={() => { setCity(""); setActiveParams(p => { const n = {...p}; delete n.city; return n; }); }} />}
@@ -433,8 +473,8 @@ export default function SearchScreen() {
         )}
       </View>
 
-      {/* ── Results ── */}
-      {(isLoading || isFetching) ? (
+      {/* ── Results — hidden while the filters panel owns the screen ── */}
+      {showFilters ? null : (isLoading || isFetching) ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>{t("findingTrainers")}</Text>
@@ -503,6 +543,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
+  // With the filters open the top bar takes the whole screen, so the panel inside
+  // it can flex to fill and the results list has no room left to peek through.
+  topBarExpanded: { flex: 1 },
   searchRow: { flexDirection: "row", gap: 8, marginBottom: theme.spacing.sm },
   searchBox: {
     flex: 1,
@@ -529,9 +572,11 @@ const styles = StyleSheet.create({
     ...theme.shadows.small,
   },
   filterToggleActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  filterToggleIcon: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center" },
 
   // Filters panel
   filtersPanel: {
+    flex: 1,
     marginTop: theme.spacing.sm,
     paddingTop: theme.spacing.md,
     borderTopWidth: 1,
