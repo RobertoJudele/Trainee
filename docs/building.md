@@ -142,13 +142,27 @@ Or build the AAB locally and upload it to Play Console by hand:
 
 ```bash
 cd frontend
-npm run build:aab            # gradle bundleRelease → android/app/build/outputs/bundle/release/app-release.aab
+npm run build:aab            # → android/app/build/outputs/bundle/release/app-release.aab
 npm run build:aab:release    # same, but bumps the Android version code first
 ```
 
+Both run `expo prebuild --platform android` first. That matters: `android/` is
+gitignored and only regenerates on demand, so without it Gradle builds against
+a stale native project and `app.json` changes — permissions, splash, plugins —
+silently never reach the output.
+
+They also refuse to run unless `frontend/.env`'s `EXPO_PUBLIC_API_URL` matches
+the `production` profile in `eas.json`, since this path reads `.env` rather than
+`eas.json` and would otherwise produce a signed, uploadable Play release wired
+to the dev backend. Override with `ALLOW_NON_PROD_API=1` only if you mean it.
+
 Local AAB signing uses the upload keystore in `~/.gradle/gradle.properties`.
-Re-read the one rule above before running it: this path takes its API URL from
-`frontend/.env`, not from `eas.json`.
+
+If the native project ever looks out of sync, force a full regenerate:
+
+```bash
+npx expo prebuild --platform android --clean
+```
 
 ---
 
