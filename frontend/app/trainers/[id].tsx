@@ -771,16 +771,6 @@ export default function TrainerDetailsScreen() {
         )}
       </View>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => router.back()}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={t("backToMap")}
-      >
-        <Text style={styles.primaryButtonText}>{t("backToMap")}</Text>
-      </TouchableOpacity>
-
       {contactOptions.length > 0 && (
         <View style={styles.socialRow}>
           {contactOptions.map((option) => (
