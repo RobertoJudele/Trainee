@@ -151,7 +151,6 @@ const en: Record<string, string> = {
   deleteReview: "Delete Review",
   deleteReviewConfirm: "Are you sure you want to delete your review?",
   couldNotDeleteReview: "Could not delete review.",
-  backToMap: "Back to map",
   contact: "Contact",
   contactTrainer: "Contact Trainer",
   choosePlatform: "Choose platform",
@@ -523,6 +522,10 @@ const en: Record<string, string> = {
   termsOfUseTitle: "Terms of Use",
   privacyPolicyTitle: "Privacy Policy",
   effectiveDate: "Effective date:",
+
+  // ─── Navigation header titles ────────────────────────────
+  trainerDetailsTitle: "Trainer Details",
+  checkoutTitle: "Checkout",
 
   // ─── Profile menu (existing) ─────────────────────────────
   legalAndPolicies: "Legal & Policies",
@@ -974,7 +977,6 @@ const ro: Record<string, string> = {
   deleteReview: "Șterge recenzia",
   deleteReviewConfirm: "Ești sigur că vrei să ștergi recenzia ta?",
   couldNotDeleteReview: "Nu s-a putut șterge recenzia.",
-  backToMap: "Înapoi la hartă",
   contact: "Contact",
   contactTrainer: "Contactează antrenorul",
   choosePlatform: "Alege platforma",
@@ -1346,6 +1348,10 @@ const ro: Record<string, string> = {
   termsOfUseTitle: "Termeni de utilizare",
   privacyPolicyTitle: "Politica de confidențialitate",
   effectiveDate: "Data intrării în vigoare:",
+
+  // ─── Titluri din bara de navigare ────────────────────────
+  trainerDetailsTitle: "Detalii antrenor",
+  checkoutTitle: "Finalizare comandă",
 
   // ─── Profile menu ────────────────────────────────────────
   legalAndPolicies: "Legal și Politici",
