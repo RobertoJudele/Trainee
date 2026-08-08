@@ -161,7 +161,10 @@ export default function SearchScreen() {
       accessible={true}
       accessibilityRole="button"
       accessibilityLabel={`View trainer ${item.user?.firstName ?? ""} ${item.user?.lastName ?? ""}`}
-      onPress={() =>
+      onPress={() => {
+        // Never navigate to a detail screen we know will fail: without an id the
+        // route lands on "could not load this trainer" with no way forward.
+        if (!item.id) return;
         router.push({
           pathname: "/trainers/[id]",
           params: {
@@ -177,8 +180,8 @@ export default function SearchScreen() {
             sessionRate: String(item.sessionRate ?? 0),
             isAvailableAtGym: item.isAvailable ? "1" : "0",
           },
-        })
-      }
+        });
+      }}
     >
       {/* Avatar */}
       <View style={styles.cardLeft}>

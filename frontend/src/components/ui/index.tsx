@@ -54,7 +54,17 @@ export function FadeInUp({
       // recover it. If we get interrupted, snap to the final state instead.
       if (!finished) progress.setValue(1);
     });
-    return () => anim.stop();
+
+    // Failsafe. The callback above only fires if the driver reports back, and a
+    // native-driven node can be detached mid-flight when a FlatList recycles the cell
+    // — leaving a row that occupies space and takes touches while painting nothing.
+    // Past this deadline the entrance has had its chance; show the content regardless.
+    const failsafe = setTimeout(() => progress.setValue(1), delay + duration + 250);
+
+    return () => {
+      clearTimeout(failsafe);
+      anim.stop();
+    };
   }, [delay, duration, progress]);
 
   return (
