@@ -65,12 +65,23 @@ export default function SearchScreen() {
     label: s.name,
   }));
 
-  const { data, isLoading, isFetching, isError } = useSearchTrainersQuery(
+  const { data, isFetching, isError } = useSearchTrainersQuery(
     Object.keys(activeParams).length > 0 ? activeParams : undefined
   );
 
-  const trainers = data?.data?.trainers ?? [];
-  const pagination = data?.data?.pagination;
+  // Live search changes the query args on every keystroke, and RTK Query treats each
+  // arg set as a fresh cache entry — `data` goes undefined until the new page lands.
+  // Holding the last successful response keeps results on screen instead of blanking
+  // the list to a spinner between keystrokes. Count and rows still come from one
+  // response object, so they can never disagree.
+  const lastResult = useRef<typeof data>(undefined);
+  useEffect(() => {
+    if (data) lastResult.current = data;
+  }, [data]);
+  const shown = data ?? lastResult.current;
+
+  const trainers = shown?.data?.trainers ?? [];
+  const pagination = shown?.data?.pagination;
 
   const buildParams = useCallback((): SearchParams => {
     const params: SearchParams = {};
@@ -255,7 +266,9 @@ export default function SearchScreen() {
   );
 
   const renderEmpty = () => {
-    if (isLoading || isFetching) return null;
+    // Keyed off whether anything has loaded, not off isFetching: otherwise refining a
+    // search that already returned nothing blanks the screen on every keystroke.
+    if (!shown) return null;
     if (Object.keys(activeParams).length === 0) {
       return (
         <View style={styles.emptyState}>
@@ -483,7 +496,7 @@ export default function SearchScreen() {
       </View>
 
       {/* ── Results — hidden while the filters panel owns the screen ── */}
-      {showFilters ? null : (isLoading || isFetching) ? (
+      {showFilters ? null : !shown ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={styles.loadingText}>{t("findingTrainers")}</Text>
@@ -501,7 +514,12 @@ export default function SearchScreen() {
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={
             pagination && pagination.total > 0 ? (
-              <Text style={styles.resultCount}>{pagination.total} {t("trainersFound")}</Text>
+              <View style={styles.resultRow}>
+                <Text style={styles.resultCount}>{pagination.total} {t("trainersFound")}</Text>
+                {isFetching && (
+                  <ActivityIndicator size="small" color={theme.colors.textSecondary} />
+                )}
+              </View>
             ) : null
           }
           ListFooterComponent={
@@ -672,7 +690,13 @@ const styles = StyleSheet.create({
 
   // List
   listContent: { padding: theme.spacing.md, paddingBottom: 40 },
-  resultCount: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: theme.spacing.md },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing.md,
+  },
+  resultCount: { ...typography.body2, color: theme.colors.textSecondary },
 
   // Card
   card: {

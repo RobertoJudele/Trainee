@@ -46,7 +46,6 @@ export default function AdminIssuesScreen() {
     isLoading,
     isError,
     refetch,
-    isFetching,
   } = useGetIssuesAdminQuery(undefined, { skip: !isAdmin });
   const [updateStatus, { isLoading: isUpdating }] = useUpdateIssueStatusAdminMutation();
 
@@ -74,7 +73,9 @@ export default function AdminIssuesScreen() {
     );
   }
 
-  if (isLoading || isFetching) {
+  // isLoading only: a refetch keeps the cached data, so there is no reason to replace
+  // the whole screen with a spinner once something is already on it.
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.primary} />

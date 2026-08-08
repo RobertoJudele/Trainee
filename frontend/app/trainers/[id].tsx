@@ -175,7 +175,6 @@ export default function TrainerDetailsScreen() {
   const {
     data: trainer,
     isLoading,
-    isFetching,
     isError,
     refetch,
   } = useGetTrainerByIdQuery(trainerPublicId, {
@@ -448,7 +447,9 @@ export default function TrainerDetailsScreen() {
     );
   }
 
-  if (isLoading || isFetching) {
+  // isLoading only: a refetch keeps the cached data, so there is no reason to replace
+  // the whole screen with a spinner once something is already on it.
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.primary} />

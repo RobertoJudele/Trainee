@@ -186,7 +186,9 @@ export default function MyScheduleScreen() {
     );
   }
 
-  if (isLoading || isFetching) {
+  // isLoading only: a refetch keeps the cached data, so there is no reason to replace
+  // the whole screen with a spinner once something is already on it.
+  if (isLoading) {
     return (
       <View style={styles.screen}>
         {renderHeader(false)}
