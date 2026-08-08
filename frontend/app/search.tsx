@@ -488,7 +488,10 @@ export default function SearchScreen() {
       ) : (
         <FlatList
           data={trainers}
-          keyExtractor={(_, i) => String(i)}
+          // Keyed by trainer, not by position: with index keys a card instance is
+          // reused for a different trainer when results change, inheriting the previous
+          // occupant's animation state — including a half-faded, invisible one.
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderTrainerCard}
           ListEmptyComponent={renderEmpty}
           contentContainerStyle={styles.listContent}

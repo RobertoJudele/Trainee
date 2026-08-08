@@ -47,7 +47,13 @@ export function FadeInUp({
       easing: Easing.out(Easing.cubic),
       useNativeDriver: true,
     });
-    anim.start();
+    anim.start(({ finished }) => {
+      // Entrance animations must never decide whether content is visible. Stopping a
+      // staggered card before its `delay` elapses used to freeze progress at 0 — the
+      // row stayed mounted and fully transparent, and nothing re-ran this effect to
+      // recover it. If we get interrupted, snap to the final state instead.
+      if (!finished) progress.setValue(1);
+    });
     return () => anim.stop();
   }, [delay, duration, progress]);
 
