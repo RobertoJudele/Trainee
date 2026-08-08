@@ -36,6 +36,18 @@ export interface SpecializationItem {
   isActive: boolean;
 }
 
+/**
+ * A specialization as it comes back attached to a trainer. Narrower than
+ * SpecializationItem: the trainer endpoints select only these four columns, so it has
+ * no isActive.
+ */
+export interface TrainerSpecializationItem {
+  id: number;
+  name: string;
+  description?: string;
+  iconUrl?: string;
+}
+
 interface SpecializationListResponse {
   success: boolean;
   message: string;
@@ -108,6 +120,7 @@ export interface PublicTrainerProfile {
   updatedAt: string;
   user?: PublicTrainerUser;
   availableGyms?: PublicTrainerGym[];
+  specializations?: TrainerSpecializationItem[];
   galleryImages?: TrainerImageItem[];
   credentialImages?: TrainerImageItem[];
 }
@@ -162,7 +175,7 @@ export interface TrainerSearchItem {
     profileImageUrl?: string | null;
   };
   images: Array<{ imageUrl: string; isPrimary: boolean }>;
-  specializations: Array<{ id: number; name: string; description?: string; iconUrl?: string }>;
+  specializations: TrainerSpecializationItem[];
 }
 
 export interface TrainerSearchResponse {

@@ -7,6 +7,7 @@ import { Trainer } from "../models/trainer";
 import { buildPointFromLatLng } from "../utils/geo";
 import { subStatus } from "../types/trainer";
 import { TrainerPackage } from "../models/trainerPackage";
+import { TrainerSpecialization } from "../models/trainerSpecialization";
 
 describe("Trainer API", () => {
   describe("POST /trainer/create", () => {
@@ -276,6 +277,23 @@ describe("Trainer API", () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty("bio");
+    });
+
+    // The public profile screen lists them, and they arrive via a separate query
+    // rather than an include — easy to drop without anything else failing.
+    it("includes the trainer's specializations", async () => {
+      const { trainer } = await createTestTrainer();
+      const specs = await Specialization.findAll({ limit: 2 });
+      await TrainerSpecialization.bulkCreate(
+        specs.map((s) => ({ trainerId: trainer.id, specializationId: s.id })) as any
+      );
+
+      const res = await request(app).get(`/trainer/${trainer.publicId}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.specializations.map((s: any) => s.id).sort()).toEqual(
+        specs.map((s) => s.id).sort()
+      );
     });
 
     it("should return 400 for invalid trainer ID format", async () => {

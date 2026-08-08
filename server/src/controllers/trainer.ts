@@ -520,6 +520,8 @@ export const getTrainer = async (
       .map((entry) => (entry.gym as any)?.toJSON?.())
       .filter(Boolean);
 
+    const specializationsMap = await getSpecializationsForTrainers([trainerNumericId]);
+
     const entitlement = resolveTrainerEntitlement(trainer);
     const trainerJson = trainer.toJSON() as any;
     // Split the included images into the two public-facing buckets and drop the
@@ -534,6 +536,7 @@ export const getTrainer = async (
       id: publicId,
       internalId: trainerNumericId,
       availableGyms,
+      specializations: specializationsMap.get(trainerNumericId) ?? [],
       galleryImages,
       credentialImages,
       isActive: entitlement.isActive,

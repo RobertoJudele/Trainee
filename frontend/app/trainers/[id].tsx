@@ -368,6 +368,7 @@ export default function TrainerDetailsScreen() {
     t
   );
   const bio = trainer?.bio ?? params.bio ?? t("noBioAvailable");
+  const specializations = trainer?.specializations ?? [];
   const locationText = [
     trainer?.locationCity,
     trainer?.locationState,
@@ -535,6 +536,19 @@ export default function TrainerDetailsScreen() {
         <Text style={styles.sectionTitle}>{t("about")}</Text>
         <Text style={styles.sectionText}>{bio}</Text>
       </View>
+
+      {specializations.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("specializations")}</Text>
+          <View style={styles.specGrid}>
+            {specializations.map((spec) => (
+              <View key={spec.id} style={styles.specChip}>
+                <Text style={styles.specChipText}>{spec.name}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t("experienceAndRates")}</Text>
@@ -927,6 +941,16 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: theme.colors.text,
   },
+  specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  specChip: {
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: `${theme.colors.primary}15`,
+    borderWidth: 1,
+    borderColor: `${theme.colors.primary}40`,
+  },
+  specChipText: { ...typography.caption, color: theme.colors.primary, fontWeight: "600" },
   sectionText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
