@@ -5,6 +5,7 @@ import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Review } from "../models/review";
 import { User } from "../models/user";
+import { TrainerClient } from "../models/trainerClient";
 
 export const getReviews = async (
   req: Request<{ trainerId: string }>,
@@ -51,10 +52,7 @@ export const createReview = async (
     const trainerId = parseInt(req.params.trainerId);
     const user = req.user!;
 
-    console.log("Trainer and user ", user.id, trainerId);
-
     if (isNaN(trainerId)) {
-      console.log(trainerId);
       sendError(res, 400, "Trainer doesnt exist");
       return;
     }
@@ -66,8 +64,25 @@ export const createReview = async (
       return;
     }
 
-    if (trainerId == user.id) {
+    // trainerId is a Trainer PK, user.id a User PK — comparing them directly never
+    // matched, so trainers could review their own profile.
+    if (trainer.userId === user.id) {
       sendError(res, 400, "Trainers cant review themself");
+      return;
+    }
+
+    // Only clients the trainer has actually taken on can review them. This is
+    // trainer-controlled, so it doesn't stop a trainer farming reviews from their own
+    // throwaway accounts — it stops drive-by reviews from strangers, and every fake
+    // now leaves a trainer_clients row naming both accounts.
+    // ponytail: roster membership, not attended sessions — slots never reach COMPLETED
+    // (checkInCodeHash is never written), so a stricter gate would block everyone.
+    const isClientOfTrainer = await TrainerClient.findOne({
+      where: { trainerId, clientId: user.id },
+    });
+
+    if (!isClientOfTrainer) {
+      sendError(res, 403, "You can only review a trainer you have trained with");
       return;
     }
 

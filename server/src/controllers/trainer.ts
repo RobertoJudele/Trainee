@@ -1101,6 +1101,9 @@ export const searchTrainers = async (
       "profileViews",
       "totalRating",
       "reviewCount",
+      // Selected so the ORDER BY still resolves once pagination wraps the rows in a
+      // derived table — same reason minSessionPrice orders by its alias below.
+      "rankingScore",
       "createdAt",
       "updatedAt",
       minSessionPriceAttribute(),
@@ -1110,17 +1113,21 @@ export const searchTrainers = async (
       trainerAttributes.push([Sequelize.literal(distanceExpression), "distanceMeters"]);
     }
 
-    const resolvedSortBy = safeSortBy === "distance" && !distanceExpression ? "totalRating" : safeSortBy;
+    // "totalRating" stays the public sort name so the app keeps sending it, but we
+    // order by the shrunk score: raw mean ranking hands the top of the list to any
+    // new profile with three 5-star reviews. Display still uses totalRating.
+    const rankColumn = safeSortBy === "totalRating" ? "rankingScore" : safeSortBy;
+    const resolvedSortBy = rankColumn === "distance" && !distanceExpression ? "rankingScore" : rankColumn;
     const orderClause: Order =
       resolvedSortBy === "distance" && distanceExpression
-        ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["totalRating", "DESC"]]
+        ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["rankingScore", "DESC"]]
         : resolvedSortBy === "minSessionPrice"
           // Not a real column, so order by the SELECT alias rather than repeating the
           // expression: pagination wraps the rows in a derived table whose columns are
           // already aliased to camelCase, and "Trainer"."session_rate" does not exist
           // out there. Trainers with neither packages nor a session rate come out NULL,
           // which Postgres sorts last on ASC, so priceless profiles don't head the list.
-          ? [[Sequelize.literal('"minSessionPrice"'), safeSortOrder], ["totalRating", "DESC"]]
+          ? [[Sequelize.literal('"minSessionPrice"'), safeSortOrder], ["rankingScore", "DESC"]]
           : [[resolvedSortBy, safeSortOrder]];
 
     const { count, rows } = await Trainer.scope("active").findAndCountAll({

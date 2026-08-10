@@ -1,4 +1,5 @@
 import sequelize from "../db";
+import { RATING_PRIOR, RATING_PRIOR_WEIGHT } from "../utils/rating";
 
 export const ensureDatabaseExtensions = async (): Promise<void> => {
   await sequelize.query('CREATE EXTENSION IF NOT EXISTS "postgis";');
@@ -170,6 +171,19 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
   await sequelize.query(
     "ALTER TABLE client_preferences DROP COLUMN IF EXISTS longitude;"
   );
+
+  // Shrunk rating for search ordering. Backfilled once from the columns already
+  // there; Review.updateTrainerRating keeps it current from then on.
+  await sequelize.query(
+    "ALTER TABLE trainer_profiles ADD COLUMN IF NOT EXISTS ranking_score NUMERIC(4,3);"
+  );
+  await sequelize.query(`
+    UPDATE trainer_profiles
+    SET ranking_score = (
+      (${RATING_PRIOR} * ${RATING_PRIOR_WEIGHT}) + (COALESCE(total_rating, 0) * COALESCE(review_count, 0))
+    ) / (${RATING_PRIOR_WEIGHT} + COALESCE(review_count, 0))
+    WHERE ranking_score IS NULL;
+  `);
 
   // Gym-request ticket type: add new enum values to existing issue enums.
   // sync({ alter:false }) won't add enum values, so do it explicitly. Idempotent.

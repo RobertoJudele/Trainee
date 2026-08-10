@@ -18,8 +18,7 @@ import {
 import { ReviewAttributes, ReviewCreationAttributes } from "../types/review";
 import { Trainer } from "./trainer";
 import { User } from "./user";
-import { sendError } from "../utils/response";
-import { Op } from "sequelize";
+import { shrinkRating } from "../utils/rating";
 
 @Table({ tableName: "reviews", timestamps: true })
 export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
@@ -83,24 +82,22 @@ export class Review extends Model<ReviewAttributes, ReviewCreationAttributes> {
   static async updateTrainerRating(trainerId: number) {
     try {
       const trainer = await Trainer.findByPk(trainerId);
-      const rating = await Review.findAll({
-        where: {
-          trainerId: trainerId,
-          reviewText: { [Op.ne]: "" },
-        },
-      });
-      const reviews = await Review.findAll({
-        where: { trainerId: trainerId },
-      });
       if (!trainer) {
         return false;
       }
-      trainer.reviewCount = reviews.length;
-      trainer.totalRating = rating.length > 0 ? rating.reduce((sum, review) => sum + review.rating, 0) / rating.length : 0;
-      console.log("Updated Trainer rating:", trainer.totalRating, "based on", rating.length, "reviews");
-      await trainer.save();
+      // Every review counts toward both the mean and the count. Filtering the mean
+      // to reviews with text (as this used to) let a rating-only review inflate
+      // reviewCount without moving totalRating, which also skews the shrinkage.
+      const reviews = await Review.findAll({ where: { trainerId } });
+      const mean =
+        reviews.length > 0
+          ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length
+          : 0;
 
-      console.log("Updated Trainer after reviews");
+      trainer.reviewCount = reviews.length;
+      trainer.totalRating = mean;
+      trainer.rankingScore = shrinkRating(mean, reviews.length);
+      await trainer.save();
     } catch (error) {}
   }
 }

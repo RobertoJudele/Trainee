@@ -23,6 +23,7 @@ import {
   useDeleteReviewMutation,
   Review,
 } from "../../features/review/reviewApiSlice";
+import { useGetMyTrainersQuery } from "../../features/trainer/trainerInviteApiSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import {
   useGetBlockedUsersQuery,
@@ -220,8 +221,24 @@ export default function TrainerDetailsScreen() {
   const [formText, setFormText] = useState("");
 
   const myReview = reviews.find((r) => r.client?.id === currentUser?.id);
+
+  // Reviews are limited to the trainer's own clients (server enforces it too, with a
+  // 403). Checking here keeps the button from appearing only to fail on submit.
+  const { data: myTrainersResp } = useGetMyTrainersQuery(undefined, {
+    skip: currentUser?.role !== UserRole.CLIENT,
+  });
+  const isMyTrainer = (myTrainersResp?.data ?? []).some(
+    (entry) => entry.trainerId === trainerInternalId
+  );
+
   const canWriteReview =
     currentUser?.role === UserRole.CLIENT &&
+    isMyTrainer &&
+    !myReview &&
+    reviewMode === "idle";
+  const showReviewGateHint =
+    currentUser?.role === UserRole.CLIENT &&
+    !isMyTrainer &&
     !myReview &&
     reviewMode === "idle";
 
@@ -273,7 +290,12 @@ export default function TrainerDetailsScreen() {
       setReviewMode("idle");
       setEditingReviewId(null);
     } catch (err: unknown) {
-      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotSaveReview")));
+      // 403 is the "not your trainer" gate; server messages are English-only.
+      const message =
+        (err as { status?: number })?.status === 403
+          ? t("reviewRequiresSession")
+          : getApiErrorMessage(err, t("couldNotSaveReview"));
+      Alert.alert(t("error"), message);
     }
   }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview, t]);
 
@@ -769,6 +791,10 @@ export default function TrainerDetailsScreen() {
             <Ionicons name="star-outline" size={16} color={theme.colors.primary} style={{ marginRight: 6 }} />
             <Text style={styles.writeReviewBtnText}>{t("writeReview")}</Text>
           </Pressable>
+        )}
+
+        {showReviewGateHint && (
+          <Text style={styles.sectionText}>{t("reviewRequiresSession")}</Text>
         )}
       </View>
 

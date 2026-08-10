@@ -19,6 +19,7 @@ import {
   Scopes,
 } from "sequelize-typescript";
 import { User } from "./user";
+import { RATING_PRIOR } from "../utils/rating";
 import { TrainerSpecialization } from "./trainerSpecialization";
 import type { Specialization } from "./specialization";
 import { TrainerImage } from "./trainerImage";
@@ -119,6 +120,14 @@ export class Trainer extends Model<
   @Default(0)
   @Column({ type: DataType.INTEGER, field: "review_count" })
   reviewCount!: number;
+
+  // Shrunk rating used for search ordering — see Review.updateTrainerRating.
+  // totalRating stays the honest displayed mean; this is what ranks.
+  // Defaults to the prior, not 0: an unreviewed trainer is an unknown, not a bad
+  // one. Starting at 0 would make a single 1-star review a promotion.
+  @Default(RATING_PRIOR)
+  @Column({ type: DataType.DECIMAL(4, 3), field: "ranking_score" })
+  rankingScore!: number;
 
   @Column({type: DataType.DATE, field:"trial_Ends_At"})
   trialEndsAt!: Date
