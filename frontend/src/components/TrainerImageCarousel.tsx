@@ -29,11 +29,6 @@ interface Props {
   // image without cropping (certificates with text).
   resizeMode?: "cover" | "contain";
   height?: number;
-  /**
-   * Horizontal padding to escape, so the strip runs edge to edge inside a
-   * padded sheet. The label stays aligned with the surrounding text.
-   */
-  bleed?: number;
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -43,7 +38,6 @@ export default function TrainerImageCarousel({
   images,
   resizeMode = "cover",
   height = 240,
-  bleed = 0,
 }: Props) {
   const [slideWidth, setSlideWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -85,13 +79,7 @@ export default function TrainerImageCarousel({
       <Text style={styles.title}>{title}</Text>
 
       <View
-        style={[
-          styles.carousel,
-          { height },
-          // Escaping the sheet padding means the strip touches both screen
-          // edges, so rounding it would leave two odd notches.
-          bleed > 0 && { marginHorizontal: -bleed, borderRadius: 0 },
-        ]}
+        style={[styles.carousel, { height }]}
         onLayout={(e) => setSlideWidth(e.nativeEvent.layout.width)}
       >
         {slideWidth > 0 && (
@@ -194,20 +182,18 @@ export default function TrainerImageCarousel({
 }
 
 const styles = StyleSheet.create({
-  // No card chrome: this sits inside the trainer-detail sheet, which is already
-  // a white surface. A bordered card here would reintroduce exactly the nesting
-  // the redesign removed.
   section: {
-    gap: 9,
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.roundness,
+    padding: theme.spacing.lg,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    gap: 12,
+    ...theme.shadows.small,
   },
-  // A quiet label rather than a section heading — the images are the content,
-  // and the word above them should not compete with them.
   title: {
-    fontSize: 10,
-    fontWeight: "800",
-    letterSpacing: 1.2,
-    textTransform: "uppercase",
-    color: "#94A3B8",
+    ...typography.h3,
+    color: theme.colors.text,
   },
   carousel: {
     borderRadius: theme.roundness,

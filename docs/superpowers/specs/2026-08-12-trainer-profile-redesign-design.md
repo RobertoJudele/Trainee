@@ -99,42 +99,19 @@ Andrei Popescu                    ← 22px / weight 800 / letterSpacing -0.4
 
 ### Sections
 
-**Revised after first review.** The original plan gave every section the same
-treatment — heading, content, hairline divider. With two sections that reads
-fine; with six it becomes an undifferentiated wall, which is exactly how it
-landed. Sections are now split into **three visual registers matching how the
-content is actually consumed**:
+A hairline divider (`#EEF2F6`) between sections, a 13.5px/800 heading, then
+content. No borders, no per-section cards, no shadows. Order:
 
-- **Prose you read** — flat on the white sheet, no container.
-- **Data you compare** — a tinted block (`#F8FAFC`, radius 14, **no border, no
-  shadow**), so it scans like a table. This is not a return of the bordered
-  cards: those wrapped *every* section and so carried no information, whereas
-  the tint here means "these are figures, not paragraphs".
-- **Media you scan** — edge to edge, negating the sheet's 18px padding, under a
-  quiet 10px uppercase label rather than a heading that would compete with the
-  images.
-
-Dividers between sections are gone; whitespace (26px) separates them. One
-divider stays under the identity block and one above Reviews.
-
-| Section | Register | Source | Change |
-|---|---|---|---|
-| Specializări | prose | `specializations` | Chips go from green-tinted to neutral `#F1F5F9` / `#334155` — the CTA should be the only green thing competing for attention |
-| Despre mine | prose | `bio` | Unchanged content |
-| **Prețuri** | tinted | `minSessionPrice`, `trainerPackages` | **Rates and Packages merge into one block** — two headings answering "what does this cost?", one of them a single row. Omitted when there is neither. **Also fixes a copy bug**: the screen rendered `myPackages` ("Pachetele Mele") while showing *someone else's* packages |
-| Săli disponibile | tinted | `availableGyms` | Absorbs the standalone Location section, now redundant with the subtitle |
-| Galerie | media | `galleryImages` | `TrainerImageCarousel` with `bleed={18}` |
-| Certificări și Premii | media | `credentialImages` | Same, `resizeMode="contain"` |
-| Recenzii | prose | `reviews` | Same behaviour (write / edit / delete / report / block), restyled |
-
-`TrainerImageCarousel` needed fixing, not just reusing: it rendered its own
-bordered, shadowed card with a 20px `typography.h3` title, so the two media
-sections were cards *inside* the flat sheet with a heading size found nowhere
-else on the screen. It now has no card chrome, a quiet uppercase label, and an
-optional `bleed` prop. Its only consumer is this screen.
-
-Row separators inside tinted blocks use `#E7EDF3`; the `#F3F6F9` used on white
-is invisible against the tint.
+| Section | Source | Change |
+|---|---|---|
+| Specializări | `specializations` | Chips go from green-tinted to neutral `#F1F5F9` / `#334155` — the CTA should be the only green thing competing for attention |
+| Despre mine | `bio` | Unchanged content |
+| Tarife | `minSessionPrice` | Experience row drops (now in the subtitle), so the heading narrows from "Experiență și Tarife" to "Tarife". Section omitted entirely when there is no price |
+| Pachete | `trainerPackages` | Restyled rows. **Also fixes a copy bug** — this screen currently renders `myPackages` ("Pachetele Mele" / "My Packages") while showing *someone else's* packages |
+| Săli disponibile | `availableGyms` | Absorbs the standalone Location section, which is now redundant with the subtitle |
+| Galerie | `galleryImages` | Existing `TrainerImageCarousel`, unchanged |
+| Certificări și Premii | `credentialImages` | Existing `TrainerImageCarousel`, unchanged |
+| Recenzii | `reviews` | Same behaviour (write / edit / delete / report / block), restyled |
 
 Bottom padding must clear the sticky CTA: `88 + insets.bottom`.
 
@@ -268,6 +245,7 @@ New keys, EN + RO:
 | `trainerOptions` | Trainer options | Opțiuni antrenor |
 | `contactVia` | Contact via | Contactează prin |
 | `packages` | Packages | Pachete |
+| `rates` | Rates | Tarife |
 
 `packages` and `rates` are **new keys, not renames.** `myPackages` must stay as
 it is: `features/trainer/TrainerProfile.tsx:458` and
@@ -276,9 +254,7 @@ packages, where "My Packages" is correct. Only this screen switches to
 `packages`. `experienceAndRates` has no other consumer and becomes dead once this
 screen uses `rates`; delete it from both language maps.
 
-Three keys this section originally planned turned out to be unnecessary —
-`translations.ts` carries a number of defined-but-unused keys, so check before
-adding:
+Two keys this section originally planned turned out to be unnecessary:
 
 - **`contactTrainer` already existed** in both maps and had no consumer — a dead
   key, now revived by the CTA. Only its EN casing changed, "Contact Trainer" →
@@ -286,13 +262,6 @@ adding:
 - **`aboutMe` already existed** as "About Me" / "Despre mine", which is the
   mockup's wording. The bio heading uses it instead of mutating `about`, so no
   existing key changes meaning.
-- **`pricing` already existed** ("Pricing" / "Tarife"), also unused. Revived for
-  the merged block; the RO value changed to "Prețuri" since it now covers the
-  session rate *and* the packages. The `rates` key added earlier in this work is
-  removed again — the merge made it redundant.
-
-`src/lib/i18n/__tests__/translations.test.ts` guards EN/RO parity, which is what
-caught these — a key present in one map only fails silently at runtime.
 
 `yearsExperience` uses the codebase's existing `.replace("{n}", …)` convention
 (cf. `cancelBookingConfirm` in `app/my-schedule.tsx:110`).
