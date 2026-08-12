@@ -202,12 +202,22 @@ The two full-width red buttons at the bottom of the page are deleted.
 | `TrainerIdentity.tsx` | Name, subtitle, rating row |
 | `TrainerSections.tsx` | Specializations, bio, rates, packages, gyms |
 | `TrainerReviews.tsx` | Review list, write/edit form, per-review options |
+| `TrainerStatusScreen.tsx` | The four full-screen states, which share one shape |
 | `ContactSheet.tsx` | The contact bottom sheet |
+| `useReviewComposer.ts` | Review form state and the create/update/delete mutations |
+| `useTrainerContact.ts` | Contact option list, link opening, sheet visibility |
+| `trainerProfileView.ts` | Pure header derivations (hero fallback, name, subtitle) |
 | `styles.ts` | Shared section/heading/divider styles |
 
-The route file keeps data fetching, the review mutations, navigation, the scroll
-animation, and the loading / error / invalid-id / blocked states. Target: under
-400 lines.
+The route file keeps data fetching, navigation, the block/report handlers, the
+scroll animation, and the composition of the above.
+
+**It landed at 541 lines, not the sub-400 this section originally targeted.**
+The estimate was written before the screen existed and undercounted the imports,
+the scroll-header wiring, and the sticky CTA. Every extraction above is
+justified by cohesion; going further would mean splitting the screen's own
+composition across files to chase a number, which would make it harder to read
+rather than easier.
 
 The URL-normalising helpers at the top of the route file (`normalizeSocialUrl`,
 `normalizeWhatsAppPhoneDigits`, `getWhatsAppContactUrls`) move to
@@ -231,18 +241,11 @@ New keys, EN + RO:
 
 | Key | EN | RO |
 |---|---|---|
-| `contactTrainer` | Contact trainer | Contactează antrenorul |
 | `yearsExperience` | {n} years experience | {n} ani experiență |
 | `trainerOptions` | Trainer options | Opțiuni antrenor |
 | `contactVia` | Contact via | Contactează prin |
 | `packages` | Packages | Pachete |
 | `rates` | Rates | Tarife |
-
-Changed keys:
-
-| Key | Was | Becomes |
-|---|---|---|
-| `about` (RO) | Despre | Despre mine |
 
 `packages` and `rates` are **new keys, not renames.** `myPackages` must stay as
 it is: `features/trainer/TrainerProfile.tsx:458` and
@@ -250,6 +253,15 @@ it is: `features/trainer/TrainerProfile.tsx:458` and
 packages, where "My Packages" is correct. Only this screen switches to
 `packages`. `experienceAndRates` has no other consumer and becomes dead once this
 screen uses `rates`; delete it from both language maps.
+
+Two keys this section originally planned turned out to be unnecessary:
+
+- **`contactTrainer` already existed** in both maps and had no consumer — a dead
+  key, now revived by the CTA. Only its EN casing changed, "Contact Trainer" →
+  "Contact trainer".
+- **`aboutMe` already existed** as "About Me" / "Despre mine", which is the
+  mockup's wording. The bio heading uses it instead of mutating `about`, so no
+  existing key changes meaning.
 
 `yearsExperience` uses the codebase's existing `.replace("{n}", …)` convention
 (cf. `cancelBookingConfirm` in `app/my-schedule.tsx:110`).
@@ -268,9 +280,42 @@ screen uses `rates`; delete it from both language maps.
 | Trainer blocked | Existing full-screen blocked state, unchanged |
 | Loading / error / invalid id | Existing states, unchanged |
 
+## Tests
+
+The frontend had no test setup at all. Jest is now configured at **29.x, not 30**
+— `react-native@0.81.5` depends on `jest-environment-node@29`, which hoists
+`jest-mock@29` to the top of the tree; jest 30's runtime then resolves the wrong
+`jest-mock` and every suite fails to start. Matching React Native's version
+avoids overriding its own tooling.
+
+`jest.config.js` is scoped to pure TypeScript under `src/` (`testEnvironment:
+node`). Component rendering would need the jest-expo preset plus mocks for
+expo-router, the Redux store, and native modules — a much larger setup than the
+logic under test justifies. `npm test` runs it.
+
+| Suite | Covers |
+|---|---|
+| `src/lib/__tests__/contactLinks.test.ts` | URL normalising and WhatsApp number extraction |
+| `src/components/trainer-detail/__tests__/trainerProfileView.test.ts` | Hero fallback chain, name, initials, subtitle composition |
+| `src/lib/i18n/__tests__/translations.test.ts` | EN/RO key parity, blank values, placeholder survival |
+
+### A bug the tests caught
+
+`getWhatsAppContactUrls` stripped non-digits from the whole raw string *before*
+checking the hostname, so any value holding 7–15 digits became a phone number. A
+trainer pasting `facebook.com/profile.php?id=100012345678` into the WhatsApp
+field got a working-looking button that opened WhatsApp on the Facebook id.
+
+Pre-existing behaviour, carried over verbatim in the move to
+`src/lib/contactLinks.ts` — but this redesign promotes it from a small icon below
+the reviews to the screen's primary CTA, so it now fails loudly. Fixed by only
+attempting raw-digit parsing when the value contains no letters, since a phone
+number never does; anything with letters is matched on its host instead.
+
 ## Verification
 
 1. `npx tsc --noEmit` clean.
+2. `npm test` green.
 2. Trainer with photo, gallery, packages, gyms, credentials, and reviews — full
    scroll, hero → scrolled header transition, CTA reachable throughout.
 3. Trainer with none of the above — no empty sections, no orphan headings,

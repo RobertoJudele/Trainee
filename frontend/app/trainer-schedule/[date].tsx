@@ -51,8 +51,8 @@ import {
 } from "../../features/trainer/trainerInviteApiSlice";
 import { theme, typography } from "../../src/lib/theme";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
+import { BottomSheet } from "../../src/components/ui/BottomSheet";
 import {
-  BottomSheet,
   OutlineButton,
   ScheduleCard,
   StatusBadge,

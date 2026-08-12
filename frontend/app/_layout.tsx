@@ -150,7 +150,8 @@ function LocalizedStack() {
       <Stack.Screen name="search" options={{ headerShown: false }} />
       <Stack.Screen name="create-trainer" options={{ headerShown: false }} />
       <Stack.Screen name="map" options={{ headerShown: false }} />
-      <Stack.Screen name="trainers/[id]" options={{ title: t("trainerDetailsTitle"), headerBackButtonDisplayMode: "minimal" }} />
+      {/* Headerless so the hero photo can run under the status bar. */}
+      <Stack.Screen name="trainers/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="my-gyms" options={{ title: t("myGyms") }} />
       <Stack.Screen name="checkout" options={{ title: t("checkoutTitle") }} />
       <Stack.Screen name="report-issue" options={{ title: t("reportIssue") }} />
