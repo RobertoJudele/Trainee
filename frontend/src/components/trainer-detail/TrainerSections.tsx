@@ -11,8 +11,6 @@ import type { TrainerPackageItem } from "../../../features/trainer/trainerPackag
 
 type Translate = (key: string) => string;
 
-const Divider = () => <View style={detailStyles.divider} />;
-
 export function SpecializationsSection({
   specializations,
   t,
@@ -22,7 +20,7 @@ export function SpecializationsSection({
 }) {
   if (specializations.length === 0) return null;
   return (
-    <>
+    <View style={detailStyles.block}>
       <Text style={detailStyles.sectionTitle}>{t("specializations")}</Text>
       <View style={detailStyles.chipRow}>
         {specializations.map((spec) => (
@@ -31,70 +29,62 @@ export function SpecializationsSection({
           </View>
         ))}
       </View>
-      <Divider />
-    </>
+    </View>
   );
 }
 
 export function AboutSection({ bio, t }: { bio: string; t: Translate }) {
   return (
-    <>
+    <View style={detailStyles.block}>
       <Text style={detailStyles.sectionTitle}>{t("aboutMe")}</Text>
       <Text style={detailStyles.bodyText}>{bio}</Text>
-      <Divider />
-    </>
+    </View>
   );
 }
 
-export function RatesSection({
+/**
+ * Session rate and packages answer the same question — "what does this cost?" —
+ * so they share one block instead of being two headings with one row each.
+ */
+export function PricingSection({
   priceLabel,
-  t,
-}: {
-  priceLabel: string | null;
-  t: Translate;
-}) {
-  // Experience moved into the identity subtitle, so with no price there is
-  // nothing left to show.
-  if (!priceLabel) return null;
-  return (
-    <>
-      <Text style={detailStyles.sectionTitle}>{t("rates")}</Text>
-      <View style={detailStyles.row}>
-        <Text style={detailStyles.rowLabel}>{t("sessionRate")}</Text>
-        <Text style={detailStyles.rowValue}>{priceLabel}</Text>
-      </View>
-      <Divider />
-    </>
-  );
-}
-
-export function PackagesSection({
   packages,
   t,
 }: {
+  priceLabel: string | null;
   packages: TrainerPackageItem[];
   t: Translate;
 }) {
-  if (packages.length === 0) return null;
-  return (
-    <>
-      <Text style={detailStyles.sectionTitle}>{t("packages")}</Text>
-      {packages.map((pkg, index) => (
-        <View
-          key={pkg.id}
-          style={[styles.listRow, index === packages.length - 1 && styles.listRowLast]}
-        >
-          <View style={styles.listMeta}>
-            <Text style={styles.listTitle}>{pkg.name}</Text>
-            <Text style={styles.listSub}>
-              {pkg.sessionCount} {t("sessions")}
-            </Text>
-          </View>
-          <Text style={styles.price}>{Number(pkg.price).toFixed(2)} lei</Text>
+  if (!priceLabel && packages.length === 0) return null;
+
+  const rows = [
+    priceLabel ? (
+      <View key="rate" style={[styles.listRow, packages.length === 0 && styles.listRowLast]}>
+        <Text style={detailStyles.rowLabel}>{t("sessionRate")}</Text>
+        <Text style={detailStyles.rowValue}>{priceLabel}</Text>
+      </View>
+    ) : null,
+    ...packages.map((pkg, index) => (
+      <View
+        key={pkg.id}
+        style={[styles.listRow, index === packages.length - 1 && styles.listRowLast]}
+      >
+        <View style={styles.listMeta}>
+          <Text style={styles.listTitle}>{pkg.name}</Text>
+          <Text style={styles.listSub}>
+            {pkg.sessionCount} {t("sessions")}
+          </Text>
         </View>
-      ))}
-      <Divider />
-    </>
+        <Text style={styles.price}>{Number(pkg.price).toFixed(2)} lei</Text>
+      </View>
+    )),
+  ];
+
+  return (
+    <View style={detailStyles.tintBlock}>
+      <Text style={detailStyles.sectionTitle}>{t("pricing")}</Text>
+      {rows}
+    </View>
   );
 }
 
@@ -109,7 +99,7 @@ export function GymsSection({
   t: Translate;
 }) {
   return (
-    <>
+    <View style={detailStyles.tintBlock}>
       <Text style={detailStyles.sectionTitle}>{t("availableGyms")}</Text>
       {gyms.length > 0 ? (
         gyms.map((gym, index) => (
@@ -134,8 +124,7 @@ export function GymsSection({
           {locationText || t("noAvailableGyms")}
         </Text>
       )}
-      <Divider />
-    </>
+    </View>
   );
 }
 
@@ -146,7 +135,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: "#F3F6F9",
+    // Reads on the #F8FAFC tint; #F3F6F9 was invisible against it.
+    borderBottomColor: "#E7EDF3",
     gap: 12,
   },
   listRowLast: {

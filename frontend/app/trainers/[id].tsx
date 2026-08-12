@@ -44,13 +44,13 @@ import { useTrainerContact } from "../../src/components/trainer-detail/useTraine
 import {
   SpecializationsSection,
   AboutSection,
-  RatesSection,
-  PackagesSection,
+  PricingSection,
   GymsSection,
 } from "../../src/components/trainer-detail/TrainerSections";
 import {
   detailStyles,
   HERO_HEIGHT_RATIO,
+  SHEET_PADDING,
 } from "../../src/components/trainer-detail/styles";
 import {
   resolveHeroImageUrl,
@@ -377,10 +377,17 @@ export default function TrainerDetailsScreen() {
 
           <View style={detailStyles.divider} />
 
+          {/* Prose reads flat; comparable data sits in tinted blocks; media
+              runs edge to edge. Three registers, so six sections stop looking
+              like one undifferentiated stack. */}
           <SpecializationsSection specializations={specializations} t={t} />
           <AboutSection bio={bio} t={t} />
-          <RatesSection priceLabel={minSessionPriceLabel} t={t} />
-          <PackagesSection packages={trainerPackages} t={t} />
+
+          <PricingSection
+            priceLabel={minSessionPriceLabel}
+            packages={trainerPackages}
+            t={t}
+          />
           <GymsSection
             gyms={trainer?.availableGyms ?? []}
             locationText={locationText}
@@ -388,16 +395,27 @@ export default function TrainerDetailsScreen() {
           />
 
           {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
-            <TrainerImageCarousel title={t("gallery")} images={trainer.galleryImages} />
+            <View style={detailStyles.mediaBlock}>
+              <TrainerImageCarousel
+                title={t("gallery")}
+                images={trainer.galleryImages}
+                bleed={SHEET_PADDING}
+              />
+            </View>
           )}
 
           {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
-            <TrainerImageCarousel
-              title={t("certificationsAwards")}
-              images={trainer.credentialImages}
-              resizeMode="contain"
-            />
+            <View style={detailStyles.mediaBlock}>
+              <TrainerImageCarousel
+                title={t("certificationsAwards")}
+                images={trainer.credentialImages}
+                resizeMode="contain"
+                bleed={SHEET_PADDING}
+              />
+            </View>
           )}
+
+          <View style={detailStyles.divider} />
 
           <TrainerReviews
             reviews={reviews}
