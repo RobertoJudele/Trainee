@@ -29,10 +29,12 @@ export const detailStyles = StyleSheet.create({
     marginVertical: 16,
   },
   sectionTitle: {
-    fontSize: 15,
+    fontSize: 18,
+    lineHeight: 24,
     fontWeight: "800",
+    letterSpacing: -0.2,
     color: theme.colors.text,
-    marginBottom: 10,
+    marginBottom: 12,
   },
   bodyText: {
     ...typography.body2,
