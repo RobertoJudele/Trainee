@@ -101,6 +101,14 @@ trainer; photos ride the existing S3 pipeline. Later becomes a marketplace hook
 Lean into "find a gym near you in Cluj": gym details, trainers-per-gym as the
 upsell surface.
 
+### Saved / favorite trainers (small build — deferred)
+Heart on the trainer profile hero; a "Saved" list on the client profile. Came out
+of the 2026-08-12 profile redesign, where the mockup drew a heart the app has no
+feature behind — the corner went to the `⋯` overflow instead. Needs a
+`client_favorite_trainers` table, POST/DELETE/GET endpoints, an entry point, and
+an empty state. Worth it once there are enough trainers per city that a client
+browses more than they can remember; pointless at 30 trainers in one city.
+
 ### Monthly challenges (small build — deferred)
 "12 check-ins in March" badge, maybe per-gym leaderboard. Only after streaks
 prove people care.
