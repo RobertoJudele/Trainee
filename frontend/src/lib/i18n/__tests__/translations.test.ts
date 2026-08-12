@@ -28,11 +28,6 @@ describe("translations", () => {
     expect(blank).toEqual([]);
   });
 
-  it("keeps the {n} placeholder in both languages for yearsExperience", () => {
-    expect(translations.en.yearsExperience).toContain("{n}");
-    expect(translations.ro.yearsExperience).toContain("{n}");
-  });
-
   it("keeps the %s placeholder in both languages for fromPerSession", () => {
     expect(translations.en.fromPerSession).toContain("%s");
     expect(translations.ro.fromPerSession).toContain("%s");

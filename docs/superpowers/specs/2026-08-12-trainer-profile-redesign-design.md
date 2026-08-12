@@ -2,7 +2,11 @@
 
 **Date:** 2026-08-12
 **Screen:** `frontend/app/trainers/[id].tsx` (client-facing trainer detail)
-**Status:** Design approved, ready for implementation planning
+**Status:** ⚠️ **Built, then reverted at the author's request on 2026-08-12.**
+The screen is back to the card-stack layout described under "Why". Kept from the
+work: the extracted `src/lib/contactLinks.ts` with its WhatsApp fix, and the
+frontend jest setup. This document is retained as a record of the design and of
+the decisions behind it — see "Reverted" at the end before reviving any of it.
 
 ## Goal
 
@@ -333,3 +337,31 @@ number never does; anything with letters is matched on its host instead.
 - **Favorites / saved trainers** — added to `docs/ideas-backlog.md`.
 - **Verified badge** — needs a real credential-verification process first.
 - **Client self-booking** — a product-model change; its own spec if ever wanted.
+
+## Reverted
+
+Built across `fc9cc1c` and `b2f2f70`, then reverted on 2026-08-12 at the
+author's request after seeing it running. `git show fc9cc1c` restores the full
+implementation; nothing here was lost, only unwired.
+
+**What went back to how it was:** the screen itself, `app/_layout.tsx` (the
+native header returns), `SchedulePrimitives.tsx` (`BottomSheet` moves back into
+the schedule module), and every translation key this work touched.
+
+**What was kept, because none of it is about the visual design:**
+
+- `src/lib/contactLinks.ts` — the URL and WhatsApp helpers, now imported by the
+  restored screen instead of living inline in it. This carries the one real bug
+  fix from the day: raw-digit extraction ran before the hostname check, so any
+  value with 7–15 digits became a phone number.
+- `jest.config.js` plus `src/lib/__tests__/contactLinks.test.ts` and
+  `src/lib/i18n/__tests__/translations.test.ts` — 32 tests, the frontend's first.
+  The `trainerProfileView` suite went with its module.
+
+**If this is ever revived,** the parts that drew no objection were the hero and
+the sticky contact CTA. The objection was to the section treatment below the
+fold: first that six identical heading-plus-divider blocks read as one
+undifferentiated stack, and then that the fix for it (tinted blocks grouping
+comparable data) was not wanted either. Start there, and validate on a device
+rather than in a desktop mockup — the browser comparison used during this work
+rendered at a fixed width, which flattered the spacing.

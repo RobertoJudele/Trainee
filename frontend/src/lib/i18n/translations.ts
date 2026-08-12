@@ -153,7 +153,7 @@ const en: Record<string, string> = {
   deleteReviewConfirm: "Are you sure you want to delete your review?",
   couldNotDeleteReview: "Could not delete review.",
   contact: "Contact",
-  contactTrainer: "Contact trainer",
+  contactTrainer: "Contact Trainer",
   choosePlatform: "Choose platform",
   couldNotOpenSocial: "Could not open this social link.",
   failedOpenSocial: "Failed to open social link.",
@@ -528,11 +528,6 @@ const en: Record<string, string> = {
   trainerDetailsTitle: "Trainer Details",
   checkoutTitle: "Checkout",
 
-  // ─── Trainer profile (public) ────────────────────────────
-  contactVia: "Contact via",
-  trainerOptions: "Trainer options",
-  yearsExperience: "{n} years experience",
-
   // ─── Profile menu (existing) ─────────────────────────────
   legalAndPolicies: "Legal & Policies",
   reportIssue: "Report Issue",
@@ -569,7 +564,7 @@ const en: Record<string, string> = {
   gallerySubtitle: "Showcase photos clients see on your profile.",
   certificationsAwards: "Certifications & Awards",
   certificationsSubtitle: "Upload your certificates and contest awards.",
-  rates: "Rates",
+  experienceAndRates: "Experience & Rates",
   experiencePlaceholder: "Experience years",
   hourlyRatePlaceholder: "Hourly rate",
   sessionRatePlaceholder: "Session rate",
@@ -580,9 +575,6 @@ const en: Record<string, string> = {
   perHour: "/hr",
   perSession: "/session",
   myPackages: "My Packages",
-  // "packages" is the client-facing heading — myPackages stays for the trainer's
-  // own profile and the create-trainer form, where "My" is correct.
-  packages: "Packages",
   addPackage: "Add Package",
   packageName: "Package Name",
   packagePrice: "Price (lei)",
@@ -1363,11 +1355,6 @@ const ro: Record<string, string> = {
   trainerDetailsTitle: "Detalii antrenor",
   checkoutTitle: "Finalizare comandă",
 
-  // ─── Profil antrenor (public) ────────────────────────────
-  contactVia: "Contactează prin",
-  trainerOptions: "Opțiuni antrenor",
-  yearsExperience: "{n} ani experiență",
-
   // ─── Profile menu ────────────────────────────────────────
   legalAndPolicies: "Legal și Politici",
   reportIssue: "Raportează o problemă",
@@ -1404,7 +1391,7 @@ const ro: Record<string, string> = {
   gallerySubtitle: "Fotografii pe care clienții le văd pe profilul tău.",
   certificationsAwards: "Certificări și Premii",
   certificationsSubtitle: "Încarcă certificatele și premiile tale.",
-  rates: "Tarife",
+  experienceAndRates: "Experiență și Tarife",
   experiencePlaceholder: "Ani de experiență",
   hourlyRatePlaceholder: "Tarif pe oră",
   sessionRatePlaceholder: "Tarif pe ședință",
@@ -1415,7 +1402,6 @@ const ro: Record<string, string> = {
   perHour: "/oră",
   perSession: "/ședință",
   myPackages: "Pachetele Mele",
-  packages: "Pachete",
   addPackage: "Adaugă Pachet",
   packageName: "Numele Pachetului",
   packagePrice: "Preț (lei)",
