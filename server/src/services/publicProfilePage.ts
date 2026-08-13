@@ -27,8 +27,14 @@ export interface PublicProfileData {
 export interface PageOptions {
   /** Absolute base URL, e.g. https://salvio.ro — no trailing slash. */
   baseUrl: string;
-  /** Play Store listing, for the install call to action. */
-  appStoreUrl?: string;
+  /**
+   * Both store listings are rendered rather than one chosen from the
+   * User-Agent: this page is served with Cache-Control: public, so a response
+   * built for an iPhone would then be handed to an Android visitor. Detecting
+   * server-side would need Vary: User-Agent, which throws the cache away.
+   */
+  appleStoreUrl?: string;
+  playStoreUrl?: string;
 }
 
 /** HTML-escapes text. Covers the attribute-context characters too. */
@@ -71,7 +77,8 @@ export const renderPublicProfile = (
   const photo = safeUrl(data.photoUrl);
   const instagram = safeUrl(data.instagramUrl);
   const whatsapp = safeUrl(data.whatsappUrl);
-  const appUrl = safeUrl(options.appStoreUrl);
+  const appleUrl = safeUrl(options.appleStoreUrl);
+  const playUrl = safeUrl(options.playStoreUrl);
 
   const subtitle = [
     data.experienceYears && data.experienceYears > 0
@@ -128,7 +135,8 @@ li span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .cta{display:block;text-align:center;background:linear-gradient(135deg,#10B981,#059669);color:#fff;text-decoration:none;font-weight:700;padding:15px;border-radius:999px;margin-top:22px}
 .cta.alt{background:#fff;color:var(--dark);border:1px solid #E2E8F0}
 .foot{text-align:center;color:var(--muted);font-size:12px;padding:22px 18px 34px}
-.foot a{color:var(--green)}
+.foot a{color:var(--green);font-weight:600}
+.foot .stores{display:inline-block;margin-top:4px}
 </style>
 </head>
 <body>
@@ -180,7 +188,17 @@ li span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
   </main>
   <p class="foot">
     ${esc(data.fullName)} își gestionează programul pe <strong>Salvio</strong>.<br>
-    ${appUrl ? `<a href="${esc(appUrl)}" rel="nofollow noopener">Descarcă aplicația</a>` : "Salvio"}
+    Descarcă aplicația:
+    ${
+      appleUrl || playUrl
+        ? `<span class="stores">${[
+            appleUrl ? `<a href="${esc(appleUrl)}" rel="nofollow noopener">iPhone</a>` : "",
+            playUrl ? `<a href="${esc(playUrl)}" rel="nofollow noopener">Android</a>` : "",
+          ]
+            .filter(Boolean)
+            .join(" · ")}</span>`
+        : "Salvio"
+    }
   </p>
 </div>
 </body>
@@ -214,8 +232,17 @@ a{color:#10B981}
   <h1>Profilul nu există</h1>
   <p>Linkul e greșit sau antrenorul și-a șters profilul.</p>
   ${
-    safeUrl(options.appStoreUrl)
-      ? `<p><a href="${esc(safeUrl(options.appStoreUrl))}" rel="nofollow noopener">Descarcă Salvio</a></p>`
+    safeUrl(options.appleStoreUrl) || safeUrl(options.playStoreUrl)
+      ? `<p>Descarcă Salvio: ${[
+          safeUrl(options.appleStoreUrl)
+            ? `<a href="${esc(safeUrl(options.appleStoreUrl))}" rel="nofollow noopener">iPhone</a>`
+            : "",
+          safeUrl(options.playStoreUrl)
+            ? `<a href="${esc(safeUrl(options.playStoreUrl))}" rel="nofollow noopener">Android</a>`
+            : "",
+        ]
+          .filter(Boolean)
+          .join(" · ")}</p>`
       : ""
   }
 </div>

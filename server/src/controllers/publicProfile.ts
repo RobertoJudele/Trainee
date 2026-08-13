@@ -22,19 +22,20 @@ import {
  */
 
 /**
- * The Play Store listing. Defaulted rather than required: the package name is
- * fixed and committed in the app's app.json, and leaving this to an env var meant
- * the "download the app" link silently vanished wherever it wasn't set — which
- * defeats the point of the page.
+ * Both store listings, defaulted rather than required: the identifiers are fixed
+ * and already documented in docs/force-update.md, and leaving them to env vars
+ * meant the download link silently vanished wherever they weren't set.
  */
-const DEFAULT_APP_STORE_URL =
+const DEFAULT_APPLE_STORE_URL = "https://apps.apple.com/app/id6775085258";
+const DEFAULT_PLAY_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.juroctech.frontend";
 
 const pageOptions = (): PageOptions => ({
   // Empty until a consumer domain exists, which makes the renderer omit
   // canonical/og:url rather than emit a relative one.
   baseUrl: publicWebBaseUrl(),
-  appStoreUrl: process.env.PUBLIC_APP_STORE_URL?.trim() || DEFAULT_APP_STORE_URL,
+  appleStoreUrl: process.env.PUBLIC_APPLE_STORE_URL?.trim() || DEFAULT_APPLE_STORE_URL,
+  playStoreUrl: process.env.PUBLIC_PLAY_STORE_URL?.trim() || DEFAULT_PLAY_STORE_URL,
 });
 
 export const getPublicTrainerPage = async (req: Request, res: Response) => {

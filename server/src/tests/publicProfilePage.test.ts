@@ -22,7 +22,11 @@ const baseData: PublicProfileData = {
   whatsappUrl: "https://wa.me/40721234567",
 };
 
-const options = { baseUrl: "https://salvio.ro", appStoreUrl: "https://play.google.com/store/apps/details?id=com.juroctech.frontend" };
+const options = {
+  baseUrl: "https://salvio.ro",
+  appleStoreUrl: "https://apps.apple.com/app/id6775085258",
+  playStoreUrl: "https://play.google.com/store/apps/details?id=com.juroctech.frontend",
+};
 
 describe("esc", () => {
   it("escapes the characters that break out of HTML and attributes", () => {
@@ -84,10 +88,22 @@ describe("renderPublicProfile", () => {
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
   });
 
-  it("renders the download link when a store URL is supplied", () => {
+  it("offers both stores, since the page is cached and cannot sniff the platform", () => {
+    // A response built for an iPhone gets served to the next Android visitor,
+    // so one link chosen from the User-Agent would be wrong half the time.
     const html = renderPublicProfile(baseData, options);
     expect(html).toContain("Descarcă aplicația");
+    expect(html).toContain("apps.apple.com");
     expect(html).toContain("play.google.com");
+  });
+
+  it("renders only the store that is configured", () => {
+    const appleOnly = renderPublicProfile(baseData, {
+      baseUrl: "https://salvio.ro",
+      appleStoreUrl: "https://apps.apple.com/app/id6775085258",
+    });
+    expect(appleOnly).toContain("apps.apple.com");
+    expect(appleOnly).not.toContain("play.google.com");
   });
 
   it("omits canonical and og:url when no public domain is configured", () => {
