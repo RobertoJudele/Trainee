@@ -36,7 +36,12 @@ interface BillingEntitlement {
   reason?: string;
   /** Free early-adopter grant rather than a paid or store-trial subscription. */
   isPromotional?: boolean;
-  foundingGrant?: FoundingGrantOffer;
+}
+
+interface FoundingOfferResponse {
+  success: boolean;
+  message: string;
+  data: FoundingGrantOffer;
 }
 
 interface BillingEntitlementResponse {
@@ -98,6 +103,11 @@ export const billingApiSlice = apiSlice.injectEndpoints({
     getBillingEntitlement: builder.query<BillingEntitlementResponse, void>({
       query: () => "/billing/entitlement",
     }),
+    // Separate from the entitlement query on purpose: that one 4xxs for anyone
+    // without a trainer profile, which is exactly the audience for this offer.
+    getFoundingOffer: builder.query<FoundingOfferResponse, void>({
+      query: () => "/billing/founding-offer",
+    }),
     validateIapSubscription: builder.mutation<
       ValidateIapSubscriptionResponse,
       ValidateIapSubscriptionRequest
@@ -117,6 +127,7 @@ export const billingApiSlice = apiSlice.injectEndpoints({
 export const {
   useCreateSubscriptionMutation,
   useGetBillingEntitlementQuery,
+  useGetFoundingOfferQuery,
   useValidateIapSubscriptionMutation,
   useGetBillingTransactionsQuery,
 } = billingApiSlice;

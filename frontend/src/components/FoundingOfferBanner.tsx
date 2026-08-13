@@ -4,7 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme, typography } from "../lib/theme";
 import { useLanguage } from "../lib/i18n/LanguageContext";
-import { useGetBillingEntitlementQuery } from "../../features/billing/billingApiSlice";
+import { useGetFoundingOfferQuery } from "../../features/billing/billingApiSlice";
 import { describeFoundingOffer } from "../lib/foundingOffer";
 
 /**
@@ -14,14 +14,14 @@ import { describeFoundingOffer } from "../lib/foundingOffer";
  */
 export default function FoundingOfferBanner() {
   const { t, language } = useLanguage();
-  const { data } = useGetBillingEntitlementQuery();
+  const { data } = useGetFoundingOfferQuery();
 
-  const view = describeFoundingOffer(data?.data?.foundingGrant);
+  const view = describeFoundingOffer(data?.data);
   if (!view) {
     return null;
   }
 
-  const deadlineIso = data?.data?.foundingGrant?.deadline;
+  const deadlineIso = data?.data?.deadline;
   const deadlineLabel = deadlineIso
     ? new Date(deadlineIso).toLocaleDateString(language === "ro" ? "ro-RO" : "en-GB", {
         day: "numeric",

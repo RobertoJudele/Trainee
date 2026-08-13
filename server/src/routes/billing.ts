@@ -4,6 +4,7 @@ import {
 	createPortalSession,
 	createSubscription,
 	getBillingEntitlement,
+	getFoundingOffer,
 	validateIapSubscription,
 	getBillingTransactions,
 } from "../controllers/billing";
@@ -27,6 +28,9 @@ router.post(
 	createSubscription
 );
 router.get("/entitlement", authenticate, getBillingEntitlement);
+// Not trainer-gated, unlike /entitlement: the audience for this offer is users
+// who are not trainers yet.
+router.get("/founding-offer", authenticate, getFoundingOffer);
 router.get("/transactions", authenticate, getBillingTransactions);
 router.post(
 	"/iap/validate",

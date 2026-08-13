@@ -64,12 +64,7 @@ export const getBillingEntitlement = async (req: AuthenticatedRequest, res: Resp
     }
 
     const entitlement = await billingService.getEntitlement(user.id);
-    // The founding promo rides along so the app can render the offer without a
-    // second request, and without hardcoding a deadline that is env-overridable.
-    sendSuccess(res, 200, "Billing entitlement retrieved", {
-      ...entitlement,
-      foundingGrant: billingService.getFoundingGrantOffer(),
-    });
+    sendSuccess(res, 200, "Billing entitlement retrieved", entitlement);
   } catch (error) {
     if (error instanceof BillingError) {
       sendError(res, mapBillingErrorStatus(error), error.message);
@@ -77,6 +72,23 @@ export const getBillingEntitlement = async (req: AuthenticatedRequest, res: Resp
     }
     console.error("Billing entitlement retrieval failed:", error);
     sendError(res, 500, "Could not retrieve billing entitlement");
+  }
+};
+
+/**
+ * The founding-trainer promo. Deliberately NOT routed through the entitlement
+ * handler: that one calls requireBillingState, which throws NOT_TRAINER for
+ * anyone without a trainer profile — and the people who need to see this offer
+ * are precisely the ones who have not become trainers yet.
+ *
+ * Returns config only, no user data.
+ */
+export const getFoundingOffer = async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    sendSuccess(res, 200, "Founding offer retrieved", billingService.getFoundingGrantOffer());
+  } catch (error) {
+    console.error("Founding offer retrieval failed:", error);
+    sendError(res, 500, "Could not retrieve the founding offer");
   }
 };
 
