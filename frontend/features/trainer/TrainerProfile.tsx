@@ -57,6 +57,8 @@ import {
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const MAX_TRAINER_IMAGES = 5;
+/** Long enough for the menu Modal's fade to finish before a native sheet opens. */
+const MENU_DISMISS_MS = 350;
 
 function TrainerProfile() {
   const trainer = useSelector(selectCurrentTrainer);
@@ -79,6 +81,14 @@ function TrainerProfile() {
 
   const handleShareProfileLink = useCallback(async () => {
     if (!publicProfileUrl) return;
+
+    // The menu is a Modal with a fade animation, and a native share sheet cannot
+    // present while another modal is still dismissing — the call resolves without
+    // ever showing anything, so the button looks dead. Waiting out the dismissal
+    // is the fix; the other menu entries get away with it because router.push and
+    // setState don't present anything native.
+    await new Promise<void>((resolve) => setTimeout(resolve, MENU_DISMISS_MS));
+
     try {
       // The native sheet is the whole point — it reaches Instagram, WhatsApp and
       // the clipboard without adding a dependency for each.
