@@ -79,9 +79,9 @@ docker compose exec db psql -U dev_app -d trainee_dev \
 **Testează:**
 
 ```bash
-curl -sS -o /dev/null -w "%{http_code}\n" https://dev-api.juroc.tech/t/<slug>   # 200
+curl -sS -o /dev/null -w "%{http_code}\n" https://dev-api.juroc.tech/t/andrei-popescu   # 200
 curl -sS -o /dev/null -w "%{http_code}\n" https://dev-api.juroc.tech/t/nu-exista # 404
-curl -sS https://dev-api.juroc.tech/t/<slug> | grep -E '<title>|og:'
+curl -sS https://dev-api.juroc.tech/t/andrei-popescu | grep -E '<title>|og:'
 ```
 
 Pentru previzualizarea linkului, pune în `server/.env.dev`:
@@ -153,7 +153,7 @@ Emite certificatul (aceeași metodă ca pentru celelalte gazde — vezi
 
 ```bash
 docker compose run --rm certbot certonly --webroot -w /var/www/certbot \
-  -d salvio.juroc.tech --email <email> --agree-tos --no-eff-email
+  -d salvio.juroc.tech --email EMAIL_TAU --agree-tos --no-eff-email
 ```
 
 ### 4. Activează HTTPS
