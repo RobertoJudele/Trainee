@@ -263,8 +263,10 @@ export default function CreateTrainer() {
           />
 
           <View style={styles.form}>
-            {/* Renders nothing once the promo closes — the server decides. */}
-            <FoundingOfferBanner />
+            {/* Renders nothing once the promo closes — the server decides.
+                The margin is passed in rather than wrapped around, so a closed
+                promo leaves no orphan 32px gap above "About you". */}
+            <FoundingOfferBanner style={styles.section} />
 
             {/* Error Message */}
             {errMsg ? (

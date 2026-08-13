@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { theme, typography } from "../lib/theme";
@@ -12,7 +12,13 @@ import { describeFoundingOffer } from "../lib/foundingOffer";
  * form. Renders nothing at all unless the server says the promo is open, so the
  * deadline can be moved or the promo ended without a new store build.
  */
-export default function FoundingOfferBanner() {
+export default function FoundingOfferBanner({
+  /** Outer spacing from the host screen — applied here, not by a wrapper, so a
+   *  closed promo leaves no empty gap behind. */
+  style,
+}: {
+  style?: StyleProp<ViewStyle>;
+}) {
   const { t, language } = useLanguage();
   const { data } = useGetFoundingOfferQuery();
 
@@ -42,7 +48,7 @@ export default function FoundingOfferBanner() {
       colors={theme.gradients.primary}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={styles.banner}
+      style={[styles.banner, style]}
     >
       <View style={styles.header}>
         <Ionicons name="gift-outline" size={20} color="#FFFFFF" />
