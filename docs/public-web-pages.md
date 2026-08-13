@@ -7,6 +7,84 @@ Runbook pentru `salvio.juroc.tech/t/<slug>`. Comenzile se rulează pe VPS, în
 Structura căii e cea definitivă, deci migrarea la un domeniu propriu e o
 redirecționare 301, nu o rescriere — vezi ultima secțiune.
 
+**Începe cu dev.** Secțiunea următoare nu cere DNS, certificat sau vreo
+modificare de nginx.
+
+---
+
+## 0. Probă pe dev-api, înainte de orice
+
+Ruta `/t/:slug` e montată pe routerul principal, iar blocul HTTPS al lui
+`dev-api.juroc.tech` are `location /` care trimite tot către `app-dev`. Deci
+pagina e disponibilă acolo imediat ce containerul de dev are codul nou —
+**fără A record, fără certbot, fără să atingi `salvio-web.conf`.**
+
+Nimic din pașii ăștia nu afectează producția: bază de date separată
+(`trainee_dev`), container separat, gazdă separată.
+
+```bash
+cd ~/Trainee && git pull
+```
+
+**Verifică extensia de care depinde backfill-ul.** Migrația folosește
+`unaccent()`; dacă lipsește, eșuează. Ar trebui să existe — `app-dev` nu ar
+porni fără ea, fiindcă `ensureDatabaseExtensions` nu prinde eroarea — dar
+costă o secundă:
+
+```bash
+docker compose exec db psql -U postgres -d trainee_dev \
+  -c "select extname from pg_extension where extname in ('unaccent','postgis','pg_trgm');"
+```
+
+Dacă `unaccent` lipsește, creeaz-o ca superuser (`dev_app` nu are voie):
+
+```bash
+docker compose exec db psql -U postgres -d trainee_dev \
+  -c "CREATE EXTENSION IF NOT EXISTS unaccent;"
+```
+
+**Migrația, pe baza de dev:**
+
+```bash
+docker compose exec -T db psql -U dev_app -d trainee_dev \
+  < server/migrations/002_add_trainer_slug.sql
+```
+
+**Codul nou:**
+
+```bash
+docker compose build app-dev && docker compose up -d app-dev
+docker compose logs -f app-dev    # confirmă pornirea curată, apoi Ctrl-C
+```
+
+**Ce slug-uri există pe dev** — baza de dev e separată, deci poate fi goală. Dacă
+nu apare niciun rând, creează-ți un antrenor din aplicație pointată pe dev
+(profilul `preview` din `eas.json`).
+
+```bash
+docker compose exec db psql -U dev_app -d trainee_dev \
+  -c "select slug from trainer_profiles where slug is not null limit 5;"
+```
+
+**Testează:**
+
+```bash
+curl -sS -o /dev/null -w "%{http_code}\n" https://dev-api.juroc.tech/t/<slug>   # 200
+curl -sS -o /dev/null -w "%{http_code}\n" https://dev-api.juroc.tech/t/nu-exista # 404
+curl -sS https://dev-api.juroc.tech/t/<slug> | grep -E '<title>|og:'
+```
+
+Pentru previzualizarea linkului, pune în `server/.env.dev`:
+
+```
+PUBLIC_WEB_URL=https://dev-api.juroc.tech
+```
+
+apoi `docker compose up -d app-dev`. Lipește linkul într-un mesaj de WhatsApp —
+dacă apare cardul cu poză și titlu, `og:` e corect și poți trece la producție.
+
+Când ești mulțumit, continuă cu pașii 1–6 pentru `salvio.juroc.tech`.
+
 ---
 
 ## Ordinea contează
