@@ -537,6 +537,11 @@ const en: Record<string, string> = {
   foundingOfferDaysLeft: "{n} days left",
   foundingOfferDaysLeftDe: "{n} days left",
   foundingOfferLastDay: "Last day",
+  // Shown to early adopters so the price is never a surprise on the day their
+  // free months end. Read-only — buying now would start billing immediately and
+  // burn the free months they still have.
+  earlyAdopterPricesTitle: "Pricing after your free period",
+  earlyAdopterPricesNote: "Nothing is charged now. You can choose a plan from {date}.",
 
   // ─── Profile menu (existing) ─────────────────────────────
   legalAndPolicies: "Legal & Policies",
@@ -1372,6 +1377,8 @@ const ro: Record<string, string> = {
   foundingOfferDaysLeft: "Mai sunt {n} zile",
   foundingOfferDaysLeftDe: "Mai sunt {n} de zile",
   foundingOfferLastDay: "Ultima zi",
+  earlyAdopterPricesTitle: "Prețuri după perioada gratuită",
+  earlyAdopterPricesNote: "Nu ți se ia nimic acum. Poți alege un plan începând cu {date}.",
 
   // ─── Profile menu ────────────────────────────────────────
   legalAndPolicies: "Legal și Politici",

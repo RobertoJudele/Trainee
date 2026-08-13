@@ -975,6 +975,31 @@ export default function CheckoutScreen() {
 							</View>
 						</View>
 
+						{/* Early adopters otherwise never see a price until the day their
+						    grant expires and access is already gone. Read-only on purpose:
+						    buying now would start billing immediately and burn the free
+						    months they still have. */}
+						{isEarlyAdopter && packages.length > 0 && (
+							<View style={styles.futurePricing}>
+								<View style={styles.divider} />
+								<Text style={styles.futurePricingTitle}>{t("earlyAdopterPricesTitle")}</Text>
+								{packages.map((pkg) => (
+									<View key={pkg.identifier} style={styles.detailsRow}>
+										<Text style={styles.detailsLabel}>
+											{pkg.product?.title || pkg.identifier}
+										</Text>
+										<Text style={styles.detailsValue}>{pkg.product?.priceString}</Text>
+									</View>
+								))}
+								<Text style={styles.futurePricingNote}>
+									{t("earlyAdopterPricesNote").replace(
+										"{date}",
+										formatDateString(entitlement?.expiresAt)
+									)}
+								</Text>
+							</View>
+						)}
+
 						<SubscriptionBenefits />
 
 						{/* An early-adopter grant has no store subscription behind it, so
@@ -1537,6 +1562,22 @@ const styles = StyleSheet.create({
 	},
 	detailsGrid: {
 		marginBottom: 8,
+	},
+	futurePricing: {
+		marginBottom: 4,
+	},
+	futurePricingTitle: {
+		...typography.body2,
+		color: theme.colors.text,
+		fontWeight: "700",
+		marginBottom: 4,
+	},
+	futurePricingNote: {
+		...typography.caption,
+		textTransform: "none",
+		color: theme.colors.textSecondary,
+		lineHeight: 18,
+		marginTop: 8,
 	},
 	detailsRow: {
 		flexDirection: "row",
