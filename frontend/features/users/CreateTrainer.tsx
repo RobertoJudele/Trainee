@@ -6,6 +6,7 @@ import { requestTrainerTour } from "../../features/onboarding/onboardingSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import FoundingOfferBanner from "../../src/components/FoundingOfferBanner";
 import {
   useGetSpecializationsQuery,
   SpecializationItem,
@@ -262,6 +263,9 @@ export default function CreateTrainer() {
           />
 
           <View style={styles.form}>
+            {/* Renders nothing once the promo closes — the server decides. */}
+            <FoundingOfferBanner />
+
             {/* Error Message */}
             {errMsg ? (
               <View style={styles.errorContainer}>

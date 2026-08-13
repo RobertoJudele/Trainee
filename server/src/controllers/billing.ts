@@ -64,7 +64,12 @@ export const getBillingEntitlement = async (req: AuthenticatedRequest, res: Resp
     }
 
     const entitlement = await billingService.getEntitlement(user.id);
-    sendSuccess(res, 200, "Billing entitlement retrieved", entitlement);
+    // The founding promo rides along so the app can render the offer without a
+    // second request, and without hardcoding a deadline that is env-overridable.
+    sendSuccess(res, 200, "Billing entitlement retrieved", {
+      ...entitlement,
+      foundingGrant: billingService.getFoundingGrantOffer(),
+    });
   } catch (error) {
     if (error instanceof BillingError) {
       sendError(res, mapBillingErrorStatus(error), error.message);

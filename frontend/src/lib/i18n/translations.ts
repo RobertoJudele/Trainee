@@ -528,6 +528,16 @@ const en: Record<string, string> = {
   trainerDetailsTitle: "Trainer Details",
   checkoutTitle: "Checkout",
 
+  // ─── Founding-trainer offer ──────────────────────────────
+  // Never promise a fixed end date for the free months: they run from the
+  // moment the grant is issued, so joining on 29 September covers you to
+  // 29 December. And never imply limited places — the server caps nothing.
+  foundingOfferTitle: "{n} months free",
+  foundingOfferBody: "Sign up as a trainer by {date} and your first {n} months are free. No card, no automatic charge.",
+  foundingOfferDaysLeft: "{n} days left",
+  foundingOfferDaysLeftDe: "{n} days left",
+  foundingOfferLastDay: "Last day",
+
   // ─── Profile menu (existing) ─────────────────────────────
   legalAndPolicies: "Legal & Policies",
   reportIssue: "Report Issue",
@@ -1354,6 +1364,14 @@ const ro: Record<string, string> = {
   // ─── Titluri din bara de navigare ────────────────────────
   trainerDetailsTitle: "Detalii antrenor",
   checkoutTitle: "Finalizare comandă",
+
+  // ─── Oferta pentru antrenori fondatori ───────────────────
+  // "de zile" pentru numeralele care o cer (20-99, 00) — vezi romanianNeedsDe.
+  foundingOfferTitle: "{n} luni gratuite",
+  foundingOfferBody: "Înscrie-te ca antrenor până pe {date} și primești primele {n} luni gratuite. Fără card, fără taxare automată.",
+  foundingOfferDaysLeft: "Mai sunt {n} zile",
+  foundingOfferDaysLeftDe: "Mai sunt {n} de zile",
+  foundingOfferLastDay: "Ultima zi",
 
   // ─── Profile menu ────────────────────────────────────────
   legalAndPolicies: "Legal și Politici",

@@ -14,6 +14,20 @@ interface CreateSubscriptionResponse {
 
 type BillingSource = "none" | "stripe" | "apple" | "google";
 
+/**
+ * The founding-trainer promo, served rather than hardcoded: the deadline and the
+ * number of free months are env-overridable on the server, so extending or
+ * ending the promo must not require a new store build.
+ */
+export interface FoundingGrantOffer {
+  /** False once the deadline has passed, or if the promo is switched off. */
+  isOpen: boolean;
+  /** Free months granted at trainer-profile creation. 0 when closed. */
+  months: number;
+  /** ISO end of the last eligible day. Absent when closed. */
+  deadline?: string;
+}
+
 interface BillingEntitlement {
   isActive: boolean;
   status: "trial" | "active" | "past_due" | "canceled";
@@ -22,6 +36,7 @@ interface BillingEntitlement {
   reason?: string;
   /** Free early-adopter grant rather than a paid or store-trial subscription. */
   isPromotional?: boolean;
+  foundingGrant?: FoundingGrantOffer;
 }
 
 interface BillingEntitlementResponse {

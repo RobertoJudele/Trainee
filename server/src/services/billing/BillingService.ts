@@ -2,6 +2,7 @@ import {
   BillingProvider,
   BillingState,
   Entitlement,
+  FoundingGrantOffer,
   IapValidationInput,
   IapValidationResult,
   RevenueCatWebhookEvent,
@@ -59,6 +60,25 @@ export class BillingService {
       isRevenueCatOnly: this.config.isRevenueCatOnlyMode(),
       clock: this.clock,
     });
+  }
+
+  /**
+   * The founding-trainer promo as the app should present it. Mirrors the gate in
+   * `grantFoundingEntitlement` so the banner can never advertise an offer the
+   * grant would refuse.
+   *
+   * Note there is deliberately no cap on trainer count — the gate is the date
+   * alone — so the app must not imply a limited number of places.
+   */
+  getFoundingGrantOffer(): FoundingGrantOffer {
+    const deadline = this.config.getFoundingGrantDeadline();
+    const months = this.config.getFoundingGrantMonths();
+
+    if (!deadline || months <= 0 || this.clock.now().getTime() > deadline.getTime()) {
+      return { isOpen: false, months: 0 };
+    }
+
+    return { isOpen: true, months, deadline: deadline.toISOString() };
   }
 
   // ── IAP validation (RevenueCat) ──────────────────────────────
