@@ -1,6 +1,8 @@
 export interface TrainerProfileAttributes {
   id: number;
   publicId?: string;
+  /** Readable identifier for the public web page at /t/<slug>. */
+  slug?: string;
   userId: number;
   bio?: string;
   experienceYears?: number;
@@ -51,6 +53,8 @@ export enum BillingProvider {
 
 export interface TrainerProfileCreationAttributes {
   userId: number;
+  /** Set once at creation; never regenerated, so printed links keep working. */
+  slug?: string;
   bio?: string;
   experienceYears?: number;
   hourlyRate?: number;

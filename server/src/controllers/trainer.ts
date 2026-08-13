@@ -18,6 +18,7 @@ import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { TrainerGym } from "../models/trainerGym";
 import { Gym } from "../models/gym";
 import { stripe } from "../config/stripe";
+import { makeUniqueSlug, trainerSlugBase } from "../utils/slug";
 import { trackTrainerProfileView } from "../services/profileViewTracking";
 import { ProfileViewEvent } from "../models/profileViewEvent";
 import sequelize from "../db";
@@ -349,8 +350,17 @@ export const createTrainer = async (
       toFiniteNumber(profileData.longitude)
     );
 
+    // Readable identifier for the public page at /t/<slug>. Resolved against the
+    // existing slugs so a second Andrei Popescu becomes andrei-popescu-2, and set
+    // at insert time so a row is never briefly without one.
+    const slug = await makeUniqueSlug(
+      trainerSlugBase(user.firstName, user.lastName, randomUUID()),
+      async (candidate) => (await Trainer.count({ where: { slug: candidate } })) > 0
+    );
+
     const trainer = await Trainer.create({
       userId: userId,
+      slug,
       bio: profileData.bio,
       experienceYears: profileData.experienceYears,
       hourlyRate: profileData.hourlyRate,

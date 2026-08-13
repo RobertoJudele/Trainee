@@ -48,6 +48,18 @@ export class Trainer extends Model<
   @Column({ type: DataType.UUID, field: "public_id", unique: true })
   publicId?: string;
 
+  /**
+   * Readable identifier for the public web page: /t/andrei-popescu.
+   *
+   * publicId is a UUID — fine inside an API path, unusable as the link a trainer
+   * puts in their Instagram bio. Assigned once at creation and never regenerated:
+   * a link already printed on a poster must not rot because someone fixed a typo
+   * in their surname.
+   */
+  @AllowNull(true)
+  @Column({ type: DataType.STRING(60), field: "slug", unique: true })
+  slug?: string;
+
   @ForeignKey(() => User)
   @AllowNull(false)
   @Column({ type: DataType.INTEGER, field: "user_id" })
