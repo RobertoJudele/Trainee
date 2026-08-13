@@ -545,6 +545,10 @@ const en: Record<string, string> = {
   shareMyLink: "Share my link",
   shareMyLinkMessage: "My trainer profile on Salvio:",
   couldNotShareLink: "Could not share the link.",
+  copyLink: "Copy",
+  share: "Share",
+  copied: "Copied",
+  linkCopied: "Link copied. Paste it into your Instagram bio.",
 
   // ─── Profile menu (existing) ─────────────────────────────
   legalAndPolicies: "Legal & Policies",
@@ -1385,6 +1389,10 @@ const ro: Record<string, string> = {
   shareMyLink: "Distribuie linkul meu",
   shareMyLinkMessage: "Profilul meu de antrenor pe Salvio:",
   couldNotShareLink: "Nu am putut distribui linkul.",
+  copyLink: "Copiază",
+  share: "Distribuie",
+  copied: "Copiat",
+  linkCopied: "Link copiat. Lipește-l în bio-ul de Instagram.",
 
   // ─── Profile menu ────────────────────────────────────────
   legalAndPolicies: "Legal și Politici",

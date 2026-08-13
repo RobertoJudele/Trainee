@@ -11,6 +11,7 @@ import {
   Dimensions,
   Share,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useSelector, useDispatch } from "react-redux";
 import {
   selectCurrentTrainer,
@@ -82,23 +83,35 @@ function TrainerProfile() {
   const handleShareProfileLink = useCallback(async () => {
     if (!publicProfileUrl) return;
 
-    // The menu is a Modal with a fade animation, and a native share sheet cannot
-    // present while another modal is still dismissing — the call resolves without
-    // ever showing anything, so the button looks dead. Waiting out the dismissal
-    // is the fix; the other menu entries get away with it because router.push and
-    // setState don't present anything native.
+    // Both the dialog and the share sheet are native presentations, and neither
+    // can appear while the menu Modal is still fading out — the call resolves
+    // having shown nothing. The other menu entries get away with it because
+    // router.push and setState present nothing native.
     await new Promise<void>((resolve) => setTimeout(resolve, MENU_DISMISS_MS));
 
-    try {
-      // The native sheet is the whole point — it reaches Instagram, WhatsApp and
-      // the clipboard without adding a dependency for each.
-      await Share.share({
-        message: `${t("shareMyLinkMessage")}\n${publicProfileUrl}`,
-        url: publicProfileUrl,
-      });
-    } catch {
-      Alert.alert(t("error"), t("couldNotShareLink"));
-    }
+    // The URL is shown, not just handed to the share sheet. Putting a link in an
+    // Instagram bio means copying it, and a sheet that silently fails leaves the
+    // trainer with nothing at all — this way the link is always at least legible.
+    Alert.alert(t("shareMyLink"), publicProfileUrl, [
+      {
+        text: t("copyLink"),
+        onPress: () => {
+          void Clipboard.setStringAsync(publicProfileUrl).then(() =>
+            Alert.alert(t("copied"), t("linkCopied"))
+          );
+        },
+      },
+      {
+        text: t("share"),
+        onPress: () => {
+          void Share.share({
+            message: `${t("shareMyLinkMessage")}\n${publicProfileUrl}`,
+            url: publicProfileUrl,
+          }).catch(() => Alert.alert(t("error"), t("couldNotShareLink")));
+        },
+      },
+      { text: t("cancel"), style: "cancel" },
+    ]);
   }, [publicProfileUrl, t]);
   const {
     data: specializationsResponse,
