@@ -22,8 +22,18 @@ pagina e disponibilă acolo imediat ce containerul de dev are codul nou —
 Nimic din pașii ăștia nu afectează producția: bază de date separată
 (`trainee_dev`), container separat, gazdă separată.
 
+Toate comenzile `docker compose` se rulează din `~/Trainee/server` — acolo stă
+`docker-compose.yml`. Rulate din `~/Trainee` sau din `frontend/`, eșuează.
+
 ```bash
-cd ~/Trainee && git pull
+cd ~/Trainee && git pull && cd server
+```
+
+Verifică întâi că pull-ul chiar a adus migrația; dacă lipsește, commit-urile nu
+au ajuns pe remote:
+
+```bash
+ls migrations/002_add_trainer_slug.sql
 ```
 
 **Verifică extensia de care depinde backfill-ul.** Migrația folosește
@@ -47,7 +57,7 @@ docker compose exec db psql -U postgres -d trainee_dev \
 
 ```bash
 docker compose exec -T db psql -U dev_app -d trainee_dev \
-  < server/migrations/002_add_trainer_slug.sql
+  < migrations/002_add_trainer_slug.sql
 ```
 
 **Codul nou:**
