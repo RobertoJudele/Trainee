@@ -4,6 +4,7 @@ import { User } from "../models/user";
 import { Gym } from "../models/gym";
 import { TrainerGym } from "../models/trainerGym";
 import { Specialization } from "../models/specialization";
+import { publicWebBaseUrl } from "../utils/publicUrl";
 import {
   renderPublicProfile,
   renderNotFound,
@@ -30,9 +31,9 @@ const DEFAULT_APP_STORE_URL =
   "https://play.google.com/store/apps/details?id=com.juroctech.frontend";
 
 const pageOptions = (): PageOptions => ({
-  // No trailing slash. Empty until a consumer domain exists, which makes the
-  // renderer omit canonical/og:url rather than emit a relative one.
-  baseUrl: (process.env.PUBLIC_WEB_URL || "").replace(/\/+$/, ""),
+  // Empty until a consumer domain exists, which makes the renderer omit
+  // canonical/og:url rather than emit a relative one.
+  baseUrl: publicWebBaseUrl(),
   appStoreUrl: process.env.PUBLIC_APP_STORE_URL?.trim() || DEFAULT_APP_STORE_URL,
 });
 

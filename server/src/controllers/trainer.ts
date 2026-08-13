@@ -19,6 +19,7 @@ import { TrainerGym } from "../models/trainerGym";
 import { Gym } from "../models/gym";
 import { stripe } from "../config/stripe";
 import { makeUniqueSlug, trainerSlugBase } from "../utils/slug";
+import { trainerPublicUrl } from "../utils/publicUrl";
 import { trackTrainerProfileView } from "../services/profileViewTracking";
 import { ProfileViewEvent } from "../models/profileViewEvent";
 import sequelize from "../db";
@@ -810,6 +811,11 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
       ...(trainer.toJSON() as any),
       isActive: entitlement.isActive,
       entitlement,
+      // Assembled here, not in the app: the app knows the API host, not the
+      // public website's, and building it client-side would freeze the domain
+      // into a released build. Null until PUBLIC_WEB_URL is set, which the app
+      // treats as "no link to share yet".
+      publicProfileUrl: trainerPublicUrl(trainer.slug),
     };
 
     sendSuccess(res, 200, "Trainer profile retrieved successfully", responsePayload);

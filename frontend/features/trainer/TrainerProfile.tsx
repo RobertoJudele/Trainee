@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   TextInput,
   Dimensions,
+  Share,
 } from "react-native";
 import { useSelector, useDispatch } from "react-redux";
 import {
@@ -72,6 +73,23 @@ function TrainerProfile() {
   } = useGetTrainerProfileQuery(undefined, {
     skip: user?.role !== UserRole.TRAINER,
   });
+
+  // Built server-side: the app knows the API host, not the public website's.
+  const publicProfileUrl = trainerResponse?.data?.publicProfileUrl ?? null;
+
+  const handleShareProfileLink = useCallback(async () => {
+    if (!publicProfileUrl) return;
+    try {
+      // The native sheet is the whole point — it reaches Instagram, WhatsApp and
+      // the clipboard without adding a dependency for each.
+      await Share.share({
+        message: `${t("shareMyLinkMessage")}\n${publicProfileUrl}`,
+        url: publicProfileUrl,
+      });
+    } catch {
+      Alert.alert(t("error"), t("couldNotShareLink"));
+    }
+  }, [publicProfileUrl, t]);
   const {
     data: specializationsResponse,
     isLoading: isSpecializationsLoading,
@@ -269,6 +287,14 @@ function TrainerProfile() {
       key: "edit", icon: "pencil", label: t("editProfile"),
       onPress: () => { setMenuVisible(false); setIsEditing(true); },
     },
+    // Only when the server sends a URL, which it does once PUBLIC_WEB_URL is
+    // configured. Without it there is no public page to share yet.
+    ...(publicProfileUrl
+      ? [{
+          key: "share", icon: "share-social-outline" as const, label: t("shareMyLink"),
+          onPress: () => { setMenuVisible(false); void handleShareProfileLink(); },
+        }]
+      : []),
     {
       key: "sub", icon: "receipt-outline", label: t("manageSubscription"),
       onPress: () => { setMenuVisible(false); router.push("/checkout"); },

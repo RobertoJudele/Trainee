@@ -542,6 +542,9 @@ const en: Record<string, string> = {
   // burn the free months they still have.
   earlyAdopterPricesTitle: "Pricing after your free period",
   earlyAdopterPricesNote: "Nothing is charged now. You can choose a plan from {date}.",
+  shareMyLink: "Share my link",
+  shareMyLinkMessage: "My trainer profile on Salvio:",
+  couldNotShareLink: "Could not share the link.",
 
   // ─── Profile menu (existing) ─────────────────────────────
   legalAndPolicies: "Legal & Policies",
@@ -1379,6 +1382,9 @@ const ro: Record<string, string> = {
   foundingOfferLastDay: "Ultima zi",
   earlyAdopterPricesTitle: "Prețuri după perioada gratuită",
   earlyAdopterPricesNote: "Nu ți se ia nimic acum. Poți alege un plan începând cu {date}.",
+  shareMyLink: "Distribuie linkul meu",
+  shareMyLinkMessage: "Profilul meu de antrenor pe Salvio:",
+  couldNotShareLink: "Nu am putut distribui linkul.",
 
   // ─── Profile menu ────────────────────────────────────────
   legalAndPolicies: "Legal și Politici",
