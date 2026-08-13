@@ -20,11 +20,20 @@ import {
  * changes.
  */
 
+/**
+ * The Play Store listing. Defaulted rather than required: the package name is
+ * fixed and committed in the app's app.json, and leaving this to an env var meant
+ * the "download the app" link silently vanished wherever it wasn't set — which
+ * defeats the point of the page.
+ */
+const DEFAULT_APP_STORE_URL =
+  "https://play.google.com/store/apps/details?id=com.juroctech.frontend";
+
 const pageOptions = (): PageOptions => ({
-  // No trailing slash; falls back to the API host so the page still renders
-  // coherently before a consumer domain exists.
-  baseUrl: (process.env.PUBLIC_WEB_URL || process.env.API_PUBLIC_URL || "").replace(/\/+$/, ""),
-  appStoreUrl: process.env.PUBLIC_APP_STORE_URL,
+  // No trailing slash. Empty until a consumer domain exists, which makes the
+  // renderer omit canonical/og:url rather than emit a relative one.
+  baseUrl: (process.env.PUBLIC_WEB_URL || "").replace(/\/+$/, ""),
+  appStoreUrl: process.env.PUBLIC_APP_STORE_URL?.trim() || DEFAULT_APP_STORE_URL,
 });
 
 export const getPublicTrainerPage = async (req: Request, res: Response) => {

@@ -84,6 +84,12 @@ describe("renderPublicProfile", () => {
     expect(html).toContain('name="twitter:card" content="summary_large_image"');
   });
 
+  it("renders the download link when a store URL is supplied", () => {
+    const html = renderPublicProfile(baseData, options);
+    expect(html).toContain("Descarcă aplicația");
+    expect(html).toContain("play.google.com");
+  });
+
   it("omits canonical and og:url when no public domain is configured", () => {
     // Before a consumer domain exists PUBLIC_WEB_URL is unset. A relative
     // canonical would point crawlers at the wrong host.
