@@ -327,7 +327,10 @@ function TrainerProfile() {
       onPress: () => { setMenuVisible(false); void handleDeleteAccount(); },
       destructive: true, disabled: isDeletingAccount, loading: isDeletingAccount,
     },
-  ], [t, language, setLanguage, isDeleting, isDeletingAccount, handleLogout, handleDeleteTrainer, handleDeleteAccount, startTour]);
+    // publicProfileUrl arrives with the profile query, after the first render.
+    // Without it here the memo keeps the initial value — null — and the share
+    // entry never appears no matter how the server is configured.
+  ], [t, language, setLanguage, isDeleting, isDeletingAccount, handleLogout, handleDeleteTrainer, handleDeleteAccount, startTour, publicProfileUrl, handleShareProfileLink]);
 
   // ── Guards ──
   if (user?.role !== UserRole.TRAINER) {
