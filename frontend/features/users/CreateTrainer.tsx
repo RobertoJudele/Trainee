@@ -164,7 +164,9 @@ export default function CreateTrainer() {
       if (responseData && user) {
         dispatch(setTrainerProfile(responseData));
         dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
-        dispatch(requestTrainerTour());
+        // Scoped to this user: an unfinished tour used to leave a global flag
+        // that started the trainer walkthrough for whoever signed in next.
+        dispatch(requestTrainerTour(user.id));
 
         for (const pkg of packages) {
           await createPackage({

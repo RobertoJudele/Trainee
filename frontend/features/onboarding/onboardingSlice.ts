@@ -6,15 +6,21 @@ interface OnboardingState {
   // Keyed by user id (as string) so completion is per-account, per-role.
   clientDoneByUser: Record<string, boolean>;
   trainerDoneByUser: Record<string, boolean>;
-  // Set right after a client creates a trainer account, so the trainer tour
-  // auto-starts the first time the trainer area renders.
-  pendingTrainerTour: boolean;
+  /**
+   * Id of the user who just created a trainer profile, so the trainer tour
+   * auto-starts the first time the trainer area renders.
+   *
+   * Holds an id rather than a boolean: this state is persisted, and a trainer
+   * who never finished the tour left a global `true` behind. Logging out and
+   * signing up as a client then started the *trainer* tour on the new account.
+   */
+  pendingTrainerTourUserId: number | null;
 }
 
 const initialState: OnboardingState = {
   clientDoneByUser: {},
   trainerDoneByUser: {},
-  pendingTrainerTour: false,
+  pendingTrainerTourUserId: null,
 };
 
 const onboardingSlice = createSlice({
@@ -31,14 +37,16 @@ const onboardingSlice = createSlice({
         state.clientDoneByUser[key] = true;
       } else {
         state.trainerDoneByUser[key] = true;
-        state.pendingTrainerTour = false;
+        if (state.pendingTrainerTourUserId === userId) {
+          state.pendingTrainerTourUserId = null;
+        }
       }
     },
-    requestTrainerTour: (state) => {
-      state.pendingTrainerTour = true;
+    requestTrainerTour: (state, action: PayloadAction<number>) => {
+      state.pendingTrainerTourUserId = action.payload;
     },
     clearPendingTrainerTour: (state) => {
-      state.pendingTrainerTour = false;
+      state.pendingTrainerTourUserId = null;
     },
   },
 });
@@ -60,5 +68,5 @@ export const selectTrainerTourDone =
   (userId?: number | null) => (state: WithOnboarding) =>
     userId ? !!state.onboarding.trainerDoneByUser[String(userId)] : false;
 
-export const selectPendingTrainerTour = (state: WithOnboarding) =>
-  state.onboarding.pendingTrainerTour;
+export const selectPendingTrainerTourUserId = (state: WithOnboarding) =>
+  state.onboarding.pendingTrainerTourUserId ?? null;

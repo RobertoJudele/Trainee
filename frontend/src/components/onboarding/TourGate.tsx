@@ -9,16 +9,17 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../../../features/auth/authSlice";
 import {
   selectClientTourDone,
-  selectPendingTrainerTour,
+  selectPendingTrainerTourUserId,
   selectTrainerTourDone,
 } from "../../../features/onboarding/onboardingSlice";
 import { useTour } from "./TourContext";
 import { clientTour } from "./clientTour";
 import { trainerTour } from "./trainerTour";
+import { decideTour } from "./decideTour";
 
 export default function TourGate() {
   const user = useSelector(selectCurrentUser);
-  const pendingTrainer = useSelector(selectPendingTrainerTour);
+  const pendingTrainerTourUserId = useSelector(selectPendingTrainerTourUserId);
   const clientDone = useSelector(selectClientTourDone(user?.id));
   const trainerDone = useSelector(selectTrainerTourDone(user?.id));
   const { startTour, isActive } = useTour();
@@ -34,15 +35,25 @@ export default function TourGate() {
   useEffect(() => {
     if (!ready || isActive || !user) return;
 
-    if (pendingTrainer && !trainerDone) {
-      startTour(trainerTour);
-      return;
-    }
+    const tour = decideTour({
+      userId: user.id,
+      role: user.role,
+      pendingTrainerTourUserId,
+      clientDone,
+      trainerDone,
+    });
 
-    if (user.role === "client" && !clientDone) {
-      startTour(clientTour);
-    }
-  }, [ready, isActive, user, pendingTrainer, trainerDone, clientDone, startTour]);
+    if (tour === "trainer") startTour(trainerTour);
+    else if (tour === "client") startTour(clientTour);
+  }, [
+    ready,
+    isActive,
+    user,
+    pendingTrainerTourUserId,
+    trainerDone,
+    clientDone,
+    startTour,
+  ]);
 
   return null;
 }
