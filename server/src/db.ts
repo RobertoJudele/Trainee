@@ -25,6 +25,7 @@ import { BillingTransaction } from "./models/billingTransaction";
 import { RefreshToken } from "./models/refreshToken";
 import { ClientPreference } from "./models/clientPreference";
 import { AppMinVersion } from "./models/appMinVersion";
+import { AppReleaseNote } from "./models/appReleaseNote";
 import { UserBlock } from "./models/userBlock";
 dotenv.config();
 
@@ -61,6 +62,7 @@ const sequelize = new Sequelize({
     RefreshToken,
     ClientPreference,
     AppMinVersion,
+    AppReleaseNote,
     UserBlock,
   ],
   logging: process.env.NODE_ENV === "test" ? false : (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),

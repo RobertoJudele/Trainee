@@ -8,19 +8,28 @@ import {
   Pressable,
 } from "react-native";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "../constants/config";
 import { theme } from "../lib/theme";
 import { useLanguage } from "../lib/i18n/LanguageContext";
+import ReleaseNotesModal from "./ReleaseNotesModal";
+import {
+  LAST_SEEN_VERSION_KEY,
+  shouldShowReleaseNotes,
+  type ReleaseNotes,
+} from "../lib/releaseNotes";
 
 interface UpdateInfo {
   updateRequired: boolean;
   message: string;
   storeUrl: string;
+  releaseNotes?: ReleaseNotes | null;
 }
 
 export default function UpdateGate({ children }: { children: ReactNode }) {
   const { t } = useLanguage();
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const [notes, setNotes] = useState<ReleaseNotes | null>(null);
 
   useEffect(() => {
     // Only native builds have a store to send users to. Fail open on web.
@@ -37,11 +46,36 @@ export default function UpdateGate({ children }: { children: ReactNode }) {
         clearTimeout(timeout);
         const body = await res.json();
         const data = body?.data as UpdateInfo | undefined;
-        if (!cancelled && data?.updateRequired) {
+        if (cancelled) return;
+
+        if (data?.updateRequired) {
           setUpdate(data);
+          return;
+        }
+
+        // Not blocked — decide whether this launch is the first after an update
+        // and the notes are worth showing. The stored version is written on
+        // every launch, including the very first, so a fresh install records
+        // its version and stays silent.
+        const storedVersion = await AsyncStorage.getItem(LAST_SEEN_VERSION_KEY);
+        if (cancelled) return;
+
+        if (
+          shouldShowReleaseNotes({
+            storedVersion,
+            currentVersion: version,
+            notes: data?.releaseNotes,
+          })
+        ) {
+          setNotes(data?.releaseNotes ?? null);
+        }
+
+        if (version && storedVersion !== version) {
+          await AsyncStorage.setItem(LAST_SEEN_VERSION_KEY, version);
         }
       } catch {
-        // Fail open: any error (network, timeout, parse) → don't block.
+        // Fail open: any error (network, timeout, parse, storage) → don't block
+        // and don't announce anything.
       }
     };
     void check();
@@ -51,7 +85,16 @@ export default function UpdateGate({ children }: { children: ReactNode }) {
   }, []);
 
   if (!update?.updateRequired) {
-    return <>{children}</>;
+    return (
+      <>
+        {children}
+        <ReleaseNotesModal
+          notes={notes}
+          visible={notes !== null}
+          onClose={() => setNotes(null)}
+        />
+      </>
+    );
   }
 
   return (

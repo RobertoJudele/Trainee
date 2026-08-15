@@ -62,3 +62,59 @@ Everyone below `1.3.0` sees the wall on next launch. No backend redeploy, no app
 - Model / seed: `server/src/models/appMinVersion.ts`, `server/src/seeds/appMinVersionSeed.ts`
 - App gate + wall: `frontend/src/components/UpdateGate.tsx` (mounted in `frontend/app/_layout.tsx`)
 - Wall strings: `updateRequiredTitle` / `updateRequiredButton` in `frontend/src/lib/i18n/translations.ts`
+
+---
+
+## "Ce e nou" după actualizare
+
+Aceeași cerere de la pornire (`GET /version/check`) întoarce și notele de
+versiune, iar aplicația afișează un modal **închidebil** — spre deosebire de
+zidul de actualizare forțată, ăsta e un anunț, nu o barieră.
+
+### Tabelul `app_release_notes`
+
+Un rând per versiune, **comun ambelor platforme** — textul descrie lansarea, nu
+magazinul din care vine build-ul.
+
+| coloană | rol |
+|---|---|
+| `version` | versiunea exactă, ex. `1.1.0` |
+| `title` | titlul modalului |
+| `body` | corpul; `\n` face rând nou |
+| `is_published` | `false` cât timp e ciornă — nu se trimite nimic |
+
+### Ca să anunți o lansare
+
+**Doar după ce build-ul e live în ambele magazine:**
+
+```sql
+INSERT INTO app_release_notes (version, title, body, is_published)
+VALUES (
+  '1.1.0',
+  'Profil public pentru antrenori',
+  E'Ai acum o pagină web proprie, de pus în bio-ul de Instagram.\nO găsești în meniul din profil, la "Distribuie linkul meu".',
+  true
+)
+ON CONFLICT (version) DO UPDATE
+  SET title = EXCLUDED.title, body = EXCLUDED.body,
+      is_published = EXCLUDED.is_published, updated_at = now();
+```
+
+Fără redeploy și fără rebuild. O versiune fără rând nu afișează nimic, deci poți
+sări peste lansările mărunte.
+
+### Reguli de afișare
+
+- **Instalările noi nu văd nimic.** Aplicația reține în `AsyncStorage` ultima
+  versiune lansată; dacă nu există niciuna, o scrie și tace. Altfel fiecare
+  utilizator nou ar fi întâmpinat cu un jurnal de modificări fără sens.
+- **O singură dată per versiune.**
+- **Niciodată împreună cu zidul** de actualizare forțată.
+- **Fail-open:** orice eroare de rețea sau de stocare → nu se afișează nimic.
+
+### Condiție obligatorie: bumpează `version`
+
+Mecanismul se cheamă pe `version` din `app.json` — nu pe `versionCode`. Dacă
+`version` rămâne neschimbat între lansări, aplicația nu are cum să detecteze că
+utilizatorul a actualizat, iar notele nu apar niciodată. Aceeași problemă
+afectează și pragul de actualizare forțată.
