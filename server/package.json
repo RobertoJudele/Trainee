@@ -16,7 +16,8 @@
     "seed:trainer-specializations": "ts-node src/seeds/trainerSpecializationSeed.ts",
     "seed:demo": "ts-node src/seeds/demoScreenshotSeed.ts",
     "seed:demo:prod": "node dist/seeds/demoScreenshotSeed.js",
-    "reminders:check": "ts-node src/scripts/checkSessionReminders.ts"
+    "reminders:check": "ts-node src/scripts/checkSessionReminders.ts",
+    "push:test": "ts-node src/scripts/sendTestPush.ts"
   },
   "author": "fsniraj",
   "license": "ISC",
