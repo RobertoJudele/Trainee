@@ -16,8 +16,22 @@ import CoachMark from "../src/components/onboarding/CoachMark";
 import TourGate from "../src/components/onboarding/TourGate";
 import { LanguageProvider, useLanguage } from "../src/lib/i18n/LanguageContext";
 import UpdateGate from "../src/components/UpdateGate";
+import * as Notifications from "expo-notifications";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
+
+// Without a handler, expo-notifications hands a push to JS but displays nothing
+// while the app is in the foreground - which is exactly the state a phone is in
+// while someone is testing. Registered at module scope so it is in place before
+// any notification can arrive.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 let hasConfiguredRevenueCat = false;
 
