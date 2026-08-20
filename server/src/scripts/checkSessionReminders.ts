@@ -87,7 +87,9 @@ async function main() {
   if (slots.length === 0) {
     console.log(bad("niciuna — sweep-ul nu are ce anunța"));
     const anyAssigned = await TrainerScheduleSlot.count({ where: { clientId: userId, status: SlotStatus.ASSIGNED } });
-    console.log(`     (utilizatorul are ${anyAssigned} ședințe alocate în total, dar nu mâine)`);
+    console.log(
+      `     (utilizatorul are ${anyAssigned} ${anyAssigned === 1 ? "ședință alocată" : "ședințe alocate"} în total, dar nu mâine)`
+    );
   } else {
     for (const s of slots) {
       console.log(ok(`slot ${s.id} la ${s.startsAt.toISOString()}`));
