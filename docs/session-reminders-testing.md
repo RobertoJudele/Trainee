@@ -56,3 +56,39 @@ Verifică răspunsul lui Expo la `--send`: un tichet `DeviceNotRegistered` sau
 `InvalidCredentials` înseamnă că tokenul e mort ori lipsesc credențialele FCM —
 nu că sweep-ul e greșit. Pentru Android în producție, FCM trebuie configurat în
 EAS.
+
+## Trimitere fără Node (VPS, container, orice)
+
+`npm run push:test` are nevoie de `ts-node`, care e devDependency — deci lipsește
+în imaginea de producție și oriunde s-a rulat `npm ci --omit=dev`. Trimiterea e
+însă doar un POST, deci `curl` e suficient.
+
+Ia tokenul:
+
+```bash
+docker compose exec db psql -U dev_app -d trainee_dev -t -A \
+  -c "select expo_push_token from user_push_tokens where user_id=<userId>;"
+```
+
+Trimite:
+
+```bash
+curl -sS -X POST https://exp.host/--/api/v2/push/send \
+  -H "Content-Type: application/json" \
+  -d '[{"to":"ExponentPushToken[...]","title":"Salvio — test","body":"Test","sound":"default"}]'
+```
+
+Răspunsul conține un `id`. **Ăsta e doar un bilet de intrare în coadă, nu o
+livrare.** Motivul real al eșecului apare în confirmare, câteva secunde mai
+târziu:
+
+```bash
+curl -sS -X POST https://exp.host/--/api/v2/push/getReceipts \
+  -H "Content-Type: application/json" \
+  -d '{"ids":["<id-ul-de-mai-sus>"]}'
+```
+
+`"status":"ok"` înseamnă că Expo a predat mesajul către APNs sau FCM. Dacă tot
+nu apare pe telefon, cauza e pe dispozitiv: permisiune refuzată, mod de
+concentrare, economie de energie — sau Expo Go pe Android, care nu primește push
+din SDK 53.

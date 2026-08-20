@@ -62,6 +62,7 @@
     "nodemon": "^3.1.10",
     "supertest": "^7.1.4",
     "ts-jest": "^29.4.11",
+    "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0"
   }
 }
