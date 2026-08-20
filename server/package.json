@@ -17,7 +17,9 @@
     "seed:demo": "ts-node src/seeds/demoScreenshotSeed.ts",
     "seed:demo:prod": "node dist/seeds/demoScreenshotSeed.js",
     "reminders:check": "ts-node src/scripts/checkSessionReminders.ts",
-    "push:test": "ts-node src/scripts/sendTestPush.ts"
+    "push:test": "ts-node src/scripts/sendTestPush.ts",
+    "reminders:check:prod": "node dist/scripts/checkSessionReminders.js",
+    "push:test:prod": "node dist/scripts/sendTestPush.js"
   },
   "author": "fsniraj",
   "license": "ISC",

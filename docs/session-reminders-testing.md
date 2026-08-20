@@ -92,3 +92,24 @@ curl -sS -X POST https://exp.host/--/api/v2/push/getReceipts \
 nu apare pe telefon, cauza e pe dispozitiv: permisiune refuzată, mod de
 concentrare, economie de energie — sau Expo Go pe Android, care nu primește push
 din SDK 53.
+
+## În container (VPS)
+
+`npm run reminders:check` și `npm run push:test` folosesc `ts-node`, care e
+devDependency — imaginea rulează `npm ci --omit=dev`, deci acolo nu există.
+Variantele compilate rulează direct din `dist`, ca `seed:gyms:prod`:
+
+```bash
+docker compose exec app-dev npm run reminders:check:prod -- <userId>
+docker compose exec app-dev npm run reminders:check:prod -- <userId> --send
+docker compose exec app-dev npm run push:test:prod -- <userId>
+```
+
+Necesită o imagine reconstruită după commit-ul care le-a adăugat:
+
+```bash
+docker compose build app-dev && docker compose up -d app-dev
+```
+
+Până atunci, calea fără dependințe rămâne SQL pentru diagnostic plus `curl`
+pentru trimitere.
