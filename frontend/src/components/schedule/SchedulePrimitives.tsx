@@ -16,6 +16,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { theme, typography } from "../../lib/theme";
+import { formatDate, formatTime } from "../../lib/datetime";
 
 export const scheduleDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -55,15 +56,14 @@ export const toDateKey = (date: Date) => {
   return `${y}-${m}-${d}`;
 };
 
-export const shortTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+// 24-hour, and never the device locale: an English-language phone rendered an
+// 18:00 session as "06:00 PM", disagreeing with the reminder push for the same
+// session.
+export const shortTime = (iso: string) => formatTime(iso);
 
 export const formatWeekLabel = (weekDays: Date[]) => {
   if (weekDays.length === 0) return "";
-  return `${weekDays[0].toLocaleDateString()} - ${weekDays[weekDays.length - 1].toLocaleDateString()}`;
+  return `${formatDate(weekDays[0])} - ${formatDate(weekDays[weekDays.length - 1])}`;
 };
 
 type ScheduleCardProps = {
