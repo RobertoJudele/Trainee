@@ -1,7 +1,9 @@
 -- Removes every account created by src/seeds/demoScreenshotSeed.ts
 -- (5 trainer profiles + 3 client accounts) and everything hanging off them.
 --
--- Anchored on the email pattern the seed writes: *.demo@salvio.app
+-- Anchored on the email patterns the seed has written: *.demo@salvio.app and
+-- *.demo@trainee.app (the pre-rename domain — older rows the current seed no
+-- longer recreates).
 --
 --   psql "$DATABASE_URL" -f delete-demo-data.sql
 --
@@ -16,7 +18,9 @@
 BEGIN;
 
 CREATE TEMP TABLE demo_users ON COMMIT DROP AS
-  SELECT id FROM users WHERE email LIKE '%.demo@salvio.app';
+  SELECT id FROM users
+   WHERE email LIKE '%.demo@salvio.app'
+      OR email LIKE '%.demo@trainee.app';
 
 CREATE TEMP TABLE demo_trainers ON COMMIT DROP AS
   SELECT id FROM trainer_profiles WHERE user_id IN (SELECT id FROM demo_users);
