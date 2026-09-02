@@ -381,9 +381,13 @@ export const createTrainer = async (
       subscriptionStatus,
     });
 
-    // Founding-trainer free grant. Deliberately not awaited: RevenueCat being
-    // slow or down must never fail signup, and the call is safe to retry.
-    void billingService.grantFoundingEntitlement(userId).catch((grantError) => {
+    // Founding-trainer free grant. Awaited: trialEndsAt above is already in the
+    // past, so until this writes the grant row the trainer is unentitled and every
+    // endpoint behind the `subscription` middleware answers 402 — which silently
+    // ate the packages the app posts right after signup. Only the local write is
+    // awaited; grantFoundingEntitlement pushes to RevenueCat in the background, so
+    // a slow or down RevenueCat still cannot fail or delay signup.
+    await billingService.grantFoundingEntitlement(userId).catch((grantError) => {
       console.error("Founding entitlement grant failed", { userId }, grantError);
     });
 

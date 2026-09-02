@@ -171,15 +171,27 @@ export class BillingService {
     const grantedUntil = new Date(now);
     grantedUntil.setMonth(grantedUntil.getMonth() + months);
 
-    await this.revenueCatGw.grantPromotionalEntitlement(
-      String(userId),
-      this.config.getRevenueCatEntitlementId(),
-      grantedUntil.getTime(),
-    );
-
-    // Written locally too: gating reads this row, and the confirming webhook may
-    // be delayed, dropped, or not configured at all.
+    // Written locally FIRST, and awaited by the caller: gating reads this row, so
+    // the trainer has to be entitled by the time createTrainer answers. The app
+    // posts packages and working hours the instant it gets that response, and
+    // those go through the `subscription` middleware. The confirming webhook may
+    // also be delayed, dropped, or not configured at all.
     await this.billingRepo.save(domain.applyPromotionalGrant(state, grantedUntil));
+
+    // RevenueCat owns entitlement restore across devices, but it must not sit on
+    // the signup path: waiting for this round trip is what used to leave a new
+    // trainer unentitled long enough for their packages to be rejected. The call
+    // is idempotent, so the next grant attempt re-sends it for free.
+    void this.revenueCatGw
+      .grantPromotionalEntitlement(
+        String(userId),
+        this.config.getRevenueCatEntitlementId(),
+        grantedUntil.getTime(),
+      )
+      .catch((error) => {
+        console.error("RevenueCat promotional grant push failed", { userId }, error);
+      });
+
     return true;
   }
 
