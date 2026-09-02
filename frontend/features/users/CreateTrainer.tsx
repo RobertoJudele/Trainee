@@ -22,6 +22,7 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import React from "react";
 import { theme, typography } from "../../src/lib/theme";
@@ -168,12 +169,22 @@ export default function CreateTrainer() {
         // that started the trainer walkthrough for whoever signed in next.
         dispatch(requestTrainerTour(user.id));
 
-        for (const pkg of packages) {
-          await createPackage({
-            name: pkg.name.trim(),
-            price: parseFloat(pkg.price),
-            sessionCount: parseInt(pkg.sessionCount),
-          });
+        // .unwrap() so a rejected package reaches a catch. Without it RTK Query
+        // resolves with { error } and the failure vanished — the trainer landed
+        // on the home screen believing packages they had typed were saved.
+        // Caught separately from the profile: the profile is already created, so
+        // the only honest thing left is to say the packages are not.
+        try {
+          for (const pkg of packages) {
+            await createPackage({
+              name: pkg.name.trim(),
+              price: parseFloat(pkg.price),
+              sessionCount: parseInt(pkg.sessionCount),
+            }).unwrap();
+          }
+        } catch (packageError) {
+          console.error("Package creation failed after trainer signup", packageError);
+          Alert.alert(t("myPackages"), t("packagesNotSaved"));
         }
       }
 
