@@ -193,7 +193,7 @@ export const deleteProfile = async (req: Request, res: Response) => {
     // if it later rolled back. Best-effort by design: the account is already
     // gone, so a storage failure is logged, not reported as a failed deletion.
     // The prefix sweep catches superseded avatars the current URL no longer names.
-    await S3ImageService.deleteImagesByPrefix(`profilePicture/${userId}/`);
+    await S3ImageService.deleteImagesByPrefix(`profile-picture/${userId}/`);
     await S3ImageService.deleteImagesByUrl([...trainerImageUrls, profileImageUrl]);
 
     sendSuccess(res, 200, "Succesfully deleted user");
