@@ -4,6 +4,7 @@ import { User } from "../models/user";
 import { Gym } from "../models/gym";
 import { TrainerGym } from "../models/trainerGym";
 import { Specialization } from "../models/specialization";
+import { TrainerImage } from "../models/trainerImage";
 import { publicWebBaseUrl } from "../utils/publicUrl";
 import {
   renderPublicProfile,
@@ -51,6 +52,12 @@ export const getPublicTrainerPage = async (req: Request, res: Response) => {
           include: [
             { model: User, attributes: ["firstName", "lastName", "profileImageUrl"] },
             { model: Specialization, attributes: ["name"] },
+            {
+              model: TrainerImage,
+              as: "images",
+              attributes: ["imageUrl", "category", "displayOrder"],
+              required: false,
+            },
           ],
         })
       : null;
@@ -70,7 +77,17 @@ export const getPublicTrainerPage = async (req: Request, res: Response) => {
     const anyTrainer = trainer as unknown as {
       user?: { firstName?: string; lastName?: string; profileImageUrl?: string | null };
       specializations?: { name: string }[];
+      images?: { imageUrl: string; category: string; displayOrder: number }[];
     };
+
+    // Sorted here rather than in the query: ordering an included association on
+    // findOne needs the { model, as } order form, and this list is at most ten rows.
+    const imageUrls = (category: string): string[] =>
+      (anyTrainer.images ?? [])
+        .filter((image) => image.category === category)
+        .sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0))
+        .map((image) => image.imageUrl)
+        .filter(Boolean);
 
     const fullName =
       [anyTrainer.user?.firstName, anyTrainer.user?.lastName].filter(Boolean).join(" ") ||
@@ -90,6 +107,8 @@ export const getPublicTrainerPage = async (req: Request, res: Response) => {
         .map((entry) => (entry as unknown as { gym?: { name: string; city?: string | null } }).gym)
         .filter((gym): gym is { name: string; city?: string | null } => Boolean(gym?.name))
         .map((gym) => ({ name: gym.name, city: gym.city ?? null })),
+      galleryImages: imageUrls("gallery"),
+      credentialImages: imageUrls("credential"),
       priceLabel: formatPrice(trainer.sessionRate),
       instagramUrl: trainer.instagramUrl ?? null,
       whatsappUrl: trainer.whatsappUrl ?? null,

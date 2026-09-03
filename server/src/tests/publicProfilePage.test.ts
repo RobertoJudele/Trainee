@@ -189,3 +189,31 @@ describe("renderPublicProfile", () => {
     expect(match![1].length).toBeLessThanOrEqual(155);
   });
 });
+
+describe("renderPublicProfile images", () => {
+  it("renders the gallery and credential grids", () => {
+    const html = renderPublicProfile(
+      {
+        ...baseData,
+        galleryImages: ["https://cdn.example.com/g1.jpg", "https://cdn.example.com/g2.jpg"],
+        credentialImages: ["https://cdn.example.com/c1.jpg"],
+      },
+      options
+    );
+    expect(html).toContain("Galerie");
+    expect(html).toContain('src="https://cdn.example.com/g1.jpg"');
+    expect(html).toContain('src="https://cdn.example.com/g2.jpg"');
+    expect(html).toContain("Certificări");
+    expect(html).toContain('src="https://cdn.example.com/c1.jpg"');
+  });
+
+  it("omits a section with no usable images and drops non-http urls", () => {
+    const html = renderPublicProfile(
+      { ...baseData, galleryImages: ["javascript:alert(1)", ""], credentialImages: [] },
+      options
+    );
+    expect(html).not.toContain("Galerie");
+    expect(html).not.toContain("Certificări");
+    expect(html).not.toContain("javascript:");
+  });
+});

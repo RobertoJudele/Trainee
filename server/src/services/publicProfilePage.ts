@@ -19,6 +19,9 @@ export interface PublicProfileData {
   reviewCount: number;
   specializations: string[];
   gyms: { name: string; city?: string | null }[];
+  /** Public image URLs in display order; empty or absent hides the section. */
+  galleryImages?: string[];
+  credentialImages?: string[];
   priceLabel?: string | null;
   instagramUrl?: string | null;
   whatsappUrl?: string | null;
@@ -127,6 +130,8 @@ hr{border:0;height:1px;background:var(--line);margin:20px 0}
 h2{font-size:15px;font-weight:800;margin-bottom:10px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
 .chip{background:#F1F5F9;color:#334155;font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:999px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.grid img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:12px;display:block;background:#F1F5F9}
 p.bio{color:var(--muted);font-size:14px;white-space:pre-wrap}
 ul{list-style:none}
 li{padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
@@ -175,6 +180,8 @@ li span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
             .join("")}</ul>`
         : ""
     }
+    ${imageSection("Galerie", data.galleryImages)}
+    ${imageSection("Certificări", data.credentialImages)}
     ${
       whatsapp
         ? `<a class="cta" href="${esc(whatsapp)}" rel="nofollow noopener">Contactează-l pe WhatsApp</a>`
@@ -203,6 +210,19 @@ li span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 </div>
 </body>
 </html>`;
+};
+
+/**
+ * Image grid for gallery / credential photos. Every URL goes through safeUrl:
+ * these come from S3 today, but the column is a plain VARCHAR the trainer's
+ * uploads write into, so it is treated as untrusted like every other field here.
+ */
+const imageSection = (title: string, urls?: string[] | null): string => {
+  const safe = (urls ?? []).map(safeUrl).filter((url): url is string => Boolean(url));
+  if (!safe.length) return "";
+  return `<hr><h2>${esc(title)}</h2><div class="grid">${safe
+    .map((url) => `<img src="${esc(url)}" alt="${esc(title)}" loading="lazy">`)
+    .join("")}</div>`;
 };
 
 const initialsOf = (fullName: string): string =>
