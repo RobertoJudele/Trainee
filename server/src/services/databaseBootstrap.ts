@@ -217,4 +217,23 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_user_blocks_pair
     ON user_blocks (blocker_id, blocked_id);
   `);
+
+  // Sign in with Google / Apple. sync({ alter:false }) never touches an existing
+  // table, so the columns and the password_hash relaxation have to be explicit.
+  await sequelize.query(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);"
+  );
+  await sequelize.query(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_id VARCHAR(255);"
+  );
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
+  `);
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_apple_id ON users (apple_id);
+  `);
+  // Social-only accounts have no password at all.
+  await sequelize.query(
+    "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;"
+  );
 };

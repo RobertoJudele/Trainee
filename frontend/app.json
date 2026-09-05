@@ -17,6 +17,7 @@
       "supportsTablet": false,
       "buildNumber": "45",
       "bundleIdentifier": "com.juroctech.frontend",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Salvio needs access to your photo library so you can upload a profile picture and, for trainers, gallery and credential photos.",
@@ -169,7 +170,14 @@
           }
         }
       ],
-      "./plugins/withFmtFix"
+      "./plugins/withFmtFix",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_REVERSED_IOS_CLIENT_ID"
+        }
+      ]
     ],
     "extra": {
       "router": {},

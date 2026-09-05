@@ -58,6 +58,15 @@ const en: Record<string, string> = {
   createNewAccount: "Create New Account",
   backToWelcome: "← Back to Welcome",
 
+  // ─── Social sign-in ─────────────────────────────────
+  continueWithGoogle: "Continue with Google",
+  continueWithApple: "Continue with Apple",
+  socialSignInFailed: "Sign-in failed. Please try again.",
+  completeProfileTitle: "Almost there",
+  completeProfileSubtitle:
+    "We just need a few details to finish setting up your account.",
+  finishSignUp: "Finish Sign Up",
+
   // ─── SignUp screen ───────────────────────────────────────
   createAccount: "Create Account",
   signUpSubtitle: "Start your fitness journey today",
@@ -908,6 +917,15 @@ const ro: Record<string, string> = {
   signInButton: "Conectare",
   createNewAccount: "Creează un cont nou",
   backToWelcome: "← Înapoi la bun venit",
+
+  // ─── Social sign-in ─────────────────────────────────
+  continueWithGoogle: "Continuă cu Google",
+  continueWithApple: "Continuă cu Apple",
+  socialSignInFailed: "Autentificarea a eșuat. Te rugăm să încerci din nou.",
+  completeProfileTitle: "Aproape gata",
+  completeProfileSubtitle:
+    "Mai avem nevoie de câteva detalii ca să îți finalizăm contul.",
+  finishSignUp: "Finalizează înregistrarea",
 
   // ─── SignUp screen ───────────────────────────────────────
   createAccount: "Creează cont",

@@ -5,6 +5,7 @@ import { UserRole } from "../types/common";
 import { IssueCategory, IssueStatus, IssueTargetType } from "../types/issue";
 import { sendError } from "../utils/response";
 import { BILLING_PLAN_IDS } from "../config/billingPlans";
+import { SOCIAL_PROVIDERS } from "../services/socialAuth";
 
 type SchemaLocation = "body" | "query" | "params";
 
@@ -194,6 +195,48 @@ export const loginValidation = [
     .withMessage("Provide a valid email."),
   body("password").notEmpty().withMessage("Password is required!"),
   strictSchema({ body: ["email", "password"] }),
+];
+
+// Sign in with Google / Apple. Separate arrays rather than extra optional fields
+// on registerValidation, because strictSchema rejects anything not in the list.
+export const socialAuthValidation = [
+  body("provider")
+    .isIn(SOCIAL_PROVIDERS)
+    .withMessage("Unsupported sign-in provider."),
+  body("idToken").isString().notEmpty().withMessage("Sign-in token is required."),
+  // Apple hands the name to the client only on the very first authorization, so
+  // it arrives here rather than inside the token. Absent on every later sign-in.
+  body("firstName").optional().trim().isLength({ max: 50 }),
+  body("lastName").optional().trim().isLength({ max: 50 }),
+  strictSchema({
+    body: ["provider", "idToken", "firstName", "lastName"],
+  }),
+];
+
+export const socialCompleteValidation = [
+  body("pendingToken")
+    .isString()
+    .notEmpty()
+    .withMessage("Sign-in session is required."),
+  body("firstName")
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("First name must be between 2 and 50 charachters long"),
+  body("lastName")
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("First name must be between 2 and 50 charachters long"),
+  // Same rule and same message as registerValidation - a social signup is still
+  // a Romanian signup, and App Review needs the format named in the error.
+  body("phone")
+    .notEmpty()
+    .withMessage("Phone number is required.")
+    .bail()
+    .isMobilePhone("ro-RO")
+    .withMessage("Enter a Romanian mobile number, for example 0712 345 678."),
+  strictSchema({
+    body: ["pendingToken", "firstName", "lastName", "phone"],
+  }),
 ];
 
 export const forgotPasswordValidation = [

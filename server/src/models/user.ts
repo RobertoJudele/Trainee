@@ -36,7 +36,9 @@ import { UserSex } from "../types/user";
       }
     },
     beforeUpdate: async (instance: User) => {
-      if (instance.changed("password")) {
+      // The truthiness check also covers clearing the password on an account
+      // that moves to social-only sign-in: there is nothing to hash.
+      if (instance.changed("password") && instance.password) {
         const rounds = parseInt(process.env.BCRYPT_ROUNDS || "12");
         instance.password = await bcrypt.hash(instance.password, rounds);
       }
@@ -60,15 +62,17 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   })
   email!: string;
 
+  // Nullable: accounts created through Google/Apple sign-in never have a password.
+  // Anything reading this must handle undefined — see comparePassword below.
   @Column({
     type: DataType.STRING,
-    allowNull: false,
+    allowNull: true,
     field: "password_hash", // Map to actual database column
     validate: {
       len: [6, 100],
     },
   })
-  password!: string;
+  password?: string;
 
   @Column({
     type: DataType.STRING,
@@ -160,6 +164,24 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   })
   lastLoginAt?: Date;
 
+  // Provider `sub` claims — stable per user, unlike the email. Unique so two
+  // accounts can never claim the same Google/Apple identity.
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+    unique: true,
+    field: "google_id",
+  })
+  googleId?: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+    unique: true,
+    field: "apple_id",
+  })
+  appleId?: string | null;
+
   @Column({
     type: DataType.STRING,
     field: "emailVerificationToken",
@@ -227,7 +249,17 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
 
   // Instance method to compare password
   async comparePassword(candidatePassword: string): Promise<boolean> {
+    // Social-only accounts have no hash. bcrypt.compare would throw on undefined,
+    // so guard here rather than at each caller.
+    if (!this.password) {
+      return false;
+    }
     return bcrypt.compare(candidatePassword, this.password);
+  }
+
+  /** True for accounts that can only sign in through Google/Apple. */
+  hasPassword(): boolean {
+    return Boolean(this.password);
   }
 
   // Remove password from JSON output

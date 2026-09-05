@@ -16,7 +16,9 @@
         "EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY": "goog_RaJQDUydMlKbfxMIYeUDgbBhpHG",
         "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
         "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
-        "EXPO_PUBLIC_REVENUECAT_DEBUG": "1"
+        "EXPO_PUBLIC_REVENUECAT_DEBUG": "1",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com"
       }
     },
     "testflight-dev": {
@@ -30,7 +32,9 @@
         "EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY": "goog_RaJQDUydMlKbfxMIYeUDgbBhpHG",
         "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
         "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
-        "EXPO_PUBLIC_REVENUECAT_DEBUG": "1"
+        "EXPO_PUBLIC_REVENUECAT_DEBUG": "1",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -44,7 +48,9 @@
         "EXPO_PUBLIC_REVENUECAT_GOOGLE_API_KEY": "goog_hSVpTLEPbhpMJdEIdjWNGnydMqT",
         "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
         "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
-        "EXPO_PUBLIC_REVENUECAT_DEBUG": "0"
+        "EXPO_PUBLIC_REVENUECAT_DEBUG": "0",
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "REPLACE_WITH_WEB_CLIENT_ID.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "REPLACE_WITH_IOS_CLIENT_ID.apps.googleusercontent.com"
       }
     }
   },

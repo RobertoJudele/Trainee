@@ -15,6 +15,8 @@ export interface UserAttributes {
   isVerified: boolean;
   isActive: boolean;
   lastLoginAt?: Date;
+  googleId?: string | null;
+  appleId?: string | null;
   createdAt: Date;
   updatedAt: Date;
   emailVerifiedAt: Date;
@@ -22,7 +24,8 @@ export interface UserAttributes {
 
 export interface UserCreationAttributes {
   email: string;
-  password: string;
+  /** Absent for accounts created through Google/Apple sign-in. */
+  password?: string;
   firstName: string;
   lastName: string;
   phone?: string;
@@ -30,6 +33,10 @@ export interface UserCreationAttributes {
   sex?: UserSex | null;
   role?: UserRole;
   profileImageUrl?: string;
+  googleId?: string | null;
+  appleId?: string | null;
+  isVerified?: boolean;
+  emailVerifiedAt?: Date;
 }
 
 export interface UserUpdateAttributes {

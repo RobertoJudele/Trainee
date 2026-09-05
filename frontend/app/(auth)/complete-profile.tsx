@@ -3,73 +3,81 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
-import { useSignupMutation, UserRole } from '../../features/auth/authApiSlice';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useDispatch } from 'react-redux';
-import { setCredentials } from '../../features/auth/authSlice';
-import { getApiErrorMessage } from '../lib/errors';
-import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
-import SocialAuthButtons from '../components/SocialAuthButtons';
-import { useLanguage } from '../lib/i18n/LanguageContext';
+import { FadeInUp, Field, GradientButton } from '../../src/components/ui';
+import { theme, typography } from '../../src/lib/theme';
+import { useLanguage } from '../../src/lib/i18n/LanguageContext';
+import { getApiErrorMessage } from '../../src/lib/errors';
+import { setCredentials } from '../../features/auth/authSlice';
+import { useCompleteSocialSignupMutation } from '../../features/auth/authApiSlice';
 
-export default function SignUp() {
+/**
+ * Step 2 of Google/Apple sign-in. Google and Apple never return a phone number
+ * and Salvio requires one, so a first-time social user lands here. No account
+ * exists until this form is submitted — backing out leaves nothing behind.
+ */
+export default function CompleteProfile() {
   const router = useRouter();
   const dispatch = useDispatch();
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [phone, setPhone] = useState('');
+  const params = useLocalSearchParams<{
+    pendingToken: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+  }>();
 
+  // Prefilled when the provider gave us a name. Apple only does so on the very
+  // first authorization, so these are often blank and the user fills them in.
+  const [firstName, setFirstName] = useState(params.firstName ?? '');
+  const [lastName, setLastName] = useState(params.lastName ?? '');
+  const [phone, setPhone] = useState('');
   const [errMsg, setErrMsg] = useState('');
 
-  const [signup, { isLoading }] = useSignupMutation();
+  const [completeSignup, { isLoading }] = useCompleteSocialSignupMutation();
 
-  const handleSignup = async () => {
+  const handleSubmit = async () => {
     setErrMsg('');
 
-    if (!firstName || !lastName || !email || !password || !phone) {
+    if (!firstName || !lastName || !phone) {
       setErrMsg(t('fillRequiredFields'));
       return;
     }
 
+    if (!params.pendingToken) {
+      setErrMsg(t('socialSignInFailed'));
+      return;
+    }
+
     try {
-      const result = await signup({
-        email,
-        password,
-        phone,
+      const result = await completeSignup({
+        pendingToken: params.pendingToken,
         firstName,
         lastName,
-        role: UserRole.CLIENT,
+        phone,
       }).unwrap();
 
-      if (result.data) {
-        dispatch(setCredentials(result.data));
-      }
-
+      dispatch(setCredentials(result.data));
       router.replace('/');
     } catch (error: unknown) {
-      const errorMessage = getApiErrorMessage(error, t('signupFailed'));
-      setErrMsg(errorMessage);
+      setErrMsg(getApiErrorMessage(error, t('signupFailed')));
     }
   };
 
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -89,10 +97,11 @@ export default function SignUp() {
             end={{ x: 1, y: 1 }}
             style={styles.iconContainer}
           >
-            <Ionicons name="person-add" size={38} color="#FFFFFF" />
+            <Ionicons name="person-add" size={40} color="#FFFFFF" />
           </LinearGradient>
-          <Text style={styles.title}>{t("createAccount")}</Text>
-          <Text style={styles.subtitle}>{t("signUpSubtitle")}</Text>
+          <Text style={styles.title}>{t('completeProfileTitle')}</Text>
+          <Text style={styles.subtitle}>{t('completeProfileSubtitle')}</Text>
+          {params.email ? <Text style={styles.email}>{params.email}</Text> : null}
         </FadeInUp>
 
         {errMsg ? (
@@ -107,14 +116,14 @@ export default function SignUp() {
         <View style={styles.form}>
           <FadeInUp delay={theme.motion.stagger} style={styles.row}>
             <Field
-              label={t("firstName")}
+              label={t('firstName')}
               placeholder="John"
               value={firstName}
               onChangeText={setFirstName}
               containerStyle={{ flex: 1 }}
             />
             <Field
-              label={t("lastName")}
+              label={t('lastName')}
               placeholder="Doe"
               value={lastName}
               onChangeText={setLastName}
@@ -124,18 +133,7 @@ export default function SignUp() {
 
           <FadeInUp delay={theme.motion.stagger * 2}>
             <Field
-              label={t("emailAddress")}
-              placeholder={t("emailPlaceholder")}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          </FadeInUp>
-
-          <FadeInUp delay={theme.motion.stagger * 3}>
-            <Field
-              label={t("phoneNumber")}
+              label={t('phoneNumber')}
               // Romanian mobile format — a US example here left an App Store
               // reviewer unable to sign up (rejection 04b9a669).
               placeholder="0712 345 678"
@@ -145,52 +143,13 @@ export default function SignUp() {
             />
           </FadeInUp>
 
-          <FadeInUp delay={theme.motion.stagger * 4}>
-            <Field
-              label={t("password")}
-              placeholder={t("createStrongPassword")}
-              value={password}
-              onChangeText={setPassword}
-              secure
-              autoCapitalize="none"
-            />
-          </FadeInUp>
-
-          <FadeInUp delay={theme.motion.stagger * 5}>
+          <FadeInUp delay={theme.motion.stagger * 3}>
             <GradientButton
-              title={t("signUp")}
-              onPress={handleSignup}
+              title={t('finishSignUp')}
+              onPress={handleSubmit}
               loading={isLoading}
               iconRight="arrow-forward"
             />
-          </FadeInUp>
-
-          <FadeInUp delay={theme.motion.stagger * 6} style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>{t("or")}</Text>
-            <View style={styles.dividerLine} />
-          </FadeInUp>
-
-          <FadeInUp delay={theme.motion.stagger * 7}>
-            <SocialAuthButtons onError={setErrMsg} />
-          </FadeInUp>
-
-          <FadeInUp delay={theme.motion.stagger * 8}>
-            <OutlineButton
-              title={t("alreadyHaveAccount")}
-              onPress={() => router.push('/(auth)/login')}
-            />
-          </FadeInUp>
-
-          <FadeInUp delay={theme.motion.stagger * 9}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              accessibilityRole="button"
-              accessibilityLabel={t("backToWelcome")}
-            >
-              <Text style={styles.backButtonText}>{t("backToWelcome")}</Text>
-            </TouchableOpacity>
           </FadeInUp>
         </View>
       </ScrollView>
@@ -232,18 +191,24 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     textAlign: 'center',
   },
+  email: {
+    ...typography.body2,
+    color: theme.colors.textSecondary,
+    marginTop: theme.spacing.xs,
+    fontWeight: '600',
+  },
   form: {
     gap: theme.spacing.md,
   },
   row: {
     flexDirection: 'row',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.sm,
-    backgroundColor: `${theme.colors.error}12`,
+    backgroundColor: `${theme.colors.error}15`,
     borderRadius: theme.roundness,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
@@ -252,28 +217,5 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: theme.colors.error,
     flex: 1,
-  },
-  divider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: theme.spacing.sm,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: theme.colors.border,
-  },
-  dividerText: {
-    ...typography.body2,
-    color: theme.colors.textSecondary,
-    marginHorizontal: theme.spacing.sm,
-  },
-  backButton: {
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
-  },
-  backButtonText: {
-    ...typography.body2,
-    color: theme.colors.textSecondary,
   },
 });

@@ -6,6 +6,8 @@ import {
   register,
   resetPassword,
   refresh,
+  socialAuth,
+  socialAuthComplete,
 } from "../controllers/auth";
 import { authenticate } from "../middleware/auth";
 import {
@@ -14,6 +16,8 @@ import {
   loginValidation,
   registerValidation,
   resetPasswordValidation,
+  socialAuthValidation,
+  socialCompleteValidation,
 } from "../middleware/validation";
 import { authRateLimit } from "../middleware/rateLimitProfiles";
 const router = express.Router();
@@ -45,6 +49,22 @@ router.post(
   resetPasswordValidation,
   handleValidationErrors,
   resetPassword
+);
+// Sign in with Google / Apple. authRateLimit keys by IP here: its
+// identityExtractor reads req.body.email, which these bodies do not carry.
+router.post(
+  "/social",
+  authRateLimit,
+  socialAuthValidation,
+  handleValidationErrors,
+  socialAuth
+);
+router.post(
+  "/social/complete",
+  authRateLimit,
+  socialCompleteValidation,
+  handleValidationErrors,
+  socialAuthComplete
 );
 router.get("/profile", authenticate, getProfile);
 
