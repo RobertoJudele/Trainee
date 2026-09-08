@@ -15,6 +15,10 @@ import {
   useGetIssuesAdminQuery,
   useUpdateIssueStatusAdminMutation,
 } from "../features/support/issueApiSlice";
+import {
+  useGetGymStaffRequestsQuery,
+  useReviewGymStaffMutation,
+} from "../features/gym/gymApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
@@ -27,11 +31,15 @@ const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
   "rejected",
 ];
 
-const TARGET_TABS: Array<{ value: IssueTargetType; labelKey: string }> = [
+/** The issue tabs, plus the gym-staff review queue which is not an Issue. */
+type AdminTab = IssueTargetType | "staff";
+
+const TARGET_TABS: Array<{ value: AdminTab; labelKey: string }> = [
   { value: "trainer", labelKey: "tabTrainer" },
   { value: "booking", labelKey: "tabBooking" },
   { value: "app", labelKey: "tabApp" },
   { value: "gym", labelKey: "tabGymRequests" },
+  { value: "staff", labelKey: "tabStaffRequests" },
 ];
 
 const OPEN_STATUSES = ["open", "in_review"];
@@ -49,8 +57,27 @@ export default function AdminIssuesScreen() {
   } = useGetIssuesAdminQuery(undefined, { skip: !isAdmin });
   const [updateStatus, { isLoading: isUpdating }] = useUpdateIssueStatusAdminMutation();
 
-  const [activeTab, setActiveTab] = React.useState<IssueTargetType>("trainer");
+  const [activeTab, setActiveTab] = React.useState<AdminTab>("trainer");
   const [showOpen, setShowOpen] = React.useState(true);
+
+  const { data: staffData } = useGetGymStaffRequestsQuery(undefined, {
+    skip: !isAdmin || activeTab !== "staff",
+  });
+  const [reviewStaff, { isLoading: isReviewing }] = useReviewGymStaffMutation();
+
+  const staffRequests = staffData?.data ?? [];
+
+  const handleReviewStaff = async (
+    gymId: number,
+    trainerId: number,
+    approve: boolean
+  ) => {
+    try {
+      await reviewStaff({ gymId, trainerId, approve }).unwrap();
+    } catch (err) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
+    }
+  };
 
   const handleStatusChange = async (
     issueId: number,
@@ -100,6 +127,88 @@ export default function AdminIssuesScreen() {
     );
   }
 
+  const tabBar = (
+    <View style={styles.tabBar}>
+      {TARGET_TABS.map((tab) => (
+        <Pressable
+          key={tab.value}
+          style={[styles.tab, activeTab === tab.value && styles.tabActive]}
+          onPress={() => setActiveTab(tab.value)}
+          accessibilityRole="button"
+          accessibilityLabel={t(tab.labelKey)}
+        >
+          <Text
+            style={[styles.tabText, activeTab === tab.value && styles.tabTextActive]}
+          >
+            {t(tab.labelKey)}
+          </Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+
+  // The gym-staff queue is not an Issue, so it gets its own list.
+  if (activeTab === "staff") {
+    return (
+      <FlatList
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        data={staffRequests}
+        keyExtractor={(item) => String(item.id)}
+        ListHeaderComponent={<View>{tabBar}</View>}
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>{t("noStaffRequests")}</Text>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Ionicons
+                name="ribbon-outline"
+                size={20}
+                color={theme.colors.primary}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={styles.title}>{item.trainerName}</Text>
+            </View>
+            <Text style={styles.meta}>
+              {item.gymName}
+              {item.gymCity ? ` • ${item.gymCity}` : ""}
+            </Text>
+            {item.staffRequestedAt ? (
+              <Text style={styles.meta}>
+                {t("requestedOn")}{" "}
+                {new Date(item.staffRequestedAt).toLocaleDateString()}
+              </Text>
+            ) : null}
+
+            <View style={styles.actions}>
+              <Pressable
+                style={[styles.statusButton, styles.statusButtonActive]}
+                onPress={() => handleReviewStaff(item.gymId, item.trainerId, true)}
+                disabled={isReviewing}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={t("approve")}
+              >
+                <Text style={styles.statusButtonTextActive}>{t("approve")}</Text>
+              </Pressable>
+              <Pressable
+                style={styles.statusButton}
+                onPress={() => handleReviewStaff(item.gymId, item.trainerId, false)}
+                disabled={isReviewing}
+                accessible={true}
+                accessibilityRole="button"
+                accessibilityLabel={t("reject")}
+              >
+                <Text style={styles.statusButtonText}>{t("reject")}</Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
+      />
+    );
+  }
+
   const allIssues = data?.data || [];
   const issues = allIssues.filter((i) => {
     if (i.targetType !== activeTab) return false;
@@ -115,23 +224,7 @@ export default function AdminIssuesScreen() {
       keyExtractor={(item) => String(item.id)}
       ListHeaderComponent={
         <View>
-          <View style={styles.tabBar}>
-            {TARGET_TABS.map((tab) => (
-              <Pressable
-                key={tab.value}
-                style={[styles.tab, activeTab === tab.value && styles.tabActive]}
-                onPress={() => setActiveTab(tab.value)}
-                accessibilityRole="button"
-                accessibilityLabel={t(tab.labelKey)}
-              >
-                <Text
-                  style={[styles.tabText, activeTab === tab.value && styles.tabTextActive]}
-                >
-                  {t(tab.labelKey)}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
+          {tabBar}
           <View style={styles.filterRow}>
             {[
               { open: true, labelKey: "filterOpen" },
