@@ -394,6 +394,93 @@ export const requestGymStaff = async (
 };
 
 // ─────────────────────────────────────────────
+// PATCH /gyms/:gymId/staff-request/:trainerId  — admin approves or rejects
+// ─────────────────────────────────────────────
+export const reviewGymStaff = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const gymId = parseInt(req.params.gymId);
+    const trainerId = parseInt(req.params.trainerId);
+    const { approve } = req.body as { approve: boolean };
+
+    if (isNaN(gymId) || isNaN(trainerId)) {
+      sendError(res, 400, "Invalid gym or trainer id");
+      return;
+    }
+
+    if (typeof approve !== "boolean") {
+      sendError(res, 400, "approve must be a boolean");
+      return;
+    }
+
+    const trainerGym = await TrainerGym.findOne({ where: { trainerId, gymId } });
+    if (!trainerGym) {
+      sendError(res, 404, "No affiliation between this trainer and gym");
+      return;
+    }
+
+    await trainerGym.update({
+      staffStatus: approve ? "approved" : "rejected",
+      staffReviewedAt: new Date(),
+      staffReviewedBy: req.user!.id,
+    });
+
+    // Staff status changes pin ordering, which the bulk gym cache feeds.
+    invalidateGymCache();
+    sendSuccess(
+      res,
+      200,
+      approve ? "Staff request approved" : "Staff request rejected",
+      trainerGym
+    );
+  } catch (error) {
+    console.error("reviewGymStaff error:", error);
+    sendError(res, 500, "Failed to review staff request");
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /gyms/staff-requests  — admin queue of pending staff requests
+// ─────────────────────────────────────────────
+export const listGymStaffRequests = async (_req: Request, res: Response) => {
+  try {
+    const pending = await TrainerGym.findAll({
+      where: { staffStatus: "pending" },
+      attributes: ["id", "trainerId", "gymId", "staffRequestedAt"],
+      include: [
+        { model: Gym, attributes: ["name", "city"] },
+        {
+          model: Trainer,
+          attributes: ["id"],
+          include: [{ model: User, attributes: ["firstName", "lastName"] }],
+        },
+      ],
+      order: [["staffRequestedAt", "ASC"]],
+    });
+
+    const data = pending.map((tg) => {
+      const trainerUser = (tg.trainer as any)?.user;
+      return {
+        id: tg.id,
+        trainerId: tg.trainerId,
+        gymId: tg.gymId,
+        staffRequestedAt: tg.staffRequestedAt,
+        gymName: (tg.gym as any)?.name ?? "",
+        gymCity: (tg.gym as any)?.city ?? "",
+        trainerName: `${trainerUser?.firstName ?? ""} ${trainerUser?.lastName ?? ""}`.trim(),
+      };
+    });
+
+    sendSuccess(res, 200, "Staff requests retrieved successfully", data);
+  } catch (error) {
+    console.error("listGymStaffRequests error:", error);
+    sendError(res, 500, "Failed to retrieve staff requests");
+  }
+};
+
+// ─────────────────────────────────────────────
 // DELETE /gyms/:gymId/leave  — trainer leaves a gym
 // ─────────────────────────────────────────────
 export const leaveGym = async (req: AuthenticatedRequest, res: Response) => {

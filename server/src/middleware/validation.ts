@@ -676,6 +676,22 @@ export const gymStaffRequestValidation = [
   strictSchema({ params: ["gymId"], body: [], query: [] }),
 ];
 
+export const gymStaffReviewValidation = [
+  param("gymId")
+    .isInt({ min: 1 })
+    .withMessage("gymId must be a positive integer."),
+  param("trainerId")
+    .isInt({ min: 1 })
+    .withMessage("trainerId must be a positive integer."),
+  body("approve")
+    .isBoolean()
+    .withMessage("approve must be a boolean."),
+  strictSchema({
+    params: ["gymId", "trainerId"],
+    body: ["approve"],
+  }),
+];
+
 export const createGymValidation = [
   body("name")
     .trim()

@@ -2,7 +2,12 @@ import { describe, it, expect } from "@jest/globals";
 import request from "supertest";
 import { app } from "../index";
 import { TrainerGym } from "../models/trainerGym";
-import { createTestGym, createTestTrainer } from "./helpers";
+import {
+  createTestAdmin,
+  createTestGym,
+  createTestTrainer,
+  createTestUser,
+} from "./helpers";
 
 describe("trainer_gyms staff columns", () => {
   it("defaults a new affiliation to 'none' with no review metadata", async () => {
@@ -66,5 +71,120 @@ describe("POST /gyms/:gymId/staff-request", () => {
     const { gym } = await createTestGym();
     const res = await request(app).post(`/gyms/${gym.id}/staff-request`);
     expect(res.status).toBe(401);
+  });
+});
+
+describe("PATCH /gyms/:gymId/staff-request/:trainerId", () => {
+  const joinAndRequest = async () => {
+    const { token, trainer } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+    await request(app).post(`/gyms/${gym.id}/staff-request`).set("Authorization", `Bearer ${token}`);
+    return { token, trainer, gym };
+  };
+
+  it("lets an admin approve a request", async () => {
+    const { trainer, gym } = await joinAndRequest();
+    const { token: adminToken, user: admin } = await createTestAdmin();
+
+    const res = await request(app)
+      .patch(`/gyms/${gym.id}/staff-request/${trainer.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ approve: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.staffStatus).toBe("approved");
+    expect(res.body.data.staffReviewedBy).toBe(admin.id);
+    expect(res.body.data.staffReviewedAt).not.toBeNull();
+  });
+
+  it("lets an admin reject a request", async () => {
+    const { trainer, gym } = await joinAndRequest();
+    const { token: adminToken } = await createTestAdmin();
+
+    const res = await request(app)
+      .patch(`/gyms/${gym.id}/staff-request/${trainer.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ approve: false });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.staffStatus).toBe("rejected");
+  });
+
+  it("allows re-requesting after a rejection", async () => {
+    const { token, trainer, gym } = await joinAndRequest();
+    const { token: adminToken } = await createTestAdmin();
+    await request(app)
+      .patch(`/gyms/${gym.id}/staff-request/${trainer.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ approve: false });
+
+    const res = await request(app)
+      .post(`/gyms/${gym.id}/staff-request`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.staffStatus).toBe("pending");
+  });
+
+  it("rejects a non-admin reviewer", async () => {
+    const { trainer, gym } = await joinAndRequest();
+    const { token: clientToken } = await createTestUser();
+
+    const res = await request(app)
+      .patch(`/gyms/${gym.id}/staff-request/${trainer.id}`)
+      .set("Authorization", `Bearer ${clientToken}`)
+      .send({ approve: true });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("drops the affiliation when the trainer leaves, and rejoining starts at none", async () => {
+    const { token, trainer, gym } = await joinAndRequest();
+    const { token: adminToken } = await createTestAdmin();
+    await request(app)
+      .patch(`/gyms/${gym.id}/staff-request/${trainer.id}`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ approve: true });
+
+    await request(app).delete(`/gyms/${gym.id}/leave`).set("Authorization", `Bearer ${token}`);
+    expect(
+      await TrainerGym.findOne({ where: { trainerId: trainer.id, gymId: gym.id } })
+    ).toBeNull();
+
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+    const rejoined = await TrainerGym.findOne({
+      where: { trainerId: trainer.id, gymId: gym.id },
+    });
+    expect(rejoined!.staffStatus).toBe("none");
+  });
+});
+
+describe("GET /gyms/staff-requests", () => {
+  it("lists pending requests for an admin", async () => {
+    const { token, trainer } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+    await request(app).post(`/gyms/${gym.id}/staff-request`).set("Authorization", `Bearer ${token}`);
+    const { token: adminToken } = await createTestAdmin();
+
+    const res = await request(app)
+      .get("/gyms/staff-requests")
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    const match = res.body.data.find(
+      (r: any) => r.trainerId === trainer.id && r.gymId === gym.id
+    );
+    expect(match).toBeDefined();
+    expect(match.gymName).toBe(gym.name);
+  });
+
+  it("rejects a non-admin", async () => {
+    const { token } = await createTestTrainer();
+    const res = await request(app)
+      .get("/gyms/staff-requests")
+      .set("Authorization", `Bearer ${token}`);
+    expect(res.status).toBe(403);
   });
 });

@@ -8,6 +8,8 @@ import {
   leaveGym,
   createGym,
   requestGymStaff,
+  reviewGymStaff,
+  listGymStaffRequests,
 } from "../controllers/gym";
 import { authenticate } from "../middleware/auth";
 import { requireAdmin } from "../middleware/authorization";
@@ -19,6 +21,7 @@ import {
   gymIdParamValidation,
   gymListQueryValidation,
   gymStaffRequestValidation,
+  gymStaffReviewValidation,
   handleValidationErrors,
 } from "../middleware/validation";
 
@@ -33,6 +36,12 @@ router.get(
   getAllGyms
 );
 router.get("/my-gyms", authenticate, getMyGyms);  // must come BEFORE /:gymId
+router.get(
+  "/staff-requests",
+  authenticate,
+  requireAdmin,
+  listGymStaffRequests
+);  // must come BEFORE /:gymId
 router.get(
   "/:gymId",
   publicReadRateLimit,
@@ -74,7 +83,15 @@ router.delete(
   leaveGym
 );
 
-// Admin route
+// Admin routes
+router.patch(
+  "/:gymId/staff-request/:trainerId",
+  authenticate,
+  requireAdmin,
+  gymStaffReviewValidation,
+  handleValidationErrors,
+  reviewGymStaff
+);
 router.post(
   "/",
   authenticate,
