@@ -684,6 +684,16 @@ export default function MapScreen() {
       : null;
   const gymTrainers = Array.isArray(gymDetail?.trainers) ? gymDetail.trainers : [];
 
+  // The gym's own trainers lead; everyone else listed here follows.
+  const staffTrainers = useMemo(
+    () => gymTrainers.filter((tr) => tr.staffStatus === "approved"),
+    [gymTrainers]
+  );
+  const otherTrainers = useMemo(
+    () => gymTrainers.filter((tr) => tr.staffStatus !== "approved"),
+    [gymTrainers]
+  );
+
   // ── Trainer "list myself here" controls ──────────────────
   const currentUser = useSelector(selectCurrentUser);
   const isTrainer = currentUser?.role === "trainer";
@@ -951,12 +961,12 @@ export default function MapScreen() {
       />
     ));
 
-  const renderTrainerRow = (trainer: GymTrainer, idx: number) => {
+  const renderTrainerRow = (trainer: GymTrainer) => {
     const priceLabel = formatFromPerSession(trainer.minSessionPrice, t);
 
     return (
     <TouchableOpacity
-      key={idx}
+      key={trainer.id}
       style={styles.trainerRow}
       activeOpacity={0.85}
       accessible={true}
@@ -1306,24 +1316,41 @@ export default function MapScreen() {
               )
             )}
 
-            {/* Trainers */}
+            {/* The gym's own trainers */}
+            {staffTrainers.length > 0 && (
+              <>
+                <View style={styles.trainersHeader}>
+                  <Text style={styles.trainersTitle}>{t("gymStaffTrainers")}</Text>
+                  <View style={styles.trainerCountBadge}>
+                    <Text style={styles.trainerCountText}>
+                      {staffTrainers.length}
+                    </Text>
+                  </View>
+                </View>
+                {staffTrainers.map(renderTrainerRow)}
+              </>
+            )}
+
+            {/* Everyone else listed here */}
             <View style={styles.trainersHeader}>
-              <Text style={styles.trainersTitle}>{t("trainersHere")}</Text>
+              <Text style={styles.trainersTitle}>
+                {staffTrainers.length > 0 ? t("otherTrainersHere") : t("trainersHere")}
+              </Text>
               <View style={styles.trainerCountBadge}>
                 <Text style={styles.trainerCountText}>
-                  {gymTrainers.length}
+                  {otherTrainers.length}
                 </Text>
               </View>
             </View>
 
-            {gymTrainers.length === 0 ? (
+            {otherTrainers.length === 0 ? (
               <View style={styles.noTrainers}>
                 <Text style={styles.noTrainersText}>
                   {t("noTrainersHere")}
                 </Text>
               </View>
             ) : (
-              gymTrainers.map(renderTrainerRow)
+              otherTrainers.map(renderTrainerRow)
             )}
           </ScrollView>
         )}
