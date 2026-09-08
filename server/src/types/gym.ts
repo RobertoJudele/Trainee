@@ -38,11 +38,21 @@ export interface GymCreationAttributes {
   imageUrl?: string;
 }
 
+/**
+ * Gym-staff affiliation lifecycle. The trainer requests it; an admin approves.
+ * Only "approved" affects ordering or client-visible rendering.
+ */
+export type GymStaffStatus = "none" | "pending" | "approved" | "rejected";
+
 export interface TrainerGymAttributes {
   id: number;
   trainerId: number;
   gymId: number;
   isAvailable: boolean; // trainer is currently available at this gym
+  staffStatus: GymStaffStatus;
+  staffRequestedAt: Date | null;
+  staffReviewedAt: Date | null;
+  staffReviewedBy: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,4 +61,8 @@ export interface TrainerGymCreationAttributes {
   trainerId: number;
   gymId: number;
   isAvailable?: boolean;
+  staffStatus?: GymStaffStatus;
+  staffRequestedAt?: Date | null;
+  staffReviewedAt?: Date | null;
+  staffReviewedBy?: number | null;
 }
