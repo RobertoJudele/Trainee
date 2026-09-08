@@ -2,6 +2,8 @@ import { describe, it, expect } from "@jest/globals";
 import request from "supertest";
 import { app } from "../index";
 import { TrainerGym } from "../models/trainerGym";
+import { Trainer } from "../models/trainer";
+import { subStatus } from "../types/trainer";
 import {
   createTestAdmin,
   createTestGym,
@@ -243,5 +245,50 @@ describe("staff status on gym reads", () => {
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.body.data[0].staffStatus).toBe("none");
+  });
+});
+
+describe("active-subscription scoping on gym pins", () => {
+  const lapse = async (trainer: Trainer) => {
+    await trainer.update({
+      subscriptionStatus: subStatus.TRIAL,
+      trialEndsAt: new Date(Date.now() - 60_000),
+    });
+  };
+
+  it("hides a lapsed trainer from gym detail", async () => {
+    const { token, trainer } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+    await lapse(trainer);
+
+    const res = await request(app).get(`/gyms/${gym.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.trainers).toEqual([]);
+  });
+
+  it("excludes a lapsed trainer from availableTrainerCount", async () => {
+    const { token, trainer } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+    await lapse(trainer);
+
+    // Geo path bypasses the 30s bulk cache.
+    const res = await request(app).get(`/gyms?lat=${gym.latitude}&lng=${gym.longitude}`);
+
+    const row = res.body.data.find((g: any) => g.id === gym.id);
+    expect(row.availableTrainerCount).toBe(0);
+  });
+
+  it("still counts an active trainer", async () => {
+    const { token } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+
+    const res = await request(app).get(`/gyms?lat=${gym.latitude}&lng=${gym.longitude}`);
+
+    const row = res.body.data.find((g: any) => g.id === gym.id);
+    expect(row.availableTrainerCount).toBe(1);
   });
 });

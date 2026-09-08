@@ -103,11 +103,20 @@ export const getAllGyms = async (req: Request, res: Response) => {
       order,
     });
 
-    // Attach available trainer count to each gym
+    // Attach available trainer count to each gym. Scoped to active
+    // subscriptions so the pin badge matches the list inside the pin.
     const gymIds = gyms.map((g) => g.id);
     const counts = await TrainerGym.findAll({
       where: { gymId: { [Op.in]: gymIds }, isAvailable: true },
       attributes: ["gymId"],
+      include: [
+        {
+          model: Trainer.scope("active"),
+          as: "trainer",
+          attributes: [],
+          required: true,
+        },
+      ],
     });
 
     const countMap = counts.reduce<Record<number, number>>((acc, tg) => {
@@ -173,7 +182,11 @@ export const getGymById = async (req: Request, res: Response) => {
       where: { gymId },
       include: [
         {
-          model: Trainer,
+          // Scoped + required so a lapsed subscriber drops out of the pin
+          // entirely, matching what search and recommendations already do.
+          model: Trainer.scope("active"),
+          as: "trainer",
+          required: true,
           attributes: [
             "id", "bio", "experienceYears", "hourlyRate",
             "sessionRate", "totalRating", "reviewCount",
