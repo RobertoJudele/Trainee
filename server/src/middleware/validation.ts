@@ -669,6 +669,13 @@ export const gymAvailabilityValidation = [
   }),
 ];
 
+export const gymStaffRequestValidation = [
+  param("gymId")
+    .isInt({ min: 1 })
+    .withMessage("gymId must be a positive integer."),
+  strictSchema({ params: ["gymId"], body: [], query: [] }),
+];
+
 export const createGymValidation = [
   body("name")
     .trim()

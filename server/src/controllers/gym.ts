@@ -338,6 +338,62 @@ export const setGymAvailability = async (
 };
 
 // ─────────────────────────────────────────────
+// POST /gyms/:gymId/staff-request  — trainer asks to be listed as gym staff
+// Grants nothing: an admin reviews it. Only "approved" ever affects ordering,
+// so no cache invalidation is needed here.
+// ─────────────────────────────────────────────
+export const requestGymStaff = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user!.id;
+    const gymId = parseInt(req.params.gymId);
+
+    if (isNaN(gymId)) {
+      sendError(res, 400, "Invalid gym id");
+      return;
+    }
+
+    const trainer = await Trainer.findOne({ where: { userId } });
+    if (!trainer) {
+      sendError(res, 404, "Trainer profile not found");
+      return;
+    }
+
+    const trainerGym = await TrainerGym.findOne({
+      where: { trainerId: trainer.id, gymId },
+    });
+
+    if (!trainerGym) {
+      sendError(res, 404, "You are not registered at this gym");
+      return;
+    }
+
+    // Already pending or approved — nothing to do, and not an error.
+    if (
+      trainerGym.staffStatus === "pending" ||
+      trainerGym.staffStatus === "approved"
+    ) {
+      sendSuccess(res, 200, "Staff request already submitted", trainerGym);
+      return;
+    }
+
+    await trainerGym.update({
+      staffStatus: "pending",
+      staffRequestedAt: new Date(),
+      staffReviewedAt: null,
+      staffReviewedBy: null,
+    });
+
+    sendSuccess(res, 200, "Staff request submitted", trainerGym);
+  } catch (error) {
+    console.error("requestGymStaff error:", error);
+    sendError(res, 500, "Failed to submit staff request");
+  }
+};
+
+// ─────────────────────────────────────────────
 // DELETE /gyms/:gymId/leave  — trainer leaves a gym
 // ─────────────────────────────────────────────
 export const leaveGym = async (req: AuthenticatedRequest, res: Response) => {

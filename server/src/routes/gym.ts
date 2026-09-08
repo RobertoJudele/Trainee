@@ -7,6 +7,7 @@ import {
   setGymAvailability,
   leaveGym,
   createGym,
+  requestGymStaff,
 } from "../controllers/gym";
 import { authenticate } from "../middleware/auth";
 import { requireAdmin } from "../middleware/authorization";
@@ -17,6 +18,7 @@ import {
   gymAvailabilityValidation,
   gymIdParamValidation,
   gymListQueryValidation,
+  gymStaffRequestValidation,
   handleValidationErrors,
 } from "../middleware/validation";
 
@@ -55,6 +57,14 @@ router.patch(
   gymAvailabilityValidation,
   handleValidationErrors,
   setGymAvailability
+);
+router.post(
+  "/:gymId/staff-request",
+  authenticate,
+  subscription,
+  gymStaffRequestValidation,
+  handleValidationErrors,
+  requestGymStaff
 );
 router.delete(
   "/:gymId/leave",
