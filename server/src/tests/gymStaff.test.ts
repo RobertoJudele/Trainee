@@ -188,3 +188,60 @@ describe("GET /gyms/staff-requests", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("staff status on gym reads", () => {
+  it("exposes staffStatus on gym detail trainers", async () => {
+    const { token } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+
+    const res = await request(app).get(`/gyms/${gym.id}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.trainers[0].staffStatus).toBe("none");
+  });
+
+  it("reports a pending request as pending, not approved", async () => {
+    const { token } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+    await request(app).post(`/gyms/${gym.id}/staff-request`).set("Authorization", `Bearer ${token}`);
+
+    const res = await request(app).get(`/gyms/${gym.id}`);
+
+    expect(res.body.data.trainers[0].staffStatus).toBe("pending");
+  });
+
+  it("orders gym trainers by rankingScore descending", async () => {
+    const { gym } = await createTestGym();
+    const low = await createTestTrainer();
+    const high = await createTestTrainer();
+    // rankingScore is a model column but not in TrainerProfileAttributes, so
+    // assign-then-save as Review.updateTrainerRating does.
+    low.trainer.rankingScore = 3.1;
+    await low.trainer.save();
+    high.trainer.rankingScore = 4.9;
+    await high.trainer.save();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${low.token}`);
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${high.token}`);
+
+    const res = await request(app).get(`/gyms/${gym.id}`);
+
+    expect(res.body.data.trainers.map((t: any) => t.id)).toEqual([
+      high.trainer.id,
+      low.trainer.id,
+    ]);
+  });
+
+  it("exposes staffStatus on my-gyms", async () => {
+    const { token } = await createTestTrainer();
+    const { gym } = await createTestGym();
+    await request(app).post(`/gyms/${gym.id}/join`).set("Authorization", `Bearer ${token}`);
+
+    const res = await request(app)
+      .get("/gyms/my-gyms")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.body.data[0].staffStatus).toBe("none");
+  });
+});

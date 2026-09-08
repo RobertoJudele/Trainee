@@ -165,7 +165,10 @@ export const getGymById = async (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch trainers linked to this gym with their availability
+    // Fetch trainers linked to this gym with their availability.
+    // Ordered by rankingScore (the Bayesian-shrunk rating search sorts by), so
+    // the sequence is deterministic; the client groups approved staff into
+    // their own section from staffStatus.
     const trainerGyms = await TrainerGym.findAll({
       where: { gymId },
       include: [
@@ -184,6 +187,7 @@ export const getGymById = async (req: Request, res: Response) => {
           ],
         },
       ],
+      order: [[{ model: Trainer, as: "trainer" }, "rankingScore", "DESC"]],
     });
 
     const trainers = trainerGyms.map((tg) => {
@@ -191,6 +195,7 @@ export const getGymById = async (req: Request, res: Response) => {
       return {
         ...trainerJson,
         isAvailableAtGym: tg.isAvailable,
+        staffStatus: tg.staffStatus,
       };
     });
 
@@ -233,6 +238,7 @@ export const getMyGyms = async (req: AuthenticatedRequest, res: Response) => {
     const data = trainerGyms.map((tg) => ({
       ...(tg.gym as any)?.toJSON?.(),
       isAvailable: tg.isAvailable,
+      staffStatus: tg.staffStatus,
       trainerGymId: tg.id,
     }));
 
