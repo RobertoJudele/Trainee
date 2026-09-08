@@ -17,6 +17,22 @@ export interface GymMarker {
   availableTrainerCount: number;
 }
 
+/**
+ * Gym-staff affiliation. The trainer requests it; an admin approves.
+ * Only "approved" renders in the gym's staff section.
+ */
+export type GymStaffStatus = "none" | "pending" | "approved" | "rejected";
+
+export interface GymStaffRequest {
+  id: number;
+  trainerId: number;
+  gymId: number;
+  staffRequestedAt: string | null;
+  gymName: string;
+  gymCity: string;
+  trainerName: string;
+}
+
 export interface GymTrainer {
   id: number;
   bio?: string;
@@ -28,6 +44,8 @@ export interface GymTrainer {
   totalRating: number;
   reviewCount: number;
   isAvailableAtGym: boolean;
+  /** Only "approved" renders in the gym's staff section. */
+  staffStatus: GymStaffStatus;
   user: {
     firstName: string;
     lastName: string;
@@ -53,6 +71,7 @@ export interface MyGym {
   imageUrl?: string;
   rating: number;
   isAvailable: boolean;    // trainer's availability at this specific gym
+  staffStatus: GymStaffStatus;
   trainerGymId: number;
 }
 
@@ -137,6 +156,34 @@ export const gymApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["MyGyms", "Gyms"],
     }),
+
+    // Ask to be listed as this gym's staff (an admin reviews it)
+    requestGymStaff: builder.mutation<ApiResponse<void>, number>({
+      query: (gymId) => ({
+        url: `/gyms/${gymId}/staff-request`,
+        method: "POST",
+      }),
+      invalidatesTags: ["MyGyms", "GymStaffRequests"],
+    }),
+
+    // Admin: pending staff requests
+    getGymStaffRequests: builder.query<ApiResponse<GymStaffRequest[]>, void>({
+      query: () => "/gyms/staff-requests",
+      providesTags: ["GymStaffRequests"],
+    }),
+
+    // Admin: approve or reject one
+    reviewGymStaff: builder.mutation<
+      ApiResponse<void>,
+      { gymId: number; trainerId: number; approve: boolean }
+    >({
+      query: ({ gymId, trainerId, approve }) => ({
+        url: `/gyms/${gymId}/staff-request/${trainerId}`,
+        method: "PATCH",
+        body: { approve },
+      }),
+      invalidatesTags: ["GymStaffRequests", "Gyms", "MyGyms"],
+    }),
   }),
 });
 
@@ -147,4 +194,7 @@ export const {
   useJoinGymMutation,
   useSetGymAvailabilityMutation,
   useLeaveGymMutation,
+  useRequestGymStaffMutation,
+  useGetGymStaffRequestsQuery,
+  useReviewGymStaffMutation,
 } = gymApiSlice;

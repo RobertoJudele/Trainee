@@ -124,6 +124,7 @@ export const apiSlice = createApi({
   tagTypes: [
     "Gyms",
     "MyGyms",
+    "GymStaffRequests",
     "TrainerSlots",
     "MySchedule",
     "PendingClientCodes",
