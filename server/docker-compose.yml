@@ -75,6 +75,11 @@ services:
   certbot:
     image: certbot/certbot
     container_name: trainee_certbot
+    # Without this the container is never restarted after a reboot or a
+    # `docker compose down`, renewals stop silently, and the first sign of
+    # trouble is an expired certificate taking the API offline.
+    # That happened on 2026-09-10 with api.juroc.tech.
+    restart: unless-stopped
     volumes:
       - certbot_www:/var/www/certbot:rw
       - certbot_conf:/etc/letsencrypt:rw

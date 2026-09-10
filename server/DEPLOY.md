@@ -11,10 +11,15 @@ The backend ships as a Docker Compose stack (`server/docker-compose.yml`):
 
 Public domain: **`api.juroc.tech`** (configured in `nginx/conf.d/app.conf` and `init-letsencrypt.sh`).
 
-The database schema is created automatically on first boot via
-`sequelize.sync({ alter: false })` (`src/index.ts`) — there is **no separate
-migration step**. Specialization reference data is also seeded automatically on
-every startup (`seedSpecializations()` in `src/index.ts`).
+On a **new** database the schema is created on first boot via
+`sequelize.sync({ alter: false })` (`src/index.ts`). Specialization reference data
+is seeded on every startup (`seedSpecializations()` in `src/index.ts`).
+
+On an **existing** database `sync` creates missing tables but never alters
+existing ones, so a new column on a table that is already there will NOT appear.
+Those changes ship as manual SQL in `server/migrations/`, and each one must be
+run once per environment — **before** the build that depends on it starts. See
+[Migrations](#migrations).
 
 ---
 
@@ -103,12 +108,67 @@ The gym seed is idempotent (`findOrCreate`), so it is safe to re-run.
 
 ```bash
 git pull
+# If this pull brings a new file in migrations/, run it FIRST — see below.
 docker compose build app
 docker compose up -d app
 ```
 
-TLS renewal and nginx reload are already automated by the `certbot` and `nginx`
-containers — no manual cert steps on redeploys.
+---
+
+## Migrations
+
+`sequelize.sync({ alter: false })` adds new *tables* but never new *columns* on a
+table that already exists. Anything else is a numbered SQL file in
+`server/migrations/`, applied by hand, once per environment:
+
+| File | Adds |
+| ---- | ---- |
+| `001_add_trainer_image_category.sql` | `trainer_images.category` |
+| `002_add_trainer_slug.sql` | `trainer_profiles.slug` |
+| `003_add_app_release_notes.sql` | `app_release_notes` table |
+| `004_add_trainer_gym_staff.sql` | `trainer_gyms.staff_*` (gym-staff affiliation) |
+
+```bash
+set -a; source .env; set +a
+docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < migrations/004_add_trainer_gym_staff.sql
+```
+
+**Order matters.** Run the migration *before* starting the build that uses it.
+Start the app first and every query touching the changed table fails with
+`column does not exist` until you catch up — for `004` that is the whole gym map,
+a main screen. All migration files are idempotent, so re-running one is safe.
+
+---
+
+## TLS certificates
+
+Let's Encrypt certificates last 90 days. The `certbot` container renews them on a
+12-hour loop, and `nginx` reloads every 6 hours to pick up new files — so in
+normal operation there is nothing to do on redeploys.
+
+**That automation is only as alive as the `certbot` container.** It carries
+`restart: unless-stopped` for exactly this reason; if it is ever missing,
+renewals stop silently and the first symptom is the API going offline when a
+certificate expires. Verify it is running after any change to the stack:
+
+```bash
+docker compose ps -a | grep certbot     # must show Up, not Exited or absent
+```
+
+Check expiry dates for every domain, and renew by hand if needed:
+
+```bash
+docker compose run --rm --entrypoint certbot certbot certificates
+docker compose run --rm --entrypoint certbot certbot renew
+docker compose exec nginx nginx -s reload
+```
+
+The `--entrypoint certbot` override is required: the service's own entrypoint is
+the renewal loop, which would otherwise swallow the arguments.
+
+Four lineages are in use — `api.juroc.tech`, `dev-api.juroc.tech`, `juroc.tech`
+and `salvio.juroc.tech`. A renewal failure on any one of them takes down whatever
+depends on it, so check all four, not just the API.
 
 ## Useful operations
 
