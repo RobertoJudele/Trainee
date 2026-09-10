@@ -10,12 +10,28 @@ Core insight: **every Romanian PT already has clients** (managed via WhatsApp +
 notebook). Seed trainers with the free scheduling tool; each trainer brings
 10–20 existing clients. The marketplace emerges from density, one city at a time.
 
-### 1. Kill the paywall at launch (trivial build)
-- "Founding Trainer" offer: first ~50 trainers in launch city get 12 months free,
-  grandfathered discount forever.
-- Use existing `billingMode.ts` / entitlement service — grant comped entitlements
-  manually, don't build a self-serve free tier.
-- 12 months, not 3: trainers must survive the low-demand period without churning.
+### 1. ~~Kill the paywall at launch~~ — **live in production** (confirmed 2026-08-13)
+- Shipped as **3 months free**, not 12, and **with no cap on the number of
+  trainers**. `BillingService.grantFoundingEntitlement` checks the deadline and
+  nothing else, so the "first ~50" framing is not what runs — do not advertise a
+  limited number of spots. The real scarcity is the date.
+- **Deadline: 2026-09-30**, set in `EnvBillingConfig.ts` and overridable per
+  environment with `FOUNDING_GRANT_DEADLINE` / `FOUNDING_GRANT_MONTHS`. Clearing
+  the deadline env var switches the promo off.
+- The three months run **from the moment the grant is issued**, not to a fixed end
+  date: joining on 29 September means cover until 29 December. Copy should say
+  "sign up by 30 September for 3 months free", never "free until December".
+- Implemented as a RevenueCat *promotional* entitlement — no store purchase, no
+  auto-charge, and it does not silently convert to a paid subscription. The call is
+  idempotent, so retries never stack.
+- **Not implemented: the "grandfathered discount forever" part.** Only the
+  three-month grant exists; there is no permanent founder price. Either build it
+  before promising it, or drop it from the pitch.
+- **Open risk, carried over from the original plan.** The 12-month figure was
+  argued for on the grounds that "trainers must survive the low-demand period
+  without churning" — three months may expire well before Cluj has enough demand to
+  justify paying. Watch what the first cohort does at the 3-month mark; extending is
+  an env var, not a code change.
 
 ### 2. Launch city: Cluj-Napoca
 - ~300k people, compact, ~40–60 relevant gyms — personally coverable in 2 weeks.
@@ -100,6 +116,14 @@ trainer; photos ride the existing S3 pipeline. Later becomes a marketplace hook
 ### Gym map as standalone utility (mostly done)
 Lean into "find a gym near you in Cluj": gym details, trainers-per-gym as the
 upsell surface.
+
+### Saved / favorite trainers (small build — deferred)
+Heart on the trainer profile hero; a "Saved" list on the client profile. Came out
+of the 2026-08-12 profile redesign, where the mockup drew a heart the app has no
+feature behind — the corner went to the `⋯` overflow instead. Needs a
+`client_favorite_trainers` table, POST/DELETE/GET endpoints, an entry point, and
+an empty state. Worth it once there are enough trainers per city that a client
+browses more than they can remember; pointless at 30 trainers in one city.
 
 ### Monthly challenges (small build — deferred)
 "12 check-ins in March" badge, maybe per-gym leaderboard. Only after streaks

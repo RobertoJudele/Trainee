@@ -146,13 +146,16 @@ export const deleteProfile = async (req: Request, res: Response) => {
       return;
     }
 
+    // Read off the row before it is destroyed; the sweep below runs after commit.
+    const profileImageUrl = user.profileImageUrl;
+
     // Tear down everything that references the account, in one transaction, before
-    // destroying the user row. ponytail: S3 images (profile picture, trainer gallery)
-    // are not purged here — add a best-effort S3 sweep if orphaned objects matter.
+    // destroying the user row. Stored images are purged after it commits — see below.
+    let trainerImageUrls: string[] = [];
     await sequelize.transaction(async (t) => {
       // The account's own trainer profile (if any) and all of its children.
       const trainer = await Trainer.findOne({ where: { userId }, transaction: t });
-      if (trainer) await cascadeDeleteTrainer(trainer.id, t);
+      if (trainer) trainerImageUrls = await cascadeDeleteTrainer(trainer.id, t);
 
       // Rows this user owns as a client — delete outright.
       await RefreshToken.destroy({ where: { userId }, transaction: t });
@@ -183,6 +186,15 @@ export const deleteProfile = async (req: Request, res: Response) => {
 
       await user.destroy({ transaction: t });
     });
+
+    // Erasure has to reach object storage: the bucket is served publicly, so an
+    // orphaned object stays fetchable by anyone holding its URL. Runs after the
+    // commit — deleting inside the transaction would destroy the files for good
+    // if it later rolled back. Best-effort by design: the account is already
+    // gone, so a storage failure is logged, not reported as a failed deletion.
+    // The prefix sweep catches superseded avatars the current URL no longer names.
+    await S3ImageService.deleteImagesByPrefix(`profile-picture/${userId}/`);
+    await S3ImageService.deleteImagesByUrl([...trainerImageUrls, profileImageUrl]);
 
     sendSuccess(res, 200, "Succesfully deleted user");
   } catch (error: unknown) {

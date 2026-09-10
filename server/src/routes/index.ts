@@ -18,6 +18,7 @@ import notificationsRouter from "./notifications";
 import recommendationRouter from "./recommendation";
 import appVersionRouter from "./appVersion";
 import blockRouter from "./userBlock";
+import { getPublicTrainerPage } from "../controllers/publicProfile";
 import {
 	createCheckoutSession,
 	createPortalSession,
@@ -30,6 +31,9 @@ import {
 } from "../middleware/validation";
 
 const router = express.Router();
+// Public HTML, not JSON, and unauthenticated: this is the link a trainer puts in
+// their Instagram bio, fetched by browsers and link-preview crawlers.
+router.get("/t/:slug", getPublicTrainerPage);
 router.use("/gyms", gymRouter);
 router.use("/auth", authRouter);
 router.use("/reviews", reviewRouter);

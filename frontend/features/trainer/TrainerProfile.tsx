@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   TextInput,
   Dimensions,
+  Share,
 } from "react-native";
+import * as Clipboard from "expo-clipboard";
 import { useSelector, useDispatch } from "react-redux";
 import {
   selectCurrentTrainer,
@@ -56,6 +58,8 @@ import {
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const MAX_TRAINER_IMAGES = 5;
+/** Long enough for the menu Modal's fade to finish before a native sheet opens. */
+const MENU_DISMISS_MS = 350;
 
 function TrainerProfile() {
   const trainer = useSelector(selectCurrentTrainer);
@@ -72,6 +76,43 @@ function TrainerProfile() {
   } = useGetTrainerProfileQuery(undefined, {
     skip: user?.role !== UserRole.TRAINER,
   });
+
+  // Built server-side: the app knows the API host, not the public website's.
+  const publicProfileUrl = trainerResponse?.data?.publicProfileUrl ?? null;
+
+  const handleShareProfileLink = useCallback(async () => {
+    if (!publicProfileUrl) return;
+
+    // Both the dialog and the share sheet are native presentations, and neither
+    // can appear while the menu Modal is still fading out — the call resolves
+    // having shown nothing. The other menu entries get away with it because
+    // router.push and setState present nothing native.
+    await new Promise<void>((resolve) => setTimeout(resolve, MENU_DISMISS_MS));
+
+    // The URL is shown, not just handed to the share sheet. Putting a link in an
+    // Instagram bio means copying it, and a sheet that silently fails leaves the
+    // trainer with nothing at all — this way the link is always at least legible.
+    Alert.alert(t("shareMyLink"), publicProfileUrl, [
+      {
+        text: t("copyLink"),
+        onPress: () => {
+          void Clipboard.setStringAsync(publicProfileUrl).then(() =>
+            Alert.alert(t("copied"), t("linkCopied"))
+          );
+        },
+      },
+      {
+        text: t("share"),
+        onPress: () => {
+          void Share.share({
+            message: `${t("shareMyLinkMessage")}\n${publicProfileUrl}`,
+            url: publicProfileUrl,
+          }).catch(() => Alert.alert(t("error"), t("couldNotShareLink")));
+        },
+      },
+      { text: t("cancel"), style: "cancel" },
+    ]);
+  }, [publicProfileUrl, t]);
   const {
     data: specializationsResponse,
     isLoading: isSpecializationsLoading,
@@ -269,6 +310,14 @@ function TrainerProfile() {
       key: "edit", icon: "pencil", label: t("editProfile"),
       onPress: () => { setMenuVisible(false); setIsEditing(true); },
     },
+    // Only when the server sends a URL, which it does once PUBLIC_WEB_URL is
+    // configured. Without it there is no public page to share yet.
+    ...(publicProfileUrl
+      ? [{
+          key: "share", icon: "share-social-outline" as const, label: t("shareMyLink"),
+          onPress: () => { setMenuVisible(false); void handleShareProfileLink(); },
+        }]
+      : []),
     {
       key: "sub", icon: "receipt-outline", label: t("manageSubscription"),
       onPress: () => { setMenuVisible(false); router.push("/checkout"); },
@@ -301,7 +350,10 @@ function TrainerProfile() {
       onPress: () => { setMenuVisible(false); void handleDeleteAccount(); },
       destructive: true, disabled: isDeletingAccount, loading: isDeletingAccount,
     },
-  ], [t, language, setLanguage, isDeleting, isDeletingAccount, handleLogout, handleDeleteTrainer, handleDeleteAccount, startTour]);
+    // publicProfileUrl arrives with the profile query, after the first render.
+    // Without it here the memo keeps the initial value — null — and the share
+    // entry never appears no matter how the server is configured.
+  ], [t, language, setLanguage, isDeleting, isDeletingAccount, handleLogout, handleDeleteTrainer, handleDeleteAccount, startTour, publicProfileUrl, handleShareProfileLink]);
 
   // ── Guards ──
   if (user?.role !== UserRole.TRAINER) {

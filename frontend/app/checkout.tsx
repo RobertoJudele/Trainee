@@ -316,9 +316,41 @@ export default function CheckoutScreen() {
 	const router = useRouter();
 	const [validateIapSubscription] = useValidateIapSubscriptionMutation();
 
-	const { data: entitlementResponse, isLoading: isLoadingEntitlement, refetch: refetchEntitlement } = useGetBillingEntitlementQuery();
+	const onboardingParam = Array.isArray(params.onboarding) ? params.onboarding[0] : params.onboarding;
+	const isOnboarding = onboardingParam === "1";
+
+	// The founding-trainer grant is issued asynchronously after createTrainer
+	// responds, so arriving straight from onboarding can beat its write by a
+	// round trip. Poll briefly rather than leave a founding trainer looking at a
+	// paywall they should not see; `waitingForGrant` caps it so a trainer who
+	// genuinely has no grant stops polling instead of hammering the API.
+	const [waitingForGrant, setWaitingForGrant] = useState(isOnboarding);
+
+	const {
+		data: entitlementResponse,
+		isLoading: isLoadingEntitlement,
+		refetch: refetchEntitlement,
+	} = useGetBillingEntitlementQuery(undefined, {
+		// Without this the cached "not subscribed" from the race above survives
+		// every reopen of this screen.
+		refetchOnMountOrArgChange: true,
+		pollingInterval: waitingForGrant ? 2000 : 0,
+	});
 	const entitlement = entitlementResponse?.data;
 	const isSubscribed = entitlement?.isActive;
+
+	useEffect(() => {
+		if (!waitingForGrant) return;
+		if (isSubscribed) {
+			setWaitingForGrant(false);
+			return;
+		}
+		const timeout = setTimeout(() => setWaitingForGrant(false), 15000);
+		return () => clearTimeout(timeout);
+	}, [waitingForGrant, isSubscribed]);
+	// Free early-adopter grant — no store purchase behind it, so the renewal and
+	// "billed via" wording below would be wrong (and alarming) as-is.
+	const isEarlyAdopter = Boolean(entitlement?.isPromotional);
 
 	const { data: transactionsResponse, isLoading: isLoadingTransactions } = useGetBillingTransactionsQuery(undefined, {
 		skip: !isSubscribed,
@@ -360,7 +392,7 @@ export default function CheckoutScreen() {
 	const getStatusLabel = (status: string) => {
 		switch (status) {
 			case "trial":
-				return t("trialPeriod");
+				return isEarlyAdopter ? t("earlyAdopterStatus") : t("trialPeriod");
 			case "active":
 				return t("activeAutoRenewing");
 			case "canceled":
@@ -441,9 +473,6 @@ export default function CheckoutScreen() {
 	);
 
 	const subscribeLabel = selectedTrialLabel ? t("startFreeTrial") : t("subscribeNow");
-
-	const onboardingParam = Array.isArray(params.onboarding) ? params.onboarding[0] : params.onboarding;
-	const isOnboarding = onboardingParam === "1";
 
 	const skipOnboarding = () => {
 		router.replace("/");
@@ -667,7 +696,9 @@ export default function CheckoutScreen() {
 					productId: selectedProductId,
 					expiresAt: entitlement?.expirationDate || undefined,
 					purchaseToken: `rc-purchase-${Date.now()}`,
-					originalTransactionId: customerInfo.originalAppUserId,
+					// originalAppUserId is the RevenueCat user id, not a transaction id —
+					// sending it wrote the user id into apple_original_transaction_id. The
+					// server reads the real one from RevenueCat, so send nothing.
 				});
 
 				void refetchEntitlement();
@@ -819,7 +850,7 @@ export default function CheckoutScreen() {
 				productId: entitlement.productIdentifier || REVENUECAT_MONTHLY_PRODUCT_ID,
 				expiresAt: entitlement.expirationDate || undefined,
 				purchaseToken: `rc-restore-${Date.now()}`,
-				originalTransactionId: customerInfo.originalAppUserId,
+				// See the purchase path: the app user id is not a transaction id.
 			});
 
 			void refetchEntitlement();
@@ -870,6 +901,15 @@ export default function CheckoutScreen() {
 							</View>
 						</View>
 						
+						{isEarlyAdopter && (
+							<View style={styles.infoBanner}>
+								<Ionicons name="sparkles" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
+								<Text style={styles.infoBannerText}>
+									{t("earlyAdopterBanner").replace("{date}", formatDateString(entitlement?.expiresAt))}
+								</Text>
+							</View>
+						)}
+
 						{showPastDueBanner && (
 							<View style={styles.errorBanner}>
 								<Ionicons name="warning" size={20} color={theme.colors.error} style={{ marginRight: 8 }} />
@@ -916,7 +956,9 @@ export default function CheckoutScreen() {
 
 							<View style={styles.detailsRow}>
 								<Text style={styles.detailsLabel}>
-									{entitlement?.status === "canceled" ? t("expirationDate") : t("nextRenewalDate")}
+									{isEarlyAdopter
+										? t("earlyAdopterFreeUntil")
+										: entitlement?.status === "canceled" ? t("expirationDate") : t("nextRenewalDate")}
 								</Text>
 								<Text style={styles.detailsValue}>
 									{formatDateString(entitlement?.expiresAt)}
@@ -926,23 +968,54 @@ export default function CheckoutScreen() {
 							<View style={styles.detailsRow}>
 								<Text style={styles.detailsLabel}>{t("billedVia")}</Text>
 								<Text style={styles.detailsValue}>
-									{getProviderLabel(entitlement?.source || "none")}
+									{isEarlyAdopter
+										? t("earlyAdopterNoPayment")
+										: getProviderLabel(entitlement?.source || "none")}
 								</Text>
 							</View>
 						</View>
 
+						{/* Early adopters otherwise never see a price until the day their
+						    grant expires and access is already gone. Read-only on purpose:
+						    buying now would start billing immediately and burn the free
+						    months they still have. */}
+						{isEarlyAdopter && packages.length > 0 && (
+							<View style={styles.futurePricing}>
+								<View style={styles.divider} />
+								<Text style={styles.futurePricingTitle}>{t("earlyAdopterPricesTitle")}</Text>
+								{packages.map((pkg) => (
+									<View key={pkg.identifier} style={styles.detailsRow}>
+										<Text style={styles.detailsLabel}>
+											{pkg.product?.title || pkg.identifier}
+										</Text>
+										<Text style={styles.detailsValue}>{pkg.product?.priceString}</Text>
+									</View>
+								))}
+								<Text style={styles.futurePricingNote}>
+									{t("earlyAdopterPricesNote").replace(
+										"{date}",
+										formatDateString(entitlement?.expiresAt)
+									)}
+								</Text>
+							</View>
+						)}
+
 						<SubscriptionBenefits />
 
-						<Pressable
-							style={({ pressed }) => [styles.button, { marginTop: 16 }, pressed && styles.buttonPressed]}
-							onPress={handleManageSubscription}
-							accessible={true}
-							accessibilityRole="button"
-							accessibilityLabel={t("manageSubscription")}
-						>
-							<Ionicons name="open-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
-							<Text style={styles.buttonText}>{t("manageSubscription")}</Text>
-						</Pressable>
+						{/* An early-adopter grant has no store subscription behind it, so
+						    "Manage" would open an empty App Store / Play page. */}
+						{!isEarlyAdopter && (
+							<Pressable
+								style={({ pressed }) => [styles.button, { marginTop: 16 }, pressed && styles.buttonPressed]}
+								onPress={handleManageSubscription}
+								accessible={true}
+								accessibilityRole="button"
+								accessibilityLabel={t("manageSubscription")}
+							>
+								<Ionicons name="open-outline" size={18} color="#ffffff" style={{ marginRight: 6 }} />
+								<Text style={styles.buttonText}>{t("manageSubscription")}</Text>
+							</Pressable>
+						)}
 
 						{isCrossPlatformSubscription && (
 							<View style={styles.infoBanner}>
@@ -1489,6 +1562,22 @@ const styles = StyleSheet.create({
 	},
 	detailsGrid: {
 		marginBottom: 8,
+	},
+	futurePricing: {
+		marginBottom: 4,
+	},
+	futurePricingTitle: {
+		...typography.body2,
+		color: theme.colors.text,
+		fontWeight: "700",
+		marginBottom: 4,
+	},
+	futurePricingNote: {
+		...typography.caption,
+		textTransform: "none",
+		color: theme.colors.textSecondary,
+		lineHeight: 18,
+		marginTop: 8,
 	},
 	detailsRow: {
 		flexDirection: "row",

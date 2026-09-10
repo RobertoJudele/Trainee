@@ -3,25 +3,26 @@
     "name": "Salvio",
     "slug": "frontend",
     "scheme": "trainee",
-    "version": "1.0.0",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": false,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a2e1a"
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "45",
+      "buildNumber": "49",
       "bundleIdentifier": "com.juroctech.frontend",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Salvio needs access to your photo library so you can upload a profile picture and, for trainers, gallery and credential photos.",
-        "NSLocationWhenInUseUsageDescription": "Salvio uses your location to find nearby gyms and trainers.",
-        "NSCameraUsageDescription": "Salvio uses the camera to take a profile picture or trainer gallery photos."
+        "NSCameraUsageDescription": "Salvio uses your camera so you can take a photo for your profile picture and, for trainers, gallery and credential photos.",
+        "NSLocationWhenInUseUsageDescription": "Salvio uses your location to find nearby gyms and trainers."
       },
       "privacyManifests": {
         "NSPrivacyTracking": false,
@@ -118,24 +119,26 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#0a2e1a"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.juroctech.frontend",
-      "versionCode": 1,
+      "versionCode": 19,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBBMx0F8w8skPumcaC0o9LQ9zYHR6qJJ8U"
         }
       },
       "permissions": [
-        "android.permission.CAMERA",
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.READ_MEDIA_IMAGES",
         "android.permission.INTERNET"
+      ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -153,7 +156,8 @@
         "expo-image-picker",
         {
           "photosPermission": "Salvio needs access to your photo library so you can upload a profile picture and, for trainers, gallery and credential photos.",
-          "cameraPermission": "Salvio uses the camera to take a profile picture or trainer gallery photos."
+          "cameraPermission": "Salvio uses your camera so you can take a photo for your profile picture and, for trainers, gallery and credential photos.",
+          "microphonePermission": false
         }
       ],
       [
@@ -167,7 +171,14 @@
           }
         }
       ],
-      "./plugins/withFmtFix"
+      "./plugins/withFmtFix",
+      "expo-apple-authentication",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_REVERSED_IOS_CLIENT_ID"
+        }
+      ]
     ],
     "extra": {
       "router": {},

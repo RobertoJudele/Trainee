@@ -5,6 +5,7 @@ import { UserRole } from "../types/common";
 import { IssueCategory, IssueStatus, IssueTargetType } from "../types/issue";
 import { sendError } from "../utils/response";
 import { BILLING_PLAN_IDS } from "../config/billingPlans";
+import { SOCIAL_PROVIDERS } from "../services/socialAuth";
 
 type SchemaLocation = "body" | "query" | "params";
 
@@ -173,6 +174,9 @@ export const registerValidation = [
   body("phone")
     .notEmpty()
     .withMessage("Phone number is required.")
+    // bail: without it an empty value fails both rules and the client shows
+    // "required" and "invalid format" stacked on top of each other.
+    .bail()
     // Romanian mobile numbers only — deliberate, the service operates in Romania.
     // The message must name the expected format: App Review rejected the app
     // (04b9a669, guideline 2.1(a)) after a generic "invalid" error left the tester
@@ -191,6 +195,48 @@ export const loginValidation = [
     .withMessage("Provide a valid email."),
   body("password").notEmpty().withMessage("Password is required!"),
   strictSchema({ body: ["email", "password"] }),
+];
+
+// Sign in with Google / Apple. Separate arrays rather than extra optional fields
+// on registerValidation, because strictSchema rejects anything not in the list.
+export const socialAuthValidation = [
+  body("provider")
+    .isIn(SOCIAL_PROVIDERS)
+    .withMessage("Unsupported sign-in provider."),
+  body("idToken").isString().notEmpty().withMessage("Sign-in token is required."),
+  // Apple hands the name to the client only on the very first authorization, so
+  // it arrives here rather than inside the token. Absent on every later sign-in.
+  body("firstName").optional().trim().isLength({ max: 50 }),
+  body("lastName").optional().trim().isLength({ max: 50 }),
+  strictSchema({
+    body: ["provider", "idToken", "firstName", "lastName"],
+  }),
+];
+
+export const socialCompleteValidation = [
+  body("pendingToken")
+    .isString()
+    .notEmpty()
+    .withMessage("Sign-in session is required."),
+  body("firstName")
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("First name must be between 2 and 50 charachters long"),
+  body("lastName")
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage("First name must be between 2 and 50 charachters long"),
+  // Same rule and same message as registerValidation - a social signup is still
+  // a Romanian signup, and App Review needs the format named in the error.
+  body("phone")
+    .notEmpty()
+    .withMessage("Phone number is required.")
+    .bail()
+    .isMobilePhone("ro-RO")
+    .withMessage("Enter a Romanian mobile number, for example 0712 345 678."),
+  strictSchema({
+    body: ["pendingToken", "firstName", "lastName", "phone"],
+  }),
 ];
 
 export const forgotPasswordValidation = [
@@ -623,6 +669,29 @@ export const gymAvailabilityValidation = [
   }),
 ];
 
+export const gymStaffRequestValidation = [
+  param("gymId")
+    .isInt({ min: 1 })
+    .withMessage("gymId must be a positive integer."),
+  strictSchema({ params: ["gymId"], body: [], query: [] }),
+];
+
+export const gymStaffReviewValidation = [
+  param("gymId")
+    .isInt({ min: 1 })
+    .withMessage("gymId must be a positive integer."),
+  param("trainerId")
+    .isInt({ min: 1 })
+    .withMessage("trainerId must be a positive integer."),
+  body("approve")
+    .isBoolean()
+    .withMessage("approve must be a boolean."),
+  strictSchema({
+    params: ["gymId", "trainerId"],
+    body: ["approve"],
+  }),
+];
+
 export const createGymValidation = [
   body("name")
     .trim()
@@ -782,6 +851,7 @@ export const trainerSearchValidation = [
       "experienceYears",
       "hourlyRate",
       "sessionRate",
+      "minSessionPrice",
       "reviewCount",
       "createdAt",
       "distance",
@@ -983,6 +1053,13 @@ export const validateIapSubscriptionValidation = [
     .trim()
     .isLength({ max: 500 })
     .withMessage("purchaseToken is invalid."),
+  // expiresAt and originalTransactionId are accepted but deliberately ignored:
+  // validateIapPurchase reads both from RevenueCat's subscriber API instead, so a
+  // client cannot activate itself by claiming an expiry or write an arbitrary
+  // string into appleOriginalTransactionId. They stay in the schema because
+  // strictSchema can run in enforce mode and the shipped builds still send them —
+  // rejecting them here would fail those purchases outright. Drop them once no
+  // supported build sends them.
   body("expiresAt")
     .optional({ nullable: true })
     .custom((value) => {

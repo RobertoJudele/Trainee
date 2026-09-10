@@ -109,3 +109,9 @@ DerivedData/
 
 # Static analysis artifacts
 static_analysis_codeql_1/
+
+# Superpowers brainstorm sessions
+.superpowers/
+
+# Local database dumps (contain real user data)
+server/backups/

@@ -6,6 +6,7 @@ import { Trainer } from "../models/trainer";
 import { User } from "../models/user";
 import { sendError, sendSuccess } from "../utils/response";
 import { AuthenticatedRequest } from "../types/common";
+import { minSessionPriceAttribute } from "../utils/pricing";
 import {
   buildPointFromLatLng,
   isValidLatitude,
@@ -102,11 +103,20 @@ export const getAllGyms = async (req: Request, res: Response) => {
       order,
     });
 
-    // Attach available trainer count to each gym
+    // Attach available trainer count to each gym. Scoped to active
+    // subscriptions so the pin badge matches the list inside the pin.
     const gymIds = gyms.map((g) => g.id);
     const counts = await TrainerGym.findAll({
       where: { gymId: { [Op.in]: gymIds }, isAvailable: true },
       attributes: ["gymId"],
+      include: [
+        {
+          model: Trainer.scope("active"),
+          as: "trainer",
+          attributes: [],
+          required: true,
+        },
+      ],
     });
 
     const countMap = counts.reduce<Record<number, number>>((acc, tg) => {
@@ -164,15 +174,23 @@ export const getGymById = async (req: Request, res: Response) => {
       return;
     }
 
-    // Fetch trainers linked to this gym with their availability
+    // Fetch trainers linked to this gym with their availability.
+    // Ordered by rankingScore (the Bayesian-shrunk rating search sorts by), so
+    // the sequence is deterministic; the client groups approved staff into
+    // their own section from staffStatus.
     const trainerGyms = await TrainerGym.findAll({
       where: { gymId },
       include: [
         {
-          model: Trainer,
+          // Scoped + required so a lapsed subscriber drops out of the pin
+          // entirely, matching what search and recommendations already do.
+          model: Trainer.scope("active"),
+          as: "trainer",
+          required: true,
           attributes: [
             "id", "bio", "experienceYears", "hourlyRate",
             "sessionRate", "totalRating", "reviewCount",
+            minSessionPriceAttribute("trainer"),
           ],
           include: [
             {
@@ -182,6 +200,7 @@ export const getGymById = async (req: Request, res: Response) => {
           ],
         },
       ],
+      order: [[{ model: Trainer, as: "trainer" }, "rankingScore", "DESC"]],
     });
 
     const trainers = trainerGyms.map((tg) => {
@@ -189,6 +208,7 @@ export const getGymById = async (req: Request, res: Response) => {
       return {
         ...trainerJson,
         isAvailableAtGym: tg.isAvailable,
+        staffStatus: tg.staffStatus,
       };
     });
 
@@ -231,6 +251,7 @@ export const getMyGyms = async (req: AuthenticatedRequest, res: Response) => {
     const data = trainerGyms.map((tg) => ({
       ...(tg.gym as any)?.toJSON?.(),
       isAvailable: tg.isAvailable,
+      staffStatus: tg.staffStatus,
       trainerGymId: tg.id,
     }));
 
@@ -332,6 +353,149 @@ export const setGymAvailability = async (
   } catch (error) {
     console.error("setGymAvailability error:", error);
     sendError(res, 500, "Failed to update availability");
+  }
+};
+
+// ─────────────────────────────────────────────
+// POST /gyms/:gymId/staff-request  — trainer asks to be listed as gym staff
+// Grants nothing: an admin reviews it. Only "approved" ever affects ordering,
+// so no cache invalidation is needed here.
+// ─────────────────────────────────────────────
+export const requestGymStaff = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const userId = req.user!.id;
+    const gymId = parseInt(req.params.gymId);
+
+    if (isNaN(gymId)) {
+      sendError(res, 400, "Invalid gym id");
+      return;
+    }
+
+    const trainer = await Trainer.findOne({ where: { userId } });
+    if (!trainer) {
+      sendError(res, 404, "Trainer profile not found");
+      return;
+    }
+
+    const trainerGym = await TrainerGym.findOne({
+      where: { trainerId: trainer.id, gymId },
+    });
+
+    if (!trainerGym) {
+      sendError(res, 404, "You are not registered at this gym");
+      return;
+    }
+
+    // Already pending or approved — nothing to do, and not an error.
+    if (
+      trainerGym.staffStatus === "pending" ||
+      trainerGym.staffStatus === "approved"
+    ) {
+      sendSuccess(res, 200, "Staff request already submitted", trainerGym);
+      return;
+    }
+
+    await trainerGym.update({
+      staffStatus: "pending",
+      staffRequestedAt: new Date(),
+      staffReviewedAt: null,
+      staffReviewedBy: null,
+    });
+
+    sendSuccess(res, 200, "Staff request submitted", trainerGym);
+  } catch (error) {
+    console.error("requestGymStaff error:", error);
+    sendError(res, 500, "Failed to submit staff request");
+  }
+};
+
+// ─────────────────────────────────────────────
+// PATCH /gyms/:gymId/staff-request/:trainerId  — admin approves or rejects
+// ─────────────────────────────────────────────
+export const reviewGymStaff = async (
+  req: AuthenticatedRequest,
+  res: Response
+) => {
+  try {
+    const gymId = parseInt(req.params.gymId);
+    const trainerId = parseInt(req.params.trainerId);
+    const { approve } = req.body as { approve: boolean };
+
+    if (isNaN(gymId) || isNaN(trainerId)) {
+      sendError(res, 400, "Invalid gym or trainer id");
+      return;
+    }
+
+    if (typeof approve !== "boolean") {
+      sendError(res, 400, "approve must be a boolean");
+      return;
+    }
+
+    const trainerGym = await TrainerGym.findOne({ where: { trainerId, gymId } });
+    if (!trainerGym) {
+      sendError(res, 404, "No affiliation between this trainer and gym");
+      return;
+    }
+
+    await trainerGym.update({
+      staffStatus: approve ? "approved" : "rejected",
+      staffReviewedAt: new Date(),
+      staffReviewedBy: req.user!.id,
+    });
+
+    // Staff status changes pin ordering, which the bulk gym cache feeds.
+    invalidateGymCache();
+    sendSuccess(
+      res,
+      200,
+      approve ? "Staff request approved" : "Staff request rejected",
+      trainerGym
+    );
+  } catch (error) {
+    console.error("reviewGymStaff error:", error);
+    sendError(res, 500, "Failed to review staff request");
+  }
+};
+
+// ─────────────────────────────────────────────
+// GET /gyms/staff-requests  — admin queue of pending staff requests
+// ─────────────────────────────────────────────
+export const listGymStaffRequests = async (_req: Request, res: Response) => {
+  try {
+    const pending = await TrainerGym.findAll({
+      where: { staffStatus: "pending" },
+      attributes: ["id", "trainerId", "gymId", "staffRequestedAt"],
+      include: [
+        { model: Gym, attributes: ["name", "city"] },
+        {
+          model: Trainer,
+          attributes: ["id"],
+          include: [{ model: User, attributes: ["firstName", "lastName"] }],
+        },
+      ],
+      order: [["staffRequestedAt", "ASC"]],
+    });
+
+    const data = pending.map((tg) => {
+      const trainerUser = (tg.trainer as any)?.user;
+      return {
+        id: tg.id,
+        trainerId: tg.trainerId,
+        gymId: tg.gymId,
+        staffRequestedAt: tg.staffRequestedAt,
+        gymName: (tg.gym as any)?.name ?? "",
+        gymCity: (tg.gym as any)?.city ?? "",
+        trainerName: `${trainerUser?.firstName ?? ""} ${trainerUser?.lastName ?? ""}`.trim(),
+      };
+    });
+
+    sendSuccess(res, 200, "Staff requests retrieved successfully", data);
+  } catch (error) {
+    console.error("listGymStaffRequests error:", error);
+    sendError(res, 500, "Failed to retrieve staff requests");
   }
 };
 

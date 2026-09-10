@@ -2,6 +2,12 @@ import { beforeAll, afterAll } from "@jest/globals";
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.test" });
 
+// The auth limiter allows 25 requests per 15 minutes per IP from an in-memory
+// store, and every request in a suite comes from the same IP. Without this a
+// suite that exercises signup/login more than 25 times starts asserting against
+// 429s instead of the behaviour under test.
+process.env.RATE_LIMIT_AUTH_MAX = process.env.RATE_LIMIT_AUTH_MAX ?? "100000";
+
 import "reflect-metadata";
 import sequelize from "../db";
 import {

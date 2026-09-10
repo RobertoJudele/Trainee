@@ -5,26 +5,21 @@ import { sendError, sendSuccess } from "../utils/response";
 import { getSequelizeValidationErrors } from "../utils/errors";
 import { Trainer } from "../models/trainer";
 import { Specialization } from "../models/specialization";
-import { Op, FindAttributeOptions, Order, Transaction } from "sequelize";
+import { Op, FindAttributeOptions, Order, Transaction, Utils } from "sequelize";
+import { unaccentILike } from "../utils/search";
+import { minSessionPriceAttribute, minSessionPriceExpression } from "../utils/pricing";
 import { User } from "../models/user";
 import { UserRole } from "../types/common";
 import { S3ImageService } from "../services/s3ImageService";
 import { Sequelize } from "sequelize";
 import "../utils/helper";
-import {
-  DeleteObjectCommand,
-  GetObjectCommand,
-  HeadObjectCommand,
-  PutObjectCommand,
-  ListObjectsV2Command,
-  DeleteObjectsCommand,
-} from "@aws-sdk/client-s3";
-import { s3, S3_CONFIG } from "../config/s3";
 import { TrainerImage } from "../models/trainerImage";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { TrainerGym } from "../models/trainerGym";
 import { Gym } from "../models/gym";
 import { stripe } from "../config/stripe";
+import { makeUniqueSlug, trainerSlugBase } from "../utils/slug";
+import { trainerPublicUrl } from "../utils/publicUrl";
 import { trackTrainerProfileView } from "../services/profileViewTracking";
 import { ProfileViewEvent } from "../models/profileViewEvent";
 import sequelize from "../db";
@@ -45,6 +40,7 @@ import { resolveEntitlement } from "../services/billing/domain";
 import { SystemClock } from "../services/billing/adapters/SystemClock";
 import { isRevenueCatOnlyMode } from "../config/billingMode";
 import { toBillingState } from "../services/billing/trainerBillingState";
+import { billingService } from "../services/billing";
 
 const billingClock = new SystemClock();
 
@@ -93,6 +89,7 @@ interface SearchQuery {
     | "experienceYears"
     | "hourlyRate"
     | "sessionRate"
+    | "minSessionPrice"
     | "reviewCount"
     | "createdAt"
     | "distance";
@@ -330,14 +327,21 @@ export const createTrainer = async (
     await user.save();
     const currentDate = new Date();
     const trialEndsAt = currentDate;
-    const stripeCustomer = await stripe.customers.create({
-      email: user.email,
-      name: `${user.firstName} ${user.lastName}`,
-      metadata: {
-        userId: user.id.toString(), // Pro-tip: Link Stripe back to your DB ID
-      }
-    });
-    const stripeCustomerId = stripeCustomer.id;
+    // In revenuecat_only mode nobody can ever pay through Stripe, so creating a
+    // customer here is an external call on the signup path — one more way signup
+    // can fail — and sends a name and email to a processor that will never bill
+    // them. createStripeSubscription creates one on demand if Stripe is enabled.
+    const stripeCustomerId = isRevenueCatOnlyMode()
+      ? ""
+      : (
+        await stripe.customers.create({
+          email: user.email,
+          name: `${user.firstName} ${user.lastName}`,
+          metadata: {
+            userId: user.id.toString(), // Pro-tip: Link Stripe back to your DB ID
+          },
+        })
+      ).id;
     const stripeSubscriptionId = "";
     const subscriptionStatus = subStatus.TRIAL;
     const currentPeriodEndsAt = null;
@@ -347,8 +351,17 @@ export const createTrainer = async (
       toFiniteNumber(profileData.longitude)
     );
 
+    // Readable identifier for the public page at /t/<slug>. Resolved against the
+    // existing slugs so a second Andrei Popescu becomes andrei-popescu-2, and set
+    // at insert time so a row is never briefly without one.
+    const slug = await makeUniqueSlug(
+      trainerSlugBase(user.firstName, user.lastName, randomUUID()),
+      async (candidate) => (await Trainer.count({ where: { slug: candidate } })) > 0
+    );
+
     const trainer = await Trainer.create({
       userId: userId,
+      slug,
       bio: profileData.bio,
       experienceYears: profileData.experienceYears,
       hourlyRate: profileData.hourlyRate,
@@ -366,6 +379,16 @@ export const createTrainer = async (
       stripeCustomerId,
       stripeSubscriptionId,
       subscriptionStatus,
+    });
+
+    // Founding-trainer free grant. Awaited: trialEndsAt above is already in the
+    // past, so until this writes the grant row the trainer is unentitled and every
+    // endpoint behind the `subscription` middleware answers 402 — which silently
+    // ate the packages the app posts right after signup. Only the local write is
+    // awaited; grantFoundingEntitlement pushes to RevenueCat in the background, so
+    // a slow or down RevenueCat still cannot fail or delay signup.
+    await billingService.grantFoundingEntitlement(userId).catch((grantError) => {
+      console.error("Founding entitlement grant failed", { userId }, grantError);
     });
 
     if (specializationIds && specializationIds.length > 0) {
@@ -439,6 +462,7 @@ export const getTrainer = async (
         "experienceYears",
         "hourlyRate",
         "sessionRate",
+        minSessionPriceAttribute(),
         "locationCity",
         "locationState",
         "locationCountry",
@@ -511,6 +535,8 @@ export const getTrainer = async (
       .map((entry) => (entry.gym as any)?.toJSON?.())
       .filter(Boolean);
 
+    const specializationsMap = await getSpecializationsForTrainers([trainerNumericId]);
+
     const entitlement = resolveTrainerEntitlement(trainer);
     const trainerJson = trainer.toJSON() as any;
     // Split the included images into the two public-facing buckets and drop the
@@ -525,6 +551,7 @@ export const getTrainer = async (
       id: publicId,
       internalId: trainerNumericId,
       availableGyms,
+      specializations: specializationsMap.get(trainerNumericId) ?? [],
       galleryImages,
       credentialImages,
       isActive: entitlement.isActive,
@@ -543,10 +570,24 @@ export const getTrainer = async (
 // account deletion. Order matters: schedule slots FK both the trainer and
 // trainer_working_hours, so they go first. Issues keep their history — only the
 // trainer link is nulled.
+/**
+ * Deletes a trainer profile and everything hanging off it, inside the caller's
+ * transaction. Returns the gallery/credential image URLs it removed rows for, so
+ * the caller can purge the objects from storage *after* the transaction commits
+ * — an object deleted inside the transaction would be gone for good if the
+ * transaction then rolled back.
+ */
 export const cascadeDeleteTrainer = async (
   trainerId: number,
   t: Transaction
-) => {
+): Promise<string[]> => {
+  const images = await TrainerImage.findAll({
+    where: { trainerId },
+    attributes: ["imageUrl"],
+    transaction: t,
+  });
+  const imageUrls = images.map((i) => i.imageUrl);
+
   await TrainerScheduleSlot.destroy({ where: { trainerId }, transaction: t });
   await TrainerWorkingHour.destroy({ where: { trainerId }, transaction: t });
   await TrainerBlockedDate.destroy({ where: { trainerId }, transaction: t });
@@ -562,6 +603,8 @@ export const cascadeDeleteTrainer = async (
     { where: { trainerId }, transaction: t }
   );
   await Trainer.destroy({ where: { id: trainerId }, transaction: t });
+
+  return imageUrls;
 };
 
 export const deleteTrainer = async (req: Request, res: Response) => {
@@ -580,38 +623,20 @@ export const deleteTrainer = async (req: Request, res: Response) => {
       sendError(res, 404, "No trainer found");
       return;
     }
-    // Best-effort: clear the trainer's profile pictures from S3 before dropping the row.
-    const profilePictureUrl = user.profileImageUrl;
-    if (profilePictureUrl) {
-      const listResponse = await s3.send(
-        new ListObjectsV2Command({
-          Bucket: S3_CONFIG.bucket,
-          Prefix: `profilePicture/${userId}/`,
-        })
-      );
-      const objectsToDelete = (listResponse.Contents ?? []).map((obj) => ({
-        Key: obj.Key!,
-      }));
-      if (objectsToDelete.length > 0) {
-        const deleteResponse = await s3.send(
-          new DeleteObjectsCommand({
-            Bucket: S3_CONFIG.bucket,
-            Delete: { Objects: objectsToDelete },
-          })
-        );
-        if (deleteResponse.Errors && deleteResponse.Errors.length > 0) {
-          console.warn("Some files failed to delete:", deleteResponse.Errors);
-        }
-      }
-    }
-
     // Clear every row referencing this trainer, then the profile, in one transaction
     // so a mid-way failure can't leave the trainer half-deleted.
+    let imageUrls: string[] = [];
     await sequelize.transaction(async (t) => {
-      await cascadeDeleteTrainer(trainer.id, t);
+      imageUrls = await cascadeDeleteTrainer(trainer.id, t);
       user.role = UserRole.CLIENT;
       await user.save({ transaction: t });
     });
+
+    // Only after the transaction commits, so a rollback can't leave the rows
+    // intact while the objects are already gone. The account survives here, so
+    // the profile picture is deliberately left alone — only trainer gallery and
+    // credential images go.
+    await S3ImageService.deleteImagesByUrl(imageUrls);
 
     sendSuccess(res, 200, "Trainer deleted succesfully");
   } catch (error: unknown) {
@@ -790,6 +815,11 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
       ...(trainer.toJSON() as any),
       isActive: entitlement.isActive,
       entitlement,
+      // Assembled here, not in the app: the app knows the API host, not the
+      // public website's, and building it client-side would freeze the domain
+      // into a released build. Null until PUBLIC_WEB_URL is set, which the app
+      // treats as "no link to share yet".
+      publicProfileUrl: trainerPublicUrl(trainer.slug),
     };
 
     sendSuccess(res, 200, "Trainer profile retrieved successfully", responsePayload);
@@ -890,13 +920,22 @@ export const searchTrainers = async (
       }
     };
 
+    // Location filters — diacritic-insensitive, so "bucuresti" finds "București".
+    const applyLocationFilters = (whereClause: any): void => {
+      const conditions: Utils.Where[] = [];
+      if (city) conditions.push(unaccentILike('"Trainer"."location_city"', city));
+      if (state) conditions.push(unaccentILike('"Trainer"."location_state"', state));
+      if (country) conditions.push(unaccentILike('"Trainer"."location_country"', country));
+      if (conditions.length === 0) return;
+
+      const existingAnd = Array.isArray(whereClause[Op.and]) ? whereClause[Op.and] : [];
+      whereClause[Op.and] = [...existingAnd, ...conditions];
+    };
+
     if (isAvailable === "true") trainerWhere.isAvailable = true;
     if (isFeatured === "true") trainerWhere.isFeatured = true;
 
-    // Location filters
-    if (city) trainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
-    if (state) trainerWhere.locationState = { [Op.iLike]: `%${state}%` };
-    if (country) trainerWhere.locationCountry = { [Op.iLike]: `%${country}%` };
+    applyLocationFilters(trainerWhere);
 
     // Rate filters
     if (minRate || maxRate) {
@@ -920,17 +959,21 @@ export const searchTrainers = async (
 
     applyGeoFilters(trainerWhere);
 
-    // Text search — bio on trainer, name on user.
+    // Text search — bio and city/state on trainer, name on user. City is in here and
+    // not just behind the City filter field because typing a place name into the search
+    // bar is the obvious way to look for trainers there.
     // NOTE: publicId is a UUID column; Postgres has no ILIKE operator for uuid
     // (operator does not exist: uuid ~~*), so we must NOT match it with iLike.
     if (q) {
       const normalizedQuery = String(q).trim();
       trainerWhere[Op.or] = [
-        { bio: { [Op.iLike]: `%${normalizedQuery}%` } },
+        unaccentILike('"Trainer"."bio"', normalizedQuery),
+        unaccentILike('"Trainer"."location_city"', normalizedQuery),
+        unaccentILike('"Trainer"."location_state"', normalizedQuery),
       ];
       userWhere[Op.or] = [
-        { firstName: { [Op.iLike]: `%${normalizedQuery}%` } },
-        { lastName: { [Op.iLike]: `%${normalizedQuery}%` } },
+        unaccentILike('"User"."first_name"', normalizedQuery),
+        unaccentILike('"User"."last_name"', normalizedQuery),
       ];
     }
 
@@ -941,6 +984,7 @@ export const searchTrainers = async (
       "experienceYears",
       "hourlyRate",
       "sessionRate",
+      "minSessionPrice",
       "reviewCount",
       "createdAt",
       "distance",
@@ -1040,9 +1084,7 @@ export const searchTrainers = async (
       // Re-apply non-text filters
       if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
       if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
-      if (city) finalTrainerWhere.locationCity = { [Op.iLike]: `%${city}%` };
-      if (state) finalTrainerWhere.locationState = { [Op.iLike]: `%${state}%` };
-      if (country) finalTrainerWhere.locationCountry = { [Op.iLike]: `%${country}%` };
+      applyLocationFilters(finalTrainerWhere);
       if (minRate || maxRate) {
         const rateField = rateType === "hourly" ? "hourlyRate" : "sessionRate";
         finalTrainerWhere[rateField] = {};
@@ -1079,19 +1121,34 @@ export const searchTrainers = async (
       "profileViews",
       "totalRating",
       "reviewCount",
+      // Selected so the ORDER BY still resolves once pagination wraps the rows in a
+      // derived table — same reason minSessionPrice orders by its alias below.
+      "rankingScore",
       "createdAt",
       "updatedAt",
+      minSessionPriceAttribute(),
     ];
 
     if (distanceExpression) {
       trainerAttributes.push([Sequelize.literal(distanceExpression), "distanceMeters"]);
     }
 
-    const resolvedSortBy = safeSortBy === "distance" && !distanceExpression ? "totalRating" : safeSortBy;
+    // "totalRating" stays the public sort name so the app keeps sending it, but we
+    // order by the shrunk score: raw mean ranking hands the top of the list to any
+    // new profile with three 5-star reviews. Display still uses totalRating.
+    const rankColumn = safeSortBy === "totalRating" ? "rankingScore" : safeSortBy;
+    const resolvedSortBy = rankColumn === "distance" && !distanceExpression ? "rankingScore" : rankColumn;
     const orderClause: Order =
       resolvedSortBy === "distance" && distanceExpression
-        ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["totalRating", "DESC"]]
-        : [[resolvedSortBy, safeSortOrder]];
+        ? [[Sequelize.literal(distanceExpression), safeSortOrder], ["rankingScore", "DESC"]]
+        : resolvedSortBy === "minSessionPrice"
+          // Not a real column, so order by the SELECT alias rather than repeating the
+          // expression: pagination wraps the rows in a derived table whose columns are
+          // already aliased to camelCase, and "Trainer"."session_rate" does not exist
+          // out there. Trainers with neither packages nor a session rate come out NULL,
+          // which Postgres sorts last on ASC, so priceless profiles don't head the list.
+          ? [[Sequelize.literal('"minSessionPrice"'), safeSortOrder], ["rankingScore", "DESC"]]
+          : [[resolvedSortBy, safeSortOrder]];
 
     const { count, rows } = await Trainer.scope("active").findAndCountAll({
       where: finalTrainerWhere,
@@ -1130,6 +1187,7 @@ export const searchTrainers = async (
         experienceYears: json.experienceYears,
         hourlyRate: json.hourlyRate,
         sessionRate: json.sessionRate,
+        minSessionPrice: json.minSessionPrice,
         locationCity: json.locationCity,
         locationState: json.locationState,
         locationCountry: json.locationCountry,

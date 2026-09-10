@@ -14,10 +14,24 @@ import { StatusBar } from "expo-status-bar";
 import { TourProvider } from "../src/components/onboarding/TourContext";
 import CoachMark from "../src/components/onboarding/CoachMark";
 import TourGate from "../src/components/onboarding/TourGate";
-import { LanguageProvider } from "../src/lib/i18n/LanguageContext";
+import { LanguageProvider, useLanguage } from "../src/lib/i18n/LanguageContext";
 import UpdateGate from "../src/components/UpdateGate";
+import * as Notifications from "expo-notifications";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
+
+// Without a handler, expo-notifications hands a push to JS but displays nothing
+// while the app is in the foreground - which is exactly the state a phone is in
+// while someone is testing. Registered at module scope so it is in place before
+// any notification can arrive.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 let hasConfiguredRevenueCat = false;
 
@@ -119,6 +133,56 @@ function HeaderBackButton({ tintColor }: { tintColor?: string }) {
   );
 }
 
+/**
+ * The navigator lives in its own component so it can read the language context —
+ * RootLayout renders LanguageProvider, so it cannot call useLanguage() itself, which
+ * is why every header title used to be a hardcoded English string.
+ */
+function LocalizedStack() {
+  const { t } = useLanguage();
+
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.primary },
+        headerTintColor: "#fff",
+        headerTitleStyle: { fontWeight: "bold" },
+        headerShadowVisible: false,
+        animation: "slide_from_right",
+        animationDuration: 280,
+        contentStyle: { backgroundColor: theme.colors.background },
+        headerLeft: ({ canGoBack, tintColor }) =>
+          canGoBack === false ? null : <HeaderBackButton tintColor={tintColor} />,
+      }}
+    >
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+      <Stack.Screen name="TrainerProfile" options={{ headerShown: false }} />
+      <Stack.Screen name="UserProfile" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="signup" options={{ headerShown: false }} />
+      <Stack.Screen name="search" options={{ headerShown: false }} />
+      <Stack.Screen name="create-trainer" options={{ headerShown: false }} />
+      <Stack.Screen name="map" options={{ headerShown: false }} />
+      <Stack.Screen name="trainers/[id]" options={{ title: t("trainerDetailsTitle"), headerBackButtonDisplayMode: "minimal" }} />
+      <Stack.Screen name="my-gyms" options={{ title: t("myGyms") }} />
+      <Stack.Screen name="checkout" options={{ title: t("checkoutTitle") }} />
+      <Stack.Screen name="report-issue" options={{ title: t("reportIssue") }} />
+      <Stack.Screen name="request-gym" options={{ title: t("requestGymTitle") }} />
+      <Stack.Screen name="admin-issues" options={{ title: t("adminIssues") }} />
+      <Stack.Screen name="trainer-schedule" options={{ headerShown: false }} />
+      <Stack.Screen name="trainer-schedule/[date]" options={{ headerShown: false }} />
+      <Stack.Screen name="trainer-schedule/week-snapshot" options={{ title: t("weekSnapshotTitle") }} />
+      <Stack.Screen name="trainer-analytics" options={{ title: t("trainerAnalytics") }} />
+      <Stack.Screen name="my-schedule" options={{ headerShown: false }} />
+      <Stack.Screen name="preferences" options={{ headerShown: false }} />
+      <Stack.Screen name="legal" options={{ title: t("legalAndPolicies") }} />
+      <Stack.Screen name="forgot-password" options={{ title: t("forgotPassword") }} />
+      <Stack.Screen name="reset-password" options={{ title: t("resetPassword") }} />
+    </Stack>
+  );
+}
+
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
 
@@ -135,44 +199,7 @@ export default function RootLayout() {
         <RevenueCatIdentityBridge />
         <StatusBar style="light" />
         <UpdateGate>
-        <Stack
-          screenOptions={{
-            headerStyle: { backgroundColor: theme.colors.primary },
-            headerTintColor: "#fff",
-            headerTitleStyle: { fontWeight: "bold" },
-            headerShadowVisible: false,
-            animation: "slide_from_right",
-            animationDuration: 280,
-            contentStyle: { backgroundColor: theme.colors.background },
-            headerLeft: ({ canGoBack, tintColor }) =>
-              canGoBack === false ? null : <HeaderBackButton tintColor={tintColor} />,
-          }}
-        >
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="TrainerProfile" options={{ headerShown: false }} />
-          <Stack.Screen name="UserProfile" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="signup" options={{ headerShown: false }} />
-          <Stack.Screen name="search" options={{ headerShown: false }} />
-          <Stack.Screen name="create-trainer" options={{ headerShown: false }} />
-          <Stack.Screen name="map" options={{ headerShown: false }} />
-          <Stack.Screen name="trainers/[id]" options={{ title: "Trainer Details", headerBackButtonDisplayMode: "minimal" }} />
-          <Stack.Screen name="my-gyms" options={{ title: "My Gyms" }} />
-          <Stack.Screen name="checkout" options={{ title: "Checkout" }} />
-          <Stack.Screen name="report-issue" options={{ title: "Report Issue" }} />
-          <Stack.Screen name="request-gym" options={{ title: "Request a Gym" }} />
-          <Stack.Screen name="admin-issues" options={{ title: "Admin Issues" }} />
-          <Stack.Screen name="trainer-schedule" options={{ headerShown: false }} />
-          <Stack.Screen name="trainer-schedule/[date]" options={{ headerShown: false }} />
-          <Stack.Screen name="trainer-schedule/week-snapshot" options={{ title: "Week Snapshot" }} />
-          <Stack.Screen name="trainer-analytics" options={{ title: "Trainer Analytics" }} />
-          <Stack.Screen name="my-schedule" options={{ headerShown: false }} />
-          <Stack.Screen name="preferences" options={{ headerShown: false }} />
-          <Stack.Screen name="legal" options={{ title: "Legal & Policies" }} />
-          <Stack.Screen name="forgot-password" options={{ title: "Forgot Password" }} />
-          <Stack.Screen name="reset-password" options={{ title: "Reset Password" }} />
-        </Stack>
+        <LocalizedStack />
         </UpdateGate>
         <CoachMark />
         <TourGate />

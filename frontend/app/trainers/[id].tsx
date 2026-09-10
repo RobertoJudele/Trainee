@@ -23,6 +23,7 @@ import {
   useDeleteReviewMutation,
   Review,
 } from "../../features/review/reviewApiSlice";
+import { useGetMyTrainersQuery } from "../../features/trainer/trainerInviteApiSlice";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import {
   useGetBlockedUsersQuery,
@@ -36,6 +37,14 @@ import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
 import { getApiErrorMessage } from "../../src/lib/errors";
+import { formatFromPerSession } from "../../src/lib/price";
+// Extracted so they can be unit-tested: the raw-digit fallback used to turn any
+// URL with enough digits in it (a Facebook profile id, say) into a WhatsApp
+// number. See src/lib/__tests__/contactLinks.test.ts.
+import {
+  normalizeSocialUrl,
+  getWhatsAppContactUrls,
+} from "../../src/lib/contactLinks";
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
@@ -64,102 +73,6 @@ const toNumber = (value?: string) => {
   return Number.isFinite(parsed) ? parsed : undefined;
 };
 
-const normalizeSocialUrl = (value?: string | null): string | null => {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const normalized = /^https?:\/\//i.test(trimmed)
-    ? trimmed
-    : `https://${trimmed}`;
-
-  try {
-    new URL(normalized);
-    return normalized;
-  } catch {
-    return null;
-  }
-};
-
-const normalizeWhatsAppPhoneDigits = (value: string): string | null => {
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  const normalizedPrefix = trimmed.startsWith("00")
-    ? `+${trimmed.slice(2)}`
-    : trimmed;
-
-  const digits = normalizedPrefix.replace(/\D/g, "");
-  if (!digits || digits.length < 7 || digits.length > 15) {
-    return null;
-  }
-
-  if (!/^[1-9]/.test(digits)) {
-    return null;
-  }
-
-  return digits;
-};
-
-const getWhatsAppContactUrls = (
-  value?: string | null
-): { appUrl: string; webUrl: string } | null => {
-  if (!value) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (!trimmed) {
-    return null;
-  }
-
-  let phoneDigits = normalizeWhatsAppPhoneDigits(trimmed);
-
-  if (!phoneDigits) {
-    const withProtocol = /^https?:\/\//i.test(trimmed)
-      ? trimmed
-      : `https://${trimmed}`;
-
-    try {
-      const parsed = new URL(withProtocol);
-      const hostname = parsed.hostname.toLowerCase();
-      const fromQuery = parsed.searchParams.get("phone") ?? "";
-      const fromPath = parsed.pathname.split("/").filter(Boolean)[0] ?? "";
-
-      let phoneCandidate = "";
-      if (hostname === "wa.me" || hostname.endsWith(".wa.me")) {
-        phoneCandidate = fromPath;
-      } else if (
-        hostname === "api.whatsapp.com" ||
-        hostname === "whatsapp.com" ||
-        hostname === "www.whatsapp.com"
-      ) {
-        phoneCandidate = fromQuery;
-      }
-
-      phoneDigits = normalizeWhatsAppPhoneDigits(phoneCandidate);
-    } catch {
-      phoneDigits = null;
-    }
-  }
-
-  if (!phoneDigits) {
-    return null;
-  }
-
-  return {
-    appUrl: `whatsapp://send?phone=${phoneDigits}`,
-    webUrl: `https://wa.me/${phoneDigits}`,
-  };
-};
-
 type ReviewFormMode = "idle" | "write" | "edit";
 
 export default function TrainerDetailsScreen() {
@@ -174,7 +87,6 @@ export default function TrainerDetailsScreen() {
   const {
     data: trainer,
     isLoading,
-    isFetching,
     isError,
     refetch,
   } = useGetTrainerByIdQuery(trainerPublicId, {
@@ -220,8 +132,24 @@ export default function TrainerDetailsScreen() {
   const [formText, setFormText] = useState("");
 
   const myReview = reviews.find((r) => r.client?.id === currentUser?.id);
+
+  // Reviews are limited to the trainer's own clients (server enforces it too, with a
+  // 403). Checking here keeps the button from appearing only to fail on submit.
+  const { data: myTrainersResp } = useGetMyTrainersQuery(undefined, {
+    skip: currentUser?.role !== UserRole.CLIENT,
+  });
+  const isMyTrainer = (myTrainersResp?.data ?? []).some(
+    (entry) => entry.trainerId === trainerInternalId
+  );
+
   const canWriteReview =
     currentUser?.role === UserRole.CLIENT &&
+    isMyTrainer &&
+    !myReview &&
+    reviewMode === "idle";
+  const showReviewGateHint =
+    currentUser?.role === UserRole.CLIENT &&
+    !isMyTrainer &&
     !myReview &&
     reviewMode === "idle";
 
@@ -273,7 +201,12 @@ export default function TrainerDetailsScreen() {
       setReviewMode("idle");
       setEditingReviewId(null);
     } catch (err: unknown) {
-      Alert.alert(t("error"), getApiErrorMessage(err, t("couldNotSaveReview")));
+      // 403 is the "not your trainer" gate; server messages are English-only.
+      const message =
+        (err as { status?: number })?.status === 403
+          ? t("reviewRequiresSession")
+          : getApiErrorMessage(err, t("couldNotSaveReview"));
+      Alert.alert(t("error"), message);
     }
   }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview, t]);
 
@@ -360,7 +293,14 @@ export default function TrainerDetailsScreen() {
     trainer?.experienceYears ?? toNumber(params.experienceYears) ?? 0;
   const hourlyRate = trainer?.hourlyRate ?? toNumber(params.hourlyRate);
   const sessionRate = trainer?.sessionRate ?? toNumber(params.sessionRate);
+  // Match the "from" price the card that led here advertised: cheapest per-session
+  // across packages, falling back to the flat session rate.
+  const minSessionPriceLabel = formatFromPerSession(
+    trainer?.minSessionPrice ?? sessionRate,
+    t
+  );
   const bio = trainer?.bio ?? params.bio ?? t("noBioAvailable");
+  const specializations = trainer?.specializations ?? [];
   const locationText = [
     trainer?.locationCity,
     trainer?.locationState,
@@ -440,7 +380,9 @@ export default function TrainerDetailsScreen() {
     );
   }
 
-  if (isLoading || isFetching) {
+  // isLoading only: a refetch keeps the cached data, so there is no reason to replace
+  // the whole screen with a spinner once something is already on it.
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -529,16 +471,29 @@ export default function TrainerDetailsScreen() {
         <Text style={styles.sectionText}>{bio}</Text>
       </View>
 
+      {specializations.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("specializations")}</Text>
+          <View style={styles.specGrid}>
+            {specializations.map((spec) => (
+              <View key={spec.id} style={styles.specChip}>
+                <Text style={styles.specChipText}>{spec.name}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t("experienceAndRates")}</Text>
         <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>{t("experience")}</Text>
           <Text style={styles.infoValue}>{experienceYears} {t("years")}</Text>
         </View>
-        {sessionRate && (
+        {minSessionPriceLabel && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-            <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(sessionRate))}</Text>
+            <Text style={styles.infoValue}>{minSessionPriceLabel}</Text>
           </View>
         )}
       </View>
@@ -748,17 +703,11 @@ export default function TrainerDetailsScreen() {
             <Text style={styles.writeReviewBtnText}>{t("writeReview")}</Text>
           </Pressable>
         )}
-      </View>
 
-      <TouchableOpacity
-        style={styles.primaryButton}
-        onPress={() => router.back()}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={t("backToMap")}
-      >
-        <Text style={styles.primaryButtonText}>{t("backToMap")}</Text>
-      </TouchableOpacity>
+        {showReviewGateHint && (
+          <Text style={styles.sectionText}>{t("reviewRequiresSession")}</Text>
+        )}
+      </View>
 
       {contactOptions.length > 0 && (
         <View style={styles.socialRow}>
@@ -920,6 +869,16 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: theme.colors.text,
   },
+  specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  specChip: {
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: `${theme.colors.primary}15`,
+    borderWidth: 1,
+    borderColor: `${theme.colors.primary}40`,
+  },
+  specChipText: { ...typography.caption, color: theme.colors.primary, fontWeight: "600" },
   sectionText: {
     ...typography.body2,
     color: theme.colors.textSecondary,

@@ -62,6 +62,47 @@ interface ResetPasswordRequest {
   newPassword: string;
 }
 
+export type SocialProvider = "google" | "apple";
+
+interface SocialAuthRequest {
+  provider: SocialProvider;
+  idToken: string;
+  firstName?: string;
+  lastName?: string;
+}
+
+/**
+ * A first-time social sign-in cannot finish on its own: Salvio requires a phone
+ * number and neither Google nor Apple supplies one. The server answers with
+ * needsProfile plus a short-lived pendingToken instead of a session, and no
+ * account exists until completeSocialSignup succeeds.
+ */
+interface SocialAuthResponse {
+  data:
+    | { token: string; refreshToken: string; user: UserAttributes }
+    | {
+        needsProfile: true;
+        pendingToken: string;
+        email: string;
+        firstName: string;
+        lastName: string;
+      };
+  message: string;
+  success: boolean;
+}
+
+export const needsProfile = (
+  data: SocialAuthResponse["data"]
+): data is Extract<SocialAuthResponse["data"], { needsProfile: true }> =>
+  "needsProfile" in data;
+
+interface CompleteSocialSignupRequest {
+  pendingToken: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
 export const authApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     login: builder.mutation<LoginResponse, LoginRequest>({
@@ -92,6 +133,23 @@ export const authApiSlice = apiSlice.injectEndpoints({
         body,
       }),
     }),
+    socialAuth: builder.mutation<SocialAuthResponse, SocialAuthRequest>({
+      query: (body) => ({
+        url: "/auth/social",
+        method: "POST",
+        body,
+      }),
+    }),
+    completeSocialSignup: builder.mutation<
+      SignupResponse,
+      CompleteSocialSignupRequest
+    >({
+      query: (body) => ({
+        url: "/auth/social/complete",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -100,4 +158,6 @@ export const {
   useSignupMutation,
   useForgotPasswordMutation,
   useResetPasswordMutation,
+  useSocialAuthMutation,
+  useCompleteSocialSignupMutation,
 } = authApiSlice;

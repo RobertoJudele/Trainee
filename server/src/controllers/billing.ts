@@ -75,6 +75,23 @@ export const getBillingEntitlement = async (req: AuthenticatedRequest, res: Resp
   }
 };
 
+/**
+ * The founding-trainer promo. Deliberately NOT routed through the entitlement
+ * handler: that one calls requireBillingState, which throws NOT_TRAINER for
+ * anyone without a trainer profile — and the people who need to see this offer
+ * are precisely the ones who have not become trainers yet.
+ *
+ * Returns config only, no user data.
+ */
+export const getFoundingOffer = async (_req: AuthenticatedRequest, res: Response) => {
+  try {
+    sendSuccess(res, 200, "Founding offer retrieved", billingService.getFoundingGrantOffer());
+  } catch (error) {
+    console.error("Founding offer retrieval failed:", error);
+    sendError(res, 500, "Could not retrieve the founding offer");
+  }
+};
+
 export const validateIapSubscription = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;

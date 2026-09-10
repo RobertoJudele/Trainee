@@ -1,0 +1,1037 @@
+<title>Lansarea Salvio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=JetBrains+Mono:wght@500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+  :root {
+    --ground: #F5F8F6;
+    --surface: #FFFFFF;
+    --surface-2: #EAF1EC;
+    --ink: #0A2E1A;
+    --ink-2: #3B5749;
+    --muted: #6C8377;
+    --line: #D6E2DA;
+    --line-strong: #A8BFB2;
+    --accent: #10B981;
+    --accent-ink: #067A55;
+    --accent-soft: #E1F5EC;
+    --urgent: #C2620A;
+    --urgent-soft: #FBEEDA;
+    --shot: #4B5FA8;
+    --shot-soft: #E6EAF7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #071710;
+      --surface: #0D2317;
+      --surface-2: #12301F;
+      --ink: #E7F2EA;
+      --ink-2: #B6CBBD;
+      --muted: #859C8D;
+      --line: #1D4230;
+      --line-strong: #2E5C43;
+      --accent: #34D399;
+      --accent-ink: #52DFAB;
+      --accent-soft: #0F3524;
+      --urgent: #F0A73C;
+      --urgent-soft: #3A2911;
+      --shot: #93A5E0;
+      --shot-soft: #1B2444;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #071710;
+    --surface: #0D2317;
+    --surface-2: #12301F;
+    --ink: #E7F2EA;
+    --ink-2: #B6CBBD;
+    --muted: #859C8D;
+    --line: #1D4230;
+    --line-strong: #2E5C43;
+    --accent: #34D399;
+    --accent-ink: #52DFAB;
+    --accent-soft: #0F3524;
+    --urgent: #F0A73C;
+    --urgent-soft: #3A2911;
+    --shot: #93A5E0;
+    --shot-soft: #1B2444;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 17px;
+    line-height: 1.6;
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.5rem;
+  }
+
+  h1, h2, h3, h4, .ui { font-family: Archivo, "Helvetica Neue", Arial, sans-serif; }
+
+  h1 {
+    font-size: clamp(2.1rem, 6vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.02;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h2 {
+    font-size: clamp(1.3rem, 3.4vw, 1.65rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 0;
+  }
+  p { margin: 0; }
+  a { color: var(--accent-ink); }
+
+  .eyebrow {
+    font-family: Archivo, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .mono {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  header { display: flex; flex-direction: column; gap: 1.5rem; }
+
+  .lede {
+    font-size: 1.15rem;
+    color: var(--ink-2);
+    max-width: 40rem;
+    line-height: 1.55;
+  }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .stat {
+    background: var(--surface);
+    padding: 1rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .stat .num {
+    font-family: "JetBrains Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .stat .num.hot { color: var(--urgent); }
+  .stat .lbl {
+    font-family: Archivo, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .rule-box {
+    border-left: 3px solid var(--accent);
+    background: var(--accent-soft);
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .rule-box strong { font-weight: 600; }
+
+  section { display: flex; flex-direction: column; gap: 1.5rem; }
+  .sec-head { display: flex; flex-direction: column; gap: 0.4rem; }
+  .sec-head p { color: var(--ink-2); max-width: 42rem; }
+
+  .cadence {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .cad {
+    background: var(--surface);
+    padding: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+  .cad .when {
+    font-family: Archivo, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent-ink);
+  }
+  .cad p { font-size: 0.94rem; color: var(--ink-2); line-height: 1.5; }
+
+  .weeks { display: flex; flex-direction: column; gap: 2.75rem; }
+
+  .week { display: flex; flex-direction: column; gap: 0; }
+
+  .week-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.5rem 1rem;
+    padding-bottom: 0.7rem;
+    border-bottom: 2px solid var(--ink);
+  }
+  .week-head .dates {
+    font-family: "JetBrains Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: -0.01em;
+  }
+  .week-head .theme {
+    font-family: Archivo, sans-serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .week-head .n {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent-ink);
+    letter-spacing: 0.04em;
+  }
+  .week-note {
+    font-size: 0.95rem;
+    color: var(--ink-2);
+    padding: 0.85rem 0 0.2rem;
+    line-height: 1.5;
+  }
+
+  .days { display: flex; flex-direction: column; }
+
+  .day {
+    display: grid;
+    grid-template-columns: 6.5rem 1fr;
+    gap: 0 1.25rem;
+    padding: 0.95rem 0;
+    border-bottom: 1px solid var(--line);
+    align-items: start;
+  }
+  .day.rest { opacity: 0.72; }
+
+  .day .date {
+    font-family: "JetBrains Mono", monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink-2);
+    line-height: 1.5;
+    letter-spacing: -0.02em;
+    padding-top: 0.1rem;
+  }
+  .day .date span {
+    display: block;
+    font-weight: 500;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .day .body { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+  .day .title {
+    font-family: Archivo, sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.012em;
+    line-height: 1.3;
+  }
+  .day .title .ref {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--accent-ink);
+    margin-right: 0.4rem;
+  }
+  .day .sub { font-size: 0.93rem; color: var(--ink-2); line-height: 1.5; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.1rem; }
+  .tag {
+    font-family: Archivo, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.45rem;
+    background: var(--surface-2);
+    color: var(--ink-2);
+    border: 1px solid var(--line);
+  }
+  .tag.post { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+  .tag.film { background: var(--shot-soft); color: var(--shot); border-color: transparent; }
+  .tag.hot  { background: var(--urgent-soft); color: var(--urgent); border-color: transparent; }
+
+  .pillar { display: flex; flex-direction: column; gap: 0.9rem; }
+  .pillar-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.7rem;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 0.4rem;
+  }
+  .bank-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+  .card {
+    background: var(--surface);
+    padding: 0.95rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+  .card .id {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--accent-ink);
+    letter-spacing: 0.04em;
+  }
+  .card h4 {
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: -0.012em;
+    line-height: 1.25;
+    margin: 0;
+  }
+  .card p { font-size: 0.89rem; color: var(--ink-2); line-height: 1.45; }
+
+  .pillars { display: flex; flex-direction: column; gap: 2rem; }
+
+  ul.plain { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 0.65rem; }
+  ul.plain li {
+    padding-left: 1.4rem;
+    position: relative;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+  ul.plain li::before {
+    content: "";
+    position: absolute;
+    left: 0.15rem;
+    top: 0.72em;
+    width: 0.5rem;
+    height: 1px;
+    background: var(--line-strong);
+  }
+  ul.plain li strong { color: var(--ink); font-weight: 600; }
+
+  ul.no li::before { background: var(--urgent); height: 2px; top: 0.68em; }
+
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--line); }
+  table { border-collapse: collapse; width: 100%; min-width: 32rem; background: var(--surface); }
+  th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    font-family: Archivo, sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface-2);
+  }
+  td { font-size: 0.94rem; color: var(--ink-2); line-height: 1.45; }
+  td:first-child { color: var(--ink); font-weight: 600; font-family: Archivo, sans-serif; font-size: 0.92rem; }
+  tr:last-child td { border-bottom: none; }
+
+  .closer {
+    border-top: 2px solid var(--ink);
+    padding-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+  }
+  .closer p { color: var(--ink-2); max-width: 44rem; }
+  .closer p.punch {
+    font-family: Archivo, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    line-height: 1.35;
+    text-wrap: balance;
+  }
+
+  @media (max-width: 34rem) {
+    body { font-size: 16px; }
+    .wrap { padding: 1.75rem 1rem 4rem; gap: 2.75rem; }
+    .day { grid-template-columns: 1fr; gap: 0.45rem; }
+    .day .date { display: flex; gap: 0.5rem; align-items: baseline; padding-top: 0; }
+    .day .date span { display: inline; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Plan de conținut &middot; Cluj-Napoca</div>
+    <h1>35 de zile până la 30 septembrie</h1>
+    <p class="lede">
+      Calendar de postări pentru lansarea Salvio, de mâine până la termenul ofertei de fondator.
+      Un singur obiectiv: destui antrenori din Cluj cât să existe o piață. Restul e zgomot.
+    </p>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="num hot mono" id="zile">35</div>
+        <div class="lbl">zile rămase</div>
+      </div>
+      <div class="stat">
+        <div class="num mono">30</div>
+        <div class="lbl">antrenori activi</div>
+      </div>
+      <div class="stat">
+        <div class="num mono">300</div>
+        <div class="lbl">clienți înregistrați</div>
+      </div>
+      <div class="stat">
+        <div class="num mono">26</div>
+        <div class="lbl">reeluri în bancă</div>
+      </div>
+    </div>
+
+    <div class="rule-box">
+      <div class="eyebrow">Regula care nu se încalcă</div>
+      <p><strong>Vinzi unealta, nu marketplace-ul.</strong> Fiecare postare pleacă de la o problemă pe care
+      antrenorul o are azi — nu de la o promisiune de clienți pe care încă nu i-ai livrat.
+      Cuvintele „marketplace" și „platformă" nu apar nicăieri.</p>
+    </div>
+  </header>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Ritmul săptămânal</div>
+      <h2>Filmezi o dată, postezi cinci zile</h2>
+      <p>Nu poți produce 26 de videouri unul câte unul și să faci și onboardinguri. Tot conținutul
+      săptămânii se filmează duminica, în 2–3 ore, cu telefonul. Restul săptămânii doar urci.</p>
+    </div>
+    <div class="cadence">
+      <div class="cad">
+        <div class="when">Duminică</div>
+        <p>Filmare batch, 2–3 ore. 3–4 videouri pentru săptămâna care vine. Umpli aplicația cu un
+        program plin înainte să pornești camera.</p>
+      </div>
+      <div class="cad">
+        <div class="when">Luni – Vineri</div>
+        <p>Un video pe zi. Urci fișierul <strong>separat</strong> pe TikTok, Reels și Shorts — niciodată
+        share automat, watermark-ul e penalizat.</p>
+      </div>
+      <div class="cad">
+        <div class="when">Sâmbătă</div>
+        <p>Fără producție. Repostezi ce a mers cel mai bine cu alt hook, sau dai stitch la ce au postat
+        antrenorii.</p>
+      </div>
+      <div class="cad">
+        <div class="when">Zilnic</div>
+        <p>2–3 story-uri, nemontate, din telefon. Aici convertești audiența ta personală — nu în reeluri.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Calendarul</div>
+      <h2>Cinci faze, în ordinea în care cineva se convinge</h2>
+      <p>Atenție → înțelegere → încredere → cerere → urgență. Nu sări peste una; un termen limită
+      fluturat înainte ca cineva să știe ce vinzi nu e presiune, e zgomot.</p>
+    </div>
+
+    <div class="weeks">
+
+      <div class="week">
+        <div class="week-head">
+          <span class="n">FAZA 0</span>
+          <span class="theme">Lansarea</span>
+          <span class="dates">27 – 30 august &middot; 4 zile</span>
+        </div>
+        <p class="week-note">Un singur mesaj: problema. Nu explici produsul, nu enumeri funcții.
+        Dacă în ziua lansării postezi trei lucruri, niciunul nu primește atenție.</p>
+        <div class="days">
+          <div class="day">
+            <div class="date">Jo 27 <span>august</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R1</span>Caietul vs. aplicația</div>
+              <div class="sub">Singurul post al zilei. Story în 3 slide-uri: reel-ul, un screenshot cu sticker
+              de întrebare („Ce ți-ar trebui într-o aplicație de antrenor?"), apoi „caută Salvio".
+              Răspunzi la fiecare comentariu în prima oră.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span><span class="tag post">Story ×3</span></div>
+            </div>
+          </div>
+          <div class="day rest">
+            <div class="date">Vi 28 <span>august</span></div>
+            <div class="body">
+              <div class="title">Doar story-uri</div>
+              <div class="sub">Răspunzi public la ce ai primit în DM ieri. Repostezi orice mențiune.
+              Ziua a doua fără reel e deliberată — lași primul video să respire.</div>
+              <div class="tags"><span class="tag post">Story</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Sâ 29 <span>august</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R6</span>Harta — 1.795 de săli</div>
+              <div class="sub">Cel mai bun raport efort/reach din toată banca. Zero actorie, doar screen
+              recording. Rezolvă „nu e nimeni pe ea" arătând, nu argumentând.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Du 30 <span>august</span></div>
+            <div class="body">
+              <div class="title">Filmare batch — R2, R7, R20</div>
+              <div class="sub">Story din culise: „azi filmez". Oamenii se atașează de proces mai tare
+              decât de produs.</div>
+              <div class="tags"><span class="tag film">Filmare</span><span class="tag post">Story</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="week">
+        <div class="week-head">
+          <span class="n">FAZA 1</span>
+          <span class="theme">Produsul</span>
+          <span class="dates">31 august – 6 septembrie</span>
+        </div>
+        <p class="week-note">O funcție pe zi, niciodată două. Fiecare video răspunde la o singură
+        întrebare pe care și-o pune un antrenor.</p>
+        <div class="days">
+          <div class="day">
+            <div class="date">Lu 31 <span>aug</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R2</span>Cronometrul</div>
+              <div class="sub">47 de secunde ca să afli în WhatsApp câte ședințe mai are Maria. 2 secunde în aplicație.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Ma 1 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R7</span>Codul de check-in</div>
+              <div class="sub">10 secunde, fără voce. Clientul arată codul, antrenorul confirmă.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Mi 2 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R12</span>Seria — Sala 1 din 40</div>
+              <div class="sub">Începe numărătoarea. De aici încolo, 2 episoade pe săptămână, filmate în
+              vizitele pe care oricum le faci.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Story</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Jo 3 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R10</span>Drag &amp; drop pe slot</div>
+              <div class="sub">Cel mai satisfăcător cadru din aplicație. Fără explicații, doar degetul și ecranul.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Vi 4 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R13</span>„Am făcut-o pentru licența de la FMI"</div>
+              <div class="sub">Vineri seara, pentru audiența ta personală. Ăsta e videoul la care prietenii
+              tăi dau share — și ei sunt drumul spre antrenori, nu destinația.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Story</span></div>
+            </div>
+          </div>
+          <div class="day rest">
+            <div class="date">Sâ 5 <span>sept</span></div>
+            <div class="body">
+              <div class="title">Repost — cel mai bun al săptămânii, alt hook</div>
+              <div class="sub">Primele 3 secunde schimbate, restul identic. Un format care a mers se stoarce,
+              nu se abandonează.</div>
+              <div class="tags"><span class="tag post">TikTok</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Du 6 <span>sept</span></div>
+            <div class="body">
+              <div class="title">Filmare batch + primul post pe Facebook</div>
+              <div class="sub">Grup de oraș din Cluj. Postezi ca persoană, două fraze scrise de tine plus
+              videoul. Nu ca anunț, nu cu link în prima linie.</div>
+              <div class="tags"><span class="tag film">Filmare</span><span class="tag post">Facebook</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="week">
+        <div class="week-head">
+          <span class="n">FAZA 2</span>
+          <span class="theme">Dovada</span>
+          <span class="dates">7 – 13 septembrie</span>
+        </div>
+        <p class="week-note">Săptămâna în care nu mai vorbești tu. Apar fețe de antrenori reali din Cluj.
+        Dacă până acum nu ai onboardat pe nimeni, faza asta nu are ce filma — și ăsta e semnalul,
+        nu o problemă de conținut.</p>
+        <div class="days">
+          <div class="day">
+            <div class="date">Lu 7 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R16</span>Reacția când își vede programul plin</div>
+              <div class="sub">Cadru real din onboarding, nu regizat. Cere-i acordul înainte să filmezi.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Ma 8 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R12</span>Seria — Sala 2 / 3</div>
+              <div class="sub">Numărul care crește e jumătate din motivul pentru care oamenii revin.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Mi 9 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R8</span>Pachetul care scade și se întoarce</div>
+              <div class="sub">Rezervarea consumă o ședință, anularea o dă înapoi. Numărul care se mișcă
+              pe ecran e tot argumentul.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Jo 10 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R17</span>„Cum arată săptămâna lui [Nume]"</div>
+              <div class="sub">Îl filmezi pe el arătându-și programul. El îl distribuie, tu ajungi la
+              audiența lui. Ăsta e motivul pentru care ai țintit antrenori cu 1k–20k urmăritori.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag hot">El postează</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Vi 11 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R3</span>Sceneta dublei programări</div>
+              <div class="sub">Cel mai mare potențial de reach, cea mai slabă conversie. Postezi pentru
+              audiență nouă, nu ca să convertești. Filmat cu un antrenor pe care l-ai onboardat.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day rest">
+            <div class="date">Sâ 12 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R19</span>Stitch / repost la antrenori</div>
+              <div class="sub">Orice au postat ei săptămâna asta. Zero producție.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Story</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Du 13 <span>sept</span></div>
+            <div class="body">
+              <div class="title">Filmare batch + Facebook (studenți)</div>
+              <div class="sub">Grupuri UBB / UTCN / UMF. Aici vânezi cerere, nu ofertă — formulezi ca
+              întrebare, nu ca reclamă.</div>
+              <div class="tags"><span class="tag film">Filmare</span><span class="tag post">Facebook</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="week">
+        <div class="week-head">
+          <span class="n">FAZA 3</span>
+          <span class="theme">Cererea</span>
+          <span class="dates">14 – 20 septembrie</span>
+        </div>
+        <p class="week-note">Muți greutatea pe partea de client. Antrenorii care te urmăresc de două
+        săptămâni văd acum că le aduci oameni, nu doar un calendar.</p>
+        <div class="days">
+          <div class="day">
+            <div class="date">Lu 14 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R20</span>POV client: „câte ședințe mai am?"</div>
+              <div class="sub">Se termină cu „nu-ți faci cont, antrenorul îți trimite un cod" — răspunsul
+              la obiecția „clienții mei n-o să-și instaleze o aplicație", spus către client.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Ma 15 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R21</span>„Găsește o sală lângă tine în Cluj"</div>
+              <div class="sub">Harta ca utilitate de sine stătătoare. Cel mai larg public din toată banca.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Mi 16 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R12</span>Seria — Sala 4 / 5</div>
+              <div class="sub">Jumătatea numărătorii. „20 de săli. Uite ce mi-au zis până acum."</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Jo 17 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R11</span>Codul de invitație — două telefoane</div>
+              <div class="sub">Split screen: trimiți codul, clientul intră deja conectat la tine.
+              Singurul mecanism prin care 30 de antrenori devin 400 de clienți.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Vi 18 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R22</span>„Cum îți alegi un antrenor personal"</div>
+              <div class="sub">Educativ, nu promoțional. Recenziile vin doar de la clienții lui reali —
+              serverul refuză restul. E singura afirmație de încredere pe care o poți face azi.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day rest">
+            <div class="date">Sâ 19 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R4</span>„Am întrebat 10 antrenori din Cluj"</div>
+              <div class="sub">Montaj de răspunsuri la o singură întrebare: cum îți ții programul acum?
+              Le-ai adunat din vizite, nu le filmezi separat.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Du 20 <span>sept</span></div>
+            <div class="body">
+              <div class="title">Filmare batch + pitch la presa din Cluj</div>
+              <div class="sub">Acum ai fețe și cifre, deci povestea e „antrenorii din Cluj folosesc",
+              nu „un student are o idee". Un outlet pe rând, exclusivitate locală.</div>
+              <div class="tags"><span class="tag film">Filmare</span><span class="tag hot">Presă</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="week">
+        <div class="week-head">
+          <span class="n">FAZA 4</span>
+          <span class="theme">Presiunea</span>
+          <span class="dates">21 – 27 septembrie</span>
+        </div>
+        <p class="week-note">Singura săptămână în care ai voie să insiști — și e onest, fiindcă data
+        chiar există. Spui întotdeauna „înscrie-te până pe 30 septembrie și ai 3 luni gratuite",
+        niciodată „gratuit până în decembrie".</p>
+        <div class="days">
+          <div class="day">
+            <div class="date">Lu 21 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R24</span>„Mai sunt 10 zile"</div>
+              <div class="sub">Fața ta, o propoziție, fără montaj. Cel mai simplu video din tot planul.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Story</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Ma 22 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R18</span>„De ce ai zis da?"</div>
+              <div class="sub">Un antrenor răspunde necenzurat. Dacă zice ceva incomod, îl lași —
+              e mai credibil decât orice testimonial curat.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Mi 23 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R12</span>Seria — ultimul episod</div>
+              <div class="sub">Închizi numărătoarea. „Am intrat în X săli. Uite ce am aflat."</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Jo 24 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R5</span>„3 lucruri care se pierd în WhatsApp"</div>
+              <div class="sub">Cine a plătit, cine vine mâine, cine a rămas fără ședințe. Format de listă,
+              rapid, pentru cei care te văd prima oară.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Vi 25 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R14</span>„Cât costă să faci o aplicație singur"</div>
+              <div class="sub">Cifre reale. Formatul ăsta performează puternic în România și îți aduce
+              audiență nouă, complet în afara nișei de fitness.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Shorts</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Sâ 26 <span>sept</span></div>
+            <div class="body">
+              <div class="title">Nu postezi. Dai DM-uri.</div>
+              <div class="sub">Toți cei care au zis „mă mai gândesc" în ultimele 5 săptămâni. Un mesaj
+              scurt, personal, cu data. Ziua asta valorează mai mult decât orice reel din plan.</div>
+              <div class="tags"><span class="tag hot">Vânzare</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Du 27 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R25</span>„Ce se întâmplă pe 1 octombrie"</div>
+              <div class="sub">Onest: nu dispare nimic și nimeni nu e taxat automat. Doar oferta se închide.
+              Transparența aici te scutește de un val de neîncredere în octombrie.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Story</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="week">
+        <div class="week-head">
+          <span class="n">FINAL</span>
+          <span class="theme">Ultimul apel</span>
+          <span class="dates">28 – 30 septembrie</span>
+        </div>
+        <p class="week-note">Story-uri, nu reeluri. În ultimele 72 de ore, formatul care convertește
+        e cel efemer și personal, nu cel montat.</p>
+        <div class="days">
+          <div class="day">
+            <div class="date">Lu 28 <span>sept</span></div>
+            <div class="body">
+              <div class="title">„Mai sunt 3 zile" — story-uri toată ziua</div>
+              <div class="sub">4–5 slide-uri răspândite de dimineață până seara. Fiecare cu altă
+              felie: o funcție, un antrenor, o întrebare, data.</div>
+              <div class="tags"><span class="tag post">Story</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Ma 29 <span>sept</span></div>
+            <div class="body">
+              <div class="title">Reeditarea celui mai performant reel</div>
+              <div class="sub">Iei videoul cu cele mai multe vizualizări din 5 săptămâni, îi schimbi
+              primele 3 secunde și pui numărătoarea peste. Nimic nou de filmat.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag post">Story</span></div>
+            </div>
+          </div>
+          <div class="day">
+            <div class="date">Mi 30 <span>sept</span></div>
+            <div class="body">
+              <div class="title"><span class="ref">R26</span>Ultimul apel — dimineața</div>
+              <div class="sub">Postezi devreme, nu seara. Seara, un story cu rezultatul real, oricare
+              ar fi el — inclusiv dacă e sub țintă. Publicul care te-a urmărit 5 săptămâni merită cifra.</div>
+              <div class="tags"><span class="tag post">TikTok</span><span class="tag post">Reels</span><span class="tag hot">Story final</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Banca de conținut</div>
+      <h2>26 de reeluri, pe șase piloni</h2>
+      <p>Calendarul le referă după cod. Când un format prinde, îl repeți cu alt hook în locul
+      următorului din listă — diversitatea nu e un obiectiv.</p>
+    </div>
+
+    <div class="pillars">
+
+      <div class="pillar">
+        <div class="pillar-head"><h3>A &middot; Problema</h3><span class="eyebrow">antrenor</span></div>
+        <div class="bank-grid">
+          <div class="card"><div class="id">R1</div><h4>Caietul vs. aplicația</h4><p>Caiet mototolit și WhatsApp plin, apoi programul curat. Videoul de lansare.</p></div>
+          <div class="card"><div class="id">R2</div><h4>Cronometrul</h4><p>47 de secunde ca să afli câte ședințe mai are cineva. 2 secunde în aplicație.</p></div>
+          <div class="card"><div class="id">R3</div><h4>Sceneta dublei programări</h4><p>Doi oameni, 15 secunde, în sală. Reach mare, conversie mică.</p></div>
+          <div class="card"><div class="id">R4</div><h4>„Am întrebat 10 antrenori"</h4><p>Montaj de răspunsuri la aceeași întrebare. Toate sună la fel.</p></div>
+          <div class="card"><div class="id">R5</div><h4>3 lucruri pierdute în WhatsApp</h4><p>Cine a plătit, cine vine mâine, cine a rămas fără ședințe.</p></div>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-head"><h3>B &middot; Produsul</h3><span class="eyebrow">screen recording</span></div>
+        <div class="bank-grid">
+          <div class="card"><div class="id">R6</div><h4>Harta — 1.795 de săli</h4><p>Zoom din România în cartier, pinurile apărând în valuri.</p></div>
+          <div class="card"><div class="id">R7</div><h4>Codul de check-in</h4><p>Clientul arată codul, antrenorul confirmă. 10 secunde, fără voce.</p></div>
+          <div class="card"><div class="id">R8</div><h4>Pachetul care scade</h4><p>Rezervarea consumă, anularea returnează. Numărul care se mișcă.</p></div>
+          <div class="card"><div class="id">R9</div><h4>Șablonul de program</h4><p>Setezi orele o dată, generezi luna. Timelapse.</p></div>
+          <div class="card"><div class="id">R10</div><h4>Drag &amp; drop pe slot</h4><p>Cel mai satisfăcător cadru din toată aplicația.</p></div>
+          <div class="card"><div class="id">R11</div><h4>Codul de invitație</h4><p>Split screen, două telefoane. Clientul intră deja conectat.</p></div>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-head"><h3>C &middot; Build in public</h3><span class="eyebrow">tu</span></div>
+        <div class="bank-grid">
+          <div class="card"><div class="id">R12</div><h4>Seria „Sala X din 40"</h4><p>Recurent, 2 pe săptămână. Se filmează în vizitele pe care le faci oricum.</p></div>
+          <div class="card"><div class="id">R13</div><h4>Licența de la FMI</h4><p>Povestea din spate. Cel mai bun pentru audiența ta personală.</p></div>
+          <div class="card"><div class="id">R14</div><h4>Cât costă o aplicație singur</h4><p>Cifre reale. Aduce audiență din afara nișei de fitness.</p></div>
+          <div class="card"><div class="id">R15</div><h4>Primul cont de antrenor</h4><p>Screenshot-ul notificării și reacția ta. Se filmează o singură dată.</p></div>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-head"><h3>D &middot; Dovada</h3><span class="eyebrow">antrenori reali</span></div>
+        <div class="bank-grid">
+          <div class="card"><div class="id">R16</div><h4>Reacția la programul plin</h4><p>Cadru real din onboarding. Cere acordul înainte.</p></div>
+          <div class="card"><div class="id">R17</div><h4>„Cum arată săptămâna lui [Nume]"</h4><p>El îl postează, tu ajungi la audiența lui.</p></div>
+          <div class="card"><div class="id">R18</div><h4>„De ce ai zis da?"</h4><p>Răspuns necenzurat. Dacă e incomod, îl lași — de aia e credibil.</p></div>
+          <div class="card"><div class="id">R19</div><h4>Stitch la antrenori</h4><p>Repostezi ce postează ei. Zero producție.</p></div>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-head"><h3>E &middot; Clientul</h3><span class="eyebrow">cerere</span></div>
+        <div class="bank-grid">
+          <div class="card"><div class="id">R20</div><h4>„Câte ședințe mai am?"</h4><p>POV client. Se termină cu „nu-ți faci cont, primești un cod".</p></div>
+          <div class="card"><div class="id">R21</div><h4>Găsește o sală în Cluj</h4><p>Harta ca utilitate. Cel mai larg public din bancă.</p></div>
+          <div class="card"><div class="id">R22</div><h4>Cum îți alegi un antrenor</h4><p>Educativ. Recenzii doar de la clienții lui reali — serverul refuză restul.</p></div>
+          <div class="card"><div class="id">R23</div><h4>WhatsApp la 11 noaptea</h4><p>Pentru clienți. Rezervă, dacă unul din faza 3 nu prinde.</p></div>
+        </div>
+      </div>
+
+      <div class="pillar">
+        <div class="pillar-head"><h3>F &middot; Termenul</h3><span class="eyebrow">ultimele 10 zile</span></div>
+        <div class="bank-grid">
+          <div class="card"><div class="id">R24</div><h4>„Mai sunt 10 zile"</h4><p>Fața ta, o propoziție, fără montaj.</p></div>
+          <div class="card"><div class="id">R25</div><h4>Ce se întâmplă pe 1 octombrie</h4><p>Onest: nu dispare nimic, nimeni nu e taxat automat. Doar oferta se închide.</p></div>
+          <div class="card"><div class="id">R26</div><h4>Ultimul apel</h4><p>30 septembrie, dimineața. Seara, cifra reală.</p></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Story-uri zilnice</div>
+      <h2>Unde convertești, de fapt</h2>
+      <p>Reelurile aduc oameni noi. Story-urile îi conving pe cei care te cunosc deja — și în Cluj,
+      la începutul unui produs, aia e majoritatea. 2–3 pe zi, nemontate, rotind formatele.</p>
+    </div>
+    <ul class="plain">
+      <li><strong>Din culise.</strong> Filmarea, codul, drumul spre sală. Oamenii se atașează de proces.</li>
+      <li><strong>Sticker de întrebare.</strong> „Ce ți-ar trebui?" — răspunsurile îți dau exact vocabularul
+      clienților care lipsește din brief-ul de produs.</li>
+      <li><strong>Screenshot dintr-un DM primit.</strong> Cu acordul lui. Cea mai ieftină dovadă socială.</li>
+      <li><strong>Numărătoare inversă</strong>, doar în ultimele 10 zile. Mai devreme e presiune fără context.</li>
+      <li><strong>Repost la antrenori.</strong> Orice postează ei despre aplicație, în aceeași zi.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Duminică seara, 4 cifre</div>
+      <h2>Ce măsori și ce faci cu răspunsul</h2>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr><th>Semnal</th><th>Ce înseamnă</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Conturi noi de antrenor</td>
+            <td>Singura cifră care contează. Sub 1 pe săptămână din social înseamnă că social nu e canalul — sălile sunt. Nu mări volumul de postat, mări numărul de vizite.</td>
+          </tr>
+          <tr>
+            <td>DM-uri primite</td>
+            <td>Măsura reală a unui video. Un reel cu 40.000 de vizualizări și zero DM-uri a fost divertisment, nu marketing.</td>
+          </tr>
+          <tr>
+            <td>Instalări</td>
+            <td>Din Play Console și App Store Connect. Dacă vizualizările cresc și instalările nu, problema e listarea din magazin, nu conținutul.</td>
+          </tr>
+          <tr>
+            <td>Care video a adus DM-uri</td>
+            <td>Notează-l. Săptămâna următoare refilmezi formatul ăla cu alt subiect, în loc să treci mai departe pe listă.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head">
+      <div class="eyebrow">Interdicții</div>
+      <h2>Ce nu faci, indiferent cât de tentant e</h2>
+    </div>
+    <ul class="plain no">
+      <li>Nu urci fișierul cu watermark de TikTok pe Reels sau Shorts. Îl exporți curat și îl încarci separat pe fiecare.</li>
+      <li>Nu postezi trei reeluri într-o zi ca să „recuperezi" o zi pierdută. Le pierzi pe toate trei.</li>
+      <li>Nu pui link în primul comentariu sau în descriere — ambele platforme reduc distribuția. CTA-ul e „caută Salvio".</li>
+      <li>Nu spui <strong>„primii 50"</strong>. Codul nu numără antrenorii, doar data. Dacă al 51-lea primește oferta oricum, ai mințit degeaba.</li>
+      <li>Nu spui <strong>„gratuit până în decembrie"</strong>. Cele 3 luni curg din momentul înscrierii.</li>
+      <li>Nu spui <strong>„marketplace"</strong> sau <strong>„platformă"</strong> în niciun video.</li>
+      <li>Nu abandonezi un format care a funcționat, de dragul varietății.</li>
+      <li>Nu înlocuiești vizitele în săli cu postatul. Postatul e mai confortabil și de asta e periculos.</li>
+    </ul>
+  </section>
+
+  <div class="closer">
+    <div class="eyebrow">Verificarea de realitate</div>
+    <p class="punch">Cei 30 de antrenori nu vin de pe TikTok. Vin din cele 20 de minute în care stai lângă
+    unul, cu telefonul lui în mână, până e gata profilul.</p>
+    <p>Conținutul face acele 20 de minute mai ușor de obținut: intri în sală și omul te-a văzut deja.
+    Produce inbound, produce intro-uri, produce credibilitate. Nu produce antrenori activi.</p>
+    <p>Testul săptămânii, duminica: dacă ai postat cinci reeluri și n-ai intrat în nicio sală,
+    ai avut o săptămână proastă — indiferent ce arată vizualizările.</p>
+    <p>Și dacă pe 30 septembrie ești sub 15 antrenori, prelungești termenul.
+    <span class="mono">FOUNDING_GRANT_DEADLINE</span> e o variabilă de mediu, nu o modificare de cod.
+    Mai bine prelungești decât să pierzi oameni pe care i-ai convins pe jumătate.</p>
+  </div>
+
+</div>
+
+<script>
+  (function () {
+    var el = document.getElementById("zile");
+    if (!el) return;
+    var deadline = new Date(2026, 8, 30);
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+    var zile = Math.round((deadline - today) / 86400000);
+    el.textContent = zile > 0 ? zile : 0;
+  })();
+</script>

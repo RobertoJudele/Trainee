@@ -2,6 +2,7 @@ import {
   BillingProvider,
   BillingState,
   Entitlement,
+  FoundingGrantOffer,
   IapValidationInput,
   IapValidationResult,
   RevenueCatWebhookEvent,
@@ -61,6 +62,25 @@ export class BillingService {
     });
   }
 
+  /**
+   * The founding-trainer promo as the app should present it. Mirrors the gate in
+   * `grantFoundingEntitlement` so the banner can never advertise an offer the
+   * grant would refuse.
+   *
+   * Note there is deliberately no cap on trainer count — the gate is the date
+   * alone — so the app must not imply a limited number of places.
+   */
+  getFoundingGrantOffer(): FoundingGrantOffer {
+    const deadline = this.config.getFoundingGrantDeadline();
+    const months = this.config.getFoundingGrantMonths();
+
+    if (!deadline || months <= 0 || this.clock.now().getTime() > deadline.getTime()) {
+      return { isOpen: false, months: 0 };
+    }
+
+    return { isOpen: true, months, deadline: deadline.toISOString() };
+  }
+
   // ── IAP validation (RevenueCat) ──────────────────────────────
 
   async validateIapPurchase(
@@ -77,12 +97,15 @@ export class BillingService {
     // app and is used to label the record, never as evidence of a purchase — in
     // particular `input.expiresAt` is deliberately not forwarded as
     // `fallbackExpiresAt`, since that value alone can activate an entitlement.
+    //
+    // `input.originalTransactionId` is not forwarded either: the real one is read
+    // from the subscriber payload, so accepting the client's would only let any
+    // caller write an arbitrary string into appleOriginalTransactionId.
     const subscriberData = await this.revenueCatGw.fetchSubscriber(String(userId));
     const snapshot = domain.resolveRevenueCatSnapshot(subscriberData, {
       entitlementId: this.config.getRevenueCatEntitlementId(),
       platform: input.platform,
       fallbackProductId: input.productId,
-      fallbackOriginalTransactionId: input.originalTransactionId,
       clock: this.clock,
     });
 
@@ -110,6 +133,66 @@ export class BillingService {
       iapExpiresAt: updated.iapExpiresAt,
       iapLastVerifiedAt: verifiedAt,
     };
+  }
+
+  // ── Founding-trainer promotional grant ───────────────────────
+
+  /**
+   * Grants the founding trainer a free RevenueCat promotional entitlement — no
+   * store purchase, no auto-charge. Safe to call more than once: a trainer who
+   * already has a running grant is skipped, so retries never stack.
+   *
+   * Callers should not await this on the signup path; a failed grant must not
+   * fail signup.
+   */
+  async grantFoundingEntitlement(userId: number): Promise<boolean> {
+    const deadline = this.config.getFoundingGrantDeadline();
+    const months = this.config.getFoundingGrantMonths();
+    const now = this.clock.now();
+
+    if (!deadline || months <= 0 || now.getTime() > deadline.getTime()) {
+      return false;
+    }
+
+    if (!this.config.hasRevenueCatApiKey()) {
+      throw new BillingError("CONFIG_MISSING", "Missing REVENUECAT_SECRET_API_KEY");
+    }
+
+    const state = await this.requireBillingState(userId);
+
+    // Already covered — either by an earlier grant or a real subscription.
+    if (domain.resolveEntitlement(state, {
+      isRevenueCatOnly: this.config.isRevenueCatOnlyMode(),
+      clock: this.clock,
+    }).isActive) {
+      return false;
+    }
+
+    const grantedUntil = new Date(now);
+    grantedUntil.setMonth(grantedUntil.getMonth() + months);
+
+    // Written locally FIRST, and awaited by the caller: gating reads this row, so
+    // the trainer has to be entitled by the time createTrainer answers. The app
+    // posts packages and working hours the instant it gets that response, and
+    // those go through the `subscription` middleware. The confirming webhook may
+    // also be delayed, dropped, or not configured at all.
+    await this.billingRepo.save(domain.applyPromotionalGrant(state, grantedUntil));
+
+    // RevenueCat owns entitlement restore across devices, but it must not sit on
+    // the signup path: waiting for this round trip is what used to leave a new
+    // trainer unentitled long enough for their packages to be rejected. The call
+    // is idempotent, so the next grant attempt re-sends it for free.
+    void this.revenueCatGw
+      .grantPromotionalEntitlement(
+        String(userId),
+        this.config.getRevenueCatEntitlementId(),
+        grantedUntil.getTime(),
+      )
+      .catch((error) => {
+        console.error("RevenueCat promotional grant push failed", { userId }, error);
+      });
+
+    return true;
   }
 
   // ── Stripe mobile subscription ───────────────────────────────
@@ -262,18 +345,22 @@ export class BillingService {
 
   async handleRevenueCatWebhook(
     authHeader: string | undefined,
-    payload: { event?: Partial<RevenueCatWebhookEvent> },
+    payload: { event?: unknown },
   ): Promise<{ received: boolean; duplicate?: boolean }> {
     if (!this.revenueCatGw.isWebhookAuthorized(authHeader)) {
       throw new BillingError("UNAUTHORIZED", "Unauthorized RevenueCat webhook");
     }
 
-    const event = payload?.event;
-    if (!event || typeof event !== "object") {
+    const rawEvent = payload?.event;
+    if (!rawEvent || typeof rawEvent !== "object") {
       throw new BillingError("INVALID_PAYLOAD", "Invalid RevenueCat webhook payload");
     }
 
-    const eventId = String(event.id || "").trim();
+    // RevenueCat sends snake_case on the wire — normalize before anything reads
+    // a field, or every multi-word field silently resolves to undefined.
+    const event = domain.normalizeRevenueCatEvent(rawEvent as Record<string, unknown>);
+
+    const eventId = event.id;
     if (!eventId) {
       throw new BillingError("INVALID_PAYLOAD", "RevenueCat webhook event id is required");
     }
@@ -287,34 +374,19 @@ export class BillingService {
       await this.webhookRepo.create({
         source: "revenuecat",
         eventId,
-        eventType: String(event.type || "unknown"),
-        appUserId: String(event.appUserId || "").trim() || undefined,
-        eventTimestampMs: typeof event.eventTimestampMs === "number"
-          ? event.eventTimestampMs : undefined,
-        payload: event as unknown as Record<string, unknown>,
+        eventType: event.type,
+        appUserId: event.appUserId,
+        eventTimestampMs: event.eventTimestampMs,
+        // Store the untouched payload — normalization is for reading, not for
+        // deciding what gets kept for debugging.
+        payload: rawEvent as Record<string, unknown>,
       });
     }
 
-    const normalizedEvent: RevenueCatWebhookEvent = {
-      id: eventId,
-      type: String(event.type || "unknown"),
-      appUserId: event.appUserId,
-      eventTimestampMs: event.eventTimestampMs,
-      productId: event.productId,
-      expirationAtMs: event.expirationAtMs,
-      originalTransactionId: event.originalTransactionId,
-      transactionId: event.transactionId,
-      store: event.store,
-      transferredFrom: event.transferredFrom,
-      transferredTo: event.transferredTo,
-      price: event.price,
-      currency: event.currency,
-    };
-
-    if (String(event.type || "").toUpperCase() === "TRANSFER") {
-      await this.handleTransfer(normalizedEvent);
+    if (event.type.toUpperCase() === "TRANSFER") {
+      await this.handleTransfer(event);
     } else {
-      await this.syncFromRevenueCatEvent(normalizedEvent);
+      await this.syncFromRevenueCatEvent(event);
     }
 
     await this.webhookRepo.markProcessed("revenuecat", eventId);
@@ -378,12 +450,21 @@ export class BillingService {
     await this.billingRepo.save(updated);
 
     const eventType = String(event.type).toUpperCase();
-    if ((eventType === "INITIAL_PURCHASE" || eventType === "RENEWAL") && event.transactionId) {
+    // Only real, priced purchases become transaction records. RevenueCat sends
+    // price and currency on these events; without them the row would have to
+    // invent an amount, and a wrong number in a payment history is worse than
+    // a missing row.
+    const hasPrice = typeof event.price === "number" && Boolean(event.currency);
+    if (
+      (eventType === "INITIAL_PURCHASE" || eventType === "RENEWAL")
+      && event.transactionId
+      && hasPrice
+    ) {
       const providerName = platform === "ios" ? "apple" : platform === "android" ? "google" : "none";
       await this.txRepo.findOrCreate({
         trainerId: state.trainerId,
-        amount: event.price ?? 100.00,
-        currency: event.currency || "RON",
+        amount: event.price as number,
+        currency: event.currency as string,
         status: "paid",
         provider: providerName,
         transactionId: event.transactionId,

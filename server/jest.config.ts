@@ -16,6 +16,10 @@ const config: Config = {
   },
   moduleFileExtensions: ["ts", "js", "json"],
   testTimeout: 30000,
+  // Every suite runs sync({ force: true }) against the same database, so parallel
+  // workers drop each other's tables mid-run. Serial until the suites get their
+  // own schemas.
+  maxWorkers: 1,
 };
 
 export default config;

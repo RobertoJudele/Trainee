@@ -5,6 +5,7 @@ import {
   IapPlatform,
   RevenueCatSnapshot,
   RevenueCatSubscriberData,
+  RevenueCatWebhookEvent,
   subStatus,
   TransactionRecord,
 } from "./types";
@@ -12,6 +13,22 @@ import {
 export interface Clock {
   now(): Date;
   nowMs(): number;
+}
+
+// RevenueCat reports granted entitlements with store and period_type PROMOTIONAL.
+const PROMOTIONAL_STORE = "PROMOTIONAL";
+const PERIOD_PROMOTIONAL = "promotional";
+
+/** Free grant with no store purchase behind it — recorded as a running trial. */
+export function applyPromotionalGrant(
+  state: BillingState,
+  grantedUntil: Date,
+): BillingState {
+  return {
+    ...state,
+    subscriptionStatus: subStatus.TRIAL,
+    trialEndsAt: grantedUntil,
+  };
 }
 
 // ── Entitlement resolution (single source of truth) ─────────────────
@@ -50,6 +67,9 @@ export function resolveEntitlement(
         status: subStatus.TRIAL,
         source: state.billingProvider,
         expiresAt: state.trialEndsAt,
+        // A store trial carries its store as the provider; a running trial with
+        // no provider at all is a promotional grant.
+        isPromotional: state.billingProvider === BillingProvider.NONE,
       };
     }
     return {
@@ -168,6 +188,109 @@ export function mapStoreToPlatform(store?: string | null): IapPlatform | undefin
   return undefined;
 }
 
+// ── RevenueCat webhook payload normalization ────────────────────────
+
+/**
+ * RevenueCat sends webhook fields in snake_case (`app_user_id`,
+ * `event_timestamp_ms`, …). Reading them as camelCase yields `undefined` for
+ * every multi-word field, which then drops the event on the floor.
+ *
+ * This stayed invisible for a long time because `id` and `type` are single
+ * words and match under either convention — so events were recorded and marked
+ * processed while carrying no subscriber to act on. Both spellings are accepted
+ * here so hand-written payloads and fixtures keep working.
+ */
+const toSnakeCase = (key: string): string =>
+  key.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`);
+
+function readField(raw: Record<string, unknown>, camelKey: string): unknown {
+  const camel = raw[camelKey];
+  return camel !== undefined ? camel : raw[toSnakeCase(camelKey)];
+}
+
+function asString(value: unknown): string | undefined {
+  if (typeof value === "string") return value.trim() || undefined;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return undefined;
+}
+
+function asNumber(value: unknown): number | undefined {
+  // Number(null) is 0 and Number("") is 0 — both would read as a real value.
+  if (value === null || value === undefined || value === "") return undefined;
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function asStringArray(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const items = value.map(asString).filter((s): s is string => Boolean(s));
+  return items.length > 0 ? items : undefined;
+}
+
+/**
+ * The v1 subscriber API is snake_case as well (`expires_date`,
+ * `product_identifier`, `period_type`, `original_transaction_id`). `store` is
+ * the only single-word field, which is why store-based detection kept working
+ * while every dated field silently read as undefined — leaving a verified
+ * entitlement with no expiry at all.
+ */
+export function normalizeRevenueCatSubscriber(raw: {
+  entitlements?: unknown;
+  subscriptions?: unknown;
+}): RevenueCatSubscriberData {
+  const mapEntries = <T>(
+    src: unknown,
+    map: (entry: Record<string, unknown>) => T,
+  ): Record<string, T> => {
+    const out: Record<string, T> = {};
+    if (!src || typeof src !== "object") return out;
+    for (const [key, value] of Object.entries(src as Record<string, unknown>)) {
+      if (value && typeof value === "object") {
+        out[key] = map(value as Record<string, unknown>);
+      }
+    }
+    return out;
+  };
+
+  return {
+    entitlements: mapEntries(raw?.entitlements, (e) => ({
+      expiresDate: asString(readField(e, "expiresDate")) ?? null,
+      productIdentifier: asString(readField(e, "productIdentifier")) ?? null,
+    })),
+    subscriptions: mapEntries(raw?.subscriptions, (s) => ({
+      expiresDate: asString(readField(s, "expiresDate")) ?? null,
+      store: asString(readField(s, "store")) ?? null,
+      originalTransactionId: asString(readField(s, "originalTransactionId")) ?? null,
+      storeTransactionId: asString(readField(s, "storeTransactionId")) ?? null,
+      purchaseDate: asString(readField(s, "purchaseDate")) ?? null,
+      periodType: asString(readField(s, "periodType")) ?? null,
+      priceInPurchasedCurrency: asNumber(readField(s, "priceInPurchasedCurrency")) ?? null,
+      currency: asString(readField(s, "currency")) ?? null,
+    })),
+  };
+}
+
+export function normalizeRevenueCatEvent(
+  raw: Record<string, unknown>,
+): RevenueCatWebhookEvent {
+  const read = (key: string) => readField(raw, key);
+  return {
+    id: asString(read("id")) ?? "",
+    type: asString(read("type")) ?? "unknown",
+    appUserId: asString(read("appUserId")),
+    eventTimestampMs: asNumber(read("eventTimestampMs")),
+    productId: asString(read("productId")),
+    expirationAtMs: asNumber(read("expirationAtMs")),
+    originalTransactionId: asString(read("originalTransactionId")),
+    transactionId: asString(read("transactionId")),
+    store: asString(read("store")),
+    transferredFrom: asStringArray(read("transferredFrom")),
+    transferredTo: asStringArray(read("transferredTo")),
+    price: asNumber(read("price")),
+    currency: asString(read("currency")),
+  };
+}
+
 export function resolveRevenueCatSnapshot(
   data: RevenueCatSubscriberData,
   opts: {
@@ -196,10 +319,18 @@ export function resolveRevenueCatSnapshot(
     ?? parseIsoDate(subscription?.expiresDate)
     ?? opts.fallbackExpiresAt;
 
-  const inferred = mapStoreToBillingProvider(subscription?.store ?? opts.fallbackStore);
-  const provider = inferred !== BillingProvider.NONE
-    ? inferred
-    : mapPlatformToProvider(opts.platform);
+  const store = String(subscription?.store ?? opts.fallbackStore ?? "").trim().toUpperCase();
+  const isPromotional = store === PROMOTIONAL_STORE;
+  const inferred = mapStoreToBillingProvider(store);
+  // The platform fallback labels a real purchase whose store RevenueCat has not
+  // reported yet. A promotional grant has no store at all, so letting it fall
+  // through would stamp it "apple" purely because the caller happens to be on
+  // iOS — which is what Restore Purchases does.
+  const provider = isPromotional
+    ? BillingProvider.NONE
+    : inferred !== BillingProvider.NONE
+      ? inferred
+      : mapPlatformToProvider(opts.platform);
 
   // RevenueCat reports a null expiry for non-expiring (lifetime) entitlements, so a
   // missing date may only be read as "active" when RevenueCat actually returned a
@@ -217,7 +348,11 @@ export function resolveRevenueCatSnapshot(
     expiresAt,
     provider,
     originalTransactionId: subscription?.originalTransactionId ?? opts.fallbackOriginalTransactionId,
-    periodType: subscription?.periodType ?? undefined,
+    // A granted (promotional) entitlement has no store subscription of its own,
+    // so periodType can arrive empty — derive it from the store instead.
+    periodType: isPromotional
+      ? PERIOD_PROMOTIONAL
+      : (subscription?.periodType ?? undefined),
   };
 }
 
@@ -232,11 +367,21 @@ export function applyRevenueCatSnapshot(
     verifiedAt: Date;
   },
 ): BillingState {
-  const provider = snapshot.provider !== BillingProvider.NONE
-    ? snapshot.provider
-    : mapPlatformToProvider(opts.platform) || state.billingProvider;
+  // Promotional grants ride the TRIAL branch of resolveEntitlement: it is the
+  // only one that grants access without an Apple/Google/Stripe provider, which
+  // a granted entitlement by definition does not have.
+  const periodType = String(snapshot.periodType || "").trim().toLowerCase();
+  const isPromotional = periodType === PERIOD_PROMOTIONAL;
+  const isTrial = periodType === "trial" || isPromotional;
 
-  const isTrial = String(snapshot.periodType || "").trim().toLowerCase() === "trial";
+  // Same reasoning as in resolveRevenueCatSnapshot: a grant must keep provider
+  // NONE, or resolveEntitlement stops reporting it as promotional and the app
+  // shows "Trial Period, billed via Apple" for something Apple never sold.
+  const provider = isPromotional
+    ? BillingProvider.NONE
+    : snapshot.provider !== BillingProvider.NONE
+      ? snapshot.provider
+      : mapPlatformToProvider(opts.platform) || state.billingProvider;
 
   let status: subStatus;
   if (!snapshot.isActive) {
@@ -299,12 +444,24 @@ export function extractTransactionsFromRevenueCat(
     if (!txId) continue;
 
     const store = String(sub.store || "").trim().toLowerCase();
+    // A granted entitlement was never paid for. Recording one as a paid
+    // transaction would put a charge the trainer never made in their payment
+    // history — don't rely on the missing-transaction-id check above for this.
+    if (store === PERIOD_PROMOTIONAL) continue;
+
+    // No inventing money. amount/currency are NOT NULL, so a transaction whose
+    // real price RevenueCat did not report is skipped rather than recorded at a
+    // made-up value; it can be backfilled from RevenueCat if it is ever needed.
+    const amount = sub.priceInPurchasedCurrency;
+    const currency = sub.currency;
+    if (typeof amount !== "number" || !currency) continue;
+
     const provider = store === "app_store" ? "apple" : store === "play_store" ? "google" : "none";
 
     records.push({
       trainerId,
-      amount: 100.00,
-      currency: "RON",
+      amount,
+      currency,
       status: "paid",
       provider,
       transactionId: txId,

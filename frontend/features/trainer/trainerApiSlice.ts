@@ -36,6 +36,18 @@ export interface SpecializationItem {
   isActive: boolean;
 }
 
+/**
+ * A specialization as it comes back attached to a trainer. Narrower than
+ * SpecializationItem: the trainer endpoints select only these four columns, so it has
+ * no isActive.
+ */
+export interface TrainerSpecializationItem {
+  id: number;
+  name: string;
+  description?: string;
+  iconUrl?: string;
+}
+
 interface SpecializationListResponse {
   success: boolean;
   message: string;
@@ -89,6 +101,8 @@ export interface PublicTrainerProfile {
   experienceYears?: number;
   hourlyRate?: number;
   sessionRate?: number;
+  /** Cheapest per-session price: best price/session across packages, else sessionRate. */
+  minSessionPrice?: string | number | null;
   locationCity?: string;
   locationState?: string;
   locationCountry?: string;
@@ -106,6 +120,7 @@ export interface PublicTrainerProfile {
   updatedAt: string;
   user?: PublicTrainerUser;
   availableGyms?: PublicTrainerGym[];
+  specializations?: TrainerSpecializationItem[];
   galleryImages?: TrainerImageItem[];
   credentialImages?: TrainerImageItem[];
 }
@@ -124,7 +139,7 @@ export interface SearchParams {
   specializations?: string; // comma-separated IDs e.g. "1,2,3"
   isAvailable?: boolean;
   isFeatured?: boolean;
-  sortBy?: "totalRating" | "experienceYears" | "hourlyRate" | "sessionRate" | "reviewCount" | "createdAt";
+  sortBy?: "totalRating" | "experienceYears" | "hourlyRate" | "sessionRate" | "minSessionPrice" | "reviewCount" | "createdAt";
   sortOrder?: "asc" | "desc";
   page?: number;
   limit?: number;
@@ -137,6 +152,8 @@ export interface TrainerSearchItem {
   experienceYears?: number;
   hourlyRate?: number;
   sessionRate?: number;
+  /** Cheapest per-session price: best price/session across packages, else sessionRate. */
+  minSessionPrice?: string | number | null;
   locationCity?: string;
   locationState?: string;
   locationCountry?: string;
@@ -158,7 +175,7 @@ export interface TrainerSearchItem {
     profileImageUrl?: string | null;
   };
   images: Array<{ imageUrl: string; isPrimary: boolean }>;
-  specializations: Array<{ id: number; name: string; description?: string; iconUrl?: string }>;
+  specializations: TrainerSpecializationItem[];
 }
 
 export interface TrainerSearchResponse {

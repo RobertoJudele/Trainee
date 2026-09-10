@@ -40,3 +40,30 @@ export const generatePasswordResetToken = (
 export const verifyPasswordResetToken = (token: string): PasswordResetPayload => {
   return jwt.verify(token, JWT_RESET_SECRET) as PasswordResetPayload;
 };
+
+/**
+ * Handed to the client after a first-time Google/Apple sign-in, carrying the
+ * already-verified provider identity while the client collects the phone number
+ * that neither provider supplies. It has no `userId`, so it cannot stand in for
+ * an access token; `purpose` is checked on the way back in.
+ */
+export interface SocialSignupPayload {
+  provider: 'google' | 'apple';
+  providerId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  purpose: 'social_signup';
+  iat?: number;
+  exp?: number;
+}
+
+export const generateSocialSignupToken = (
+  payload: Omit<SocialSignupPayload, 'iat' | 'exp'>
+): string => {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: '15m' });
+};
+
+export const verifySocialSignupToken = (token: string): SocialSignupPayload => {
+  return jwt.verify(token, JWT_SECRET) as SocialSignupPayload;
+};

@@ -28,6 +28,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, PressableScale } from "../components/ui";
 import { useTourTarget } from "../components/onboarding/TourContext";
 import { useLanguage } from "../lib/i18n/LanguageContext";
+import { formatFromPerSession } from "../lib/price";
 
 const { width } = Dimensions.get("window");
 
@@ -226,11 +227,7 @@ export default function Home() {
       </View>
       <View style={styles.priceTag}>
         <Text style={styles.hourlyRate}>
-          {item.hourlyRate
-            ? `${item.hourlyRate} lei/hr`
-            : item.sessionRate
-              ? `${item.sessionRate} lei/ses`
-              : ""}
+          {formatFromPerSession(item.minSessionPrice, t) ?? ""}
         </Text>
       </View>
     </PressableScale>
@@ -318,11 +315,7 @@ export default function Home() {
       </View>
       <View style={styles.priceTag}>
         <Text style={styles.hourlyRate}>
-          {item.hourlyRate
-            ? `${item.hourlyRate} lei/hr`
-            : item.sessionRate
-              ? `${item.sessionRate} lei/ses`
-              : ""}
+          {formatFromPerSession(item.minSessionPrice, t) ?? ""}
         </Text>
       </View>
     </PressableScale>

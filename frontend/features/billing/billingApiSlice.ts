@@ -14,12 +14,34 @@ interface CreateSubscriptionResponse {
 
 type BillingSource = "none" | "stripe" | "apple" | "google";
 
+/**
+ * The founding-trainer promo, served rather than hardcoded: the deadline and the
+ * number of free months are env-overridable on the server, so extending or
+ * ending the promo must not require a new store build.
+ */
+export interface FoundingGrantOffer {
+  /** False once the deadline has passed, or if the promo is switched off. */
+  isOpen: boolean;
+  /** Free months granted at trainer-profile creation. 0 when closed. */
+  months: number;
+  /** ISO end of the last eligible day. Absent when closed. */
+  deadline?: string;
+}
+
 interface BillingEntitlement {
   isActive: boolean;
   status: "trial" | "active" | "past_due" | "canceled";
   source: BillingSource;
   expiresAt?: string;
   reason?: string;
+  /** Free early-adopter grant rather than a paid or store-trial subscription. */
+  isPromotional?: boolean;
+}
+
+interface FoundingOfferResponse {
+  success: boolean;
+  message: string;
+  data: FoundingGrantOffer;
 }
 
 interface BillingEntitlementResponse {
@@ -81,6 +103,11 @@ export const billingApiSlice = apiSlice.injectEndpoints({
     getBillingEntitlement: builder.query<BillingEntitlementResponse, void>({
       query: () => "/billing/entitlement",
     }),
+    // Separate from the entitlement query on purpose: that one 4xxs for anyone
+    // without a trainer profile, which is exactly the audience for this offer.
+    getFoundingOffer: builder.query<FoundingOfferResponse, void>({
+      query: () => "/billing/founding-offer",
+    }),
     validateIapSubscription: builder.mutation<
       ValidateIapSubscriptionResponse,
       ValidateIapSubscriptionRequest
@@ -100,6 +127,7 @@ export const billingApiSlice = apiSlice.injectEndpoints({
 export const {
   useCreateSubscriptionMutation,
   useGetBillingEntitlementQuery,
+  useGetFoundingOfferQuery,
   useValidateIapSubscriptionMutation,
   useGetBillingTransactionsQuery,
 } = billingApiSlice;

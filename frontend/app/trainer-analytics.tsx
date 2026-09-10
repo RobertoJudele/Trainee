@@ -105,7 +105,7 @@ export default function TrainerAnalyticsScreen() {
     ["unknown", t("ageUnknown")],
   ];
 
-  const { data, isLoading, isFetching, isError, refetch } = useGetTrainerAnalyticsQuery(undefined, {
+  const { data, isLoading, isError, refetch } = useGetTrainerAnalyticsQuery(undefined, {
     skip: user?.role !== UserRole.TRAINER,
   });
 
@@ -126,7 +126,9 @@ export default function TrainerAnalyticsScreen() {
     );
   }
 
-  if (isLoading || isFetching) {
+  // isLoading only: a refetch keeps the cached data, so there is no reason to replace
+  // the whole screen with a spinner once something is already on it.
+  if (isLoading) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={theme.colors.primary} />

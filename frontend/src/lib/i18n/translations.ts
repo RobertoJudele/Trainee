@@ -58,6 +58,15 @@ const en: Record<string, string> = {
   createNewAccount: "Create New Account",
   backToWelcome: "← Back to Welcome",
 
+  // ─── Social sign-in ─────────────────────────────────
+  continueWithGoogle: "Continue with Google",
+  continueWithApple: "Continue with Apple",
+  socialSignInFailed: "Sign-in failed. Please try again.",
+  completeProfileTitle: "Almost there",
+  completeProfileSubtitle:
+    "We just need a few details to finish setting up your account.",
+  finishSignUp: "Finish Sign Up",
+
   // ─── SignUp screen ───────────────────────────────────────
   createAccount: "Create Account",
   signUpSubtitle: "Start your fitness journey today",
@@ -148,10 +157,10 @@ const en: Record<string, string> = {
   tooLong: "Too long",
   reviewTooLong: "Review text must be under 100 characters.",
   couldNotSaveReview: "Could not save review.",
+  reviewRequiresSession: "Only this trainer's clients can leave a review.",
   deleteReview: "Delete Review",
   deleteReviewConfirm: "Are you sure you want to delete your review?",
   couldNotDeleteReview: "Could not delete review.",
-  backToMap: "Back to map",
   contact: "Contact",
   contactTrainer: "Contact Trainer",
   choosePlatform: "Choose platform",
@@ -189,8 +198,6 @@ const en: Record<string, string> = {
   countyIsRequired: "County is required",
   countryIsRequired: "Country is required",
   countryMinLength: "Country must be at least 2 characters long",
-  trainerCreated: "You're a trainer now! 🎉",
-  freeTrialPrompt: "Want to start your 1-month free trial?...",
   maybeLater: "Maybe later",
   startFreeTrial: "Start free trial",
   mustBeLoggedIn: "You must be logged in to create a trainer profile.",
@@ -408,6 +415,17 @@ const en: Record<string, string> = {
   loadingGymDetails: "Loading gym details...",
   trainersHere: "Trainers here",
   noTrainersHere: "No trainers registered here yet",
+  gymStaffTrainers: "The gym's trainers",
+  otherTrainersHere: "Other trainers here",
+  workForThisGym: "I work for this gym",
+  staffRequestPending: "Staff request pending",
+  staffApproved: "Listed as this gym's trainer",
+  staffRequestSent: "Request sent — an admin will review it",
+  tabStaffRequests: "Staff",
+  noStaffRequests: "No pending staff requests",
+  approve: "Approve",
+  reject: "Reject",
+  requestedOn: "Requested",
   fitnessTrainer: "Fitness trainer",
   viewDetails: "View details",
   hoursNA: "Hours N/A",
@@ -423,6 +441,11 @@ const en: Record<string, string> = {
   expirationDate: "Expiration Date",
   billedVia: "Billed Via",
   trialPeriod: "Trial Period",
+  earlyAdopterStatus: "Early Adopter",
+  earlyAdopterFreeUntil: "Free Until",
+  earlyAdopterNoPayment: "No payment required",
+  earlyAdopterBanner:
+    "You're an early adopter — full trainer access free until {date}. No card needed, and nothing is charged automatically. You can subscribe any time before then to continue without interruption.",
   activeAutoRenewing: "Active (Auto-renewing)",
   cancelled: "Cancelled",
   pastDueAction: "Past Due / Action Required",
@@ -521,6 +544,33 @@ const en: Record<string, string> = {
   privacyPolicyTitle: "Privacy Policy",
   effectiveDate: "Effective date:",
 
+  // ─── Navigation header titles ────────────────────────────
+  trainerDetailsTitle: "Trainer Details",
+  checkoutTitle: "Checkout",
+
+  // ─── Founding-trainer offer ──────────────────────────────
+  // Never promise a fixed end date for the free months: they run from the
+  // moment the grant is issued, so joining on 29 September covers you to
+  // 29 December. And never imply limited places — the server caps nothing.
+  foundingOfferTitle: "{n} months free",
+  foundingOfferBody: "Sign up as a trainer by {date} and your first {n} months are free. No card, no automatic charge.",
+  foundingOfferDaysLeft: "{n} days left",
+  foundingOfferDaysLeftDe: "{n} days left",
+  foundingOfferLastDay: "Last day",
+  // Shown to early adopters so the price is never a surprise on the day their
+  // free months end. Read-only — buying now would start billing immediately and
+  // burn the free months they still have.
+  earlyAdopterPricesTitle: "Pricing after your free period",
+  earlyAdopterPricesNote: "Nothing is charged now. You can choose a plan from {date}.",
+  shareMyLink: "Share my link",
+  shareMyLinkMessage: "My trainer profile on Salvio:",
+  couldNotShareLink: "Could not share the link.",
+  copyLink: "Copy",
+  gotIt: "Got it",
+  share: "Share",
+  copied: "Copied",
+  linkCopied: "Link copied. Paste it into your Instagram bio.",
+
   // ─── Profile menu (existing) ─────────────────────────────
   legalAndPolicies: "Legal & Policies",
   reportIssue: "Report Issue",
@@ -579,6 +629,7 @@ const en: Record<string, string> = {
   packagePriceRequired: "Price must be greater than 0.",
   sessionCountRequired: "Session count must be at least 1.",
   deletePackageConfirm: "Are you sure you want to delete this package?",
+  packagesNotSaved: "Your profile was created, but the packages could not be saved. You can add them from Edit profile.",
   deletePackageTitle: "Delete Package",
   packageCreated: "Package created successfully.",
   packageUpdated: "Package updated successfully.",
@@ -878,6 +929,15 @@ const ro: Record<string, string> = {
   createNewAccount: "Creează un cont nou",
   backToWelcome: "← Înapoi la bun venit",
 
+  // ─── Social sign-in ─────────────────────────────────
+  continueWithGoogle: "Continuă cu Google",
+  continueWithApple: "Continuă cu Apple",
+  socialSignInFailed: "Autentificarea a eșuat. Te rugăm să încerci din nou.",
+  completeProfileTitle: "Aproape gata",
+  completeProfileSubtitle:
+    "Mai avem nevoie de câteva detalii ca să îți finalizăm contul.",
+  finishSignUp: "Finalizează înregistrarea",
+
   // ─── SignUp screen ───────────────────────────────────────
   createAccount: "Creează cont",
   signUpSubtitle: "Începe-ți călătoria fitness astăzi",
@@ -968,10 +1028,10 @@ const ro: Record<string, string> = {
   tooLong: "Prea lung",
   reviewTooLong: "Textul recenziei trebuie să fie sub 100 de caractere.",
   couldNotSaveReview: "Nu s-a putut salva recenzia.",
+  reviewRequiresSession: "Doar clienții acestui antrenor pot lăsa o recenzie.",
   deleteReview: "Șterge recenzia",
   deleteReviewConfirm: "Ești sigur că vrei să ștergi recenzia ta?",
   couldNotDeleteReview: "Nu s-a putut șterge recenzia.",
-  backToMap: "Înapoi la hartă",
   contact: "Contact",
   contactTrainer: "Contactează antrenorul",
   choosePlatform: "Alege platforma",
@@ -1009,8 +1069,6 @@ const ro: Record<string, string> = {
   countyIsRequired: "Județul este obligatoriu",
   countryIsRequired: "Țara este obligatorie",
   countryMinLength: "Țara trebuie să aibă cel puțin 2 caractere",
-  trainerCreated: "Ești antrenor acum! 🎉",
-  freeTrialPrompt: "Vrei să începi perioada de probă gratuită de 1 lună?...",
   maybeLater: "Poate mai târziu",
   startFreeTrial: "Începe perioada de probă",
   mustBeLoggedIn: "Trebuie să fii autentificat pentru a crea un profil de antrenor.",
@@ -1228,6 +1286,17 @@ const ro: Record<string, string> = {
   loadingGymDetails: "Se încarcă detaliile sălii...",
   trainersHere: "Antrenori aici",
   noTrainersHere: "Niciun antrenor înregistrat aici încă",
+  gymStaffTrainers: "Antrenorii sălii",
+  otherTrainersHere: "Alți antrenori aici",
+  workForThisGym: "Lucrez pentru această sală",
+  staffRequestPending: "Cerere în așteptare",
+  staffApproved: "Ești listat ca antrenor al sălii",
+  staffRequestSent: "Cerere trimisă — o va verifica un administrator",
+  tabStaffRequests: "Antrenori sală",
+  noStaffRequests: "Nicio cerere în așteptare",
+  approve: "Aprobă",
+  reject: "Respinge",
+  requestedOn: "Cerută pe",
   fitnessTrainer: "Antrenor de fitness",
   viewDetails: "Vezi detalii",
   hoursNA: "Program indisponibil",
@@ -1243,6 +1312,11 @@ const ro: Record<string, string> = {
   expirationDate: "Data expirării",
   billedVia: "Facturat prin",
   trialPeriod: "Perioadă de probă",
+  earlyAdopterStatus: "Early Adopter",
+  earlyAdopterFreeUntil: "Gratuit până la",
+  earlyAdopterNoPayment: "Fără plată",
+  earlyAdopterBanner:
+    "Ești early adopter — acces complet de antrenor gratuit până la {date}. Nu ai nevoie de card și nu se percepe automat nicio plată. Poți alege un abonament oricând până atunci pentru a continua fără întrerupere.",
   activeAutoRenewing: "Activ (reînnoire automată)",
   cancelled: "Anulat",
   pastDueAction: "Restant / Acțiune necesară",
@@ -1341,6 +1415,28 @@ const ro: Record<string, string> = {
   privacyPolicyTitle: "Politica de confidențialitate",
   effectiveDate: "Data intrării în vigoare:",
 
+  // ─── Titluri din bara de navigare ────────────────────────
+  trainerDetailsTitle: "Detalii antrenor",
+  checkoutTitle: "Finalizare comandă",
+
+  // ─── Oferta pentru antrenori fondatori ───────────────────
+  // "de zile" pentru numeralele care o cer (20-99, 00) — vezi romanianNeedsDe.
+  foundingOfferTitle: "{n} luni gratuite",
+  foundingOfferBody: "Înscrie-te ca antrenor până pe {date} și primești primele {n} luni gratuite. Fără card, fără taxare automată.",
+  foundingOfferDaysLeft: "Mai sunt {n} zile",
+  foundingOfferDaysLeftDe: "Mai sunt {n} de zile",
+  foundingOfferLastDay: "Ultima zi",
+  earlyAdopterPricesTitle: "Prețuri după perioada gratuită",
+  earlyAdopterPricesNote: "Nu ți se ia nimic acum. Poți alege un plan începând cu {date}.",
+  shareMyLink: "Distribuie linkul meu",
+  shareMyLinkMessage: "Profilul meu de antrenor pe Salvio:",
+  couldNotShareLink: "Nu am putut distribui linkul.",
+  copyLink: "Copiază",
+  gotIt: "Am înțeles",
+  share: "Distribuie",
+  copied: "Copiat",
+  linkCopied: "Link copiat. Lipește-l în bio-ul de Instagram.",
+
   // ─── Profile menu ────────────────────────────────────────
   legalAndPolicies: "Legal și Politici",
   reportIssue: "Raportează o problemă",
@@ -1399,6 +1495,7 @@ const ro: Record<string, string> = {
   packagePriceRequired: "Prețul trebuie să fie mai mare decât 0.",
   sessionCountRequired: "Numărul de ședințe trebuie să fie cel puțin 1.",
   deletePackageConfirm: "Sigur doriți să ștergeți acest pachet?",
+  packagesNotSaved: "Profilul a fost creat, dar pachetele nu au putut fi salvate. Le poți adăuga din Editează profil.",
   deletePackageTitle: "Șterge Pachet",
   packageCreated: "Pachet creat cu succes.",
   packageUpdated: "Pachet actualizat cu succes.",

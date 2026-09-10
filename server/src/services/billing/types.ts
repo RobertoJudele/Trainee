@@ -8,6 +8,25 @@ export interface Entitlement {
   source: BillingProvider;
   expiresAt?: Date;
   reason?: string;
+  /** Free grant (early adopter) rather than a paid or store-trial subscription. */
+  isPromotional?: boolean;
+}
+
+/**
+ * The founding-trainer promo, shaped for the app to render.
+ *
+ * Served rather than hardcoded in the client: the deadline and the number of
+ * free months are env-overridable (`FOUNDING_GRANT_DEADLINE`,
+ * `FOUNDING_GRANT_MONTHS`), so extending or ending the promo must not require
+ * shipping a new build to the stores.
+ */
+export interface FoundingGrantOffer {
+  /** False once the deadline has passed, or if the promo is switched off. */
+  isOpen: boolean;
+  /** Free months granted at trainer-profile creation. 0 when closed. */
+  months: number;
+  /** ISO timestamp for the end of the last eligible day. Absent when closed. */
+  deadline?: string;
 }
 
 export interface BillingState {
@@ -97,6 +116,8 @@ export interface RevenueCatSubscriberData {
     storeTransactionId?: string | null;
     purchaseDate?: string | null;
     periodType?: string | null;
+    priceInPurchasedCurrency?: number | null;
+    currency?: string | null;
   }>;
 }
 

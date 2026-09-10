@@ -6,6 +6,7 @@ import { requestTrainerTour } from "../../features/onboarding/onboardingSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
 import ScreenHeader from "../../src/components/ScreenHeader";
+import FoundingOfferBanner from "../../src/components/FoundingOfferBanner";
 import {
   useGetSpecializationsQuery,
   SpecializationItem,
@@ -20,8 +21,8 @@ import {
   Pressable,
   ScrollView,
   Platform,
-  Alert,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import React from "react";
 import { theme, typography } from "../../src/lib/theme";
@@ -164,32 +165,30 @@ export default function CreateTrainer() {
       if (responseData && user) {
         dispatch(setTrainerProfile(responseData));
         dispatch(setCredentials({ user: { ...user, role: "trainer" }, token: token || "" }));
-        dispatch(requestTrainerTour());
+        // Scoped to this user: an unfinished tour used to leave a global flag
+        // that started the trainer walkthrough for whoever signed in next.
+        dispatch(requestTrainerTour(user.id));
 
-        for (const pkg of packages) {
-          await createPackage({
-            name: pkg.name.trim(),
-            price: parseFloat(pkg.price),
-            sessionCount: parseInt(pkg.sessionCount),
-          });
+        // .unwrap() so a rejected package reaches a catch. Without it RTK Query
+        // resolves with { error } and the failure vanished — the trainer landed
+        // on the home screen believing packages they had typed were saved.
+        // Caught separately from the profile: the profile is already created, so
+        // the only honest thing left is to say the packages are not.
+        try {
+          for (const pkg of packages) {
+            await createPackage({
+              name: pkg.name.trim(),
+              price: parseFloat(pkg.price),
+              sessionCount: parseInt(pkg.sessionCount),
+            }).unwrap();
+          }
+        } catch (packageError) {
+          console.error("Package creation failed after trainer signup", packageError);
+          Alert.alert(t("myPackages"), t("packagesNotSaved"));
         }
       }
 
-      Alert.alert(
-        t("trainerCreated"),
-        t("freeTrialPrompt"),
-        [
-          {
-            text: t("maybeLater"),
-            style: "cancel",
-            onPress: () => router.replace("/"),
-          },
-          {
-            text: t("startFreeTrial"),
-            onPress: () => router.replace("/checkout?onboarding=1"),
-          },
-        ]
-      );
+      router.replace("/");
     } catch (error: unknown) {
       const err =
         typeof error === "object" && error !== null
@@ -277,6 +276,11 @@ export default function CreateTrainer() {
           />
 
           <View style={styles.form}>
+            {/* Renders nothing once the promo closes — the server decides.
+                The margin is passed in rather than wrapped around, so a closed
+                promo leaves no orphan 32px gap above "About you". */}
+            <FoundingOfferBanner style={styles.section} />
+
             {/* Error Message */}
             {errMsg ? (
               <View style={styles.errorContainer}>

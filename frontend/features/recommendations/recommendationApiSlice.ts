@@ -53,6 +53,8 @@ export interface SuggestedTrainer {
   experienceYears?: number;
   hourlyRate?: number;
   sessionRate?: number;
+  /** Cheapest per-session price: best price/session across packages, else sessionRate. */
+  minSessionPrice?: string | number | null;
   locationCity?: string;
   locationState?: string;
   locationCountry?: string;

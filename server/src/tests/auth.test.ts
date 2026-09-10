@@ -13,6 +13,7 @@ describe("Auth API", () => {
           password: "Test123!",
           firstName: "John",
           lastName: "Doe",
+          phone: "0712345678",
         });
 
       expect(res.status).toBe(201);
@@ -66,6 +67,7 @@ describe("Auth API", () => {
           password: "Test123!",
           firstName: "John",
           lastName: "Doe",
+          phone: "0712345678",
         });
 
       const res = await request(app)
@@ -75,6 +77,7 @@ describe("Auth API", () => {
           password: "Test123!",
           firstName: "Jane",
           lastName: "Doe",
+          phone: "0712345678",
         });
 
       expect(res.status).toBe(409);
@@ -98,6 +101,8 @@ describe("Auth API", () => {
           password: "weak",
           firstName: "John",
           lastName: "Doe",
+          // Present and valid so the 400 can only come from the password rule.
+          phone: "0712345678",
         });
 
       expect(res.status).toBe(400);
@@ -115,6 +120,7 @@ describe("Auth API", () => {
           password: "Test123!",
           firstName: "John",
           lastName: "Doe",
+          phone: "0712345678",
         });
 
       const res = await request(app)
@@ -136,6 +142,9 @@ describe("Auth API", () => {
           password: "Test123!",
           firstName: "John",
           lastName: "Doe",
+          // Without this the user is never created and the 401 below would come
+          // from "no such account", not from the wrong password.
+          phone: "0712345678",
         });
 
       const res = await request(app)
@@ -166,6 +175,7 @@ describe("Auth API", () => {
           password: "Test123!",
           firstName: "John",
           lastName: "Doe",
+          phone: "0712345678",
         });
 
       const refreshToken = signupRes.body.data.refreshToken;

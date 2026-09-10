@@ -18,6 +18,7 @@ import { theme, typography } from '../../src/lib/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
+import SocialAuthButtons from '../components/SocialAuthButtons';
 import { useLanguage } from '../lib/i18n/LanguageContext';
 
 export default function SignUp() {
@@ -171,13 +172,17 @@ export default function SignUp() {
           </FadeInUp>
 
           <FadeInUp delay={theme.motion.stagger * 7}>
+            <SocialAuthButtons onError={setErrMsg} />
+          </FadeInUp>
+
+          <FadeInUp delay={theme.motion.stagger * 8}>
             <OutlineButton
               title={t("alreadyHaveAccount")}
               onPress={() => router.push('/(auth)/login')}
             />
           </FadeInUp>
 
-          <FadeInUp delay={theme.motion.stagger * 8}>
+          <FadeInUp delay={theme.motion.stagger * 9}>
             <TouchableOpacity
               style={styles.backButton}
               onPress={() => router.back()}

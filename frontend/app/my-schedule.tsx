@@ -19,6 +19,7 @@ import ProfileMenuModal, { type ProfileMenuItem } from "../src/components/Profil
 import ScreenHeader from "../src/components/ScreenHeader";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { formatDateTime } from "../src/lib/datetime";
 import { getApiErrorMessage } from "../src/lib/errors";
 
 export default function MyScheduleScreen() {
@@ -104,7 +105,7 @@ export default function MyScheduleScreen() {
   };
 
   const handleCancelBooking = useCallback((slotId: number, startsAt: string) => {
-    const dateStr = new Date(startsAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US");
+    const dateStr = formatDateTime(startsAt, language);
     Alert.alert(
       t("cancelBooking"),
       t("cancelBookingConfirm").replace("{date}", dateStr),
@@ -186,7 +187,9 @@ export default function MyScheduleScreen() {
     );
   }
 
-  if (isLoading || isFetching) {
+  // isLoading only: a refetch keeps the cached data, so there is no reason to replace
+  // the whole screen with a spinner once something is already on it.
+  if (isLoading) {
     return (
       <View style={styles.screen}>
         {renderHeader(false)}
@@ -249,7 +252,7 @@ export default function MyScheduleScreen() {
             <FadeInUp style={styles.codeBox}>
               <Text style={styles.codeLabel}>{t("giveCodeToTrainer")}</Text>
               <Text style={styles.codeText}>{generatedCode.code}</Text>
-              <Text style={styles.codeExpiry}>{t("expires")} {new Date(generatedCode.expiresAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US")}</Text>
+              <Text style={styles.codeExpiry}>{t("expires")} {formatDateTime(generatedCode.expiresAt, language)}</Text>
             </FadeInUp>
           )}
         </FadeInUp>
@@ -317,11 +320,11 @@ export default function MyScheduleScreen() {
               </View>
               <View style={styles.timeRow}>
                 <Ionicons name="time-outline" size={15} color={theme.colors.textSecondary} />
-                <Text style={styles.text}>{new Date(item.startsAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US")}</Text>
+                <Text style={styles.text}>{formatDateTime(item.startsAt, language)}</Text>
               </View>
               <View style={styles.timeRow}>
                 <Ionicons name="flag-outline" size={15} color={theme.colors.textSecondary} />
-                <Text style={styles.text}>{new Date(item.endsAt).toLocaleString(language === "ro" ? "ro-RO" : "en-US")}</Text>
+                <Text style={styles.text}>{formatDateTime(item.endsAt, language)}</Text>
               </View>
               {item.status === "assigned" && (
                 <PressableScale

@@ -18,6 +18,7 @@ import {
   useJoinGymMutation,
   useSetGymAvailabilityMutation,
   useLeaveGymMutation,
+  useRequestGymStaffMutation,
   GymMarker,
   MyGym,
 } from "../features/gym/gymApiSlice";
@@ -53,6 +54,7 @@ export default function MyGymsScreen() {
   const [joinGym, { isLoading: joining }] = useJoinGymMutation();
   const [setAvailability] = useSetGymAvailabilityMutation();
   const [leaveGym, { isLoading: leaving }] = useLeaveGymMutation();
+  const [requestStaff, { isLoading: requestingStaff }] = useRequestGymStaffMutation();
 
   const myGyms: MyGym[] = useMemo(() => myGymsRes?.data ?? [], [myGymsRes]);
   const allGyms: GymMarker[] = useMemo(() => allGymsRes?.data ?? [], [allGymsRes]);
@@ -117,6 +119,17 @@ export default function MyGymsScreen() {
     },
     [leaveGym]
   );
+
+  // Asks an admin to list this trainer as one of the gym's own. Grants nothing
+  // on its own — the affiliation stays pending until it is reviewed.
+  const handleRequestStaff = async (gymId: number) => {
+    try {
+      await requestStaff(gymId).unwrap();
+      Alert.alert(t("success"), t("staffRequestSent"));
+    } catch (err) {
+      Alert.alert(t("error"), getApiErrorMessage(err, t("error")));
+    }
+  };
 
   // ── Not a trainer ──────────────────────────────────────────────────────────
   if (!isTrainer) {
@@ -185,6 +198,35 @@ export default function MyGymsScreen() {
           </Text>
         </View>
       </View>
+
+      {/* Gym-staff affiliation */}
+      {item.staffStatus === "approved" ? (
+        <View style={styles.staffRow}>
+          <Ionicons name="ribbon" size={16} color="#059669" style={{ marginRight: 6 }} />
+          <Text style={styles.staffText}>{t("staffApproved")}</Text>
+        </View>
+      ) : item.staffStatus === "pending" ? (
+        <View style={styles.staffRow}>
+          <Ionicons
+            name="hourglass-outline"
+            size={16}
+            color={theme.colors.textSecondary}
+            style={{ marginRight: 6 }}
+          />
+          <Text style={styles.staffText}>{t("staffRequestPending")}</Text>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={styles.staffBtn}
+          onPress={() => handleRequestStaff(item.id)}
+          disabled={requestingStaff}
+          accessible={true}
+          accessibilityRole="button"
+          accessibilityLabel={t("workForThisGym")}
+        >
+          <Text style={styles.staffBtnText}>{t("workForThisGym")}</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Leave button */}
       <TouchableOpacity
@@ -409,6 +451,29 @@ const styles = StyleSheet.create({
   },
   availRowOn: { backgroundColor: "#D1FAE5" },
   availRowOff: { backgroundColor: "#FEE2E2" },
+  staffRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: "#F1F5F9",
+    marginBottom: 10,
+  },
+  staffText: { ...typography.caption, color: theme.colors.text },
+  staffBtn: {
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  staffBtnText: {
+    ...typography.caption,
+    color: theme.colors.primary,
+    fontWeight: "700",
+  },
   availText: { ...typography.caption, color: "#374151", fontWeight: "600" },
   leaveBtn: {
     alignSelf: "flex-start",

@@ -27,7 +27,7 @@ router.get(
   handleValidationErrors,
   searchTrainers
 );
-router.get("/analytics", authenticate, getTrainerAnalytics);
+router.get("/analytics", authenticate, subscription, getTrainerAnalytics);
 router.get(
   "/:trainerId",
   publicReadRateLimit,

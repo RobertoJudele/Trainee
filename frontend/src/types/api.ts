@@ -29,6 +29,14 @@ export type BillingProvider = "none" | "stripe" | "apple" | "google";
 export interface TrainerProfileAttributes {
   id: number;
   userId: number;
+  /** Readable identifier for the public web page. */
+  slug?: string;
+  /**
+   * Absolute URL of the trainer's public page, assembled by the server.
+   * Null until PUBLIC_WEB_URL is configured — the app must hide the share
+   * affordance rather than build a URL from the API host.
+   */
+  publicProfileUrl?: string | null;
   bio?: string;
   experienceYears?: number;
   hourlyRate?: number;

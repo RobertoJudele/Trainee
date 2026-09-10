@@ -1,8 +1,11 @@
 import sequelize from "../db";
+import { RATING_PRIOR, RATING_PRIOR_WEIGHT } from "../utils/rating";
 
 export const ensureDatabaseExtensions = async (): Promise<void> => {
   await sequelize.query('CREATE EXTENSION IF NOT EXISTS "postgis";');
   await sequelize.query('CREATE EXTENSION IF NOT EXISTS "pg_trgm";');
+  // Diacritic-insensitive search — see utils/search.ts
+  await sequelize.query('CREATE EXTENSION IF NOT EXISTS "unaccent";');
 };
 
 export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
@@ -169,6 +172,19 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     "ALTER TABLE client_preferences DROP COLUMN IF EXISTS longitude;"
   );
 
+  // Shrunk rating for search ordering. Backfilled once from the columns already
+  // there; Review.updateTrainerRating keeps it current from then on.
+  await sequelize.query(
+    "ALTER TABLE trainer_profiles ADD COLUMN IF NOT EXISTS ranking_score NUMERIC(4,3);"
+  );
+  await sequelize.query(`
+    UPDATE trainer_profiles
+    SET ranking_score = (
+      (${RATING_PRIOR} * ${RATING_PRIOR_WEIGHT}) + (COALESCE(total_rating, 0) * COALESCE(review_count, 0))
+    ) / (${RATING_PRIOR_WEIGHT} + COALESCE(review_count, 0))
+    WHERE ranking_score IS NULL;
+  `);
+
   // Gym-request ticket type: add new enum values to existing issue enums.
   // sync({ alter:false }) won't add enum values, so do it explicitly. Idempotent.
   await sequelize.query(
@@ -201,4 +217,23 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     CREATE UNIQUE INDEX IF NOT EXISTS idx_user_blocks_pair
     ON user_blocks (blocker_id, blocked_id);
   `);
+
+  // Sign in with Google / Apple. sync({ alter:false }) never touches an existing
+  // table, so the columns and the password_hash relaxation have to be explicit.
+  await sequelize.query(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS google_id VARCHAR(255);"
+  );
+  await sequelize.query(
+    "ALTER TABLE users ADD COLUMN IF NOT EXISTS apple_id VARCHAR(255);"
+  );
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
+  `);
+  await sequelize.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_apple_id ON users (apple_id);
+  `);
+  // Social-only accounts have no password at all.
+  await sequelize.query(
+    "ALTER TABLE users ALTER COLUMN password_hash DROP NOT NULL;"
+  );
 };

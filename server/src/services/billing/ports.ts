@@ -79,6 +79,11 @@ export interface StripeGateway {
 
 export interface RevenueCatGateway {
   fetchSubscriber(appUserId: string): Promise<RevenueCatSubscriberData>;
+  grantPromotionalEntitlement(
+    appUserId: string,
+    entitlementId: string,
+    endTimeMs: number,
+  ): Promise<void>;
   isWebhookAuthorized(authorizationHeader: string | undefined): boolean;
 }
 
@@ -95,4 +100,6 @@ export interface BillingConfig {
   getStripeCancelUrl(): string;
   getStripePortalReturnUrl(): string;
   hasRevenueCatApiKey(): boolean;
+  getFoundingGrantMonths(): number;
+  getFoundingGrantDeadline(): Date | undefined;
 }
