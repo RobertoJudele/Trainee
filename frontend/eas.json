@@ -17,8 +17,8 @@
         "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
         "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
         "EXPO_PUBLIC_REVENUECAT_DEBUG": "1",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1072576406986-3jc4ook5uhrqvov9sivgrcotb77cd84t.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1072576406986-sfuve3t267m6gotrc4knuhptm7vt7elr.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1074619281969-93ccm5d6n7kq3h99u7ie1je2ajh5i3oj.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1074619281969-imri2h359g5o4utkebq0crvnk96ro3hj.apps.googleusercontent.com"
       }
     },
     "testflight-dev": {
@@ -33,8 +33,8 @@
         "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
         "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
         "EXPO_PUBLIC_REVENUECAT_DEBUG": "1",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1072576406986-3jc4ook5uhrqvov9sivgrcotb77cd84t.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1072576406986-sfuve3t267m6gotrc4knuhptm7vt7elr.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1074619281969-93ccm5d6n7kq3h99u7ie1je2ajh5i3oj.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1074619281969-imri2h359g5o4utkebq0crvnk96ro3hj.apps.googleusercontent.com"
       }
     },
     "production": {
@@ -49,8 +49,8 @@
         "EXPO_PUBLIC_REVENUECAT_ENTITLEMENT_ID": "Trainee Pro",
         "EXPO_PUBLIC_REVENUECAT_PRODUCT_ID": "com.trainee.trainer_monthly",
         "EXPO_PUBLIC_REVENUECAT_DEBUG": "0",
-        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1072576406986-3jc4ook5uhrqvov9sivgrcotb77cd84t.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1072576406986-sfuve3t267m6gotrc4knuhptm7vt7elr.apps.googleusercontent.com"
+        "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "1074619281969-93ccm5d6n7kq3h99u7ie1je2ajh5i3oj.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "1074619281969-imri2h359g5o4utkebq0crvnk96ro3hj.apps.googleusercontent.com"
       }
     }
   },
