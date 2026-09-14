@@ -1,6 +1,6 @@
 import { Stack, useRouter } from "expo-router";
 import { useEffect, useRef } from "react";
-import { Platform, Pressable } from "react-native";
+import { Platform, Pressable, type ColorValue } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { Provider } from "react-redux";
 import { useSelector } from "react-redux";
@@ -118,7 +118,7 @@ function RevenueCatIdentityBridge() {
 // ponytail: JS back button replaces the native-stack back arrow, which is
 // unresponsive on the first header screen pushed over a headerShown:false
 // screen (react-native-screens hit-test glitch) until another screen re-layouts.
-function HeaderBackButton({ tintColor }: { tintColor?: string }) {
+function HeaderBackButton({ tintColor }: { tintColor?: ColorValue }) {
   const router = useRouter();
   return (
     <Pressable
@@ -159,8 +159,6 @@ function LocalizedStack() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="TrainerProfile" options={{ headerShown: false }} />
       <Stack.Screen name="UserProfile" options={{ headerShown: false }} />
-      <Stack.Screen name="login" options={{ headerShown: false }} />
-      <Stack.Screen name="signup" options={{ headerShown: false }} />
       <Stack.Screen name="search" options={{ headerShown: false }} />
       <Stack.Screen name="create-trainer" options={{ headerShown: false }} />
       <Stack.Screen name="map" options={{ headerShown: false }} />

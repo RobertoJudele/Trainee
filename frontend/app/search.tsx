@@ -602,7 +602,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.small,
   },
   filterToggleActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  filterToggleIcon: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center" },
+  filterToggleIcon: { ...StyleSheet.absoluteFill, justifyContent: "center", alignItems: "center" },
 
   // Filters panel
   filtersPanel: {

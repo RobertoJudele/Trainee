@@ -1,9 +1,6 @@
-import { Platform } from 'react-native';
+import { Platform, TurboModuleRegistry } from 'react-native';
 import * as AppleAuthentication from 'expo-apple-authentication';
-import {
-  GoogleSignin,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
+import type * as GoogleSignInLib from '@react-native-google-signin/google-signin';
 import { isCancellationError } from './socialAuthErrors';
 
 export type SocialProvider = 'google' | 'apple';
@@ -19,18 +16,25 @@ export interface SocialCredential {
   lastName?: string;
 }
 
+// The library looks its native module up the moment it is imported and throws
+// when the binary doesn't have it — Expo Go never does. So only load it when the
+// module is there; without it Google simply stays hidden.
+const google: typeof GoogleSignInLib | null = TurboModuleRegistry.get('RNGoogleSignin')
+  ? require('@react-native-google-signin/google-signin')
+  : null;
+
 const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
 
 // The server validates the token's audience against the WEB client id on Android
 // and the iOS one on iOS, so both have to be configured here.
-GoogleSignin.configure({
+google?.GoogleSignin.configure({
   webClientId,
   iosClientId,
   offlineAccess: false,
 });
 
-export const isGoogleConfigured = Boolean(webClientId);
+export const isGoogleConfigured = google !== null && Boolean(webClientId);
 
 /** Apple only offers native Sign in with Apple on iOS 13+. */
 export const isAppleSignInAvailable = async (): Promise<boolean> => {
@@ -45,13 +49,17 @@ export const isAppleSignInAvailable = async (): Promise<boolean> => {
 };
 
 const isCancellation = (error: unknown): boolean =>
-  isCancellationError(error, statusCodes.SIGN_IN_CANCELLED);
+  isCancellationError(error, google?.statusCodes.SIGN_IN_CANCELLED);
 
 /**
  * Returns null when the user backs out of the native sheet — a cancel is not an
  * error and must not raise an alert.
  */
 export const signInWithGoogle = async (): Promise<SocialCredential | null> => {
+  if (!google) {
+    throw new Error('Google Sign-In is not available in this build');
+  }
+  const { GoogleSignin } = google;
   try {
     await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
     const response = await GoogleSignin.signIn();
@@ -111,7 +119,7 @@ export const signInWithApple = async (): Promise<SocialCredential | null> => {
 /** Clears the cached Google session so the next sign-in shows the account picker. */
 export const signOutFromProviders = async (): Promise<void> => {
   try {
-    await GoogleSignin.signOut();
+    await google?.GoogleSignin.signOut();
   } catch {
     // Nothing to sign out of; not worth surfacing.
   }

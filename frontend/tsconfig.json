@@ -1,6 +1,8 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
-    "strict": true
+    "strict": true,
+    // TS 6 stopped auto-loading @types/*; the ts-jest suites need jest's globals.
+    "types": ["jest"]
   }
 }

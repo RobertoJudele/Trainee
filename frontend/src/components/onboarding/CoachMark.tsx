@@ -168,7 +168,7 @@ export default function CoachMark() {
       {/* Animated spotlight (dim panels + highlight outline) */}
       {spotlight && (
         <Animated.View
-          style={[StyleSheet.absoluteFillObject, { opacity: spotOpacity }]}
+          style={[StyleSheet.absoluteFill, { opacity: spotOpacity }]}
           pointerEvents="box-none"
         >
           {dim && (
@@ -312,7 +312,7 @@ export default function CoachMark() {
 
 const styles = StyleSheet.create({
   root: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 9999,
     elevation: 9999,
   },
