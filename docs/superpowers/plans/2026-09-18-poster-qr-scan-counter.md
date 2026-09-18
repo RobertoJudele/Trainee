@@ -1473,7 +1473,37 @@ router.get("/p/:code/start", startFromPoster);
 router.get("/p/:code", getPosterLandingPage);
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [ ] **Step 6: Expose /p/ through nginx**
+
+`server/nginx/conf.d/salvio-web.conf` deliberately exposes only `location /t/` and
+ends with `location / { return 404; }`, so the poster URL would 404 on
+`salvio.juroc.tech` with the code shipped and working. Add a `/p/` block to the
+HTTPS server, immediately after the `location /t/` block, mirroring it exactly:
+
+```nginx
+    # Gym poster QR codes. Same treatment as /t/: public GET-only HTML on this
+    # host, while the rest of the API stays on api.juroc.tech.
+    location /p/ {
+        proxy_pass http://$trainee_app$request_uri;
+        proxy_http_version 1.1;
+
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 60s;
+    }
+```
+
+`X-Forwarded-For` matters here beyond convention: `shouldCountPosterHit` reads the
+client IP from that header for its flood guard, and without it every scan on the
+host would share nginx's own address and trip the limit.
+
+Also update the file's header comment, which currently reads "Only /t/ is exposed
+here", to name both paths.
+
+- [ ] **Step 7: Run tests to verify they pass**
 
 Run: `cd server && npm test -- posterLandingRoutes`
 Expected: PASS, 10 tests.
@@ -1483,11 +1513,11 @@ Then confirm the extraction broke nothing on the trainer page:
 Run: `cd server && npm test -- publicProfile trainer`
 Expected: PASS, no new failures.
 
-- [ ] **Step 7: Typecheck and commit**
+- [ ] **Step 8: Typecheck and commit**
 
 ```bash
 cd server && npm run typecheck
-git add src/utils/storeLinks.ts src/controllers/publicProfile.ts src/controllers/posterLanding.ts src/routes/index.ts src/tests/posterLandingRoutes.test.ts
+git add src/utils/storeLinks.ts src/controllers/publicProfile.ts src/controllers/posterLanding.ts src/routes/index.ts src/tests/posterLandingRoutes.test.ts nginx/conf.d/salvio-web.conf
 git commit -m "feat(poster): serve and count /p/:code scans and CTA clicks"
 ```
 
@@ -1882,7 +1912,15 @@ Not a code task, but the feature is inert without it. After merging, on each env
 cd ~/Trainee && git pull && cd server
 docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < migrations/005_add_poster_codes.sql
 docker compose up -d --build app      # or app-dev on the dev host
+
+# The /p/ location block is new. Test the config before reloading: a reload of a
+# bad config leaves the running nginx up, a restart does not.
+docker compose exec nginx nginx -t && docker compose exec nginx nginx -s reload
 ```
+
+There is nothing to deploy to a separate website. The page is served by this
+Express app, exactly like `/t/:slug` — nginx on `salvio.juroc.tech` proxies both
+paths to the same `app` container, and everything else on that host still 404s.
 
 Then create the first code and read back the URL to encode:
 
