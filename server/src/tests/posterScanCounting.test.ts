@@ -11,13 +11,21 @@ const fakeRequest = (overrides: {
   method?: string;
   userAgent?: string;
   ip?: string;
-}): Request =>
-  ({
+  headers?: Record<string, string | string[]>;
+}): Request => {
+  const headers: Record<string, string | string[]> = overrides.headers
+    ? { ...overrides.headers }
+    : {};
+  if (overrides.userAgent) {
+    headers["user-agent"] = overrides.userAgent;
+  }
+  return {
     method: overrides.method ?? "GET",
-    headers: overrides.userAgent ? { "user-agent": overrides.userAgent } : {},
+    headers,
     ip: overrides.ip ?? "203.0.113.10",
     socket: { remoteAddress: overrides.ip ?? "203.0.113.10" },
-  } as unknown as Request);
+  } as unknown as Request;
+};
 
 describe("isCrawlerUserAgent", () => {
   it("matches the link-preview bots that fetch a shared poster URL", () => {
@@ -93,5 +101,79 @@ describe("shouldCountPosterHit", () => {
         fakeRequest({ userAgent: "Mozilla/5.0 (iPhone)", ip: "198.51.100.6" })
       )
     ).toBe(true);
+  });
+
+  it("uses leftmost x-forwarded-for address (string form) for flood bucketing", () => {
+    const xff1 = "1.2.3.4, 10.0.0.1";
+    const xff1_different_rightmost = "1.2.3.4, 10.0.0.2";
+    const xff2 = "5.6.7.8, 10.0.0.1";
+
+    let counted1 = 0;
+
+    // Flood with xff1 and its variant (same leftmost, different rightmost)
+    for (let i = 0; i < 150; i += 1) {
+      const xff = i % 2 === 0 ? xff1 : xff1_different_rightmost;
+      if (
+        shouldCountPosterHit(
+          fakeRequest({
+            userAgent: "Mozilla/5.0 (iPhone)",
+            headers: { "x-forwarded-for": xff },
+          })
+        )
+      ) {
+        counted1 += 1;
+      }
+    }
+
+    // Try with xff2 (different leftmost address)
+    const counted2 = shouldCountPosterHit(
+      fakeRequest({
+        userAgent: "Mozilla/5.0 (iPhone)",
+        headers: { "x-forwarded-for": xff2 },
+      })
+    )
+      ? 1
+      : 0;
+
+    // Both xff1 variants should bucket together under 1.2.3.4, hitting limit at 120
+    expect(counted1).toBe(120);
+    // Different leftmost should count (5.6.7.8 is independent bucket)
+    expect(counted2).toBe(1);
+  });
+
+  it("uses leftmost x-forwarded-for address (array form) for flood bucketing", () => {
+    const xffArray1 = ["1.2.3.4", "10.0.0.1"];
+    const xff2 = "5.6.7.8, 10.0.0.1";
+
+    let counted1 = 0;
+
+    // Flood with array-form XFF
+    for (let i = 0; i < 150; i += 1) {
+      if (
+        shouldCountPosterHit(
+          fakeRequest({
+            userAgent: "Mozilla/5.0 (iPhone)",
+            headers: { "x-forwarded-for": xffArray1 },
+          })
+        )
+      ) {
+        counted1 += 1;
+      }
+    }
+
+    // Try with string-form different leftmost
+    const counted2 = shouldCountPosterHit(
+      fakeRequest({
+        userAgent: "Mozilla/5.0 (iPhone)",
+        headers: { "x-forwarded-for": xff2 },
+      })
+    )
+      ? 1
+      : 0;
+
+    // Array-form should bucket under 1.2.3.4, hitting limit at 120
+    expect(counted1).toBe(120);
+    // Different leftmost should count (5.6.7.8 is independent bucket)
+    expect(counted2).toBe(1);
   });
 });
