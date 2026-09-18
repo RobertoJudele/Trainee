@@ -13,7 +13,14 @@
 ## Global Constraints
 
 - **Server only.** No change to `frontend/`. Signup attribution, QR image generation and any in-app admin screen are out of scope.
-- **`npm test` runs `sequelize.sync({ force: true })`, which DROPS EVERY TABLE in whatever `DB_NAME` points at** (`src/tests/setup.ts:16`, `src/db.ts:32`). Before running any test, confirm `DB_NAME` is the local throwaway database (`trainee_db_local` on `127.0.0.1:5432` locally), never `trainee` or `trainee_dev`. There is no `.env.test` in the repo; the DB_* vars must come from the environment.
+- **`npm test` runs `sequelize.sync({ force: true })`, which DROPS EVERY TABLE in whatever `DB_NAME` points at** (`src/tests/setup.ts:16`, `src/db.ts:32`), and there is no `.env.test` in the repo. Run every test with this exact command, which targets a database created solely for the suite — never plain `npm test`, which would fall back to `.env` and drop the local dev database:
+
+  ```bash
+  cd server && DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=trainee_test DB_USER=admin \
+    DB_PASS=$(grep '^DB_PASS=' .env | cut -d= -f2-) npx jest <pattern>
+  ```
+
+  `trainee_test` lives in the `trainee_db_local` container (already created, with postgis/pg_trgm/unaccent). Never point `DB_NAME` at `trainee`, `trainee_dev`, or anything on the VPS.
 - **Jest runs serially** (`maxWorkers: 1`) for that same reason. Do not add `test.concurrent`.
 - **TypeScript is strict**: no implicit `any`, explicit return types on exported functions, `??` over `||`, optional chaining. Verify with `npm run typecheck` before every commit.
 - **Romanian copy is verbatim from the spec.** In particular proof row 1 keeps its missing diacritics ("salile", "singuri") — the handoff explicitly says not to silently correct it. Use the comma-below Romanian letters (ș, ț) in copy the spec writes that way: `București`, `Ești`.
@@ -72,7 +79,7 @@ describe("PosterCode model", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd server && npm test -- posterCodeModel`
+Run: the test command from Global Constraints with pattern `posterCodeModel`
 Expected: FAIL — `Cannot find module '../models/posterCode'`.
 
 - [ ] **Step 3: Write the model**
@@ -180,7 +187,7 @@ and add `PosterCode,` to the end of the `models: [...]` array (after `UserBlock,
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `cd server && npm test -- posterCodeModel`
+Run: the test command from Global Constraints with pattern `posterCodeModel`
 Expected: PASS, 2 tests.
 
 - [ ] **Step 6: Write the migration**
@@ -284,7 +291,7 @@ describe("POSTER_CODE_PATTERN", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd server && npm test -- posterCodeGenerator`
+Run: the test command from Global Constraints with pattern `posterCodeGenerator`
 Expected: FAIL — `Cannot find module '../utils/posterCode'`.
 
 - [ ] **Step 3: Write the implementation**
@@ -318,7 +325,7 @@ export const generatePosterCode = (length: number = 6): string => {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd server && npm test -- posterCodeGenerator`
+Run: the test command from Global Constraints with pattern `posterCodeGenerator`
 Expected: PASS, 4 tests.
 
 - [ ] **Step 5: Typecheck and commit**
@@ -453,7 +460,7 @@ describe("shouldCountPosterHit", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd server && npm test -- posterScanCounting`
+Run: the test command from Global Constraints with pattern `posterScanCounting`
 Expected: FAIL — `Cannot find module '../services/posterScanCounting'`.
 
 - [ ] **Step 3: Write the implementation**
@@ -549,7 +556,7 @@ export const resetPosterFloodBuckets = (): void => {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd server && npm test -- posterScanCounting`
+Run: the test command from Global Constraints with pattern `posterScanCounting`
 Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Typecheck and commit**
@@ -708,7 +715,7 @@ describe("poster landing assets", () => {
 
 - [ ] **Step 5: Run test to verify it passes**
 
-Run: `cd server && npm test -- posterLandingAssets`
+Run: the test command from Global Constraints with pattern `posterLandingAssets`
 Expected: PASS, 4 tests. (The generated modules already exist from steps 1–2, so this task's test is written after its inputs — the generators are mechanical, with nothing to drive out test-first.)
 
 - [ ] **Step 6: Typecheck and commit**
@@ -867,7 +874,7 @@ describe("renderPosterLanding", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd server && npm test -- posterLandingPage`
+Run: the test command from Global Constraints with pattern `posterLandingPage`
 Expected: FAIL — `Cannot find module '../services/posterLandingPage'`.
 
 - [ ] **Step 3: Write the renderer**
@@ -1099,7 +1106,7 @@ ${offer}
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `cd server && npm test -- posterLandingPage`
+Run: the test command from Global Constraints with pattern `posterLandingPage`
 Expected: PASS, 15 tests.
 
 - [ ] **Step 5: Typecheck and commit**
@@ -1289,7 +1296,7 @@ describe("GET /p/:code/start", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd server && npm test -- posterLandingRoutes`
+Run: the test command from Global Constraints with pattern `posterLandingRoutes`
 Expected: FAIL — `Cannot find module '../utils/storeLinks'`.
 
 - [ ] **Step 3: Extract the store links**
@@ -1505,12 +1512,12 @@ here", to name both paths.
 
 - [ ] **Step 7: Run tests to verify they pass**
 
-Run: `cd server && npm test -- posterLandingRoutes`
+Run: the test command from Global Constraints with pattern `posterLandingRoutes`
 Expected: PASS, 10 tests.
 
 Then confirm the extraction broke nothing on the trainer page:
 
-Run: `cd server && npm test -- publicProfile trainer`
+Run: the test command from Global Constraints with pattern `publicProfile trainer`
 Expected: PASS, no new failures.
 
 - [ ] **Step 8: Typecheck and commit**
@@ -1675,7 +1682,7 @@ describe("poster code admin authorization", () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `cd server && npm test -- posterCodeAdmin`
+Run: the test command from Global Constraints with pattern `posterCodeAdmin`
 Expected: FAIL — every request 404s, because `/poster-codes` is not mounted.
 
 - [ ] **Step 3: Add the validators**
@@ -1884,13 +1891,15 @@ router.use("/poster-codes", posterCodesRouter);
 
 - [ ] **Step 6: Run tests to verify they pass**
 
-Run: `cd server && npm test -- posterCodeAdmin`
+Run: the test command from Global Constraints with pattern `posterCodeAdmin`
 Expected: PASS, 6 tests.
 
 - [ ] **Step 7: Run the whole poster suite and typecheck**
 
 ```bash
-cd server && npm test -- poster && npm run typecheck
+cd server && DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=trainee_test DB_USER=admin \
+  DB_PASS=$(grep '^DB_PASS=' .env | cut -d= -f2-) npx jest poster
+cd server && npm run typecheck
 ```
 
 Expected: PASS across `posterCodeModel`, `posterCodeGenerator`, `posterScanCounting`, `posterLandingAssets`, `posterLandingPage`, `posterLandingRoutes`, `posterCodeAdmin`; typecheck clean.
