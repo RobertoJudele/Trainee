@@ -27,6 +27,7 @@ import { ClientPreference } from "./models/clientPreference";
 import { AppMinVersion } from "./models/appMinVersion";
 import { AppReleaseNote } from "./models/appReleaseNote";
 import { UserBlock } from "./models/userBlock";
+import { PosterCode } from "./models/posterCode";
 dotenv.config();
 
 const sequelize = new Sequelize({
@@ -64,6 +65,7 @@ const sequelize = new Sequelize({
     AppMinVersion,
     AppReleaseNote,
     UserBlock,
+    PosterCode,
   ],
   logging: process.env.NODE_ENV === "test" ? false : (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {
