@@ -1413,6 +1413,15 @@ export const suggestTrainersValidation = [
   strictSchema({ query: ["page", "limit"] }),
 ];
 
+/** Shared by create and update: a poster's optional gym-logo image URL. */
+const posterGymLogoUrlValidation = body("gymLogoUrl")
+  .optional({ nullable: true })
+  .trim()
+  .isLength({ max: 500 })
+  .withMessage("gymLogoUrl must be at most 500 characters.")
+  .isURL({ protocols: ["http", "https"], require_protocol: true })
+  .withMessage("gymLogoUrl must be an http(s) URL.");
+
 export const createPosterCodeValidation = [
   body("label")
     .trim()
@@ -1427,13 +1436,8 @@ export const createPosterCodeValidation = [
     .optional({ nullable: true })
     .isInt({ min: 1 })
     .withMessage("gymId must be a positive integer."),
-  body("gymLogoUrl")
-    .optional({ nullable: true })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("gymLogoUrl must be at most 500 characters.")
-    .isURL({ protocols: ["http", "https"], require_protocol: true })
-    .withMessage("gymLogoUrl must be an http(s) URL."),
+  posterGymLogoUrlValidation,
+  strictSchema({ body: ["label", "code", "gymId", "gymLogoUrl"] }),
 ];
 
 export const updatePosterCodeValidation = [
@@ -1444,13 +1448,8 @@ export const updatePosterCodeValidation = [
     .isLength({ min: 2, max: 120 })
     .withMessage("Label must be between 2 and 120 characters."),
   body("isActive").optional().isBoolean().withMessage("isActive must be a boolean."),
-  body("gymLogoUrl")
-    .optional({ nullable: true })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("gymLogoUrl must be at most 500 characters.")
-    .isURL({ protocols: ["http", "https"], require_protocol: true })
-    .withMessage("gymLogoUrl must be an http(s) URL."),
+  posterGymLogoUrlValidation,
+  strictSchema({ body: ["label", "isActive", "gymLogoUrl"], params: ["id"] }),
 ];
 
 export const handleValidationErrors = (

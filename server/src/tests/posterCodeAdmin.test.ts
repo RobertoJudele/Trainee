@@ -8,19 +8,50 @@ const adminToken = async (): Promise<string> =>
   (await createTestUser({ role: "admin" })).token;
 
 describe("POST /poster-codes", () => {
-  it("creates a code, generating one when none is supplied", async () => {
-    const token = await adminToken();
+  it("creates a code, generating one when none is supplied, with an absolute URL", async () => {
+    const original = process.env.PUBLIC_WEB_URL;
+    process.env.PUBLIC_WEB_URL = "https://salvio.juroc.tech";
 
-    const res = await request(app)
-      .post("/poster-codes")
-      .set("Authorization", `Bearer ${token}`)
-      .send({ label: "World Class Dorobanți" });
+    try {
+      const token = await adminToken();
 
-    expect(res.status).toBe(201);
-    expect(res.body.success).toBe(true);
-    expect(res.body.data.code).toMatch(/^[a-z0-9]{6}$/);
-    expect(res.body.data.scanCount).toBe(0);
-    expect(res.body.data.url).toContain(`/p/${res.body.data.code}`);
+      const res = await request(app)
+        .post("/poster-codes")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ label: "World Class Dorobanți" });
+
+      expect(res.status).toBe(201);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data.code).toMatch(/^[a-z0-9]{6}$/);
+      expect(res.body.data.scanCount).toBe(0);
+      expect(res.body.data.url).toBe(
+        `https://salvio.juroc.tech/p/${res.body.data.code}`
+      );
+    } finally {
+      if (original === undefined) delete process.env.PUBLIC_WEB_URL;
+      else process.env.PUBLIC_WEB_URL = original;
+    }
+  });
+
+  it("returns null — never a relative path — when PUBLIC_WEB_URL is unset", async () => {
+    const original = process.env.PUBLIC_WEB_URL;
+    delete process.env.PUBLIC_WEB_URL;
+
+    try {
+      const token = await adminToken();
+
+      const res = await request(app)
+        .post("/poster-codes")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ label: "Sala Fara Domeniu" });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.url).toBeNull();
+      expect(res.body.data.url).not.toEqual(expect.stringContaining("/p/"));
+    } finally {
+      if (original === undefined) delete process.env.PUBLIC_WEB_URL;
+      else process.env.PUBLIC_WEB_URL = original;
+    }
   });
 
   it("accepts a hand-written code and rejects a malformed one", async () => {

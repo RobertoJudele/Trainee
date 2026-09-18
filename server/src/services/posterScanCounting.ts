@@ -47,6 +47,12 @@ export const detectStorePlatform = (
  * every member behind one IP, so a normal limiter would refuse real scanners
  * and undercount exactly the posters that are working best. Over the threshold
  * the page is still served — only the increment is skipped.
+ *
+ * Each IP's bucket is capped at FLOOD_MAX_HITS timestamps: once an IP is over
+ * the threshold, the timestamp is not pushed, so the array stops growing and a
+ * sustained flood stays a cheap O(FLOOD_MAX_HITS) filter per request rather
+ * than an unbounded one. A side effect is that a flooder stays throttled
+ * until the bucket ages out 60s of quiet, rather than re-arming continuously.
  */
 const isFloodLimited = (ip: string): boolean => {
   const now = Date.now();
@@ -58,10 +64,16 @@ const isFloodLimited = (ip: string): boolean => {
   const recent = (floodBuckets.get(ip) ?? []).filter(
     (timestamp) => now - timestamp < FLOOD_WINDOW_MS
   );
+
+  if (recent.length >= FLOOD_MAX_HITS) {
+    floodBuckets.set(ip, recent);
+    return true;
+  }
+
   recent.push(now);
   floodBuckets.set(ip, recent);
 
-  return recent.length > FLOOD_MAX_HITS;
+  return false;
 };
 
 export const shouldCountPosterHit = (req: Request): boolean => {

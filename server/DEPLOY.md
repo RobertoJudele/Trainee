@@ -127,6 +127,7 @@ table that already exists. Anything else is a numbered SQL file in
 | `002_add_trainer_slug.sql` | `trainer_profiles.slug` |
 | `003_add_app_release_notes.sql` | `app_release_notes` table |
 | `004_add_trainer_gym_staff.sql` | `trainer_gyms.staff_*` (gym-staff affiliation) |
+| `005_add_poster_codes.sql` | `poster_codes` table |
 
 ```bash
 set -a; source .env; set +a

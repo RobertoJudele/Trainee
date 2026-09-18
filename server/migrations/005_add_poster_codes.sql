@@ -1,7 +1,10 @@
 -- Per-gym poster QR codes and their scan / store-click counters.
 --
--- Why a manual SQL file: the app boots with sequelize.sync({ alter: false }), so a
--- new model is NOT created automatically on an existing database. Run this once
+-- Why a manual SQL file: sequelize.sync({ alter: false }) DOES create this table
+-- on boot (sync issues CREATE TABLE IF NOT EXISTS for every registered model
+-- regardless of `alter`; `alter` only governs ALTERs to existing tables). This
+-- file exists so the schema is explicit, reviewable, and applied deterministically
+-- ahead of the deploy rather than as a side effect of process start. Run this once
 -- per environment.
 --
 -- Local:  docker compose exec -T db psql -U "$DB_USER" -d "$DB_NAME" < migrations/005_add_poster_codes.sql

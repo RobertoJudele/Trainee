@@ -10,13 +10,32 @@ import { sendError, sendSuccess } from "../utils/response";
 /**
  * The URL that goes into the QR generator. Built here rather than in the client
  * so moving PUBLIC_WEB_URL moves every future poster without a code change.
+ *
+ * Null until a consumer domain exists (see `trainerPublicUrl` in
+ * `utils/publicUrl.ts`): a relative URL baked into a printed QR code is
+ * unrecoverable once posters ship, so a missing base URL must surface as
+ * "no URL yet" rather than as a fabricated relative path.
  */
-const posterUrl = (code: string): string => {
+const posterUrl = (code: string): string | null => {
   const base = publicWebBaseUrl();
-  return base ? `${base}/p/${code}` : `/p/${code}`;
+  return base ? `${base}/p/${code}` : null;
 };
 
-const serialize = (poster: PosterCode) => ({
+interface SerializedPosterCode {
+  id: number;
+  code: string;
+  label: string;
+  gymId: number | null;
+  gymLogoUrl: string | null;
+  scanCount: number;
+  appleClickCount: number;
+  playClickCount: number;
+  lastScannedAt: Date | null;
+  isActive: boolean;
+  url: string | null;
+}
+
+const serialize = (poster: PosterCode): SerializedPosterCode => ({
   id: poster.id,
   code: poster.code,
   label: poster.label,
