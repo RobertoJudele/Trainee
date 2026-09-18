@@ -142,18 +142,23 @@ describe("shouldCountPosterHit", () => {
   });
 
   it("uses leftmost x-forwarded-for address (array form) for flood bucketing", () => {
-    const xffArray1 = ["1.2.3.4", "10.0.0.1"];
-    const xff2 = "5.6.7.8, 10.0.0.1";
+    const xffArray1a = ["1.2.3.4, 10.0.0.1", "9.9.9.9"];
+    const xffArray1b = ["1.2.3.4, 10.0.0.2", "8.8.8.8"];
+    const xffArray2 = ["5.6.7.8, 10.0.0.1"];
 
     let counted1 = 0;
 
-    // Flood with array-form XFF
+    // Flood with alternating array-form XFF (same leftmost 1.2.3.4 after split,
+    // different rest). The leading element contains a comma to verify the split
+    // happens inside forwardedFor[0].
     for (let i = 0; i < 150; i += 1) {
+      const xff = i % 2 === 0 ? xffArray1a : xffArray1b;
       if (
         shouldCountPosterHit(
           fakeRequest({
             userAgent: "Mozilla/5.0 (iPhone)",
-            headers: { "x-forwarded-for": xffArray1 },
+            headers: { "x-forwarded-for": xff },
+            ip: "203.0.113.10",
           })
         )
       ) {
@@ -161,19 +166,22 @@ describe("shouldCountPosterHit", () => {
       }
     }
 
-    // Try with string-form different leftmost
+    // Try with array-form different leftmost, SAME IP as flood requests.
+    // If array branch is ignored, this would bucket under the fallback IP
+    // (already saturated), and would not count.
     const counted2 = shouldCountPosterHit(
       fakeRequest({
         userAgent: "Mozilla/5.0 (iPhone)",
-        headers: { "x-forwarded-for": xff2 },
+        headers: { "x-forwarded-for": xffArray2 },
+        ip: "203.0.113.10",
       })
     )
       ? 1
       : 0;
 
-    // Array-form should bucket under 1.2.3.4, hitting limit at 120
+    // Both array forms should bucket together under 1.2.3.4, hitting limit at 120
     expect(counted1).toBe(120);
-    // Different leftmost should count (5.6.7.8 is independent bucket)
+    // Different leftmost (5.6.7.8) should count via its own bucket
     expect(counted2).toBe(1);
   });
 });
