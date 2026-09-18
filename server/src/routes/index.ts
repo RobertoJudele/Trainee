@@ -20,6 +20,10 @@ import appVersionRouter from "./appVersion";
 import blockRouter from "./userBlock";
 import { getPublicTrainerPage } from "../controllers/publicProfile";
 import {
+	getPosterLandingPage,
+	startFromPoster,
+} from "../controllers/posterLanding";
+import {
 	createCheckoutSession,
 	createPortalSession,
 } from "../controllers/billing";
@@ -34,6 +38,10 @@ const router = express.Router();
 // Public HTML, not JSON, and unauthenticated: this is the link a trainer puts in
 // their Instagram bio, fetched by browsers and link-preview crawlers.
 router.get("/t/:slug", getPublicTrainerPage);
+// Gym poster QR codes. Public HTML like /t/:slug, and counted — see
+// docs/superpowers/specs/2026-09-18-poster-qr-scan-counter-design.md.
+router.get("/p/:code/start", startFromPoster);
+router.get("/p/:code", getPosterLandingPage);
 router.use("/gyms", gymRouter);
 router.use("/auth", authRouter);
 router.use("/reviews", reviewRouter);
