@@ -61,6 +61,10 @@ export const getPosterLandingPage = async (
   req: Request,
   res: Response
 ): Promise<void> => {
+  // Never cached: this response increments a counter, and a proxy serving it
+  // from cache is a scan that never reaches the database.
+  res.set("Cache-Control", "no-store");
+
   try {
     const poster = await findActivePoster(String(req.params.code ?? ""));
 
@@ -75,9 +79,6 @@ export const getPosterLandingPage = async (
 
     const gymName = poster.gym?.name?.trim() ?? poster.label;
 
-    // Never cached: this response increments a counter, and a proxy serving it
-    // from cache is a scan that never reaches the database.
-    res.set("Cache-Control", "no-store");
     res.type("html").send(
       renderPosterLanding({
         gymName: gymName || null,

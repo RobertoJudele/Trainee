@@ -48,6 +48,13 @@ describe("GET /p/:code", () => {
     expect(res.headers["cache-control"]).toContain("no-store");
   });
 
+  it("returns no-store on 404 too, to prevent caching stale not-found responses", async () => {
+    const res = await request(app).get("/p/unknown404").set("User-Agent", IPHONE_UA);
+
+    expect(res.status).toBe(404);
+    expect(res.headers["cache-control"]).toContain("no-store");
+  });
+
   it("does not count a HEAD request", async () => {
     const poster = await makePoster();
 
