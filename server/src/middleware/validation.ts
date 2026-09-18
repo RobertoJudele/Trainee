@@ -6,6 +6,7 @@ import { IssueCategory, IssueStatus, IssueTargetType } from "../types/issue";
 import { sendError } from "../utils/response";
 import { BILLING_PLAN_IDS } from "../config/billingPlans";
 import { SOCIAL_PROVIDERS } from "../services/socialAuth";
+import { POSTER_CODE_PATTERN } from "../utils/posterCode";
 
 type SchemaLocation = "body" | "query" | "params";
 
@@ -1410,6 +1411,46 @@ export const suggestTrainersValidation = [
     .isInt({ min: 1, max: 50 })
     .withMessage("limit must be between 1 and 50."),
   strictSchema({ query: ["page", "limit"] }),
+];
+
+export const createPosterCodeValidation = [
+  body("label")
+    .trim()
+    .isLength({ min: 2, max: 120 })
+    .withMessage("Label must be between 2 and 120 characters."),
+  body("code")
+    .optional()
+    .trim()
+    .matches(POSTER_CODE_PATTERN)
+    .withMessage("Code must be 3-32 lowercase letters, digits or hyphens."),
+  body("gymId")
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage("gymId must be a positive integer."),
+  body("gymLogoUrl")
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("gymLogoUrl must be at most 500 characters.")
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("gymLogoUrl must be an http(s) URL."),
+];
+
+export const updatePosterCodeValidation = [
+  param("id").isInt({ min: 1 }).withMessage("id must be a positive integer."),
+  body("label")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 120 })
+    .withMessage("Label must be between 2 and 120 characters."),
+  body("isActive").optional().isBoolean().withMessage("isActive must be a boolean."),
+  body("gymLogoUrl")
+    .optional({ nullable: true })
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage("gymLogoUrl must be at most 500 characters.")
+    .isURL({ protocols: ["http", "https"], require_protocol: true })
+    .withMessage("gymLogoUrl must be an http(s) URL."),
 ];
 
 export const handleValidationErrors = (

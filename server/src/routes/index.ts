@@ -18,6 +18,7 @@ import notificationsRouter from "./notifications";
 import recommendationRouter from "./recommendation";
 import appVersionRouter from "./appVersion";
 import blockRouter from "./userBlock";
+import posterCodesRouter from "./posterCodes";
 import { getPublicTrainerPage } from "../controllers/publicProfile";
 import {
 	getPosterLandingPage,
@@ -61,6 +62,7 @@ router.use("/notifications", notificationsRouter);
 router.use("/recommendations", recommendationRouter);
 router.use("/version", appVersionRouter);
 router.use("/blocks", blockRouter);
+router.use("/poster-codes", posterCodesRouter);
 
 // Backward-compatible paths used by the existing checkout screen.
 router.post(
