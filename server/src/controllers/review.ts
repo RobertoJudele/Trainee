@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Op } from "sequelize";
 import { ReviewRequest } from "../types/review";
 import { sendError, sendSuccess } from "../utils/response";
 import { getSequelizeValidationErrors } from "../utils/errors";
@@ -6,6 +7,7 @@ import { Trainer } from "../models/trainer";
 import { Review } from "../models/review";
 import { User } from "../models/user";
 import { TrainerClient } from "../models/trainerClient";
+import { getMutuallyBlockedUserIds } from "../services/userBlocks";
 
 export const getReviews = async (
   req: Request<{ trainerId: string }>,
@@ -24,8 +26,17 @@ export const getReviews = async (
       return;
     }
 
+    // req.user is optional here — this route stays open to anonymous callers
+    // (optionalAuthenticate) — so an unauthenticated visitor sees every
+    // review, same as before. A logged-in viewer never sees a review from
+    // someone they've blocked, or who has blocked them.
+    const blockedUserIds = await getMutuallyBlockedUserIds(req.user?.id);
+
     const reviews = await Review.findAll({
-      where: { trainerId },
+      where: {
+        trainerId,
+        ...(blockedUserIds.length > 0 && { clientId: { [Op.notIn]: blockedUserIds } }),
+      },
       include: [
         {
           model: User,

@@ -41,6 +41,7 @@ import { SystemClock } from "../services/billing/adapters/SystemClock";
 import { isRevenueCatOnlyMode } from "../config/billingMode";
 import { toBillingState } from "../services/billing/trainerBillingState";
 import { billingService } from "../services/billing";
+import { getMutuallyBlockedUserIds } from "../services/userBlocks";
 
 const billingClock = new SystemClock();
 
@@ -868,6 +869,15 @@ export const searchTrainers = async (
     const trainerWhere: any = {};
     const userWhere: any = {};
 
+    // req.user is optional here — /trainer/search stays open to anonymous
+    // callers (optionalAuthenticate) — so an unblocked, unauthenticated visitor
+    // sees the same results as before. Mutual: a trainer who blocked this
+    // client is excluded too, not just trainers the client blocked.
+    const blockedUserIds = await getMutuallyBlockedUserIds(req.user?.id);
+    if (blockedUserIds.length > 0) {
+      trainerWhere.userId = { [Op.notIn]: blockedUserIds };
+    }
+
     const latValue = toFiniteNumber(lat);
     const lngValue = toFiniteNumber(lng);
     const radiusValue = toFiniteNumber(radiusKm ?? radius);
@@ -1097,6 +1107,9 @@ export const searchTrainers = async (
         if (maxExperience) finalTrainerWhere.experienceYears[Op.lte] = parseInt(maxExperience);
       }
       if (minRating) finalTrainerWhere.totalRating = { [Op.gte]: parseFloat(minRating) };
+      if (blockedUserIds.length > 0) {
+        finalTrainerWhere.userId = { [Op.notIn]: blockedUserIds };
+      }
 
       applyGeoFilters(finalTrainerWhere);
     }

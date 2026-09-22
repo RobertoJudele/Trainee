@@ -8,7 +8,7 @@ import {
   getTrainer,
   updateTrainer,
 } from "../controllers/trainer";
-import { authenticate } from "../middleware/auth";
+import { authenticate, optionalAuthenticate } from "../middleware/auth";
 import {
   handleValidationErrors,
   trainerIdParamValidation,
@@ -23,6 +23,7 @@ const router = express.Router();
 router.get(
   "/search",
   publicReadRateLimit,
+  optionalAuthenticate,
   trainerSearchValidation,
   handleValidationErrors,
   searchTrainers

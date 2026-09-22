@@ -11,6 +11,7 @@ import { User } from "../models/user";
 import { sendError, sendSuccess } from "../utils/response";
 import { toFiniteNumber } from "../utils/geo";
 import { minSessionPriceAttribute } from "../utils/pricing";
+import { getMutuallyBlockedUserIds } from "../services/userBlocks";
 
 interface SuggestQuery {
   page?: string;
@@ -88,7 +89,12 @@ export const suggestTrainers = async (req: Request<{}, {}, {}, SuggestQuery>, re
       include: [{ model: Gym }],
     });
 
+    const blockedUserIds = await getMutuallyBlockedUserIds(req.user.id);
+
     const trainers = await Trainer.scope("active").findAll({
+      ...(blockedUserIds.length > 0 && {
+        where: { userId: { [Op.notIn]: blockedUserIds } },
+      }),
       attributes: [
         "id",
         "publicId",
