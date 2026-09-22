@@ -28,6 +28,7 @@ export class BillingError extends Error {
   constructor(
     public readonly code:
       | "UNAUTHORIZED"
+      | "FORBIDDEN"
       | "INVALID_PAYLOAD"
       | "NOT_TRAINER"
       | "STRIPE_DISABLED"
@@ -281,16 +282,39 @@ export class BillingService {
 
   // ── Stripe portal ────────────────────────────────────────────
 
+  // `customerId` was previously trusted straight from the request body with
+  // no check that it belonged to the caller: any authenticated (or, before
+  // the route fix, unauthenticated) request naming a real Stripe customer id
+  // got a live portal session for that customer's invoices, payment method
+  // and subscription. `userId` is now required and the resolved customer is
+  // verified to belong to that user's own trainer record before Stripe is
+  // ever called - a direct customerId is checked immediately; one derived
+  // from sessionId is checked right after Stripe resolves it.
   async createPortalSession(opts: {
+    userId: number;
     customerId?: string;
     sessionId?: string;
   }): Promise<StripePortalSession> {
-    this.requireStripeEnabled();
+    const assertOwnedByCaller = async (customerId: string): Promise<void> => {
+      const owner = await this.billingRepo.findByStripeCustomerId(customerId);
+      if (!owner || owner.userId !== opts.userId) {
+        throw new BillingError("FORBIDDEN", "This billing customer does not belong to you");
+      }
+    };
 
     let customerId = opts.customerId;
+    if (customerId) {
+      await assertOwnedByCaller(customerId);
+    }
+
+    this.requireStripeEnabled();
+
     if (!customerId && opts.sessionId) {
       const session = await this.stripeGw.retrieveCheckoutSession(opts.sessionId);
       customerId = session.customerId ?? undefined;
+      if (customerId) {
+        await assertOwnedByCaller(customerId);
+      }
     }
 
     if (!customerId) {

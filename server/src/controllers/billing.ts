@@ -7,6 +7,7 @@ import { isBillingPlanId, BillingPlanId } from "../config/billingPlans";
 const mapBillingErrorStatus = (e: BillingError): number => {
   switch (e.code) {
     case "UNAUTHORIZED": return 401;
+    case "FORBIDDEN": return 403;
     case "NOT_TRAINER": return 403;
     case "INVALID_PAYLOAD": return 400;
     case "STRIPE_DISABLED": return 503;
@@ -146,7 +147,7 @@ export const validateIapSubscription = async (req: AuthenticatedRequest, res: Re
   }
 };
 
-export const createCheckoutSession = async (req: Request, res: Response) => {
+export const createCheckoutSession = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const body = req.body as { lookup_key?: string; priceId?: string; plan?: string };
 
@@ -175,11 +176,18 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
   }
 };
 
-export const createPortalSession = async (req: Request, res: Response) => {
+export const createPortalSession = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const user = req.user;
+    if (!user) {
+      sendError(res, 401, "User is not authenticated");
+      return;
+    }
+
     const body = req.body as { session_id?: string; customerId?: string };
 
     const result = await billingService.createPortalSession({
+      userId: user.id,
       customerId: body.customerId,
       sessionId: body.session_id,
     });

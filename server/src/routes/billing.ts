@@ -48,6 +48,7 @@ router.post(
 );
 router.post(
 	"/create-checkout-session",
+	authenticate,
 	checkoutRateLimit,
 	createCheckoutSessionValidation,
 	handleValidationErrors,
@@ -55,6 +56,7 @@ router.post(
 );
 router.post(
 	"/create-portal-session",
+	authenticate,
 	checkoutRateLimit,
 	createPortalSessionValidation,
 	handleValidationErrors,

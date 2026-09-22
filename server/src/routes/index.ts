@@ -29,6 +29,7 @@ import {
 	createPortalSession,
 } from "../controllers/billing";
 import { checkoutRateLimit } from "../middleware/rateLimitProfiles";
+import { authenticate } from "../middleware/auth";
 import {
 	createCheckoutSessionValidation,
 	createPortalSessionValidation,
@@ -67,6 +68,7 @@ router.use("/poster-codes", posterCodesRouter);
 // Backward-compatible paths used by the existing checkout screen.
 router.post(
 	"/create-checkout-session",
+	authenticate,
 	checkoutRateLimit,
 	createCheckoutSessionValidation,
 	handleValidationErrors,
@@ -74,6 +76,7 @@ router.post(
 );
 router.post(
 	"/create-portal-session",
+	authenticate,
 	checkoutRateLimit,
 	createPortalSessionValidation,
 	handleValidationErrors,
