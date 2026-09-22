@@ -1,3 +1,4 @@
+import "./withDatabase";
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 // Mock the S3 client before importing anything that reaches for it, so the

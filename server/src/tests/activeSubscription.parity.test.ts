@@ -1,3 +1,4 @@
+import "./withDatabase";
 import { describe, it, expect, beforeAll } from "@jest/globals";
 import { activeSubscriptionWhere } from "../services/billing/activeSubscriptionScope";
 import { resolveEntitlement, Clock } from "../services/billing/domain";

@@ -1,3 +1,4 @@
+import "./withDatabase";
 import { describe, it, expect } from "@jest/globals";
 import { PosterCode } from "../models/posterCode";
 
