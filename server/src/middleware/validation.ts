@@ -1281,57 +1281,6 @@ export const assignClientToSlotValidation = [
   }),
 ];
 
-export const assignSlotByCodeValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("code")
-    .trim()
-    .matches(/^\d{6}$/)
-    .withMessage("code must have exactly 6 digits."),
-  body("note")
-    .optional({ values: "falsy" })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("note must be at most 500 characters."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["code", "note"],
-  }),
-];
-
-export const assignSlotByCodeIdValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("checkInCodeId")
-    .isInt({ min: 1 })
-    .withMessage("checkInCodeId must be a positive integer."),
-  body("note")
-    .optional({ values: "falsy" })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("note must be at most 500 characters."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["checkInCodeId", "note"],
-  }),
-];
-
-export const trainerCheckInValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("code")
-    .trim()
-    .matches(/^\d{6}$/)
-    .withMessage("code must have exactly 6 digits."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["code"],
-  }),
-];
-
 export const clientScheduleQueryValidation = [
   query("from")
     .optional({ values: "falsy" })

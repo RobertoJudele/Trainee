@@ -295,13 +295,9 @@ export default function MyScheduleScreen() {
         </FadeInUp>
       }
       renderItem={({ item, index }) => {
-        const status = String(item.status).toLowerCase();
-        const statusColor =
-          status === "completed"
-            ? theme.colors.secondary
-            : status === "cancelled"
-              ? theme.colors.error
-              : theme.colors.primary;
+        // Every slot in this list belongs to the client and is therefore
+        // always "assigned" - there is no third status to branch on.
+        const statusColor = theme.colors.primary;
         return (
           <FadeInUp delay={index * theme.motion.stagger}>
             <View

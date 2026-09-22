@@ -46,7 +46,7 @@ export function MonthCalendar({
       const entry = perDay.get(key) ?? { available: 0, booked: 0 };
       if (slot.status === "available") {
         entry.available += 1;
-      } else if (slot.status === "assigned" || slot.status === "completed") {
+      } else if (slot.status === "assigned") {
         entry.booked += 1;
       }
       perDay.set(key, entry);

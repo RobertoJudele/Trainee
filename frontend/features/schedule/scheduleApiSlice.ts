@@ -16,9 +16,8 @@ export interface ScheduleSlot {
   clientId?: number;
   startsAt: string;
   endsAt: string;
-  status: "available" | "assigned" | "completed" | "canceled" | "no_show";
+  status: "available" | "assigned";
   note?: string;
-  checkedInAt?: string;
   client?: {
     id: number;
     email: string;
@@ -136,50 +135,22 @@ export const scheduleApiSlice = apiSlice.injectEndpoints(
       // Cancelling refunds a pack session.
       invalidatesTags: ["TrainerSlots", "MySchedule", "ClientPacks"],
     }),
-    trainerCheckInSlot: builder.mutation<ApiResp<ScheduleSlot>, { slotId: number; code: string }>({
-      query: ({ slotId, code }) => ({
-        url: `/trainer-schedule/slots/${slotId}/check-in`,
-        method: "POST",
-        body: { code },
-      }),
-      invalidatesTags: ["TrainerSlots", "MySchedule"],
-    }),
-    assignSlotByClientCode: builder.mutation<
-      ApiResp<{ slot: ScheduleSlot }>,
-      { slotId: number; code: string; note?: string }
-    >({
-      query: ({ slotId, ...body }) => ({
-        url: `/trainer-schedule/slots/${slotId}/assign-by-code`,
-        method: "POST",
-        body,
-      }),
-      // This is the drag-and-drop one — refresh both sides!
-      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks", "TrainerClients"],
-    }),
+    // The trainer's browsable list of live client codes. Scoped server-side
+    // to clients already on the trainer's roster - a brand-new client is
+    // onboarded via resolveClientCode below, not by browsing this list.
     getPendingClientCodes: builder.query<ApiResp<PendingClientCode[]>, void>({
       query: () => "/trainer-schedule/client-codes/pending",
       providesTags: ["PendingClientCodes"],
     }),
+    // A pure lookup: identifies the client behind a 6-digit code so the
+    // trainer can then book them with assignClientToSlot. Does not write the
+    // roster and does not need to invalidate anything.
     resolveClientCode: builder.mutation<ApiResp<PendingClientCode>, { code: string }>({
       query: (body) => ({
         url: "/trainer-schedule/client-codes/resolve",
         method: "POST",
         body,
       }),
-      // Resolving a code also adds the client to the server-side roster.
-      invalidatesTags: ["TrainerClients"],
-    }),
-    assignSlotByCodeId: builder.mutation<
-      ApiResp<{ slot: ScheduleSlot }>,
-      { slotId: number; checkInCodeId: number; note?: string }
-    >({
-      query: ({ slotId, ...body }) => ({
-        url: `/trainer-schedule/slots/${slotId}/assign-by-code-id`,
-        method: "POST",
-        body,
-      }),
-      // Also the drag-and-drop variant — refresh both sides!
-      invalidatesTags: ["TrainerSlots", "MySchedule", "PendingClientCodes", "ClientPacks", "TrainerClients"],
     }),
     getBlockedDates: builder.query<
       ApiResp<BlockedDate[]>,
@@ -276,11 +247,8 @@ export const {
   useSearchClientsQuery,
   useAssignClientToSlotMutation,
   useUnassignClientFromSlotMutation,
-  useTrainerCheckInSlotMutation,
-  useAssignSlotByClientCodeMutation,
   useGetPendingClientCodesQuery,
   useResolveClientCodeMutation,
-  useAssignSlotByCodeIdMutation,
   useGetMyScheduleQuery,
   useGenerateMyCheckInCodeMutation,
   useGetBlockedDatesQuery,
