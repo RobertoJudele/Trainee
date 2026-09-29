@@ -83,9 +83,6 @@ export default function TrainerWeekSnapshotScreen() {
       {
         available: 0,
         assigned: 0,
-        completed: 0,
-        canceled: 0,
-        no_show: 0,
       }
     );
   }, [slots]);
@@ -130,14 +127,6 @@ export default function TrainerWeekSnapshotScreen() {
           <View style={styles.metricChip}>
             <Text style={styles.metricLabel}>{t("weekAssigned")}</Text>
             <Text style={styles.metricValue}>{countByStatus.assigned}</Text>
-          </View>
-          <View style={styles.metricChip}>
-            <Text style={styles.metricLabel}>{t("weekCompleted")}</Text>
-            <Text style={styles.metricValue}>{countByStatus.completed}</Text>
-          </View>
-          <View style={styles.metricChip}>
-            <Text style={styles.metricLabel}>{t("weekCanceledNoShow")}</Text>
-            <Text style={styles.metricValue}>{countByStatus.canceled + countByStatus.no_show}</Text>
           </View>
         </View>
       </ScheduleCard>

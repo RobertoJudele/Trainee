@@ -61,22 +61,6 @@ export class TrainerScheduleSlot extends Model<
   @Column({ type: DataType.STRING(500) })
   note?: string;
 
-  @AllowNull(true)
-  @Column({ type: DataType.STRING(256), field: "check_in_code_hash" })
-  checkInCodeHash?: string | null;
-
-  @AllowNull(true)
-  @Column({ type: DataType.DATE, field: "check_in_code_expires_at" })
-  checkInCodeExpiresAt?: Date | null;
-
-  @Default(0)
-  @Column({ type: DataType.INTEGER, field: "check_in_attempts" })
-  checkInAttempts!: number;
-
-  @AllowNull(true)
-  @Column({ type: DataType.DATE, field: "checked_in_at" })
-  checkedInAt?: Date | null;
-
   @CreatedAt
   @Column({ field: "created_at" })
   createdAt!: Date;

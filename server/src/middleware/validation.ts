@@ -1235,6 +1235,10 @@ export const blockedDatesQueryValidation = [
   strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
+// The read paths accept timeZone for the same reason the write paths do: which
+// calendar day a slot belongs to is a question about the trainer's local
+// calendar. The old handlers answered it with server-local Date#setHours and so
+// ignored this entirely, which only looked correct because the server runs UTC.
 export const trainerSlotsQueryValidation = [
   query("from")
     .optional({ values: "falsy" })
@@ -1244,7 +1248,11 @@ export const trainerSlotsQueryValidation = [
     .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("to must be a valid ISO date."),
-  strictSchema({ query: ["from", "to"] }),
+  query("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
 export const searchClientsQueryValidation = [
@@ -1281,57 +1289,6 @@ export const assignClientToSlotValidation = [
   }),
 ];
 
-export const assignSlotByCodeValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("code")
-    .trim()
-    .matches(/^\d{6}$/)
-    .withMessage("code must have exactly 6 digits."),
-  body("note")
-    .optional({ values: "falsy" })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("note must be at most 500 characters."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["code", "note"],
-  }),
-];
-
-export const assignSlotByCodeIdValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("checkInCodeId")
-    .isInt({ min: 1 })
-    .withMessage("checkInCodeId must be a positive integer."),
-  body("note")
-    .optional({ values: "falsy" })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("note must be at most 500 characters."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["checkInCodeId", "note"],
-  }),
-];
-
-export const trainerCheckInValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("code")
-    .trim()
-    .matches(/^\d{6}$/)
-    .withMessage("code must have exactly 6 digits."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["code"],
-  }),
-];
-
 export const clientScheduleQueryValidation = [
   query("from")
     .optional({ values: "falsy" })
@@ -1341,7 +1298,11 @@ export const clientScheduleQueryValidation = [
     .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("to must be a valid ISO date."),
-  strictSchema({ query: ["from", "to"] }),
+  query("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
 export const upsertClientPreferencesValidation = [

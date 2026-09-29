@@ -86,8 +86,14 @@ export const createReview = async (
     // trainer-controlled, so it doesn't stop a trainer farming reviews from their own
     // throwaway accounts — it stops drive-by reviews from strangers, and every fake
     // now leaves a trainer_clients row naming both accounts.
-    // ponytail: roster membership, not attended sessions — slots never reach COMPLETED
-    // (checkInCodeHash is never written), so a stricter gate would block everyone.
+    //
+    // Attendance confirmation was never finished and has been removed rather than
+    // completed (the per-slot check-in code was only ever written null), so roster
+    // membership is the only structural signal available here. A stricter gate —
+    // roster membership AND at least one booked slot whose start time has already
+    // passed — is a well-defined follow-up (see TrainerScheduleSlot, SlotStatus.
+    // ASSIGNED); it needs the review test fixtures to create a real elapsed booking
+    // wherever they assert eligibility, which is more than this pass touches.
     const isClientOfTrainer = await TrainerClient.findOne({
       where: { trainerId, clientId: user.id },
     });

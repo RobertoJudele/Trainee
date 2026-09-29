@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "@jest/globals";
 import request from "supertest";
 import { app } from "../index";
 import { createTestTrainer, createTestUser } from "./helpers";
+import { TrainerClient } from "../models/trainerClient";
 
 function futureDate(daysFromNow: number): string {
   const d = new Date();
@@ -400,8 +401,12 @@ describe("Trainer Schedule API", () => {
     });
   });
 
-  describe("Check-in code lifecycle", () => {
-    it("should generate a check-in code (client)", async () => {
+  describe("Client assign-code handshake", () => {
+    // A short-lived bearer code the client generates and reads out to a
+    // trainer, who resolves it to identify the client and then books them
+    // normally with assign-client. It is not attendance proof - attendance
+    // confirmation was never finished and has been removed, not fixed.
+    it("should generate a client code", async () => {
       const { token: clientToken } = await createTestUser();
 
       const res = await request(app)
@@ -414,7 +419,7 @@ describe("Trainer Schedule API", () => {
       expect(res.body.data).toHaveProperty("expiresAt");
     });
 
-    it("should get pending codes (trainer)", async () => {
+    it("should list no pending codes for a trainer with no roster", async () => {
       const { token: trainerToken } = await createTestTrainer();
 
       const res = await request(app)
@@ -423,12 +428,12 @@ describe("Trainer Schedule API", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(res.body.data).toEqual([]);
     });
 
-    it("should resolve a valid code", async () => {
-      const { token: clientToken } = await createTestUser();
-      const { token: trainerToken } = await createTestTrainer();
+    it("should resolve a valid code without writing the roster", async () => {
+      const { token: clientToken, user: client } = await createTestUser();
+      const { token: trainerToken, trainer } = await createTestTrainer();
 
       const codeRes = await request(app)
         .post("/trainer-schedule/my-schedule/generate-check-in-code")
@@ -444,6 +449,14 @@ describe("Trainer Schedule API", () => {
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
       expect(res.body.data).toHaveProperty("client");
+
+      // Resolving is a pure lookup: a trainer who types a code but never
+      // books anyone must not end up permanently rostered with them - that
+      // roster row is the whole basis for review eligibility.
+      const roster = await TrainerClient.findOne({
+        where: { trainerId: trainer.id, clientId: client.id },
+      });
+      expect(roster).toBeNull();
     });
 
     it("should reject invalid code", async () => {
@@ -458,108 +471,57 @@ describe("Trainer Schedule API", () => {
       expect(res.body.success).toBe(false);
     });
 
-    it("should assign slot by code", async () => {
+    it("should only list a code once its client is on the trainer's roster", async () => {
+      const { token: clientToken, user: client } = await createTestUser();
       const { token: trainerToken } = await createTestTrainer();
-      const { token: clientToken } = await createTestUser();
+      const { token: strangerToken } = await createTestTrainer();
       const date = futureDate(15);
 
-      const slotRes = await request(app)
-        .post("/trainer-schedule/slots")
-        .set("Authorization", `Bearer ${trainerToken}`)
-        .send({ date, startTime: "10:00", endTime: "11:00" });
-
-      const slotId = slotRes.body.data.slot.id;
-
       const codeRes = await request(app)
         .post("/trainer-schedule/my-schedule/generate-check-in-code")
         .set("Authorization", `Bearer ${clientToken}`);
-
       const code = codeRes.body.data.code;
 
-      const res = await request(app)
-        .post(`/trainer-schedule/slots/${slotId}/assign-by-code`)
-        .set("Authorization", `Bearer ${trainerToken}`)
+      // Any trainer can resolve a code they were told out of band - that's
+      // the acquisition path - but it must not appear in another trainer's
+      // browsable pending list.
+      await request(app)
+        .post("/trainer-schedule/client-codes/resolve")
+        .set("Authorization", `Bearer ${strangerToken}`)
         .send({ code });
 
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
+      const strangerPending = await request(app)
+        .get("/trainer-schedule/client-codes/pending")
+        .set("Authorization", `Bearer ${strangerToken}`);
+      expect(strangerPending.body.data).toEqual([]);
 
-    it("should assign slot by code ID", async () => {
-      const { token: trainerToken } = await createTestTrainer();
-      const { token: clientToken } = await createTestUser();
-      const date = futureDate(16);
-
+      // Booking the client puts them on the roster; a fresh code then shows
+      // up for the trainer who has actually booked them.
       const slotRes = await request(app)
         .post("/trainer-schedule/slots")
         .set("Authorization", `Bearer ${trainerToken}`)
         .send({ date, startTime: "10:00", endTime: "11:00" });
-
-      const slotId = slotRes.body.data.slot.id;
-
-      const codeRes = await request(app)
-        .post("/trainer-schedule/my-schedule/generate-check-in-code")
-        .set("Authorization", `Bearer ${clientToken}`);
-
-      const resolveRes = await request(app)
-        .post("/trainer-schedule/client-codes/resolve")
-        .set("Authorization", `Bearer ${trainerToken}`)
-        .send({ code: codeRes.body.data.code });
-
-      const checkInCodeId = resolveRes.body.data.checkInCodeId;
-
-      const res = await request(app)
-        .post(`/trainer-schedule/slots/${slotId}/assign-by-code-id`)
-        .set("Authorization", `Bearer ${trainerToken}`)
-        .send({ checkInCodeId });
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
-
-    it("should reject check-in on available slot", async () => {
-      const { token: trainerToken } = await createTestTrainer();
-      const date = futureDate(17);
-
-      const slotRes = await request(app)
-        .post("/trainer-schedule/slots")
-        .set("Authorization", `Bearer ${trainerToken}`)
-        .send({ date, startTime: "10:00", endTime: "11:00" });
-
-      const slotId = slotRes.body.data.slot.id;
-
-      const res = await request(app)
-        .post(`/trainer-schedule/slots/${slotId}/check-in`)
-        .set("Authorization", `Bearer ${trainerToken}`)
-        .send({ code: "123456" });
-
-      expect(res.status).toBe(400);
-      expect(res.body.success).toBe(false);
-    });
-
-    it("should reject check-in without code on assigned slot", async () => {
-      const { token: trainerToken } = await createTestTrainer();
-      const { user: client } = await createTestUser();
-      const date = futureDate(18);
-
-      const slotRes = await request(app)
-        .post("/trainer-schedule/slots")
-        .set("Authorization", `Bearer ${trainerToken}`)
-        .send({ date, startTime: "10:00", endTime: "11:00" });
-
-      const slotId = slotRes.body.data.slot.id;
-
       await request(app)
-        .post(`/trainer-schedule/slots/${slotId}/assign-client`)
+        .post(`/trainer-schedule/slots/${slotRes.body.data.slot.id}/assign-client`)
         .set("Authorization", `Bearer ${trainerToken}`)
         .send({ clientId: client.id });
 
-      const res = await request(app)
-        .post(`/trainer-schedule/slots/${slotId}/check-in`)
-        .set("Authorization", `Bearer ${trainerToken}`)
-        .send({ code: "123456" });
+      await request(app)
+        .post("/trainer-schedule/my-schedule/generate-check-in-code")
+        .set("Authorization", `Bearer ${clientToken}`);
 
-      expect(res.status).toBe(400);
+      const pending = await request(app)
+        .get("/trainer-schedule/client-codes/pending")
+        .set("Authorization", `Bearer ${trainerToken}`);
+
+      expect(pending.body.data.length).toBe(1);
+      expect(pending.body.data[0].client.id).toBe(client.id);
+
+      // The trainer who never booked this client still sees nothing.
+      const strangerPendingAfter = await request(app)
+        .get("/trainer-schedule/client-codes/pending")
+        .set("Authorization", `Bearer ${strangerToken}`);
+      expect(strangerPendingAfter.body.data).toEqual([]);
     });
   });
 
