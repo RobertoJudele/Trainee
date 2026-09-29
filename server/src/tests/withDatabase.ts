@@ -26,9 +26,23 @@ import { seedSpecializations } from "../seeds/specializationSeed";
 beforeAll(async () => {
   await sequelize.authenticate();
   if (testSchemaName) {
-    // A fresh Postgres database only has `public`; db.ts's `schema` option
-    // makes every later statement target this schema, but does not create
-    // it. Idempotent - safe to call again for each file a worker runs.
+    // Dropped before it is created, which matters more than it looks.
+    //
+    // Sequelize's ENUM bookkeeping hardcodes `public` (see the `schema`
+    // fallback in its query generator), so a table in jest_worker_3 depends on
+    // a type in public.enum_*. A schema left behind by an earlier run - a run
+    // with a different worker count, or one that was killed - therefore keeps
+    // those public types undroppable, and the next sync({ force: true }) fails
+    // partway through. That failure surfaced as intermittent nonsense: a
+    // different test file failing on each run with a supertest "socket hang
+    // up" or a 404 on a row the previous request had just created. Roughly one
+    // run in four, and only ever in the full suite - which is exactly the kind
+    // of ghost that gets blamed on parallelism for a week.
+    //
+    // Dropping first makes each file's slate genuinely clean rather than clean
+    // only if the database happened to be. CASCADE because the schema owns its
+    // tables and we want them gone with it.
+    await sequelize.dropSchema(testSchemaName, {});
     await sequelize.createSchema(testSchemaName, {});
   }
   await ensureDatabaseExtensions();
@@ -42,5 +56,19 @@ beforeAll(async () => {
 }, 60000);
 
 afterAll(async () => {
+  // Leave nothing behind. Within a worker, files run sequentially and each
+  // one recreates the schema in its own beforeAll, so dropping here is safe -
+  // and it means the last file in each worker cleans up after itself. Without
+  // this, a run leaves jest_worker_* schemas lying around that break the suite
+  // on any older checkout, since those trees sync against `public` and inherit
+  // the cross-schema enum dependency described above.
+  if (testSchemaName) {
+    try {
+      await sequelize.dropSchema(testSchemaName, {});
+    } catch {
+      // Teardown must not turn a passing suite red; the beforeAll above drops
+      // the schema again anyway.
+    }
+  }
   await sequelize.close();
 });

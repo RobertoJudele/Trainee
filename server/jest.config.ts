@@ -17,26 +17,23 @@ const config: Config = {
   moduleFileExtensions: ["ts", "js", "json"],
   testTimeout: 30000,
   // Each database-backed suite gets its own Postgres schema per worker (see
-  // db.ts, DB_TEST_SCHEMA), which is what makes parallelism *possible* here -
-  // it is no longer possible for one worker's sync({ force: true }) to drop
-  // another's tables.
+  // db.ts and withDatabase.ts), which stops one worker's sync({ force: true })
+  // from dropping another's *tables*.
   //
-  // Still pinned to 1, because "possible" turned out not to be "correct". With
-  // Jest's default (cores - 1 = 7 on an 8-core machine) roughly 2 runs in 5
-  // failed; at 4 workers, about 1 in 7. The failure moves between files each
-  // run and takes two shapes: a supertest "socket hang up", and a request that
-  // 404s on a row a previous request in the same test just created. Every file
-  // passes 6/6 on its own, and serially the suite is stable.
+  // Still 1, because the schemas are not as independent as they look. Sequelize
+  // hardcodes `public` for ENUM bookkeeping, so a table in jest_worker_3 owns a
+  // type in public.enum_*. Every sync({ force: true }) therefore reaches out of
+  // its own schema and tries to DROP TYPE public.enum_* - which races against
+  // any other worker whose tables still reference that type. It usually wins
+  // (parallel runs passed 5 of 5 once the database was clean), and when it
+  // loses, the sync fails partway and the run reports a different unrelated
+  // file failing with a "socket hang up" or a 404 on a row that was just
+  // created. Timing, not safety.
   //
-  // Measured and ruled out: schema collisions between workers (instrumented the
-  // schema/pid/file timeline across runs - zero overlaps), the server binding a
-  // port under test (guarded by NODE_ENV in index.ts), Postgres connection
-  // exhaustion (~35 of max_connections=100), and testTimeout (the captured
-  // failure was an assertion, not a timeout). So the cause is still unknown,
-  // and a suite that lies to you one run in seven is worse than a slow one:
-  // serial costs ~90s extra, and a chased phantom costs an afternoon.
-  //
-  // Raising this is its own task - reproduce the 404 under load first.
+  // Serial keeps exactly one schema live at a time, which makes that race
+  // unreachable rather than unlikely. Cost is ~70s of wall clock. Raising this
+  // is a real task, not a config flip: the enum types have to live in the same
+  // schema as the tables that own them.
   maxWorkers: 1,
 };
 
