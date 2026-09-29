@@ -2,6 +2,7 @@
 // The pure rules are covered in scheduleDomain.test.ts; these drive the real
 // HTTP stack, because each case below is one the old controller answered
 // wrongly and a unit test on a fake could not have caught.
+import "./withDatabase";
 import { describe, it, expect } from "@jest/globals";
 import request from "supertest";
 import { app } from "../index";
