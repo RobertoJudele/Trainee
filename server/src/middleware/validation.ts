@@ -1235,6 +1235,10 @@ export const blockedDatesQueryValidation = [
   strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
+// The read paths accept timeZone for the same reason the write paths do: which
+// calendar day a slot belongs to is a question about the trainer's local
+// calendar. The old handlers answered it with server-local Date#setHours and so
+// ignored this entirely, which only looked correct because the server runs UTC.
 export const trainerSlotsQueryValidation = [
   query("from")
     .optional({ values: "falsy" })
@@ -1244,7 +1248,11 @@ export const trainerSlotsQueryValidation = [
     .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("to must be a valid ISO date."),
-  strictSchema({ query: ["from", "to"] }),
+  query("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
 export const searchClientsQueryValidation = [
@@ -1290,7 +1298,11 @@ export const clientScheduleQueryValidation = [
     .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("to must be a valid ISO date."),
-  strictSchema({ query: ["from", "to"] }),
+  query("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
 export const upsertClientPreferencesValidation = [
