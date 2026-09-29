@@ -5,7 +5,7 @@ import {
   updateReview,
   deleteReview,
 } from "../controllers/review";
-import { authenticate } from "../middleware/auth";
+import { authenticate, optionalAuthenticate } from "../middleware/auth";
 import {
   createReviewValidation,
   deleteReviewValidation,
@@ -23,7 +23,7 @@ router.post(
   handleValidationErrors,
   createReview
 ); // Create review for trainer
-router.get("/:trainerId", getReviews); // Get all reviews for trainer
+router.get("/:trainerId", optionalAuthenticate, getReviews); // Get all reviews for trainer
 router.put(
   "/:reviewId",
   authenticate,

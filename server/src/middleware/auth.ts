@@ -44,3 +44,35 @@ export const authenticate = async (
     sendError(res, 500, "Token verification failed.");
   }
 };
+
+/**
+ * Attaches req.user when a valid Bearer token is present, but never refuses
+ * the request - for a route that must stay open to anonymous callers (public
+ * search, a trainer's public reviews) while still personalising the result
+ * for whichever caller happens to be logged in (e.g. excluding a user they've
+ * blocked). A missing, invalid or expired token silently leaves req.user
+ * unset rather than answering 401, unlike `authenticate`.
+ */
+export const optionalAuthenticate = async (
+  req: AuthenticatedRequest,
+  _res: Response,
+  next: NextFunction
+): Promise<void> => {
+  const token = req.header("Authorization")?.replace("Bearer ", "");
+  if (!token) {
+    next();
+    return;
+  }
+
+  try {
+    const decoded = verifyToken(token);
+    const user = await User.findByPk(decoded.userId);
+    if (user && user.isActive) {
+      req.user = user.toJSON();
+    }
+  } catch {
+    // An invalid/expired token on an optional route is the same as no token.
+  }
+
+  next();
+};
