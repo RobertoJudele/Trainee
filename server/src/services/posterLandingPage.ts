@@ -95,8 +95,8 @@ h1 .gym{color:var(--green-bright)}
 .counter p{margin:0;font-size:13.5px;line-height:1.45;color:var(--muted-on-dark)}
 .sheet{flex-grow:1;background:var(--sheet);border-radius:24px 24px 0 0;padding:26px 20px 24px;display:flex;flex-direction:column;gap:16px}
 .free{margin:0;font-size:16px;line-height:1.5;font-weight:700;color:var(--ink-dark)}
-.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:14px;background:var(--green);color:var(--green-ink);font-weight:700;font-size:17px;text-decoration:none}
-.store{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;border-radius:14px;border:1.5px solid var(--green-bright);color:var(--text-on-dark);font-weight:700;font-size:16px;text-decoration:none}
+.cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:14px;background:var(--ink-dark);color:var(--text-on-dark);font-weight:700;font-size:17px;text-decoration:none}
+.store{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;border-radius:14px;background:var(--green);color:var(--green-ink);font-weight:700;font-size:16px;text-decoration:none}
 .cta:focus-visible,.store:focus-visible{outline:3px solid rgba(0,169,112,.35);outline-offset:2px}
 .under{margin:0;font-size:14px;line-height:1.45;color:var(--text-muted);text-align:center}
 .me{display:flex;align-items:center;gap:12px;padding-block:4px}
@@ -177,7 +177,7 @@ ${knownGym ? counterBlock(knownGym, data.trainerCount) : ""}
 
     <ul class="points">
       <li>${ICONS.tag}<span>Tariful îl stabilești tu și se vede de la început.</span></li>
-      <li>${ICONS.calendarCheck}<span>Îți programezi clienții de acum și confirmi prezența cu un cod. Merge din prima zi.</span></li>
+      <li>${ICONS.calendarCheck}<span>Îți programezi clienții de acum și vezi câte ședințe mai are fiecare. Merge din prima zi.</span></li>
     </ul>
 
     <div class="foot"><span>@salvio</span><span>Gratuit în App Store și Google Play</span></div>
