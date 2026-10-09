@@ -7,7 +7,7 @@ const DEFAULT_ENTITLEMENT_ID = "trainer_subscription";
 const DEFAULT_FOUNDING_GRANT_MONTHS = 3;
 // Founding-trainer promo: every trainer profile created up to and including
 // this date gets the free grant. Bump/clear the env var to move or end it.
-const DEFAULT_FOUNDING_GRANT_DEADLINE = "2026-09-30";
+const DEFAULT_FOUNDING_GRANT_DEADLINE = "2026-10-31";
 
 export class EnvBillingConfig implements BillingConfig {
   isStripeEnabled(): boolean {
