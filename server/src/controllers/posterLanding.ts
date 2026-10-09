@@ -2,15 +2,15 @@ import { Request, Response } from "express";
 import sequelize from "../db";
 import { PosterCode } from "../models/posterCode";
 import { Gym } from "../models/gym";
-import { billingService } from "../services/billing/container";
+import { Trainer } from "../models/trainer";
+import { TrainerGym } from "../models/trainerGym";
+import { PosterScanEvent } from "../models/posterScanEvent";
 import { renderPosterLanding } from "../services/posterLandingPage";
-import { renderNotFound, PageOptions } from "../services/publicProfilePage";
 import {
   detectStorePlatform,
   shouldCountPosterHit,
 } from "../services/posterScanCounting";
 import { appleStoreUrl, playStoreUrl } from "../utils/storeLinks";
-import { publicWebBaseUrl } from "../utils/publicUrl";
 
 /**
  * The QR poster routes: public, unauthenticated HTML, mounted beside /t/:slug
@@ -18,19 +18,13 @@ import { publicWebBaseUrl } from "../utils/publicUrl";
  * if the JSON API surface changes.
  */
 
-const pageOptions = (): PageOptions => ({
-  baseUrl: publicWebBaseUrl(),
-  appleStoreUrl: appleStoreUrl(),
-  playStoreUrl: playStoreUrl(),
-});
-
 const findActivePoster = async (code: string): Promise<PosterCode | null> => {
   const trimmed = code.trim().toLowerCase();
   if (!trimmed) return null;
 
   return PosterCode.findOne({
     where: { code: trimmed, isActive: true },
-    include: [{ model: Gym, attributes: ["name"], required: false }],
+    include: [{ model: Gym, attributes: ["id", "name"], required: false }],
   });
 };
 
@@ -38,11 +32,17 @@ const findActivePoster = async (code: string): Promise<PosterCode | null> => {
  * One atomic statement, so two people scanning at the same moment cannot read
  * the same value and write it back twice.
  */
-const recordScan = async (posterId: number): Promise<void> => {
+const recordScan = async (poster: PosterCode, userAgent: string | undefined): Promise<void> => {
+  const platform = detectStorePlatform(userAgent);
   await sequelize.query(
     "UPDATE poster_codes SET scan_count = scan_count + 1, last_scanned_at = NOW(), updated_at = NOW() WHERE id = :id",
-    { replacements: { id: posterId } }
+    { replacements: { id: poster.id } }
   );
+  await PosterScanEvent.create({
+    posterCodeId: poster.id,
+    gymId: poster.gymId ?? null,
+    device: platform === "unknown" ? "other" : platform,
+  });
 };
 
 const recordStoreClick = async (
@@ -57,6 +57,40 @@ const recordStoreClick = async (
   );
 };
 
+/**
+ * Trainers a member opening this gym's pin would see: the same Trainer
+ * "active" scope and required join as GET /gyms/:gymId.
+ */
+const countVisibleTrainers = (gymId: number): Promise<number> =>
+  TrainerGym.count({
+    where: { gymId },
+    include: [{ model: Trainer.scope("active"), as: "trainer", attributes: [], required: true }],
+  });
+
+/** wa.me wants digits only: no "+", spaces or dashes. */
+const whatsappNumber = (): string | null => {
+  const digits = (process.env.SALVIO_WHATSAPP_NUMBER ?? "").replace(/\D/g, "");
+  return digits || null;
+};
+
+const userAgentOf = (req: Request): string | undefined =>
+  typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined;
+
+/** Rendered without touching the database, for when the database is the problem. */
+const errorPage = (): string =>
+  renderPosterLanding({ gymName: null, trainerCount: 0, whatsappNumber: whatsappNumber() });
+
+const renderFor = async (poster: PosterCode | null): Promise<string> => {
+  const gym = poster?.gym ?? null;
+
+  return renderPosterLanding({
+    // Only a linked gym's name is shown: labels carry admin suffixes like "v1".
+    gymName: gym?.name ?? null,
+    trainerCount: gym ? await countVisibleTrainers(gym.id) : 0,
+    whatsappNumber: whatsappNumber(),
+  });
+};
+
 export const getPosterLandingPage = async (
   req: Request,
   res: Response
@@ -69,38 +103,29 @@ export const getPosterLandingPage = async (
     const poster = await findActivePoster(String(req.params.code ?? ""));
 
     if (!poster) {
-      res.status(404).type("html").send(renderNotFound(pageOptions()));
+      // Unknown or retired code: still 404, but someone standing in a gym gets
+      // the gym-neutral page rather than an error.
+      res.status(404).type("html").send(await renderFor(null));
       return;
     }
 
     if (shouldCountPosterHit(req)) {
-      await recordScan(poster.id);
+      await recordScan(poster, userAgentOf(req));
     }
 
-    const gymName = poster.gym?.name?.trim() ?? poster.label;
-
-    res.type("html").send(
-      renderPosterLanding({
-        gymName: gymName || null,
-        gymLogoUrl: poster.gymLogoUrl ?? null,
-        startUrl: `/p/${encodeURIComponent(poster.code)}/start`,
-        // Same source as the in-app founding-offer banner, so the poster page
-        // and the app can never advertise different terms.
-        offer: billingService.getFoundingGrantOffer(),
-      })
-    );
+    res.type("html").send(await renderFor(poster));
   } catch (error) {
     console.error("[POSTER] landing page failed:", error);
-    res.status(500).type("html").send(renderNotFound(pageOptions()));
+    res.status(500).type("html").send(errorPage());
   }
 };
 
+/**
+ * The old page's store CTA. The new page no longer links here, but the route
+ * stays so any shared /start link keeps landing in a store.
+ */
 export const startFromPoster = async (req: Request, res: Response): Promise<void> => {
-  const platform = detectStorePlatform(
-    typeof req.headers["user-agent"] === "string"
-      ? req.headers["user-agent"]
-      : undefined
-  );
+  const platform = detectStorePlatform(userAgentOf(req));
   const destination = platform === "ios" ? appleStoreUrl() : playStoreUrl();
 
   try {

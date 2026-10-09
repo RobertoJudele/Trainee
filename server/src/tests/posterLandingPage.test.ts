@@ -1,116 +1,106 @@
 import { describe, it, expect } from "@jest/globals";
 import {
-  formatCountdown,
-  formatDeadlineLabel,
-  formatMonthsLabel,
   renderPosterLanding,
+  trainerCountHtml,
+  whatsappUrl,
 } from "../services/posterLandingPage";
-
-const openOffer = {
-  isOpen: true,
-  months: 3,
-  deadline: "2026-09-30T23:59:59+03:00",
-};
 
 const render = (overrides: Partial<Parameters<typeof renderPosterLanding>[0]> = {}) =>
   renderPosterLanding({
     gymName: "World Class Dorobanți",
-    startUrl: "/p/k7fm2q/start",
-    offer: openOffer,
-    now: new Date("2026-09-19T17:17:59+03:00"),
+    trainerCount: 2,
+    whatsappNumber: "40722123456",
     ...overrides,
   });
 
-describe("formatCountdown", () => {
-  it("formats days unpadded and time zero-padded", () => {
-    const ms = 11 * 864e5 + 6 * 36e5 + 42 * 6e4;
-    expect(formatCountdown(ms)).toBe("11z 06:42");
+describe("trainerCountHtml", () => {
+  it("invites the first trainer at 0", () => {
+    expect(trainerCountHtml(0)).toContain("Încă nu e nimeni pe hartă. Poți fi primul.");
   });
 
-  it("clamps at zero rather than going negative", () => {
-    expect(formatCountdown(-5000)).toBe("0z 00:00");
+  it("uses the singular for one trainer", () => {
+    expect(trainerCountHtml(1)).toContain("<b>1</b> antrenor din 6");
+  });
+
+  it("counts towards 6 below the target", () => {
+    expect(trainerCountHtml(3)).toContain("<b>3</b> antrenori din 6");
+  });
+
+  it("drops the target once it is reached", () => {
+    expect(trainerCountHtml(7)).toContain("<b>7</b> antrenori pe hartă");
   });
 });
 
-describe("formatMonthsLabel", () => {
-  it("uses Romanian number agreement", () => {
-    expect(formatMonthsLabel(1)).toBe("1 lună gratis");
-    expect(formatMonthsLabel(3)).toBe("3 luni gratis");
-    expect(formatMonthsLabel(24)).toBe("24 de luni gratis");
+describe("whatsappUrl", () => {
+  it("prefills the gym in the message", () => {
+    expect(whatsappUrl("40722123456", "Smart Fit")).toBe(
+      "https://wa.me/40722123456?text=Salut%2C%20sunt%20antrenor%20la%20Smart%20Fit"
+    );
   });
-});
 
-describe("formatDeadlineLabel", () => {
-  it("renders the deadline as a Romanian date in Bucharest time", () => {
-    expect(formatDeadlineLabel("2026-09-30T23:59:59+03:00")).toBe("30 septembrie");
+  it("still opens WhatsApp when no number is configured", () => {
+    expect(whatsappUrl(null, null)).toBe("https://wa.me/?text=Salut%2C%20sunt%20antrenor");
   });
 });
 
 describe("renderPosterLanding", () => {
-  it("puts the gym name in the headline", () => {
+  it("puts the gym name in the headline, title and counter label", () => {
     const html = render();
-    expect(html).toContain("Ești antrenor la");
-    expect(html).toContain("World Class Dorobanți");
+    expect(html).toContain('Ești antrenor la <span class="gym">World Class Dorobanți</span>?');
+    expect(html).toContain("<title>Salvio · Ești antrenor la World Class Dorobanți?</title>");
+    expect(html).toContain('<div class="label">Harta World Class Dorobanți</div>');
   });
 
   it("escapes a gym name so it cannot inject markup", () => {
-    const html = render({ gymName: '<script>alert(1)</script>' });
+    const html = render({ gymName: "<script>alert(1)</script>" });
     expect(html).not.toContain("<script>alert(1)</script>");
     expect(html).toContain("&lt;script&gt;");
   });
 
-  it("falls back to a gym-neutral headline, never the placeholder", () => {
+  it("never ships the design placeholder", () => {
+    expect(render()).not.toContain("[Nume sală]");
+    expect(render({ gymName: null })).not.toContain("[Nume sală]");
+  });
+
+  it("falls back to 'sala ta' with no counter for an unknown gym", () => {
     const html = render({ gymName: null });
-    expect(html).toContain("Ești antrenor în");
-    expect(html).toContain("București");
-    expect(html).not.toContain("[Nume Sală]");
+    expect(html).toContain('Ești antrenor la <span class="gym">sala ta</span>?');
+    expect(html).not.toContain('class="counter"');
   });
 
-  it("steps the headline down for a long gym name instead of truncating", () => {
-    expect(render({ gymName: "Sala" })).toContain("font-size:44px");
-    expect(render({ gymName: "World Class Dorobanți" })).toContain("font-size:38px");
+  it("fills one segment per trainer, capped at six", () => {
+    const filled = (html: string) => (html.match(/<i class="on"><\/i>/g) ?? []).length;
+    expect(filled(render({ trainerCount: 0 }))).toBe(0);
+    expect(filled(render({ trainerCount: 3 }))).toBe(3);
+    expect(filled(render({ trainerCount: 9 }))).toBe(6);
   });
 
-  it("renders the offer card with a server-side first countdown frame", () => {
-    const html = render();
-    expect(html).toContain("OFERTA PENTRU PRIMII MEMBRII");
-    expect(html).toContain("3 luni gratis");
-    expect(html).toContain("30 septembrie");
-    expect(html).toContain("11z 06:42");
-    expect(html).toContain('data-deadline="2026-09-30T23:59:59+03:00"');
+  it("switches the status line once the map is full", () => {
+    expect(render({ trainerCount: 5 })).toContain("Când suntem 6, încep s-o arăt membrilor sălii.");
+    expect(render({ trainerCount: 6 })).toContain("Harta e gata. O arăt acum membrilor sălii.");
   });
 
-  it("omits the offer entirely when the founding grant has closed", () => {
-    const html = render({ offer: { isOpen: false, months: 0 } });
-    expect(html).not.toContain("OFERTA PENTRU PRIMII MEMBRII");
-    expect(html).not.toContain("Închis");
-    expect(html).toContain("Începe în 90 de secunde");
-  });
-
-  it("points the single CTA at the start URL", () => {
-    const html = render();
-    expect(html).toContain('href="/p/k7fm2q/start"');
-    expect(html.match(/Începe în 90 de secunde/g)).toHaveLength(1);
-  });
-
-  it("keeps the client's copy verbatim, missing diacritics included", () => {
+  it("points the CTA at WhatsApp with the gym prefilled", () => {
     expect(render()).toContain(
-      "Apari la toate salile la care antrenezi si lasa lumea sa te cunoasca."
+      'href="https://wa.me/40722123456?text=Salut%2C%20sunt%20antrenor%20la%20World%20Class%20Doroban%C8%9Bi"'
     );
   });
 
-  it("drops the two claims removed in review", () => {
+  it("drops the old page's claims", () => {
     const html = render();
-    expect(html).not.toContain("Locuri limitate");
-    expect(html).not.toContain("Parteneriat oficial");
-  });
-
-  it("shows the gym logo only when one is set, and only over http(s)", () => {
-    expect(render()).not.toContain("gym-logo");
-    expect(render({ gymLogoUrl: "https://cdn.example.com/g.png" })).toContain(
-      "https://cdn.example.com/g.png"
-    );
-    expect(render({ gymLogoUrl: "javascript:alert(1)" })).not.toContain("javascript:");
+    for (const gone of [
+      "luni gratis",
+      "Oferta pentru primii membrii",
+      "Locuri limitate",
+      "Parteneriat oficial",
+      "Începe în 90 de secunde",
+      "Nu e o listă cu 700 de nume",
+      "Clienții din sala ta te găsesc singuri",
+      "Nu ești antrenor?",
+      "Afiș pus cu acordul",
+    ]) {
+      expect(html.toLowerCase()).not.toContain(gone.toLowerCase());
+    }
   });
 
   it("keeps crawlers out of the index", () => {
