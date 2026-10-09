@@ -38,6 +38,7 @@ describe("GET /p/:code", () => {
     expect(res.status).toBe(200);
     expect(res.headers["content-type"]).toContain("text/html");
     expect(res.text).toContain("World Class Dorobanți");
+    expect(res.text).toContain(`href="/p/${poster.code}/start"`);
 
     await poster.reload();
     expect(poster.scanCount).toBe(1);

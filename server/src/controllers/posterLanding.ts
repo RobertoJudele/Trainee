@@ -77,10 +77,21 @@ const userAgentOf = (req: Request): string | undefined =>
   typeof req.headers["user-agent"] === "string" ? req.headers["user-agent"] : undefined;
 
 /** Rendered without touching the database, for when the database is the problem. */
-const errorPage = (): string =>
-  renderPosterLanding({ gymName: null, trainerCount: 0, whatsappNumber: whatsappNumber() });
+/**
+ * The store button goes through /start even for an unknown code: that route
+ * redirects by platform and simply skips the count.
+ */
+const startUrlFor = (code: string): string => `/p/${encodeURIComponent(code)}/start`;
 
-const renderFor = async (poster: PosterCode | null): Promise<string> => {
+const errorPage = (code: string): string =>
+  renderPosterLanding({
+    gymName: null,
+    trainerCount: 0,
+    whatsappNumber: whatsappNumber(),
+    startUrl: startUrlFor(code),
+  });
+
+const renderFor = async (poster: PosterCode | null, code: string): Promise<string> => {
   const gym = poster?.gym ?? null;
 
   return renderPosterLanding({
@@ -88,6 +99,7 @@ const renderFor = async (poster: PosterCode | null): Promise<string> => {
     gymName: gym?.name ?? null,
     trainerCount: gym ? await countVisibleTrainers(gym.id) : 0,
     whatsappNumber: whatsappNumber(),
+    startUrl: startUrlFor(poster?.code ?? code),
   });
 };
 
@@ -98,14 +110,15 @@ export const getPosterLandingPage = async (
   // Never cached: this response increments a counter, and a proxy serving it
   // from cache is a scan that never reaches the database.
   res.set("Cache-Control", "no-store");
+  const code = String(req.params.code ?? "");
 
   try {
-    const poster = await findActivePoster(String(req.params.code ?? ""));
+    const poster = await findActivePoster(code);
 
     if (!poster) {
       // Unknown or retired code: still 404, but someone standing in a gym gets
       // the gym-neutral page rather than an error.
-      res.status(404).type("html").send(await renderFor(null));
+      res.status(404).type("html").send(await renderFor(null, code));
       return;
     }
 
@@ -113,17 +126,14 @@ export const getPosterLandingPage = async (
       await recordScan(poster, userAgentOf(req));
     }
 
-    res.type("html").send(await renderFor(poster));
+    res.type("html").send(await renderFor(poster, code));
   } catch (error) {
     console.error("[POSTER] landing page failed:", error);
-    res.status(500).type("html").send(errorPage());
+    res.status(500).type("html").send(errorPage(code));
   }
 };
 
-/**
- * The old page's store CTA. The new page no longer links here, but the route
- * stays so any shared /start link keeps landing in a store.
- */
+/** The page's "Descarcă aplicația" button: a counted redirect to the right store. */
 export const startFromPoster = async (req: Request, res: Response): Promise<void> => {
   const platform = detectStorePlatform(userAgentOf(req));
   const destination = platform === "ios" ? appleStoreUrl() : playStoreUrl();

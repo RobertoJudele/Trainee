@@ -10,6 +10,7 @@ const render = (overrides: Partial<Parameters<typeof renderPosterLanding>[0]> = 
     gymName: "World Class Dorobanți",
     trainerCount: 2,
     whatsappNumber: "40722123456",
+    startUrl: "/p/k7fm2q/start",
     ...overrides,
   });
 
@@ -84,6 +85,18 @@ describe("renderPosterLanding", () => {
     expect(render()).toContain(
       'href="https://wa.me/40722123456?text=Salut%2C%20sunt%20antrenor%20la%20World%20Class%20Doroban%C8%9Bi"'
     );
+  });
+
+  it("puts the store button right under the map block", () => {
+    const html = render();
+    const store = html.indexOf('<a class="store" href="/p/k7fm2q/start">');
+    expect(store).toBeGreaterThan(html.indexOf('class="counter"'));
+    expect(store).toBeLessThan(html.indexOf('class="sheet"'));
+    expect(html).toContain("Descarcă aplicația");
+  });
+
+  it("keeps the store button when the gym is unknown", () => {
+    expect(render({ gymName: null })).toContain('href="/p/k7fm2q/start"');
   });
 
   it("drops the old page's claims", () => {

@@ -22,6 +22,8 @@ export interface PosterLandingData {
   trainerCount: number;
   /** Digits only, no "+": wa.me rejects anything else. */
   whatsappNumber: string | null;
+  /** The counted store redirect (/p/:code/start): App Store on iOS, Play otherwise. */
+  startUrl: string;
 }
 
 export const trainerCountHtml = (count: number): string => {
@@ -53,6 +55,7 @@ const ICON_ATTRS =
   'width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"';
 
 const ICONS = {
+  download: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></svg>`,
   chat: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>`,
   tag: `<svg ${ICON_ATTRS}><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r="0.5"/></svg>`,
   calendarCheck: `<svg ${ICON_ATTRS}><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"/></svg>`,
@@ -93,7 +96,8 @@ h1 .gym{color:var(--green-bright)}
 .sheet{flex-grow:1;background:var(--sheet);border-radius:24px 24px 0 0;padding:26px 20px 24px;display:flex;flex-direction:column;gap:16px}
 .free{margin:0;font-size:16px;line-height:1.5;font-weight:700;color:var(--ink-dark)}
 .cta{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;border-radius:14px;background:var(--green);color:var(--green-ink);font-weight:700;font-size:17px;text-decoration:none}
-.cta:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid rgba(0,169,112,.35);outline-offset:2px}
+.store{display:flex;align-items:center;justify-content:center;gap:10px;min-height:52px;border-radius:14px;border:1.5px solid var(--green-bright);color:var(--text-on-dark);font-weight:700;font-size:16px;text-decoration:none}
+.cta:focus-visible,.store:focus-visible{outline:3px solid rgba(0,169,112,.35);outline-offset:2px}
 .under{margin:0;font-size:14px;line-height:1.45;color:var(--text-muted);text-align:center}
 .me{display:flex;align-items:center;gap:12px;padding-block:4px}
 .me .avatar{flex:0 0 40px;height:40px;border-radius:50%;background:var(--ink-dark);color:var(--green-bright);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-stretch:75%;font-weight:800;font-size:20px}
@@ -152,6 +156,7 @@ export const renderPosterLanding = (data: PosterLandingData): string => {
 
     <p class="honest">Aplicația e nouă. N-are încă clienți și nu-ți promit cereri.</p>
 ${knownGym ? counterBlock(knownGym, data.trainerCount) : ""}
+    <a class="store" href="${esc(data.startUrl)}">${ICONS.download}<span>Descarcă aplicația</span></a>
   </section>
 
   <section class="sheet">
