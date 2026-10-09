@@ -772,6 +772,16 @@ export const trainerIdParamValidation = [
   strictSchema({ params: ["trainerId"], body: [], query: [] }),
 ];
 
+export const TRAINER_CONTACT_CHANNELS = ["whatsapp", "instagram", "facebook"] as const;
+
+export const trainerContactValidation = [
+  ...trainerIdParamValidation.slice(0, -1),
+  body("channel")
+    .isIn(TRAINER_CONTACT_CHANNELS)
+    .withMessage(`channel must be one of: ${TRAINER_CONTACT_CHANNELS.join(", ")}.`),
+  strictSchema({ params: ["trainerId"], body: ["channel"], query: [] }),
+];
+
 export const trainerSearchValidation = [
   query("q")
     .optional({ values: "falsy" })

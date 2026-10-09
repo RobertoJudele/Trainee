@@ -147,4 +147,51 @@ export const emailTemplates = {
     `,
     text: `Hi ${name}, your password was changed successfully. If this was not you, contact support immediately.`,
   }),
+
+  /** Internal alert to the Salvio team, not sent to the trainer. */
+  trainerContactAlert: (alert: TrainerContactAlertDetails) => {
+    const esc = (value: string): string =>
+      value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    const channels = Object.entries(alert.channelCounts)
+      .map(([channel, count]) => `${channel}: ${count}`)
+      .join(", ");
+    const lines: Array<[string, string]> = [
+      ["Antrenor", alert.trainerName],
+      ["Email", alert.trainerEmail],
+      ["Persoane diferite care l-au contactat", String(alert.distinctContacts)],
+      ["Apăsări pe canale", channels || "-"],
+      ["Abonament", alert.subscriptionSummary],
+      ["Profil public", alert.profileUrl ?? "-"],
+      ["ID antrenor", String(alert.trainerId)],
+    ];
+
+    return {
+      subject: `Salvio: ${alert.trainerName} a fost contactat de ${alert.distinctContacts} persoane`,
+      html: `
+      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+        <h2>Antrenor gata de conversie</h2>
+        <p>${esc(alert.trainerName)} a fost contactat prin aplicație de ${alert.distinctContacts} persoane diferite.</p>
+        <table style="border-collapse: collapse;">
+          ${lines
+            .map(
+              ([label, value]) =>
+                `<tr><td style="padding: 4px 12px 4px 0; color: #555;">${esc(label)}</td><td style="padding: 4px 0;"><strong>${esc(value)}</strong></td></tr>`
+            )
+            .join("\n          ")}
+        </table>
+      </div>
+    `,
+      text: lines.map(([label, value]) => `${label}: ${value}`).join("\n"),
+    };
+  },
 };
+
+export interface TrainerContactAlertDetails {
+  trainerId: number;
+  trainerName: string;
+  trainerEmail: string;
+  distinctContacts: number;
+  channelCounts: Record<string, number>;
+  subscriptionSummary: string;
+  profileUrl: string | null;
+}

@@ -258,6 +258,19 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
         response.data ?? (response as unknown as PublicTrainerProfile),
     }),
 
+    // Fire-and-forget: counts a tap on a trainer's contact button. The server
+    // emails the Salvio team once 5 different people have tapped.
+    recordTrainerContact: builder.mutation<
+      void,
+      { trainerId: string; channel: "whatsapp" | "instagram" | "facebook" }
+    >({
+      query: ({ trainerId, channel }) => ({
+        url: `/trainer/${trainerId}/contact`,
+        method: "POST",
+        body: { channel },
+      }),
+    }),
+
     getSpecializations: builder.query<SpecializationListResponse, void>({
       query: () => "/specialization",
     }),
@@ -334,6 +347,7 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
 export const {
   useGetTrainerProfileQuery,
   useGetTrainerByIdQuery,
+  useRecordTrainerContactMutation,
   useGetSpecializationsQuery,
   useGetTrainerAnalyticsQuery,
   useDeleteTrainerProfileMutation,

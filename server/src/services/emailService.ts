@@ -1,6 +1,6 @@
 // src/services/emailService.ts
 import { transporter } from "../config/email";
-import { emailTemplates } from "./emailTemplate";
+import { emailTemplates, TrainerContactAlertDetails } from "./emailTemplate";
 
 export interface EmailOptions {
   to: string;
@@ -81,6 +81,17 @@ export class EmailService {
 
     await this.sendEmail({
       to: email,
+      subject: template.subject,
+      html: template.html,
+      text: template.text,
+    });
+  }
+
+  async sendTrainerContactAlert(to: string, alert: TrainerContactAlertDetails): Promise<void> {
+    const template = emailTemplates.trainerContactAlert(alert);
+
+    await this.sendEmail({
+      to,
       subject: template.subject,
       html: template.html,
       text: template.text,

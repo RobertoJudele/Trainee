@@ -42,6 +42,9 @@ import { isRevenueCatOnlyMode } from "../config/billingMode";
 import { toBillingState } from "../services/billing/trainerBillingState";
 import { billingService } from "../services/billing";
 import { getMutuallyBlockedUserIds } from "../services/userBlocks";
+import { recordTrainerContact } from "../services/trainerContactAlerts";
+import { getRequestIp } from "../services/posterScanCounting";
+import { TrainerContactChannel } from "../models/trainerContactEvent";
 
 const billingClock = new SystemClock();
 
@@ -432,6 +435,43 @@ export const createTrainer = async (
       return;
     }
     sendError(res, 500, "Unexpected error while creating trainer happened");
+  }
+};
+
+/**
+ * POST /trainer/:trainerId/contact — the app reports a tap on one of the
+ * trainer's contact buttons. Always 204 once validated: the app fires this
+ * and forgets, so an ignored tap needs no different answer.
+ */
+export const recordContact = async (
+  req: Request<{ trainerId: string }, {}, { channel: TrainerContactChannel }> & {
+    user?: { id?: number };
+  },
+  res: Response
+) => {
+  try {
+    const identifier = String(req.params.trainerId).trim();
+    const numericId = Number(identifier);
+    const trainer = await Trainer.findOne({
+      where: /^\d+$/.test(identifier) ? { id: numericId } : { publicId: identifier },
+    });
+
+    if (!trainer) {
+      sendError(res, 404, "Trainer not found");
+      return;
+    }
+
+    await recordTrainerContact({
+      trainer,
+      userId: typeof req.user?.id === "number" ? req.user.id : null,
+      ip: getRequestIp(req),
+      channel: req.body.channel,
+    });
+
+    res.status(204).end();
+  } catch (error) {
+    console.error("[CONTACT] record failed:", error);
+    sendError(res, 500, "Could not record the contact.");
   }
 };
 

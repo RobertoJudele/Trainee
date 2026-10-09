@@ -6,11 +6,13 @@ import {
   searchTrainers,
   getSelfTrainer,
   getTrainer,
+  recordContact,
   updateTrainer,
 } from "../controllers/trainer";
 import { authenticate, optionalAuthenticate } from "../middleware/auth";
 import {
   handleValidationErrors,
+  trainerContactValidation,
   trainerIdParamValidation,
   trainerSearchValidation,
   updateTrainerValidation,
@@ -35,6 +37,16 @@ router.get(
   trainerIdParamValidation,
   handleValidationErrors,
   getTrainer
+);
+// The app reports taps on a trainer's WhatsApp / Instagram / Facebook buttons.
+// Optional auth: a logged-in tapper is counted by user id, anyone else by IP.
+router.post(
+  "/:trainerId/contact",
+  publicReadRateLimit,
+  optionalAuthenticate,
+  trainerContactValidation,
+  handleValidationErrors,
+  recordContact
 );
 router.use(authenticate);
 

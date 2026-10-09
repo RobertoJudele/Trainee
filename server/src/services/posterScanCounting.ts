@@ -16,7 +16,7 @@ const MAX_TRACKED_IPS = 5_000;
 
 const floodBuckets = new Map<string, number[]>();
 
-const getRequestIp = (req: Request): string => {
+export const getRequestIp = (req: Request): string => {
   const forwardedFor = req.headers["x-forwarded-for"];
 
   if (typeof forwardedFor === "string" && forwardedFor.trim()) {
