@@ -115,7 +115,8 @@ describe("GET /p/:code", () => {
 
     expect(res.status).toBe(200);
     expect(res.text).toContain("sala ta");
-    expect(res.text).not.toContain("v1");
+    // The whole label, not just "v1": that substring turns up in the inlined logo's base64.
+    expect(res.text).not.toContain("BEFIT Eroii Revolutiei");
   });
 
   it("counts only trainers with an active subscription", async () => {
