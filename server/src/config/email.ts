@@ -1,7 +1,17 @@
 import nodemailer from "nodemailer";
 
+// Explicit Gmail host on 587 + STARTTLS rather than `service: "gmail"`, which
+// uses port 465: Hetzner blocks outbound 25 and 465 on cloud servers, and
+// every send from the VPS timed out on connect.
+// `||`, not `??`: an empty SMTP_HOST= / SMTP_PORT= line in .env means "default".
+const smtpPort = Number(process.env.SMTP_PORT || 587);
+
 export const transporter = nodemailer.createTransport({
-  service: "gmail",
+  host: process.env.SMTP_HOST || "smtp.gmail.com",
+  port: smtpPort,
+  // 465 is TLS from the first byte; anything else upgrades with STARTTLS.
+  secure: smtpPort === 465,
+  requireTLS: smtpPort !== 465,
   auth: {
     user: process.env.SMTP_USER,
     pass: process.env.SMTP_PASS,
