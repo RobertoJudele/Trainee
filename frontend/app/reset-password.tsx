@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,32 +11,75 @@ import {
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useResetPasswordMutation } from "../features/auth/authApiSlice";
+import {
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+} from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
-import { getApiErrorMessage } from "../src/lib/errors";
+import { getApiErrorCode, getApiErrorMessage } from "../src/lib/errors";
+
+/** Matches the server's per-user cooldown between two codes. */
+const RESEND_COOLDOWN_S = 60;
+
+const RESET_CODE_ERROR_KEYS: Record<string, string> = {
+  RESET_CODE_INVALID: "resetCodeInvalid",
+  RESET_CODE_EXPIRED: "resetCodeExpired",
+  RESET_CODE_LOCKED: "resetCodeLocked",
+};
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { t, language } = useLanguage();
-  const params = useLocalSearchParams<{ token?: string; email?: string }>();
-  const [token, setToken] = useState(params.token ?? "");
+  const { t } = useLanguage();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const [email, setEmail] = useState(params.email ?? "");
+  const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  // Arriving from the forgot-password screen means a code was just sent.
+  const [resendIn, setResendIn] = useState(params.email ? RESEND_COOLDOWN_S : 0);
   const [resetPassword, { isLoading }] = useResetPasswordMutation();
+  const [forgotPassword, { isLoading: isResending }] = useForgotPasswordMutation();
 
-  const hintEmail = useMemo(() => params.email ?? "", [params.email]);
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setTimeout(() => setResendIn((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [resendIn]);
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const isEmailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
 
   const validatePassword = (value: string) => /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/.test(value);
+
+  const onResend = async () => {
+    setError("");
+    if (!isEmailValid) {
+      setError(t("emailInvalid"));
+      return;
+    }
+    try {
+      await forgotPassword({ email: normalizedEmail }).unwrap();
+      setResendIn(RESEND_COOLDOWN_S);
+      Alert.alert(t("checkYourEmail"), t("resetCodeSent"));
+    } catch (err: unknown) {
+      Alert.alert(t("requestFailed"), getApiErrorMessage(err, t("couldNotSendReset")));
+    }
+  };
 
   const onSubmit = async () => {
     setError("");
 
-    if (!token.trim()) {
-      setError(t("resetTokenRequired"));
+    if (!isEmailValid) {
+      setError(t("emailInvalid"));
+      return;
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      setError(t("resetCodeRequired"));
       return;
     }
 
@@ -51,13 +94,16 @@ export default function ResetPasswordScreen() {
     }
 
     try {
-      const res = await resetPassword({ token: token.trim(), newPassword }).unwrap();
-      Alert.alert(t("success"), res.message, [
+      await resetPassword({ email: normalizedEmail, code, newPassword }).unwrap();
+      Alert.alert(t("success"), t("passwordResetDone"), [
         { text: t("goToLogin"), onPress: () => router.replace("/(auth)/login") },
       ]);
     } catch (err: unknown) {
-      const msg = getApiErrorMessage(err, t("couldNotResetPassword"));
-      Alert.alert(t("resetFailed"), msg);
+      const key = RESET_CODE_ERROR_KEYS[getApiErrorCode(err) ?? ""];
+      Alert.alert(
+        t("resetFailed"),
+        key ? t(key) : getApiErrorMessage(err, t("couldNotResetPassword"))
+      );
     }
   };
 
@@ -82,19 +128,36 @@ export default function ResetPasswordScreen() {
           </LinearGradient>
           <Text style={styles.title}>{t("resetPassword")}</Text>
           <Text style={styles.subtitle}>
-            {hintEmail
-              ? t("resetPasswordForEmail").replace("{email}", hintEmail)
-              : t("resetTokenInstructions")}
+            {params.email
+              ? t("resetPasswordForEmail").replace("{email}", params.email)
+              : t("resetCodeInstructions")}
           </Text>
         </FadeInUp>
 
+        {!params.email && (
+          <FadeInUp delay={theme.motion.stagger}>
+            <Field
+              placeholder={t("email")}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoComplete="email"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </FadeInUp>
+        )}
+
         <FadeInUp delay={theme.motion.stagger}>
           <Field
-            placeholder={t("resetToken")}
-            value={token}
-            onChangeText={setToken}
-            autoCapitalize="none"
-            autoCorrect={false}
+            placeholder={t("resetCode")}
+            value={code}
+            onChangeText={(text) => setCode(text.replace(/\D/g, "").slice(0, 6))}
+            keyboardType="number-pad"
+            maxLength={6}
+            // iOS offers the code straight from Mail above the keyboard.
+            textContentType="oneTimeCode"
+            autoComplete="one-time-code"
           />
         </FadeInUp>
 
@@ -128,6 +191,24 @@ export default function ResetPasswordScreen() {
             onPress={onSubmit}
             loading={isLoading}
           />
+        </FadeInUp>
+
+        <FadeInUp delay={theme.motion.stagger * 5}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={onResend}
+            disabled={resendIn > 0 || isResending}
+            accessibilityRole="button"
+            accessibilityLabel={t("resendCode")}
+          >
+            <Text
+              style={[styles.resendText, (resendIn > 0 || isResending) && styles.resendTextDisabled]}
+            >
+              {resendIn > 0
+                ? t("resendCodeIn").replace("{seconds}", String(resendIn))
+                : t("resendCode")}
+            </Text>
+          </TouchableOpacity>
         </FadeInUp>
 
         <FadeInUp delay={theme.motion.stagger * 5}>
@@ -167,4 +248,6 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
   backButton: { alignItems: "center", marginTop: theme.spacing.sm },
   backButtonText: { ...typography.body2, color: theme.colors.textSecondary },
+  resendText: { ...typography.body2, color: theme.colors.primary, fontWeight: "600" },
+  resendTextDisabled: { color: theme.colors.textSecondary },
 });

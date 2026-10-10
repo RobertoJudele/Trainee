@@ -30,6 +30,7 @@ import { UserBlock } from "./models/userBlock";
 import { PosterCode } from "./models/posterCode";
 import { PosterScanEvent } from "./models/posterScanEvent";
 import { TrainerContactEvent } from "./models/trainerContactEvent";
+import { PasswordResetCode } from "./models/passwordResetCode";
 dotenv.config();
 
 // Test isolation: every database-backed test suite runs inside its own
@@ -120,6 +121,7 @@ const sequelize = new Sequelize({
     PosterCode,
     PosterScanEvent,
     TrainerContactEvent,
+    PasswordResetCode,
   ],
   logging: process.env.NODE_ENV === "test" ? false : (msg) => console.log(`[SEQUELIZE DATABASE] ${msg}`),
   pool: {

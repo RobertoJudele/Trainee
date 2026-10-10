@@ -58,7 +58,9 @@ interface ForgotPasswordRequest {
 }
 
 interface ResetPasswordRequest {
-  token: string;
+  email: string;
+  /** The 6-digit code from the reset email. */
+  code: string;
   newPassword: string;
 }
 

@@ -3,17 +3,20 @@ import { User } from "../models/user";
 import { RefreshToken } from "../models/refreshToken";
 import { AuthResponse, RegisterRequest } from "../types/user";
 import {
-  generatePasswordResetToken,
   generateToken,
   generateRefreshToken,
   generateSocialSignupToken,
-  verifyPasswordResetToken,
   verifySocialSignupToken,
 } from "../utils/jwt";
 import { sendError, sendSuccess } from "../utils/response";
 import { getSequelizeValidationErrors } from "../utils/errors";
 import { AuthenticatedRequest, UserRole } from "../types/common";
 import { emailService } from "../services/emailService";
+import {
+  CODE_TTL_MS as RESET_CODE_TTL_MS,
+  consumeResetCode,
+  issueResetCode,
+} from "../services/passwordResetCodes";
 import {
   SocialAuthError,
   verifySocialIdToken,
@@ -25,7 +28,8 @@ interface ForgotPasswordRequest {
 }
 
 interface ResetPasswordRequest {
-  token: string;
+  email: string;
+  code: string;
   newPassword: string;
 }
 
@@ -365,25 +369,29 @@ export const forgotPassword = async (
     const user = await User.findOne({ where: { email: normalizedEmail, isActive: true } });
 
     if (user) {
-      const token = generatePasswordResetToken({
-        userId: user.id,
-        email: user.email,
-        purpose: "password_reset",
-      });
+      // Null inside the resend cooldown: the previous code is still on its way.
+      const code = await issueResetCode(user.id);
 
-      // Fire-and-forget so a slow/hanging Gmail SMTP send can't stall the response.
-      void emailService
-        .sendPasswordResetEmail(user.email, `${user.firstName} ${user.lastName}`, token)
-        .catch((emailError) => {
-          console.error("Failed to send password reset email:", emailError);
-        });
+      if (code) {
+        // Fire-and-forget so a slow/hanging SMTP send can't stall the response.
+        void emailService
+          .sendPasswordResetCodeEmail(
+            user.email,
+            user.firstName,
+            code,
+            Math.round(RESET_CODE_TTL_MS / 60_000)
+          )
+          .catch((emailError) => {
+            console.error("Failed to send password reset email:", emailError);
+          });
+      }
     }
 
     // Always return the same message to prevent email enumeration.
     sendSuccess(
       res,
       200,
-      "If an account with that email exists, we have sent a password reset link."
+      "If an account with that email exists, we have sent a 6-digit reset code."
     );
   } catch (error) {
     console.error("Forgot password error:", error);
@@ -391,46 +399,52 @@ export const forgotPassword = async (
   }
 };
 
+const RESET_CODE_ERRORS = {
+  invalid: { code: "RESET_CODE_INVALID", message: "The reset code is incorrect." },
+  expired: {
+    code: "RESET_CODE_EXPIRED",
+    message: "The reset code has expired. Request a new one.",
+  },
+  locked: {
+    code: "RESET_CODE_LOCKED",
+    message: "Too many wrong attempts. Request a new code.",
+  },
+} as const;
+
 export const resetPassword = async (
   req: Request<{}, {}, ResetPasswordRequest>,
   res: Response
 ) => {
   try {
-    const { token, newPassword } = req.body;
-
-    if (!token || !newPassword) {
-      sendError(res, 400, "Token and new password are required");
-      return;
-    }
-
-    let payload;
-    try {
-      payload = verifyPasswordResetToken(token);
-    } catch {
-      sendError(res, 400, "Invalid or expired reset token");
-      return;
-    }
-
-    if (payload.purpose !== "password_reset") {
-      sendError(res, 400, "Invalid reset token");
-      return;
-    }
+    const { email, code, newPassword } = req.body;
+    const normalizedEmail = email.trim().toLowerCase();
 
     const user = await User.scope("withPassword").findOne({
-      where: { id: payload.userId, email: payload.email, isActive: true },
+      where: { email: normalizedEmail, isActive: true },
     });
 
-    if (!user) {
-      sendError(res, 404, "User not found");
+    // An unknown email answers like an expired code, so this route can't be
+    // used to find out which emails have accounts.
+    const check = user ? await consumeResetCode(user.id, code) : "expired";
+
+    if (!user || check !== "ok") {
+      const failure = RESET_CODE_ERRORS[check === "ok" ? "expired" : check];
+      res.status(400).json({ success: false, message: failure.message, code: failure.code });
       return;
     }
 
     user.password = newPassword;
     await user.save();
 
-    // Fire-and-forget so a slow/hanging Gmail SMTP send can't stall the response.
+    // Sign out every device: whoever had the old password may still hold a session.
+    await RefreshToken.update(
+      { isRevoked: true },
+      { where: { userId: user.id, isRevoked: false } }
+    );
+
+    // Fire-and-forget so a slow/hanging SMTP send can't stall the response.
     void emailService
-      .sendPasswordResetSuccessEmail(user.email, `${user.firstName} ${user.lastName}`)
+      .sendPasswordResetSuccessEmail(user.email, user.firstName)
       .catch((emailError) => {
         console.error("Failed to send password reset success email:", emailError);
       });

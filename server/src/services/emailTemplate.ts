@@ -1,4 +1,18 @@
 // src/services/emailTemplates.ts
+const escapeHtml = (value: string): string =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** Shared Salvio frame for user-facing emails: dark header, plain body. */
+const salvioEmail = (body: string): string => `
+      <div style="max-width: 560px; margin: 0 auto; font-family: Arial, sans-serif; font-size: 15px; line-height: 1.5; color: #1B2124;">
+        <div style="background: #14181A; padding: 18px 24px; border-radius: 12px 12px 0 0;">
+          <span style="color: #12B177; font-weight: 800; font-size: 18px; letter-spacing: 1px;">SALVIO</span>
+        </div>
+        <div style="background: #F6F8F7; padding: 28px 24px; border-radius: 0 0 12px 12px;">${body}
+        </div>
+      </div>
+    `;
+
 export const emailTemplates = {
   emailVerification: (name: string, verificationUrl: string) => ({
     subject: "Verify Your Email - Trainer Marketplace",
@@ -75,77 +89,27 @@ export const emailTemplates = {
     text: `Hi ${name}, Your email has been verified successfully! Welcome to Trainer Marketplace.`,
   }),
 
-  passwordReset: (name: string, resetUrl: string) => ({
-    subject: "Reset Your Password - Trainer Marketplace",
-    html: `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <style>
-          .container { max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif; }
-          .header { background-color: #2563eb; color: white; padding: 20px; text-align: center; }
-          .content { padding: 30px 20px; }
-          .button {
-            display: inline-block;
-            padding: 12px 24px;
-            background-color: #2563eb;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            margin: 20px 0;
-          }
-          .footer { background-color: #f3f4f6; padding: 20px; text-align: center; color: #6b7280; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Password Reset Request</h1>
-          </div>
-          <div class="content">
-            <h2>Hi ${name},</h2>
-            <p>We received a request to reset your password.</p>
-            <p>Click the button below to set a new password:</p>
-            <a href="${resetUrl}" class="button">Reset Password</a>
-            <p>Or copy and paste this link in your browser:</p>
-            <p style="word-break: break-all; color: #2563eb;">${resetUrl}</p>
-            <p><strong>This link will expire in 15 minutes.</strong></p>
-            <p>If you did not request this, you can safely ignore this email.</p>
-          </div>
-          <div class="footer">
-            <p>© 2024 Trainer Marketplace. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `,
-    text: `
-      Hi ${name},
-
-      We received a request to reset your password.
-
-      Reset your password here:
-      ${resetUrl}
-
-      This link expires in 15 minutes.
-
-      If you did not request this, you can ignore this email.
-    `,
+  /** The 6-digit code the user types into the app's reset screen. */
+  passwordResetCode: (name: string, code: string, minutesValid: number) => ({
+    subject: `Codul tău Salvio: ${code}`,
+    html: salvioEmail(`
+        <p style="margin: 0 0 16px;">Salut, ${escapeHtml(name)}!</p>
+        <p style="margin: 0 0 16px;">Ai cerut să-ți resetezi parola. Introdu codul de mai jos în aplicația Salvio:</p>
+        <p style="margin: 24px 0; font-size: 34px; font-weight: 800; letter-spacing: 8px; color: #14181A;">${code}</p>
+        <p style="margin: 0 0 16px;">Codul e valabil <strong>${minutesValid} minute</strong> și merge o singură dată.</p>
+        <p style="margin: 0; color: #4C565B;">Dacă nu tu ai cerut resetarea, ignoră emailul: parola ta rămâne neschimbată.</p>
+    `),
+    text: `Salut, ${name}! Codul tău de resetare a parolei Salvio este ${code}. E valabil ${minutesValid} minute și merge o singură dată. Dacă nu tu ai cerut resetarea, ignoră emailul.`,
   }),
 
   passwordResetSuccess: (name: string) => ({
-    subject: "Password Reset Successful - Trainer Marketplace",
-    html: `
-      <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
-        <h2>Password Updated Successfully</h2>
-        <p>Hi ${name},</p>
-        <p>Your password was changed successfully.</p>
-        <p>If you did not perform this action, please contact support immediately.</p>
-        <p>Best regards,<br>The Trainer Marketplace Team</p>
-      </div>
-    `,
-    text: `Hi ${name}, your password was changed successfully. If this was not you, contact support immediately.`,
+    subject: "Parola ta Salvio a fost schimbată",
+    html: salvioEmail(`
+        <p style="margin: 0 0 16px;">Salut, ${escapeHtml(name)}!</p>
+        <p style="margin: 0 0 16px;">Parola contului tău Salvio a fost schimbată, iar toate sesiunile deschise au fost închise. Intră din nou în aplicație cu parola nouă.</p>
+        <p style="margin: 0; color: #4C565B;">Dacă nu tu ai schimbat parola, scrie-ne imediat la robertojudele@juroc.tech.</p>
+    `),
+    text: `Salut, ${name}! Parola contului tău Salvio a fost schimbată și toate sesiunile au fost închise. Dacă nu tu ai schimbat-o, scrie-ne imediat la robertojudele@juroc.tech.`,
   }),
 
   /** Internal alert to the Salvio team, not sent to the trainer. */

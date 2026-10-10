@@ -249,7 +249,14 @@ export const forgotPasswordValidation = [
 ];
 
 export const resetPasswordValidation = [
-  body("token").notEmpty().withMessage("Reset token is required."),
+  body("email")
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Provide a valid email."),
+  body("code")
+    .trim()
+    .matches(/^\d{6}$/)
+    .withMessage("The reset code must be 6 digits."),
   body("newPassword")
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters long.")
@@ -257,7 +264,7 @@ export const resetPasswordValidation = [
     .withMessage(
       "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
-  strictSchema({ body: ["token", "newPassword"] }),
+  strictSchema({ body: ["email", "code", "newPassword"] }),
 ];
 
 export const updateProfileValidation = [
