@@ -10,15 +10,17 @@ export interface Entitlement {
   reason?: string;
   /** Free grant (early adopter) rather than a paid or store-trial subscription. */
   isPromotional?: boolean;
+  /**
+   * A promotional grant with no end date yet: free until Salvio converts the
+   * trainer. `expiresAt` is then a far-off placeholder, not a date to show.
+   */
+  isOpenEnded?: boolean;
 }
 
 /**
- * The founding-trainer promo, shaped for the app to render.
- *
- * Served rather than hardcoded in the client: the deadline and the number of
- * free months are env-overridable (`FOUNDING_GRANT_DEADLINE`,
- * `FOUNDING_GRANT_MONTHS`), so extending or ending the promo must not require
- * shipping a new build to the stores.
+ * The founding-trainer promo, as older app builds still render it. The promo is
+ * retired (trainers are now free until converted), so it is always closed; the
+ * route stays so those builds get a valid answer and hide the banner.
  */
 export interface FoundingGrantOffer {
   /** False once the deadline has passed, or if the promo is switched off. */

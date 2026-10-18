@@ -3,17 +3,20 @@ import {
 	createCheckoutSession,
 	createPortalSession,
 	createSubscription,
+	endTrainerFreeAccess,
 	getBillingEntitlement,
 	getFoundingOffer,
 	validateIapSubscription,
 	getBillingTransactions,
 } from "../controllers/billing";
 import { authenticate } from "../middleware/auth";
+import { requireAdmin } from "../middleware/authorization";
 import { checkoutRateLimit } from "../middleware/rateLimitProfiles";
 import {
 	createCheckoutSessionValidation,
 	createPortalSessionValidation,
 	createSubscriptionValidation,
+	endTrainerFreeAccessValidation,
 	handleValidationErrors,
 	validateIapSubscriptionValidation,
 } from "../middleware/validation";
@@ -32,6 +35,14 @@ router.get("/entitlement", authenticate, getBillingEntitlement);
 // who are not trainers yet.
 router.get("/founding-offer", authenticate, getFoundingOffer);
 router.get("/transactions", authenticate, getBillingTransactions);
+router.post(
+	"/admin/trainers/:trainerId/end-free-access",
+	authenticate,
+	requireAdmin,
+	endTrainerFreeAccessValidation,
+	handleValidationErrors,
+	endTrainerFreeAccess
+);
 router.post(
 	"/iap/validate",
 	authenticate,

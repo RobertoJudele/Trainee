@@ -1430,6 +1430,15 @@ export const updatePosterCodeValidation = [
   strictSchema({ body: ["label", "isActive", "gymLogoUrl"], params: ["id"] }),
 ];
 
+export const endTrainerFreeAccessValidation = [
+  param("trainerId").isInt({ min: 1 }).withMessage("trainerId must be a positive integer."),
+  body("noticeDays")
+    .optional()
+    .isInt({ min: 0, max: 90 })
+    .withMessage("noticeDays must be a whole number between 0 and 90."),
+  strictSchema({ body: ["noticeDays"], params: ["trainerId"] }),
+];
+
 export const handleValidationErrors = (
   req: Request,
   res: Response,

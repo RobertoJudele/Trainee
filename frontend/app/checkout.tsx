@@ -319,9 +319,9 @@ export default function CheckoutScreen() {
 	const onboardingParam = Array.isArray(params.onboarding) ? params.onboarding[0] : params.onboarding;
 	const isOnboarding = onboardingParam === "1";
 
-	// The founding-trainer grant is issued asynchronously after createTrainer
+	// The free-access grant is issued asynchronously after createTrainer
 	// responds, so arriving straight from onboarding can beat its write by a
-	// round trip. Poll briefly rather than leave a founding trainer looking at a
+	// round trip. Poll briefly rather than leave a new trainer looking at a
 	// paywall they should not see; `waitingForGrant` caps it so a trainer who
 	// genuinely has no grant stops polling instead of hammering the API.
 	const [waitingForGrant, setWaitingForGrant] = useState(isOnboarding);
@@ -351,6 +351,9 @@ export default function CheckoutScreen() {
 	// Free early-adopter grant — no store purchase behind it, so the renewal and
 	// "billed via" wording below would be wrong (and alarming) as-is.
 	const isEarlyAdopter = Boolean(entitlement?.isPromotional);
+	// Free until Salvio converts them: `expiresAt` is a far-off placeholder, so
+	// no date is shown until an end has actually been set.
+	const isOpenEndedGrant = isEarlyAdopter && Boolean(entitlement?.isOpenEnded);
 
 	const { data: transactionsResponse, isLoading: isLoadingTransactions } = useGetBillingTransactionsQuery(undefined, {
 		skip: !isSubscribed,
@@ -905,7 +908,9 @@ export default function CheckoutScreen() {
 							<View style={styles.infoBanner}>
 								<Ionicons name="sparkles" size={20} color={theme.colors.primary} style={{ marginRight: 8 }} />
 								<Text style={styles.infoBannerText}>
-									{t("earlyAdopterBanner").replace("{date}", formatDateString(entitlement?.expiresAt))}
+									{isOpenEndedGrant
+										? t("earlyAdopterOpenEndedBanner")
+										: t("earlyAdopterBanner").replace("{date}", formatDateString(entitlement?.expiresAt))}
 								</Text>
 							</View>
 						)}
@@ -961,7 +966,9 @@ export default function CheckoutScreen() {
 										: entitlement?.status === "canceled" ? t("expirationDate") : t("nextRenewalDate")}
 								</Text>
 								<Text style={styles.detailsValue}>
-									{formatDateString(entitlement?.expiresAt)}
+									{isOpenEndedGrant
+										? t("earlyAdopterOpenEndedValue")
+										: formatDateString(entitlement?.expiresAt)}
 								</Text>
 							</View>
 
@@ -992,10 +999,12 @@ export default function CheckoutScreen() {
 									</View>
 								))}
 								<Text style={styles.futurePricingNote}>
-									{t("earlyAdopterPricesNote").replace(
-										"{date}",
-										formatDateString(entitlement?.expiresAt)
-									)}
+									{isOpenEndedGrant
+										? t("earlyAdopterOpenEndedPricesNote")
+										: t("earlyAdopterPricesNote").replace(
+												"{date}",
+												formatDateString(entitlement?.expiresAt)
+											)}
 								</Text>
 							</View>
 						)}

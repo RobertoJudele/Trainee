@@ -6,7 +6,6 @@ import { requestTrainerTour } from "../../features/onboarding/onboardingSlice";
 import { router } from "expo-router";
 import { useGetProfileQuery } from "./usersApiSlicet";
 import ScreenHeader from "../../src/components/ScreenHeader";
-import FoundingOfferBanner from "../../src/components/FoundingOfferBanner";
 import {
   useGetSpecializationsQuery,
   SpecializationItem,
@@ -276,11 +275,6 @@ export default function CreateTrainer() {
           />
 
           <View style={styles.form}>
-            {/* Renders nothing once the promo closes — the server decides.
-                The margin is passed in rather than wrapped around, so a closed
-                promo leaves no orphan 32px gap above "About you". */}
-            <FoundingOfferBanner style={styles.section} />
-
             {/* Error Message */}
             {errMsg ? (
               <View style={styles.errorContainer}>
