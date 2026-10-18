@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
 import { billingService, BillingError } from "../services/billing";
 import { isBillingPlanId, BillingPlanId } from "../config/billingPlans";
+import { Trainer } from "../models/trainer";
 
 const mapBillingErrorStatus = (e: BillingError): number => {
   switch (e.code) {
@@ -14,6 +15,7 @@ const mapBillingErrorStatus = (e: BillingError): number => {
     case "NO_PRICE": return 400;
     case "CONFIG_MISSING": return 500;
     case "NO_CLIENT_SECRET": return 500;
+    case "NO_FREE_ACCESS": return 409;
     default: return 500;
   }
 };
@@ -90,6 +92,34 @@ export const getFoundingOffer = async (_req: AuthenticatedRequest, res: Response
   } catch (error) {
     console.error("Founding offer retrieval failed:", error);
     sendError(res, 500, "Could not retrieve the founding offer");
+  }
+};
+
+/**
+ * Admin: ends a trainer's free access once they have been converted (or have
+ * declined). Keyed by trainer id because that is what the contact alert email
+ * carries.
+ */
+export const endTrainerFreeAccess = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const trainer = await Trainer.findByPk(Number(req.params.trainerId), {
+      attributes: ["id", "userId"],
+    });
+    if (!trainer) {
+      sendError(res, 404, "Trainer not found");
+      return;
+    }
+
+    const noticeDays = Number(req.body.noticeDays ?? 0);
+    const entitlement = await billingService.endFreeAccess(trainer.userId, noticeDays);
+    sendSuccess(res, 200, "Free access ended", entitlement);
+  } catch (error) {
+    if (error instanceof BillingError) {
+      sendError(res, mapBillingErrorStatus(error), error.message);
+      return;
+    }
+    console.error("Ending free access failed:", error);
+    sendError(res, 500, "Could not end the free access");
   }
 };
 

@@ -555,20 +555,16 @@ const en: Record<string, string> = {
   trainerDetailsTitle: "Trainer Details",
   checkoutTitle: "Checkout",
 
-  // ─── Founding-trainer offer ──────────────────────────────
-  // Never promise a fixed end date for the free months: they run from the
-  // moment the grant is issued, so joining on 29 September covers you to
-  // 29 December. And never imply limited places — the server caps nothing.
-  foundingOfferTitle: "{n} months free",
-  foundingOfferBody: "Sign up as a trainer by {date} and your first {n} months are free. No card, no automatic charge.",
-  foundingOfferDaysLeft: "{n} days left",
-  foundingOfferDaysLeftDe: "{n} days left",
-  foundingOfferLastDay: "Last day",
   // Shown to early adopters so the price is never a surprise on the day their
-  // free months end. Read-only — buying now would start billing immediately and
-  // burn the free months they still have.
+  // free access ends. Read-only — buying now would start billing immediately and
+  // burn the free access they still have.
   earlyAdopterPricesTitle: "Pricing after your free period",
   earlyAdopterPricesNote: "Nothing is charged now. You can choose a plan from {date}.",
+  // Open-ended free access: there is no end date to show until Salvio sets one.
+  earlyAdopterOpenEndedBanner:
+    "You're an early adopter — full trainer access, free. No card needed, and nothing is charged automatically. We'll let you know well in advance before anything changes.",
+  earlyAdopterOpenEndedValue: "No end date",
+  earlyAdopterOpenEndedPricesNote: "Nothing is charged now. We'll let you know well in advance before you need to choose a plan.",
   shareMyLink: "Share my link",
   shareMyLinkMessage: "My trainer profile on Salvio:",
   couldNotShareLink: "Could not share the link.",
@@ -1433,15 +1429,12 @@ const ro: Record<string, string> = {
   trainerDetailsTitle: "Detalii antrenor",
   checkoutTitle: "Finalizare comandă",
 
-  // ─── Oferta pentru antrenori fondatori ───────────────────
-  // "de zile" pentru numeralele care o cer (20-99, 00) — vezi romanianNeedsDe.
-  foundingOfferTitle: "{n} luni gratuite",
-  foundingOfferBody: "Înscrie-te ca antrenor până pe {date} și primești primele {n} luni gratuite. Fără card, fără taxare automată.",
-  foundingOfferDaysLeft: "Mai sunt {n} zile",
-  foundingOfferDaysLeftDe: "Mai sunt {n} de zile",
-  foundingOfferLastDay: "Ultima zi",
   earlyAdopterPricesTitle: "Prețuri după perioada gratuită",
   earlyAdopterPricesNote: "Nu ți se ia nimic acum. Poți alege un plan începând cu {date}.",
+  earlyAdopterOpenEndedBanner:
+    "Ești early adopter — acces complet de antrenor, gratuit. Nu ai nevoie de card și nu se percepe automat nicio plată. Te anunțăm din timp înainte să se schimbe ceva.",
+  earlyAdopterOpenEndedValue: "Fără termen",
+  earlyAdopterOpenEndedPricesNote: "Nu ți se ia nimic acum. Te anunțăm din timp înainte să fie nevoie să alegi un plan.",
   shareMyLink: "Distribuie linkul meu",
   shareMyLinkMessage: "Profilul meu de antrenor pe Salvio:",
   couldNotShareLink: "Nu am putut distribui linkul.",

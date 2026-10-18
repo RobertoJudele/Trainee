@@ -10,28 +10,25 @@ Core insight: **every Romanian PT already has clients** (managed via WhatsApp +
 notebook). Seed trainers with the free scheduling tool; each trainer brings
 10–20 existing clients. The marketplace emerges from density, one city at a time.
 
-### 1. ~~Kill the paywall at launch~~ — **live in production** (confirmed 2026-08-13)
-- Shipped as **3 months free**, not 12, and **with no cap on the number of
-  trainers**. `BillingService.grantFoundingEntitlement` checks the deadline and
-  nothing else, so the "first ~50" framing is not what runs — do not advertise a
-  limited number of spots. The real scarcity is the date.
-- **Deadline: 2026-09-30**, set in `EnvBillingConfig.ts` and overridable per
-  environment with `FOUNDING_GRANT_DEADLINE` / `FOUNDING_GRANT_MONTHS`. Clearing
-  the deadline env var switches the promo off.
-- The three months run **from the moment the grant is issued**, not to a fixed end
-  date: joining on 29 September means cover until 29 December. Copy should say
-  "sign up by 30 September for 3 months free", never "free until December".
-- Implemented as a RevenueCat *promotional* entitlement — no store purchase, no
-  auto-charge, and it does not silently convert to a paid subscription. The call is
-  idempotent, so retries never stack.
-- **Not implemented: the "grandfathered discount forever" part.** Only the
-  three-month grant exists; there is no permanent founder price. Either build it
-  before promising it, or drop it from the pitch.
-- **Open risk, carried over from the original plan.** The 12-month figure was
-  argued for on the grounds that "trainers must survive the low-demand period
-  without churning" — three months may expire well before Cluj has enough demand to
-  justify paying. Watch what the first cohort does at the 3-month mark; extending is
-  an env var, not a code change.
+### 1. ~~Kill the paywall at launch~~ — **live in production**
+- **Since 2026-10-19: free until converted.** Every trainer gets open-ended free
+  access at signup — no signup deadline, no expiry, no cap on the number of
+  trainers. It replaced the 3-month founding grant (deadline 2026-09-30, later
+  2026-10-31). Existing trainers are moved over once, at deploy, with
+  `npm run free-access:backfill` (dry run first, then `-- --apply`).
+- Still a RevenueCat *promotional* entitlement — no store purchase, no
+  auto-charge. RevenueCat needs an end date, so it carries a 2099-12-31
+  sentinel; the app reads `isOpenEnded` and shows no date.
+- **Conversion is manual.** The 5-contact alert email is the cue; the admin then
+  ends free access with `POST /billing/admin/trainers/:trainerId/end-free-access`
+  (`noticeDays` 0–90). Copy must never promise "free forever".
+- **Not implemented: the "grandfathered discount forever" part.** There is no
+  permanent founder price. Either build it before promising it, or drop it from
+  the pitch.
+- **Resolved risk.** The original plan wanted 12 months so trainers would "survive
+  the low-demand period without churning"; three months risked expiring before
+  Cluj had demand. Free-until-converted removes the clock: the paywall now comes
+  only after a trainer has proof (5 contacts) that the app brings clients.
 
 ### 2. Launch city: Cluj-Napoca
 - ~300k people, compact, ~40–60 relevant gyms — personally coverable in 2 weeks.

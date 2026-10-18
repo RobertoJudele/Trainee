@@ -34,7 +34,8 @@ export class BillingError extends Error {
       | "STRIPE_DISABLED"
       | "NO_PRICE"
       | "CONFIG_MISSING"
-      | "NO_CLIENT_SECRET",
+      | "NO_CLIENT_SECRET"
+      | "NO_FREE_ACCESS",
     message: string,
   ) {
     super(message);
@@ -64,22 +65,11 @@ export class BillingService {
   }
 
   /**
-   * The founding-trainer promo as the app should present it. Mirrors the gate in
-   * `grantFoundingEntitlement` so the banner can never advertise an offer the
-   * grant would refuse.
-   *
-   * Note there is deliberately no cap on trainer count — the gate is the date
-   * alone — so the app must not imply a limited number of places.
+   * Retired: trainers are free until converted, so there is no signup deadline
+   * to advertise. Always closed, which makes older builds hide their banner.
    */
   getFoundingGrantOffer(): FoundingGrantOffer {
-    const deadline = this.config.getFoundingGrantDeadline();
-    const months = this.config.getFoundingGrantMonths();
-
-    if (!deadline || months <= 0 || this.clock.now().getTime() > deadline.getTime()) {
-      return { isOpen: false, months: 0 };
-    }
-
-    return { isOpen: true, months, deadline: deadline.toISOString() };
+    return { isOpen: false, months: 0 };
   }
 
   // ── IAP validation (RevenueCat) ──────────────────────────────
@@ -136,41 +126,33 @@ export class BillingService {
     };
   }
 
-  // ── Founding-trainer promotional grant ───────────────────────
+  // ── Free access until converted ──────────────────────────────
 
   /**
-   * Grants the founding trainer a free RevenueCat promotional entitlement — no
-   * store purchase, no auto-charge. Safe to call more than once: a trainer who
-   * already has a running grant is skipped, so retries never stack.
+   * Gives the trainer free, open-ended access: a RevenueCat promotional
+   * entitlement with no store purchase and no auto-charge, lasting until
+   * `endFreeAccess` cuts it short. Safe to call more than once.
    *
-   * Callers should not await this on the signup path; a failed grant must not
-   * fail signup.
+   * Skips a trainer with a paid or store-trial subscription, and one who is
+   * already open-ended. A promotional grant with a real end date (the old
+   * 3-month grant) is extended.
    */
-  async grantFoundingEntitlement(userId: number): Promise<boolean> {
-    const deadline = this.config.getFoundingGrantDeadline();
-    const months = this.config.getFoundingGrantMonths();
-    const now = this.clock.now();
-
-    if (!deadline || months <= 0 || now.getTime() > deadline.getTime()) {
-      return false;
-    }
-
+  async grantFreeAccess(userId: number): Promise<boolean> {
     if (!this.config.hasRevenueCatApiKey()) {
       throw new BillingError("CONFIG_MISSING", "Missing REVENUECAT_SECRET_API_KEY");
     }
 
     const state = await this.requireBillingState(userId);
-
-    // Already covered — either by an earlier grant or a real subscription.
-    if (domain.resolveEntitlement(state, {
+    const entitlement = domain.resolveEntitlement(state, {
       isRevenueCatOnly: this.config.isRevenueCatOnlyMode(),
       clock: this.clock,
-    }).isActive) {
+    });
+
+    if (entitlement.isActive && (!entitlement.isPromotional || entitlement.isOpenEnded)) {
       return false;
     }
 
-    const grantedUntil = new Date(now);
-    grantedUntil.setMonth(grantedUntil.getMonth() + months);
+    const grantedUntil = domain.OPEN_ENDED_GRANT_UNTIL;
 
     // Written locally FIRST, and awaited by the caller: gating reads this row, so
     // the trainer has to be entitled by the time createTrainer answers. The app
@@ -194,6 +176,49 @@ export class BillingService {
       });
 
     return true;
+  }
+
+  /**
+   * Ends a trainer's free access — the admin's "converted" step. Access stays
+   * until `noticeDays` from now (0 = immediately); after that the trainer meets
+   * the paywall like any unsubscribed trainer.
+   *
+   * RevenueCat is updated first and awaited: its subscriber record is what
+   * webhooks and Restore Purchases sync from, so a local-only change would be
+   * undone by the next sync. All promotional grants are revoked (a new one does
+   * not shorten an existing one), then the notice period is granted afresh.
+   */
+  async endFreeAccess(userId: number, noticeDays: number): Promise<Entitlement> {
+    const state = await this.requireBillingState(userId);
+    const opts = { isRevenueCatOnly: this.config.isRevenueCatOnlyMode(), clock: this.clock };
+    const entitlement = domain.resolveEntitlement(state, opts);
+
+    if (!entitlement.isActive || !entitlement.isPromotional) {
+      throw new BillingError(
+        "NO_FREE_ACCESS",
+        "This trainer has no running free access to end.",
+      );
+    }
+
+    if (!this.config.hasRevenueCatApiKey()) {
+      throw new BillingError("CONFIG_MISSING", "Missing REVENUECAT_SECRET_API_KEY");
+    }
+
+    const endsAt = new Date(this.clock.nowMs() + noticeDays * 24 * 60 * 60 * 1000);
+    const entitlementId = this.config.getRevenueCatEntitlementId();
+
+    await this.revenueCatGw.revokePromotionalEntitlements(String(userId), entitlementId);
+    if (noticeDays > 0) {
+      await this.revenueCatGw.grantPromotionalEntitlement(
+        String(userId),
+        entitlementId,
+        endsAt.getTime(),
+      );
+    }
+
+    const updated = domain.applyPromotionalGrant(state, endsAt);
+    await this.billingRepo.save(updated);
+    return domain.resolveEntitlement(updated, opts);
   }
 
   // ── Stripe mobile subscription ───────────────────────────────
