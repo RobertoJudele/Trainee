@@ -36,6 +36,7 @@ export interface TrainerProfileAttributes {
   iapExpiresAt?: Date;
   iapLastVerifiedAt?: Date;
   currentPeriodEndsAt?: Date;
+  contactAlertSentAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

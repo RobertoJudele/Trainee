@@ -87,11 +87,15 @@ const baseQueryWithReauth: BaseQueryFn<
           }
           // Network error or 5xx: don't log out. The original 401 is returned to
           // the caller so the user sees an error and can retry manually.
-        } else {
-          // No refresh token stored at all — definitely not authenticated.
+        } else if (result.meta?.request.headers.has("authorization")) {
+          // A session with no refresh token left to renew it — end it.
           api.dispatch(logOut());
           api.dispatch(apiSlice.util.resetApiState());
         }
+        // No session was sent, so there is nothing to end: the 401 goes back to
+        // the caller as-is. Resetting here re-mounted every query on screen, the
+        // one needing a session 401'd again, and the loop re-fetched the rest
+        // with it — on a trainer profile, /trainer/:id until the rate limit 429'd.
       } finally {
         release();
       }

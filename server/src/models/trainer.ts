@@ -176,6 +176,14 @@ export class Trainer extends Model<
   @Column({type: DataType.DATE, field: "current_period_ends_at"})
   currentPeriodEndsAt?: Date
 
+  /**
+   * When the "contacted by 5 people" conversion alert was emailed. Set once, so
+   * each trainer triggers the alert at most once; see trainerContactAlerts.ts.
+   */
+  @AllowNull(true)
+  @Column({ type: DataType.DATE, field: "contact_alert_sent_at" })
+  contactAlertSentAt?: Date | null
+
   @CreatedAt
   @Column({ field: "created_at" })
   createdAt!: Date;

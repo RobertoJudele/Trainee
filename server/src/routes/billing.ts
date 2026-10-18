@@ -3,17 +3,20 @@ import {
 	createCheckoutSession,
 	createPortalSession,
 	createSubscription,
+	endTrainerFreeAccess,
 	getBillingEntitlement,
 	getFoundingOffer,
 	validateIapSubscription,
 	getBillingTransactions,
 } from "../controllers/billing";
 import { authenticate } from "../middleware/auth";
+import { requireAdmin } from "../middleware/authorization";
 import { checkoutRateLimit } from "../middleware/rateLimitProfiles";
 import {
 	createCheckoutSessionValidation,
 	createPortalSessionValidation,
 	createSubscriptionValidation,
+	endTrainerFreeAccessValidation,
 	handleValidationErrors,
 	validateIapSubscriptionValidation,
 } from "../middleware/validation";
@@ -33,6 +36,14 @@ router.get("/entitlement", authenticate, getBillingEntitlement);
 router.get("/founding-offer", authenticate, getFoundingOffer);
 router.get("/transactions", authenticate, getBillingTransactions);
 router.post(
+	"/admin/trainers/:trainerId/end-free-access",
+	authenticate,
+	requireAdmin,
+	endTrainerFreeAccessValidation,
+	handleValidationErrors,
+	endTrainerFreeAccess
+);
+router.post(
 	"/iap/validate",
 	authenticate,
 	validateIapSubscriptionValidation,
@@ -48,6 +59,7 @@ router.post(
 );
 router.post(
 	"/create-checkout-session",
+	authenticate,
 	checkoutRateLimit,
 	createCheckoutSessionValidation,
 	handleValidationErrors,
@@ -55,6 +67,7 @@ router.post(
 );
 router.post(
 	"/create-portal-session",
+	authenticate,
 	checkoutRateLimit,
 	createPortalSessionValidation,
 	handleValidationErrors,

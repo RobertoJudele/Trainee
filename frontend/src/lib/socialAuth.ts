@@ -19,18 +19,31 @@ export interface SocialCredential {
   lastName?: string;
 }
 
-const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+// eas.json holds "REPLACE_WITH_..." until the matching Google OAuth client
+// exists. Treat that as unset: a fake id shows a button that fails on tap.
+const realClientId = (id: string | undefined): string | undefined =>
+  id && !id.startsWith('REPLACE_WITH') ? id : undefined;
+
+const webClientId = realClientId(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID);
+const iosClientId = realClientId(process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+
+// iOS signs in with the iOS client alone; Android only gets an ID token
+// through the web client.
+export const isGoogleConfigured = Boolean(
+  Platform.OS === 'ios' ? iosClientId : webClientId
+);
 
 // The server validates the token's audience against the WEB client id on Android
-// and the iOS one on iOS, so both have to be configured here.
-GoogleSignin.configure({
-  webClientId,
-  iosClientId,
-  offlineAccess: false,
-});
-
-export const isGoogleConfigured = Boolean(webClientId);
+// and the iOS one on iOS, so both have to be configured here. Skipped when the
+// id is missing: on iOS configure() throws at import time without one, which
+// crashes the login screen instead of just hiding the Google button.
+if (isGoogleConfigured) {
+  GoogleSignin.configure({
+    webClientId,
+    iosClientId,
+    offlineAccess: false,
+  });
+}
 
 /** Apple only offers native Sign in with Apple on iOS 13+. */
 export const isAppleSignInAvailable = async (): Promise<boolean> => {

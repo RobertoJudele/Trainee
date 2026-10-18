@@ -15,7 +15,10 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSelector } from "react-redux";
-import { useGetTrainerByIdQuery } from "../../features/trainer/trainerApiSlice";
+import {
+  useGetTrainerByIdQuery,
+  useRecordTrainerContactMutation,
+} from "../../features/trainer/trainerApiSlice";
 import {
   useGetTrainerReviewsQuery,
   useCreateReviewMutation,
@@ -48,6 +51,8 @@ import {
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
+  /** Reported to the server when tapped; see recordTrainerContact. */
+  channel: "instagram" | "facebook" | "whatsapp";
   url: string;
   fallbackUrl?: string;
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -95,6 +100,7 @@ export default function TrainerDetailsScreen() {
   });
 
   const trainerInternalId = trainer?.internalId;
+  const [recordTrainerContact] = useRecordTrainerContactMutation();
 
   const { data: blockedData } = useGetBlockedUsersQuery();
   const blockedIds = React.useMemo(
@@ -319,18 +325,19 @@ export default function TrainerDetailsScreen() {
 
     const instagramUrl = normalizeSocialUrl(trainer?.instagramUrl);
     if (instagramUrl) {
-      options.push({ label: "Instagram", url: instagramUrl, icon: "logo-instagram", color: "#E1306C" });
+      options.push({ label: "Instagram", channel: "instagram", url: instagramUrl, icon: "logo-instagram", color: "#E1306C" });
     }
 
     const facebookUrl = normalizeSocialUrl(trainer?.facebookUrl);
     if (facebookUrl) {
-      options.push({ label: "Facebook", url: facebookUrl, icon: "logo-facebook", color: "#1877F2" });
+      options.push({ label: "Facebook", channel: "facebook", url: facebookUrl, icon: "logo-facebook", color: "#1877F2" });
     }
 
     const whatsappContactUrls = getWhatsAppContactUrls(trainer?.whatsappUrl);
     if (whatsappContactUrls) {
       options.push({
         label: "WhatsApp",
+        channel: "whatsapp",
         url: whatsappContactUrls.appUrl,
         fallbackUrl: whatsappContactUrls.webUrl,
         icon: "logo-whatsapp",
@@ -715,7 +722,15 @@ export default function TrainerDetailsScreen() {
             <TouchableOpacity
               key={option.label}
               style={styles.socialIconButton}
-              onPress={() => void openContactUrl(option.url, option.fallbackUrl)}
+              onPress={() => {
+                // Sent before opening the link: once WhatsApp or Instagram is in
+                // front, the app may be suspended before a later request leaves.
+                // A tracking failure must never get in the way of the contact.
+                recordTrainerContact({ trainerId: trainerPublicId, channel: option.channel })
+                  .unwrap()
+                  .catch(() => {});
+                void openContactUrl(option.url, option.fallbackUrl);
+              }}
               accessible={true}
               accessibilityRole="button"
               accessibilityLabel={option.label}

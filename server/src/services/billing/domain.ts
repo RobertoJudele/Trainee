@@ -19,6 +19,20 @@ export interface Clock {
 const PROMOTIONAL_STORE = "PROMOTIONAL";
 const PERIOD_PROMOTIONAL = "promotional";
 
+/**
+ * Trainers are free until converted by hand, so a grant has no real end date.
+ * RevenueCat needs one anyway, hence this far-off sentinel. It is cut short by
+ * `BillingService.endFreeAccess`, never by the calendar.
+ */
+export const OPEN_ENDED_GRANT_UNTIL = new Date("2099-12-31T23:59:59.000Z");
+
+// Compared by threshold rather than equality: RevenueCat round-trips the end
+// time and may not hand back the exact millisecond.
+const OPEN_ENDED_THRESHOLD_MS = Date.UTC(2099, 0, 1);
+
+export const isOpenEndedGrantEnd = (endsAt?: Date): boolean =>
+  Boolean(endsAt && endsAt.getTime() >= OPEN_ENDED_THRESHOLD_MS);
+
 /** Free grant with no store purchase behind it — recorded as a running trial. */
 export function applyPromotionalGrant(
   state: BillingState,
@@ -62,14 +76,16 @@ export function resolveEntitlement(
 
   if (state.subscriptionStatus === subStatus.TRIAL) {
     if (hasFuture(state.trialEndsAt)) {
+      // A store trial carries its store as the provider; a running trial with
+      // no provider at all is a promotional grant.
+      const isPromotional = state.billingProvider === BillingProvider.NONE;
       return {
         isActive: true,
         status: subStatus.TRIAL,
         source: state.billingProvider,
         expiresAt: state.trialEndsAt,
-        // A store trial carries its store as the provider; a running trial with
-        // no provider at all is a promotional grant.
-        isPromotional: state.billingProvider === BillingProvider.NONE,
+        isPromotional,
+        isOpenEnded: isPromotional && isOpenEndedGrantEnd(state.trialEndsAt),
       };
     }
     return {

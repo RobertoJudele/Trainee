@@ -68,6 +68,17 @@ export class RevenueCatHttpGateway implements RevenueCatGateway {
     );
   }
 
+  async revokePromotionalEntitlements(
+    appUserId: string,
+    entitlementId: string,
+  ): Promise<void> {
+    await this.request(
+      `/subscribers/${encodeURIComponent(appUserId)}`
+        + `/entitlements/${encodeURIComponent(entitlementId)}/revoke_promotionals`,
+      { method: "POST" },
+    );
+  }
+
   isWebhookAuthorized(authorizationHeader: string | undefined): boolean {
     const expected = this.config.webhookAuth?.trim();
     // Fail closed. An unset REVENUECAT_WEBHOOK_AUTH used to accept every caller,

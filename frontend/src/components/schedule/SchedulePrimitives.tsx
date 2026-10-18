@@ -20,14 +20,10 @@ import { formatDate, formatTime } from "../../lib/datetime";
 
 export const scheduleDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export type ScheduleStatus = "available" | "assigned" | "completed" | "canceled" | "no_show";
+export type ScheduleStatus = "available" | "assigned";
 
 export const scheduleStatusColor = (status: ScheduleStatus) => {
-  if (status === "available") return "#198754";
-  if (status === "assigned") return "#0D6EFD";
-  if (status === "completed") return "#6F42C1";
-  if (status === "canceled") return "#DC3545";
-  return "#B54708";
+  return status === "available" ? "#198754" : "#0D6EFD";
 };
 
 export const scheduleStatusBackground = (status: ScheduleStatus) => {

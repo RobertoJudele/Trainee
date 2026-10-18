@@ -1,3 +1,4 @@
+import "./withDatabase";
 import { describe, it, expect, beforeAll } from "@jest/globals";
 import sequelize from "../db";
 import { ensureSpatialAndSearchInfrastructure } from "../services/databaseBootstrap";
@@ -15,11 +16,19 @@ interface ColumnRow {
   is_nullable: "YES" | "NO";
 }
 
+// Both information_schema.columns and pg_indexes are database-wide views,
+// not scoped to the connection's search_path - so without a `schema =
+// current_schema()` filter, a `users` table left behind in another schema
+// (e.g. `public`, from before this suite ran inside a dedicated per-worker
+// schema) is indistinguishable from this test's own table, and Postgres
+// picks an arbitrary one. current_schema() is the first entry on the
+// connection's actual search_path, i.e. this worker's schema.
 const usersColumns = async (): Promise<Record<string, string>> => {
   const [rows] = await sequelize.query(`
     SELECT column_name, is_nullable
     FROM information_schema.columns
-    WHERE table_name = 'users'
+    WHERE table_schema = current_schema()
+      AND table_name = 'users'
       AND column_name IN ('google_id', 'apple_id', 'password_hash');
   `);
   return Object.fromEntries(
@@ -30,7 +39,8 @@ const usersColumns = async (): Promise<Record<string, string>> => {
 const userIndexes = async (): Promise<string[]> => {
   const [rows] = await sequelize.query(`
     SELECT indexname FROM pg_indexes
-    WHERE tablename = 'users'
+    WHERE schemaname = current_schema()
+      AND tablename = 'users'
       AND indexname IN ('idx_users_google_id', 'idx_users_apple_id');
   `);
   return (rows as Array<{ indexname: string }>).map((r) => r.indexname).sort();

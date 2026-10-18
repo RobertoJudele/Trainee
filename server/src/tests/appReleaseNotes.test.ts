@@ -1,3 +1,4 @@
+import "./withDatabase";
 import { describe, it, expect, beforeEach } from "@jest/globals";
 import request from "supertest";
 import { app } from "../index";

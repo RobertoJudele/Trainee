@@ -41,6 +41,10 @@ import { SystemClock } from "../services/billing/adapters/SystemClock";
 import { isRevenueCatOnlyMode } from "../config/billingMode";
 import { toBillingState } from "../services/billing/trainerBillingState";
 import { billingService } from "../services/billing";
+import { getMutuallyBlockedUserIds } from "../services/userBlocks";
+import { recordTrainerContact } from "../services/trainerContactAlerts";
+import { getRequestIp } from "../services/posterScanCounting";
+import { TrainerContactChannel } from "../models/trainerContactEvent";
 
 const billingClock = new SystemClock();
 
@@ -381,14 +385,14 @@ export const createTrainer = async (
       subscriptionStatus,
     });
 
-    // Founding-trainer free grant. Awaited: trialEndsAt above is already in the
+    // Free access until converted. Awaited: trialEndsAt above is already in the
     // past, so until this writes the grant row the trainer is unentitled and every
     // endpoint behind the `subscription` middleware answers 402 — which silently
     // ate the packages the app posts right after signup. Only the local write is
-    // awaited; grantFoundingEntitlement pushes to RevenueCat in the background, so
-    // a slow or down RevenueCat still cannot fail or delay signup.
-    await billingService.grantFoundingEntitlement(userId).catch((grantError) => {
-      console.error("Founding entitlement grant failed", { userId }, grantError);
+    // awaited; grantFreeAccess pushes to RevenueCat in the background, so a slow
+    // or down RevenueCat still cannot fail or delay signup.
+    await billingService.grantFreeAccess(userId).catch((grantError) => {
+      console.error("Free access grant failed", { userId }, grantError);
     });
 
     if (specializationIds && specializationIds.length > 0) {
@@ -431,6 +435,43 @@ export const createTrainer = async (
       return;
     }
     sendError(res, 500, "Unexpected error while creating trainer happened");
+  }
+};
+
+/**
+ * POST /trainer/:trainerId/contact — the app reports a tap on one of the
+ * trainer's contact buttons. Always 204 once validated: the app fires this
+ * and forgets, so an ignored tap needs no different answer.
+ */
+export const recordContact = async (
+  req: Request<{ trainerId: string }, {}, { channel: TrainerContactChannel }> & {
+    user?: { id?: number };
+  },
+  res: Response
+) => {
+  try {
+    const identifier = String(req.params.trainerId).trim();
+    const numericId = Number(identifier);
+    const trainer = await Trainer.findOne({
+      where: /^\d+$/.test(identifier) ? { id: numericId } : { publicId: identifier },
+    });
+
+    if (!trainer) {
+      sendError(res, 404, "Trainer not found");
+      return;
+    }
+
+    await recordTrainerContact({
+      trainer,
+      userId: typeof req.user?.id === "number" ? req.user.id : null,
+      ip: getRequestIp(req),
+      channel: req.body.channel,
+    });
+
+    res.status(204).end();
+  } catch (error) {
+    console.error("[CONTACT] record failed:", error);
+    sendError(res, 500, "Could not record the contact.");
   }
 };
 
@@ -868,6 +909,15 @@ export const searchTrainers = async (
     const trainerWhere: any = {};
     const userWhere: any = {};
 
+    // req.user is optional here — /trainer/search stays open to anonymous
+    // callers (optionalAuthenticate) — so an unblocked, unauthenticated visitor
+    // sees the same results as before. Mutual: a trainer who blocked this
+    // client is excluded too, not just trainers the client blocked.
+    const blockedUserIds = await getMutuallyBlockedUserIds(req.user?.id);
+    if (blockedUserIds.length > 0) {
+      trainerWhere.userId = { [Op.notIn]: blockedUserIds };
+    }
+
     const latValue = toFiniteNumber(lat);
     const lngValue = toFiniteNumber(lng);
     const radiusValue = toFiniteNumber(radiusKm ?? radius);
@@ -1097,6 +1147,9 @@ export const searchTrainers = async (
         if (maxExperience) finalTrainerWhere.experienceYears[Op.lte] = parseInt(maxExperience);
       }
       if (minRating) finalTrainerWhere.totalRating = { [Op.gte]: parseFloat(minRating) };
+      if (blockedUserIds.length > 0) {
+        finalTrainerWhere.userId = { [Op.notIn]: blockedUserIds };
+      }
 
       applyGeoFilters(finalTrainerWhere);
     }

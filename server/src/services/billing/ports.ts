@@ -84,6 +84,7 @@ export interface RevenueCatGateway {
     entitlementId: string,
     endTimeMs: number,
   ): Promise<void>;
+  revokePromotionalEntitlements(appUserId: string, entitlementId: string): Promise<void>;
   isWebhookAuthorized(authorizationHeader: string | undefined): boolean;
 }
 
@@ -100,6 +101,4 @@ export interface BillingConfig {
   getStripeCancelUrl(): string;
   getStripePortalReturnUrl(): string;
   hasRevenueCatApiKey(): boolean;
-  getFoundingGrantMonths(): number;
-  getFoundingGrantDeadline(): Date | undefined;
 }

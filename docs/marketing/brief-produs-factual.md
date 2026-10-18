@@ -1,7 +1,8 @@
 # Salvio — descriere factuală a produsului
 
 **Scop:** brief intern pentru comunicare. Totul de mai jos e citit din cod la
-2026-08-20 (branch `dev`). Unde codul nu răspunde, scrie „neclar din cod".
+2026-08-20 (branch `dev`); părțile despre accesul gratuit al antrenorilor sunt
+actualizate la 2026-10-19. Unde codul nu răspunde, scrie „neclar din cod".
 
 ---
 
@@ -14,7 +15,8 @@ antrenorii personali își administrează programul, clienții și pachetele de
 Conține și un director de antrenori cu căutare și filtre, plus o hartă cu săli de
 fitness importate din Google Places.
 
-Antrenorii plătesc abonament ca să fie vizibili în căutare; clienții folosesc
+Antrenorii sunt vizibili în căutare cât timp au acces activ: gratuit până îi
+convertește Salvio la un abonament plătit, apoi prin abonament. Clienții folosesc
 aplicația gratuit.
 
 ---
@@ -124,9 +126,10 @@ Carduri, filtrate pe rol:
 4. **Pe server, automat:** profilul se creează cu `trialEndsAt` egal cu momentul
    creării — adică **perioada de probă e expirată din prima clipă**. Fără altceva,
    antrenorul **nu apare în căutare**.
-5. **Pe server, automat:** dacă data curentă e înainte de termenul promoției
-   (2026-09-30), se acordă un entitlement promoțional de 3 luni, care îl face activ
-   și deci vizibil. Altfel îi trebuie abonament plătit.
+5. **Pe server, automat:** primește acces gratuit **fără termen** (entitlement
+   promoțional), care îl face activ și deci vizibil. Nu există termen-limită de
+   înscriere. Accesul gratuit se închide doar manual, de un admin (vezi §4.4
+   „Plăți"); după aceea îi trebuie abonament plătit.
 6. **În aplicație, manual:** antrenorul se alătură sălilor din „Sălile mele" —
    altfel nu apare la nicio sală pe hartă.
 7. **În afara aplicației:** dacă sala lui nu există în listă, trimite „Solicită o
@@ -180,9 +183,17 @@ certificat și `PUBLIC_WEB_URL` configurate.
   (`canUseStripeWebCheckout` cere platformă non-nativă). Practic, plata pe telefon
   se face exclusiv prin magazinele de aplicații.
 - **Perioadă de probă: nu există.** `trialEndsAt` se setează la momentul creării.
-- **Grant de fondator:** 3 luni gratuite pentru orice profil de antrenor creat
-  până la 2026-09-30 inclusiv. Fără card, fără taxare automată, fără limită de
-  număr de antrenori. Cele 3 luni curg din momentul acordării.
+- **Acces gratuit până la conversie:** orice antrenor primește la înscriere acces
+  complet gratuit, fără termen, fără card și fără taxare automată. Nu are
+  termen-limită de înscriere și nici limită de număr. (A înlocuit, pe 2026-10-19,
+  vechiul grant de fondator de 3 luni; antrenorii existenți se mută pe noul
+  sistem o singură dată, la deploy, cu `npm run free-access:backfill`.)
+- **Cum se face conversia:** când 5 persoane distincte au apăsat pe butoanele de
+  contact ale unui antrenor, adminul primește un email cu datele lui. Discuția de
+  conversie se face în afara aplicației. Gratuitul se închide manual cu
+  `POST /billing/admin/trainers/:trainerId/end-free-access`, opțional cu preaviz de
+  0–90 de zile; în aplicație antrenorul vede atunci „Gratuit până la <data>". După
+  acea dată ajunge pe paywall, ca orice antrenor fără abonament.
 - **Plata ședințelor:** **nu se întâmplă în aplicație.** Pachetele afișate pe profil
   sunt doar informative — nu există niciun buton de cumpărare. Banii se dau în
   afara aplicației, iar antrenorul înregistrează manual pachetul clientului.
@@ -203,7 +214,8 @@ Cele mai probabile presupuneri greșite:
   preț afișat, nimic mai mult. Singura plată din aplicație e abonamentul antrenorului.
 - **Nu există conturi de sală.** Sălile sunt date importate; nicio sală nu-și
   administrează prezența, orarul sau prețurile.
-- **Nu există perioadă de probă gratuită** pentru antrenori.
+- **Nu există perioadă de probă care trece singură în plată.** Accesul gratuit al
+  antrenorilor nu expiră automat și nu taxează nimic; se închide doar manual.
 - **Nu există program de recomandare, puncte, insigne, serii de prezență sau
   clasamente.**
 - **Nu există jurnal de antrenamente, bibliotecă de exerciții sau urmărirea
@@ -268,7 +280,8 @@ Termenii exacți, în română. A se folosi aceștia în comunicare.
 | Cerere de sală | **200** de caractere |
 | Planuri de abonament | 1, 3, 6, 12 luni |
 | Perioadă de probă | **nu există** (expiră la creare) |
-| Grant de fondator | **3 luni**, termen **2026-09-30**, fără limită de număr |
+| Acces gratuit antrenori | **fără termen**, se închide manual (preaviz 0–90 de zile) |
+| Prag pentru emailul de conversie | **5** persoane distincte care contactează antrenorul |
 | Limbi | română (implicită) și engleză |
 
 **Numărul de săli:** baza de date de dezvoltare are **1795** de săli, acoperind mai

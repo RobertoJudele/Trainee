@@ -41,8 +41,8 @@ export default function ForgotPasswordScreen() {
     }
 
     try {
-      const res = await forgotPassword({ email: normalized }).unwrap();
-      Alert.alert(t("checkYourEmail"), res.message);
+      await forgotPassword({ email: normalized }).unwrap();
+      Alert.alert(t("checkYourEmail"), t("resetCodeSent"));
       router.push({ pathname: "/reset-password", params: { email: normalized } });
     } catch (err: unknown) {
       const msg = getApiErrorMessage(err, t("couldNotSendReset"));

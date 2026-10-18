@@ -1,9 +1,9 @@
+// Attendance confirmation was never finished (the per-slot check-in code was
+// only ever written null) and has been removed rather than completed. A slot
+// is either open or booked - there is no third state.
 export enum SlotStatus {
   AVAILABLE = "available",
   ASSIGNED = "assigned",
-  COMPLETED = "completed",
-  CANCELED = "canceled",
-  NO_SHOW = "no_show",
 }
 
 export interface TrainerWorkingHourAttributes {
@@ -36,10 +36,6 @@ export interface TrainerScheduleSlotAttributes {
   endsAt: Date;
   status: SlotStatus;
   note?: string;
-  checkInCodeHash?: string | null;
-  checkInCodeExpiresAt?: Date | null;
-  checkInAttempts: number;
-  checkedInAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -52,10 +48,6 @@ export interface TrainerScheduleSlotCreationAttributes {
   endsAt: Date;
   status?: SlotStatus;
   note?: string;
-  checkInCodeHash?: string | null;
-  checkInCodeExpiresAt?: Date | null;
-  checkInAttempts?: number;
-  checkedInAt?: Date | null;
 }
 
 export interface TrainerBlockedDateAttributes {

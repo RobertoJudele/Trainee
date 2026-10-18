@@ -23,6 +23,27 @@ for (const profile of ["preview", "production"]) {
   }
 }
 
+// The iOS 1.0.4 upload was rejected by App Store Connect: app.json still had
+// the placeholder Google URL scheme. It must be the reversed iOS client id, or
+// Google Sign-In has no URL to return to.
+const googlePlugin = require("../app.json").expo.plugins.find(
+  (p) => Array.isArray(p) && p[0] === "@react-native-google-signin/google-signin"
+);
+if (googlePlugin) {
+  const scheme = googlePlugin[1].iosUrlScheme;
+  for (const [profile, { env }] of Object.entries(eas.build)) {
+    if (!env) continue;
+    const iosId = env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "";
+    const reversed =
+      "com.googleusercontent.apps." + iosId.replace(/\.apps\.googleusercontent\.com$/, "");
+    assert.strictEqual(
+      scheme,
+      reversed,
+      `app.json: google-signin iosUrlScheme must be the reversed build.${profile}.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
+    );
+  }
+}
+
 // Verbose RevenueCat logging must not ship to the App Store.
 assert.notStrictEqual(
   eas.build.production.env.EXPO_PUBLIC_REVENUECAT_DEBUG,

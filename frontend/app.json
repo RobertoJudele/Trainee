@@ -3,7 +3,7 @@
     "name": "Salvio",
     "slug": "frontend",
     "scheme": "trainee",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "buildNumber": "49",
+      "buildNumber": "52",
       "bundleIdentifier": "com.juroctech.frontend",
       "usesAppleSignIn": true,
       "infoPlist": {
@@ -176,7 +176,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.REPLACE_WITH_REVERSED_IOS_CLIENT_ID"
+          "iosUrlScheme": "com.googleusercontent.apps.1074619281969-imri2h359g5o4utkebq0crvnk96ro3hj"
         }
       ]
     ],

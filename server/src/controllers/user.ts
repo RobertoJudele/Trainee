@@ -16,6 +16,7 @@ import { Review } from "../models/review";
 import { Issue } from "../models/issue";
 import { ProfileViewEvent } from "../models/profileViewEvent";
 import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
+import { SlotStatus } from "../types/schedule";
 import { cascadeDeleteTrainer } from "./trainer";
 
 export const updateProfile = async (
@@ -171,8 +172,10 @@ export const deleteProfile = async (req: Request, res: Response) => {
       await ProfileViewEvent.destroy({ where: { viewerUserId: userId }, transaction: t });
 
       // Rows owned by others that merely point back at this user — keep the row, drop the link.
+      // Both fields must move together: leaving status untouched orphans the slot
+      // as "assigned" with no client, which no booking flow can ever recover.
       await TrainerScheduleSlot.update(
-        { clientId: null as unknown as undefined },
+        { clientId: null as unknown as undefined, status: SlotStatus.AVAILABLE },
         { where: { clientId: userId }, transaction: t }
       );
       await ClientCheckInCode.update(

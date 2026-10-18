@@ -3,16 +3,19 @@ import { AuthenticatedRequest } from "../types/common";
 import { sendError, sendSuccess } from "../utils/response";
 import { billingService, BillingError } from "../services/billing";
 import { isBillingPlanId, BillingPlanId } from "../config/billingPlans";
+import { Trainer } from "../models/trainer";
 
 const mapBillingErrorStatus = (e: BillingError): number => {
   switch (e.code) {
     case "UNAUTHORIZED": return 401;
+    case "FORBIDDEN": return 403;
     case "NOT_TRAINER": return 403;
     case "INVALID_PAYLOAD": return 400;
     case "STRIPE_DISABLED": return 503;
     case "NO_PRICE": return 400;
     case "CONFIG_MISSING": return 500;
     case "NO_CLIENT_SECRET": return 500;
+    case "NO_FREE_ACCESS": return 409;
     default: return 500;
   }
 };
@@ -92,6 +95,34 @@ export const getFoundingOffer = async (_req: AuthenticatedRequest, res: Response
   }
 };
 
+/**
+ * Admin: ends a trainer's free access once they have been converted (or have
+ * declined). Keyed by trainer id because that is what the contact alert email
+ * carries.
+ */
+export const endTrainerFreeAccess = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const trainer = await Trainer.findByPk(Number(req.params.trainerId), {
+      attributes: ["id", "userId"],
+    });
+    if (!trainer) {
+      sendError(res, 404, "Trainer not found");
+      return;
+    }
+
+    const noticeDays = Number(req.body.noticeDays ?? 0);
+    const entitlement = await billingService.endFreeAccess(trainer.userId, noticeDays);
+    sendSuccess(res, 200, "Free access ended", entitlement);
+  } catch (error) {
+    if (error instanceof BillingError) {
+      sendError(res, mapBillingErrorStatus(error), error.message);
+      return;
+    }
+    console.error("Ending free access failed:", error);
+    sendError(res, 500, "Could not end the free access");
+  }
+};
+
 export const validateIapSubscription = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const user = req.user;
@@ -146,7 +177,7 @@ export const validateIapSubscription = async (req: AuthenticatedRequest, res: Re
   }
 };
 
-export const createCheckoutSession = async (req: Request, res: Response) => {
+export const createCheckoutSession = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const body = req.body as { lookup_key?: string; priceId?: string; plan?: string };
 
@@ -175,11 +206,18 @@ export const createCheckoutSession = async (req: Request, res: Response) => {
   }
 };
 
-export const createPortalSession = async (req: Request, res: Response) => {
+export const createPortalSession = async (req: AuthenticatedRequest, res: Response) => {
   try {
+    const user = req.user;
+    if (!user) {
+      sendError(res, 401, "User is not authenticated");
+      return;
+    }
+
     const body = req.body as { session_id?: string; customerId?: string };
 
     const result = await billingService.createPortalSession({
+      userId: user.id,
       customerId: body.customerId,
       sessionId: body.session_id,
     });

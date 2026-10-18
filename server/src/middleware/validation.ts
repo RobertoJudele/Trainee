@@ -6,6 +6,7 @@ import { IssueCategory, IssueStatus, IssueTargetType } from "../types/issue";
 import { sendError } from "../utils/response";
 import { BILLING_PLAN_IDS } from "../config/billingPlans";
 import { SOCIAL_PROVIDERS } from "../services/socialAuth";
+import { POSTER_CODE_PATTERN } from "../utils/posterCode";
 
 type SchemaLocation = "body" | "query" | "params";
 
@@ -248,7 +249,14 @@ export const forgotPasswordValidation = [
 ];
 
 export const resetPasswordValidation = [
-  body("token").notEmpty().withMessage("Reset token is required."),
+  body("email")
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Provide a valid email."),
+  body("code")
+    .trim()
+    .matches(/^\d{6}$/)
+    .withMessage("The reset code must be 6 digits."),
   body("newPassword")
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters long.")
@@ -256,7 +264,7 @@ export const resetPasswordValidation = [
     .withMessage(
       "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
-  strictSchema({ body: ["token", "newPassword"] }),
+  strictSchema({ body: ["email", "code", "newPassword"] }),
 ];
 
 export const updateProfileValidation = [
@@ -771,6 +779,16 @@ export const trainerIdParamValidation = [
   strictSchema({ params: ["trainerId"], body: [], query: [] }),
 ];
 
+export const TRAINER_CONTACT_CHANNELS = ["whatsapp", "instagram", "facebook"] as const;
+
+export const trainerContactValidation = [
+  ...trainerIdParamValidation.slice(0, -1),
+  body("channel")
+    .isIn(TRAINER_CONTACT_CHANNELS)
+    .withMessage(`channel must be one of: ${TRAINER_CONTACT_CHANNELS.join(", ")}.`),
+  strictSchema({ params: ["trainerId"], body: ["channel"], query: [] }),
+];
+
 export const trainerSearchValidation = [
   query("q")
     .optional({ values: "falsy" })
@@ -1234,6 +1252,10 @@ export const blockedDatesQueryValidation = [
   strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
+// The read paths accept timeZone for the same reason the write paths do: which
+// calendar day a slot belongs to is a question about the trainer's local
+// calendar. The old handlers answered it with server-local Date#setHours and so
+// ignored this entirely, which only looked correct because the server runs UTC.
 export const trainerSlotsQueryValidation = [
   query("from")
     .optional({ values: "falsy" })
@@ -1243,7 +1265,11 @@ export const trainerSlotsQueryValidation = [
     .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("to must be a valid ISO date."),
-  strictSchema({ query: ["from", "to"] }),
+  query("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
 export const searchClientsQueryValidation = [
@@ -1280,57 +1306,6 @@ export const assignClientToSlotValidation = [
   }),
 ];
 
-export const assignSlotByCodeValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("code")
-    .trim()
-    .matches(/^\d{6}$/)
-    .withMessage("code must have exactly 6 digits."),
-  body("note")
-    .optional({ values: "falsy" })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("note must be at most 500 characters."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["code", "note"],
-  }),
-];
-
-export const assignSlotByCodeIdValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("checkInCodeId")
-    .isInt({ min: 1 })
-    .withMessage("checkInCodeId must be a positive integer."),
-  body("note")
-    .optional({ values: "falsy" })
-    .trim()
-    .isLength({ max: 500 })
-    .withMessage("note must be at most 500 characters."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["checkInCodeId", "note"],
-  }),
-];
-
-export const trainerCheckInValidation = [
-  param("slotId")
-    .isInt({ min: 1 })
-    .withMessage("slotId must be a positive integer."),
-  body("code")
-    .trim()
-    .matches(/^\d{6}$/)
-    .withMessage("code must have exactly 6 digits."),
-  strictSchema({
-    params: ["slotId"],
-    body: ["code"],
-  }),
-];
-
 export const clientScheduleQueryValidation = [
   query("from")
     .optional({ values: "falsy" })
@@ -1340,7 +1315,11 @@ export const clientScheduleQueryValidation = [
     .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("to must be a valid ISO date."),
-  strictSchema({ query: ["from", "to"] }),
+  query("timeZone")
+    .optional({ values: "falsy" })
+    .custom(timeZoneValidator)
+    .withMessage("timeZone must be a valid IANA timezone."),
+  strictSchema({ query: ["from", "to", "timeZone"] }),
 ];
 
 export const upsertClientPreferencesValidation = [
@@ -1410,6 +1389,54 @@ export const suggestTrainersValidation = [
     .isInt({ min: 1, max: 50 })
     .withMessage("limit must be between 1 and 50."),
   strictSchema({ query: ["page", "limit"] }),
+];
+
+/** Shared by create and update: a poster's optional gym-logo image URL. */
+const posterGymLogoUrlValidation = body("gymLogoUrl")
+  .optional({ nullable: true })
+  .trim()
+  .isLength({ max: 500 })
+  .withMessage("gymLogoUrl must be at most 500 characters.")
+  .isURL({ protocols: ["http", "https"], require_protocol: true })
+  .withMessage("gymLogoUrl must be an http(s) URL.");
+
+export const createPosterCodeValidation = [
+  body("label")
+    .trim()
+    .isLength({ min: 2, max: 120 })
+    .withMessage("Label must be between 2 and 120 characters."),
+  body("code")
+    .optional()
+    .trim()
+    .matches(POSTER_CODE_PATTERN)
+    .withMessage("Code must be 3-32 lowercase letters, digits or hyphens."),
+  body("gymId")
+    .optional({ nullable: true })
+    .isInt({ min: 1 })
+    .withMessage("gymId must be a positive integer."),
+  posterGymLogoUrlValidation,
+  strictSchema({ body: ["label", "code", "gymId", "gymLogoUrl"] }),
+];
+
+export const updatePosterCodeValidation = [
+  param("id").isInt({ min: 1 }).withMessage("id must be a positive integer."),
+  body("label")
+    .optional()
+    .trim()
+    .isLength({ min: 2, max: 120 })
+    .withMessage("Label must be between 2 and 120 characters."),
+  body("isActive").optional().isBoolean().withMessage("isActive must be a boolean."),
+  posterGymLogoUrlValidation,
+  strictSchema({ body: ["label", "isActive", "gymLogoUrl"], params: ["id"] }),
+];
+
+export const endTrainerFreeAccessValidation = [
+  param("trainerId").isInt({ min: 1 }).withMessage("trainerId must be a positive integer."),
+  body("noticeDays")
+    .optional()
+    .isInt({ min: 0, max: 90 })
+    .withMessage("noticeDays must be a whole number between 0 and 90."),
+  strictSchema({ body: ["noticeDays"], params: ["trainerId"] }),
 ];
 
 export const handleValidationErrors = (

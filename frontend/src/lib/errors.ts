@@ -62,3 +62,19 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
   }
   return fallback;
 }
+
+/**
+ * The machine-readable `code` some endpoints add to an error body (e.g.
+ * RESET_CODE_EXPIRED), so the app can show its own translated message.
+ */
+export function getApiErrorCode(error: unknown): string | null {
+  if (typeof error !== "object" || error === null || !("data" in error)) {
+    return null;
+  }
+  const data = (error as { data: unknown }).data;
+  if (typeof data !== "object" || data === null || !("code" in data)) {
+    return null;
+  }
+  const code = (data as { code: unknown }).code;
+  return typeof code === "string" ? code : null;
+}

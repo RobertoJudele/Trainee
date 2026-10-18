@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Op } from "sequelize";
 import { ReviewRequest } from "../types/review";
 import { sendError, sendSuccess } from "../utils/response";
 import { getSequelizeValidationErrors } from "../utils/errors";
@@ -6,6 +7,7 @@ import { Trainer } from "../models/trainer";
 import { Review } from "../models/review";
 import { User } from "../models/user";
 import { TrainerClient } from "../models/trainerClient";
+import { getMutuallyBlockedUserIds } from "../services/userBlocks";
 
 export const getReviews = async (
   req: Request<{ trainerId: string }>,
@@ -24,8 +26,17 @@ export const getReviews = async (
       return;
     }
 
+    // req.user is optional here — this route stays open to anonymous callers
+    // (optionalAuthenticate) — so an unauthenticated visitor sees every
+    // review, same as before. A logged-in viewer never sees a review from
+    // someone they've blocked, or who has blocked them.
+    const blockedUserIds = await getMutuallyBlockedUserIds(req.user?.id);
+
     const reviews = await Review.findAll({
-      where: { trainerId },
+      where: {
+        trainerId,
+        ...(blockedUserIds.length > 0 && { clientId: { [Op.notIn]: blockedUserIds } }),
+      },
       include: [
         {
           model: User,
@@ -75,8 +86,14 @@ export const createReview = async (
     // trainer-controlled, so it doesn't stop a trainer farming reviews from their own
     // throwaway accounts — it stops drive-by reviews from strangers, and every fake
     // now leaves a trainer_clients row naming both accounts.
-    // ponytail: roster membership, not attended sessions — slots never reach COMPLETED
-    // (checkInCodeHash is never written), so a stricter gate would block everyone.
+    //
+    // Attendance confirmation was never finished and has been removed rather than
+    // completed (the per-slot check-in code was only ever written null), so roster
+    // membership is the only structural signal available here. A stricter gate —
+    // roster membership AND at least one booked slot whose start time has already
+    // passed — is a well-defined follow-up (see TrainerScheduleSlot, SlotStatus.
+    // ASSIGNED); it needs the review test fixtures to create a real elapsed booking
+    // wherever they assert eligibility, which is more than this pass touches.
     const isClientOfTrainer = await TrainerClient.findOne({
       where: { trainerId, clientId: user.id },
     });
