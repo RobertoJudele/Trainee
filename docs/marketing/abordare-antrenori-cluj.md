@@ -1,6 +1,9 @@
 # Abordarea antrenorilor din Cluj
 
-**Scris:** 2026-08-13 · **Termenul ofertei:** 30 septembrie 2026 (48 de zile)
+**Scris:** 2026-08-13 · **Actualizat:** 2026-10-19 — oferta de 3 luni (termen
+30 septembrie, apoi 31 octombrie) a fost înlocuită cu **acces gratuit până la
+conversie**: fără termen-limită și fără dată de expirare. Conversia o faci tu,
+după emailul care vine când 5 oameni l-au contactat pe antrenor.
 **Obiectiv:** 30 de antrenori activi în Cluj-Napoca. Contextul de poziționare:
 [`.agents/product-marketing.md`](../../.agents/product-marketing.md).
 
@@ -50,8 +53,8 @@ către persoane care nu te urmăresc).
 > clienții și ședințele rămase din pachete, ca să nu le mai numeri prin
 > conversații de WhatsApp.
 >
-> E gratuită complet până la finalul lunii septembrie și încă 3 luni după. Te-ar
-> interesa să ți-o arăt 15 minute? Vin eu la sală.
+> E gratuită pentru antrenori, fără card. Te-ar interesa să ți-o arăt 15 minute?
+> Vin eu la sală.
 
 **De ce funcționează:** menționezi sala (dovadă că nu e mesaj în masă), numești
 problema în termenii lui („ședințele rămase din pachete", nu „management de
@@ -83,11 +86,11 @@ pune în rol de consultant, nu de client — oamenii răspund mult mai bine.
 | Ce auzi | Ce răspunzi |
 |---|---|
 | „Am deja clienții mei, ce-mi trebuie marketplace?" | Nu-ți trebuie. Îți înlocuiește caietul și scrolluri prin WhatsApp. Clienții noi sunt un bonus care vine mai târziu, dacă vine — nu-ți promit nimic acolo. |
-| „Nu e nimeni pe ea." | Așa e, abia încep cu Clujul. De asta primii antrenori au 3 luni gratuite. Tu vii cu clienții tăi; restul e treaba mea. |
-| „Încă un abonament de ținut minte." | Nu ceri card, nu se activează nimic automat. E acordare promoțională, nu perioadă de probă care începe să taxeze pe tăcute. |
+| „Nu e nimeni pe ea." | Așa e, abia încep cu Clujul. De asta e gratuită pentru antrenori. Tu vii cu clienții tăi; restul e treaba mea. |
+| „Încă un abonament de ținut minte." | Nu ceri card, nu se activează nimic automat și nu expiră singur. Dacă se schimbă ceva, vorbim înainte — nu începe să taxeze pe tăcute. |
 | „Clienții mei n-o să-și instaleze o aplicație." | Nu se înregistrează de la zero — le trimiți un cod de invitație și intră direct conectați la tine, văzându-și ședințele. |
 | „N-am timp să o configurez." | De asta vin eu. În 20 de minute e gata tot — poze, certificări, sălile, programul. |
-| „Cât costă după?" | *(Arată-i ecranul de abonament — prețurile sunt acolo, sub perioada gratuită.)* Nu trebuie să decizi acum, dar nici nu vreau să afli în ultima zi. |
+| „Cât costă după?" | *(Arată-i ecranul de abonament — prețurile sunt acolo, sub perioada gratuită.)* Acum nu costă nimic. Când aplicația începe să-ți aducă clienți, vorbim despre abonament — și afli din timp, nu într-o zi oarecare. |
 
 ---
 
@@ -99,7 +102,7 @@ arată neîngrijit, și strică impresia și pentru ceilalți. De aceea îl comp
 
 Ordinea, ca să nu se blocheze la primul pas greu:
 
-- [ ] Cont + rol de antrenor *(aici se acordă automat cele 3 luni)*
+- [ ] Cont + rol de antrenor *(aici se acordă automat accesul gratuit)*
 - [ ] Poză de profil — cea mai bună de pe Instagramul lui, nu una făcută pe loc
 - [ ] Descriere — îl întrebi „cu ce fel de oameni lucrezi cel mai bine?" și scrii tu ce spune
 - [ ] Specializări
@@ -125,12 +128,13 @@ Trei lucruri sună bine într-o conversație și nu sunt susținute de produs:
 
 - **„Doar primii 50."** Codul nu numără antrenorii — poarta e exclusiv data. Dacă
   al 51-lea primește oferta oricum, ai mințit degeaba.
-- **„Gratuit până în decembrie."** Cele 3 luni curg din momentul înscrierii. Cine
-  se înscrie pe 29 septembrie e acoperit până pe 29 decembrie; cine se înscrie
-  mâine, până în noiembrie. Spui **„înscrie-te până pe 30 septembrie și ai 3 luni
-  gratuite"**.
-- **„Rămâi cu preț de fondator pe viață."** Nu există. Există doar cele 3 luni.
-  Dacă vrei să existe, trebuie construit înainte să fie promis.
+- **„Gratuit pentru totdeauna."** Nu e adevărat: accesul gratuit nu are dată de
+  expirare, dar îl închizi tu când îl convertești. Spui **„e gratuită pentru
+  antrenori, fără card; dacă se schimbă ceva, afli din timp"**.
+- **„Înscrie-te până pe X ca să prinzi oferta."** Nu mai există termen-limită;
+  oricine se înscrie primește același acces gratuit. O dată inventată e minciună.
+- **„Rămâi cu preț de fondator pe viață."** Nu există. Dacă vrei să existe,
+  trebuie construit înainte să fie promis.
 
 ---
 
@@ -156,10 +160,24 @@ București.
    unde se blochează discuția, nu să-i convertești pe toți.
 2. **Săptămânile 2–4** — corectezi mesajul cu ce ai învățat, apoi mergi sală cu
    sală. 5 antrenori pe săptămână e un ritm realist dacă faci și altceva.
-3. **Ultimele 2 săptămâni** — termenul devine argument: „mai sunt X zile". Reia
-   legătura cu toți cei care au zis „mă mai gândesc". E singurul moment în care ai
-   voie să insiști, și e onest, fiindcă data chiar există.
+3. **După aceea** — reia legătura cu toți cei care au zis „mă mai gândesc". Fără
+   termen-limită nu mai ai argumentul „mai sunt X zile"; argumentul e ce au
+   primit ceilalți antrenori din sala lor.
 
-Dacă la 30 septembrie ai sub 15 antrenori, prelungește termenul —
-`FOUNDING_GRANT_DEADLINE` e o variabilă de mediu, nu o modificare de cod. Mai bine
-prelungești decât să pierzi oameni pe care i-ai convins pe jumătate.
+## Conversia
+
+Când 5 oameni distincți au apăsat pe WhatsApp / Instagram / Facebook pe profilul
+unui antrenor, primești un email cu numele, emailul și linkul lui. Atunci are o
+dovadă că aplicația îi aduce clienți — e momentul discuției despre abonament.
+
+După discuție îi închizi accesul gratuit, de preferat cu preaviz:
+
+```bash
+curl -s -X POST "$API_URL/billing/admin/trainers/<trainerId>/end-free-access" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"noticeDays": 7}'
+```
+
+În aplicație vede „Gratuit până la <data>"; după acea dată ajunge pe paywall.
+Atenție: cât timp are acces gratuit, aplicația nu-l lasă să cumpere abonamentul,
+deci poate plăti abia după ce se termină preavizul.
