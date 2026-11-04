@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "231465579640",
+    "project_id": "salvio-b6ce2",
+    "storage_bucket": "salvio-b6ce2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231465579640:android:b252e0b51ff984142de98d",
+        "android_client_info": {
+          "package_name": "com.juroctech.frontend"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBXhNPt1SoQWwynz9XOETb4LJwlFSij3zQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
