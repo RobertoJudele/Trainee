@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   buttonDisabled: {
-    backgroundColor: theme.colors.surfaceSunken,
+    backgroundColor: theme.colors.textDisabled, // keeps the white label visible
   },
   buttonText: {
     ...typography.button,
