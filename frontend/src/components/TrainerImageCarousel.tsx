@@ -31,6 +31,10 @@ interface Props {
   // image without cropping (certificates with text).
   resizeMode?: "cover" | "contain";
   height?: number;
+  /** Replaces the default title, for pages with their own section headers. */
+  header?: React.ReactNode;
+  /** No card around it, for pages that separate sections without cards. */
+  plain?: boolean;
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -40,6 +44,8 @@ export default function TrainerImageCarousel({
   images,
   resizeMode = "cover",
   height = 240,
+  header,
+  plain = false,
 }: Props) {
   const { t } = useLanguage();
   const [slideWidth, setSlideWidth] = useState(0);
@@ -78,8 +84,8 @@ export default function TrainerImageCarousel({
   const isViewerOpen = viewerIndex !== null;
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.title}>{title}</Text>
+    <View style={plain ? styles.plainSection : styles.section}>
+      {header ?? <Text style={styles.title}>{title}</Text>}
 
       <View
         style={[styles.carousel, { height }]}
@@ -189,6 +195,9 @@ const styles = StyleSheet.create({
     ...presets.card,
     padding: theme.spacing.lg,
     gap: 12,
+  },
+  plainSection: {
+    gap: 14,
   },
   title: {
     ...typography.h3,

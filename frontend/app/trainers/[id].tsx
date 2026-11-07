@@ -96,6 +96,16 @@ const toNumber = (value?: string) => {
 
 type ReviewFormMode = "idle" | "write" | "edit";
 
+/** Section header: condensed uppercase title with a rule running to the edge. */
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return (
+    <View style={styles.sectionHead} accessibilityRole="header">
+      <Text style={styles.sectionTitle}>{children}</Text>
+      <View style={styles.sectionRule} />
+    </View>
+  );
+}
+
 export default function TrainerDetailsScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
@@ -653,9 +663,9 @@ export default function TrainerDetailsScreen() {
           {/* ── About ── */}
           {bioText ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>
+              <SectionTitle>
                 {firstName ? t("aboutName").replace("%s", firstName) : t("about")}
-              </Text>
+              </SectionTitle>
               {bioQuote ? <Text style={styles.bioQuote}>„{bioQuote}”</Text> : null}
               {bioRest ? <Text style={styles.bodyText}>{bioRest}</Text> : null}
             </View>
@@ -664,7 +674,7 @@ export default function TrainerDetailsScreen() {
           {/* ── Where they train ── */}
           {trainer?.availableGyms && trainer.availableGyms.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t("whereTheyTrain")}</Text>
+              <SectionTitle>{t("whereTheyTrain")}</SectionTitle>
               <View>
                 {trainer.availableGyms.map((gym, index) => (
                   <View
@@ -678,26 +688,37 @@ export default function TrainerDetailsScreen() {
             </View>
           ) : locationText ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t("whereTheyTrain")}</Text>
+              <SectionTitle>{t("whereTheyTrain")}</SectionTitle>
               <Text style={styles.bodyText}>{t("trainsIn").replace("%s", locationText)}</Text>
             </View>
           ) : null}
 
           {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
-            <TrainerImageCarousel title={t("gallery")} images={trainer.galleryImages} />
+            <View style={styles.section}>
+              <TrainerImageCarousel
+                title={t("gallery")}
+                images={trainer.galleryImages}
+                plain
+                header={<SectionTitle>{t("gallery")}</SectionTitle>}
+              />
+            </View>
           )}
 
           {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
-            <TrainerImageCarousel
-              title={t("certificationsAwards")}
-              images={trainer.credentialImages}
-              resizeMode="contain"
-            />
+            <View style={styles.section}>
+              <TrainerImageCarousel
+                title={t("certificationsAwards")}
+                images={trainer.credentialImages}
+                resizeMode="contain"
+                plain
+                header={<SectionTitle>{t("certificationsAwards")}</SectionTitle>}
+              />
+            </View>
           )}
 
           {/* ── Reviews ── */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t("whatClientsSay")}</Text>
+            <SectionTitle>{t("whatClientsSay")}</SectionTitle>
 
             {reviews.length === 0 && reviewMode === "idle" && (
               <Text style={styles.bodyText}>{t("noReviewsYet")}</Text>
@@ -854,7 +875,7 @@ export default function TrainerDetailsScreen() {
           {/* ── Other ways to get in touch ── */}
           {otherContacts.length > 0 ? (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t("otherContactWays")}</Text>
+              <SectionTitle>{t("otherContactWays")}</SectionTitle>
               <View style={styles.otherContacts}>
                 {otherContacts.map((option) => (
                   <Button
@@ -1066,12 +1087,25 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   section: {
-    marginTop: 40,
-    gap: 10,
+    marginTop: 52,
+    gap: 14,
+  },
+  sectionHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   sectionTitle: {
-    ...typography.heading,
+    ...typography.title,
+    fontSize: 24,
+    lineHeight: 28,
     color: theme.colors.text,
+    flexShrink: 1,
+  },
+  sectionRule: {
+    flex: 1,
+    height: 2,
+    backgroundColor: theme.colors.text,
   },
   bioQuote: {
     fontFamily: fonts.uiSemiBold,
