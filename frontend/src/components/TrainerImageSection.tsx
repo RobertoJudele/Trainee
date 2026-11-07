@@ -15,7 +15,7 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme, typography } from "../lib/theme";
+import { theme, typography, presets } from "../lib/theme";
 import { TrainerImageItem } from "../../features/trainer/trainerApiSlice";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { fonts } from "../lib/fonts";
@@ -108,14 +108,10 @@ export default function TrainerImageSection({
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     gap: 10,
     marginBottom: 20,
-    ...theme.shadows.small,
   },
   headerRow: {
     flexDirection: "row",

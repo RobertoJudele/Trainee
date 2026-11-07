@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { GradientButton } from "../src/components/ui";
 import ScreenHeader from "../src/components/ScreenHeader";
 import { useGetSpecializationsQuery, SpecializationItem } from "../features/trainer/trainerApiSlice";
@@ -453,19 +453,13 @@ const styles = StyleSheet.create({
 
   chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
   chip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 20,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
+    ...presets.chip,
   },
   chipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    ...presets.chipSelected,
   },
-  chipText: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
-  chipTextActive: { color: "#fff" },
+  chipText: { ...presets.chipText },
+  chipTextActive: { ...presets.chipTextSelected },
 
   showMoreButton: {
     flexDirection: "row",
@@ -473,6 +467,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     gap: theme.spacing.xs,
     marginTop: theme.spacing.xs,
+    minHeight: 44,
   },
   showMoreText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiSemiBold },
 
@@ -497,14 +492,7 @@ const styles = StyleSheet.create({
   halfWidth: { flex: 1, gap: theme.spacing.xs },
   label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm + 4,
-    ...typography.body1,
-    color: theme.colors.text,
+    ...presets.input,
   },
 
   selectedGym: {

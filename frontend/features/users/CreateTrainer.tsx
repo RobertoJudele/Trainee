@@ -24,7 +24,7 @@ import {
   Alert,
 } from "react-native";
 import React from "react";
-import { theme, typography } from "../../src/lib/theme";
+import { theme, typography, presets } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { ApiEnvelope, TrainerProfileAttributes } from "../../src/types/api";
@@ -532,14 +532,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.roundness,
-    padding: 16,
-    ...typography.body1,
-    color: theme.colors.text,
-    ...theme.shadows.small,
+    ...presets.input,
   },
   textArea: {
     minHeight: 100,
@@ -572,21 +565,17 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 18,
-    borderRadius: theme.roundness,
+    height: 52,
+    borderRadius: theme.radius.control,
     alignItems: "center",
     justifyContent: "center",
-    ...theme.shadows.medium,
   },
   buttonDisabled: {
-    backgroundColor: "#9CA3AF",
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: theme.colors.surfaceSunken,
   },
   buttonText: {
-    color: "white",
-    fontSize: 18,
-    fontFamily: fonts.uiSemiBold,
+    ...typography.button,
+    color: "#fff",
   },
   loadingContainer: {
     flexDirection: "row",
@@ -607,9 +596,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   specLoadingText: {
-    fontFamily: fonts.ui,
-    color: "#6B7280",
-    fontSize: 14,
+    ...typography.small,
+    color: theme.colors.textSecondary,
   },
   specFallbackBox: {
     alignItems: "flex-start",
@@ -617,22 +605,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   specFallbackText: {
-    fontFamily: fonts.ui,
-    color: "#6B7280",
-    fontSize: 14,
+    ...typography.small,
+    color: theme.colors.textSecondary,
   },
   specRetryButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 36,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
     minWidth: 84,
     alignItems: "center",
   },
   specRetryText: {
+    ...typography.button,
+    fontSize: 14,
     color: "#fff",
-    fontSize: 13,
-    fontFamily: fonts.uiBold,
   },
   specGrid: {
     flexDirection: "row",
@@ -640,23 +628,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   specChip: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#fff",
+    ...presets.chip,
   },
   specChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    ...presets.chipSelected,
   },
   specChipText: {
-    color: "#374151",
-    fontSize: 13,
-    fontFamily: fonts.uiSemiBold,
+    ...presets.chipText,
   },
   specChipTextActive: {
-    color: "#fff",
+    ...presets.chipTextSelected,
   },
 });

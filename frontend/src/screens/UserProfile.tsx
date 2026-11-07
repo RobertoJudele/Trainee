@@ -9,7 +9,7 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { useDeleteProfileMutation } from "../../features/users/usersApiSlicet";
 import { useRouter } from "expo-router";
-import { theme, typography } from "../lib/theme";
+import { theme, typography, presets } from "../lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import EditableAvatar from "../components/EditableAvatar";
 import { useProfilePictureUpload } from "../lib/useProfilePictureUpload";
@@ -183,24 +183,19 @@ const styles = StyleSheet.create({
   },
   roleBadge: {
     backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 12,
+    borderRadius: theme.radius.pill,
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
   roleBadgeText: {
+    ...typography.label,
     color: "#fff",
-    fontSize: 12,
-    fontFamily: fonts.uiSemiBold,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
   },
   card: {
+    ...presets.card,
     margin: 20,
-    backgroundColor: theme.colors.surface,
-    borderRadius: 16,
     padding: 20,
     gap: 16,
-    ...theme.shadows.small,
   },
   infoRow: {
     flexDirection: "row",
@@ -211,27 +206,23 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoLabel: {
-    fontSize: 12,
-    fontFamily: fonts.ui,
+    ...typography.label,
     color: theme.colors.textSecondary,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
     marginBottom: 2,
   },
   infoValue: {
-    fontSize: 15,
+    ...typography.body,
     color: theme.colors.text,
-    fontFamily: fonts.ui,
   },
   langBadge: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 10,
-    paddingHorizontal: 8,
+    borderRadius: theme.radius.xs,
+    paddingHorizontal: 6,
     paddingVertical: 2,
   },
   langBadgeText: {
-    color: "#fff",
+    ...typography.label,
     fontSize: 11,
-    fontFamily: fonts.uiBold,
+    color: "#fff",
   },
 });
