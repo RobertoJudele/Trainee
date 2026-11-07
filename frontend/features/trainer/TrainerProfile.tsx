@@ -356,7 +356,11 @@ function TrainerProfile() {
   ], [t, language, setLanguage, isDeleting, isDeletingAccount, handleLogout, handleDeleteTrainer, handleDeleteAccount, startTour, publicProfileUrl, handleShareProfileLink]);
 
   // ── Guards ──
-  if (user?.role !== UserRole.TRAINER) {
+  // No user means a logout is in flight and this screen is fading out: render
+  // nothing rather than an error the user would see for a moment.
+  if (!user) return null;
+
+  if (user.role !== UserRole.TRAINER) {
     return (
       <View style={styles.centered}>
         <Text style={styles.errorText}>{t("trainerOnly")}</Text>
