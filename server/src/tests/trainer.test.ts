@@ -158,15 +158,15 @@ describe("Trainer API", () => {
       expect(prices).toEqual([...prices].sort((a: number, b: number) => a - b));
     });
 
-    // "de la X" has to be the lowest price a client can get, so a single session
-    // cheaper than every package wins over the package rate.
-    it("uses the session rate when it is cheaper than every package", async () => {
+    // The session rate is a leftover trainers can't edit any more. With packages it
+    // must be ignored, even when it is lower: it is usually a stale value.
+    it("ignores a stale session rate once the trainer has packages", async () => {
       const { user } = await createTestUser({ role: "trainer" });
       const trainer = await Trainer.create({
         userId: user.id,
-        bio: "Cheap single session trainer",
+        bio: "Stale session rate trainer",
         experienceYears: 3,
-        sessionRate: 90,
+        sessionRate: 50,
         subscriptionStatus: subStatus.TRIAL,
         trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       } as any);
@@ -174,12 +174,11 @@ describe("Trainer API", () => {
         { trainerId: trainer.id, name: "4 pack", price: 440, sessionCount: 4 },
       ] as any);
 
-      const res = await request(app).get("/trainer/search").query({ q: "Cheap single session" });
+      const res = await request(app).get("/trainer/search").query({ q: "Stale session rate" });
 
       expect(res.status).toBe(200);
       const found = res.body.data.trainers.find((t: any) => t.internalId === trainer.id);
-      // 440/4 = 110 per session in the pack, but one session costs 90.
-      expect(Number(found.minSessionPrice)).toBe(90);
+      expect(Number(found.minSessionPrice)).toBe(110);
     });
 
     it("falls back to the session rate when a trainer has no packages", async () => {

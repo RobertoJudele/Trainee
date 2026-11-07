@@ -1,38 +1,51 @@
 import { summarizePrices, roCount, contactButtonLabel, formatLei } from "../trainerPage";
 
 describe("summarizePrices", () => {
-  // The case the sketch got wrong: the packs are cheaper per session than one
-  // session, so "de la" must quote the pack rate, not the single price.
-  it("quotes the cheapest per-session rate and shows 'de la' when prices differ", () => {
-    const summary = summarizePrices(120, [
-      { name: "Pachet de 4", price: 440, sessionCount: 4 },
-      { name: "Pachet de 8", price: "800.00", sessionCount: 8 },
+  // Three packs, the biggest the cheapest per session: "de la 50 lei o ședință",
+  // with the pack that gets you there named under it.
+  it("quotes the cheapest pack rate and the pack it comes from", () => {
+    const summary = summarizePrices(null, [
+      { name: "1 ședință", price: 80, sessionCount: 1 },
+      { name: "Pachet 5", price: "300.00", sessionCount: 5 },
+      { name: "Pachet 10", price: 500, sessionCount: 10 },
     ]);
+    expect(summary?.lowest).toBe(50);
+    expect(summary?.showFrom).toBe(true);
+    expect(summary?.lowestPackSessions).toBe(10);
+    expect(summary?.options.map((o) => o.perSession)).toEqual([80, 60, 50]);
+  });
+
+  // The session rate is a leftover trainers can't edit any more. With packages it
+  // must not appear as a "one session" price, even when it is the lowest number.
+  it("ignores the old session rate once there are packages", () => {
+    const summary = summarizePrices(50, [
+      { name: "4", price: 440, sessionCount: 4 },
+      { name: "8", price: 800, sessionCount: 8 },
+    ]);
+    expect(summary?.options.every((o) => o.kind === "package")).toBe(true);
     expect(summary?.lowest).toBe(100);
-    expect(summary?.showFrom).toBe(true);
-    expect(summary?.options.map((o) => o.perSession)).toEqual([120, 110, 100]);
+    expect(summary?.lowestPackSessions).toBe(8);
   });
 
-  it("uses the single session when it is cheaper than every pack", () => {
-    const summary = summarizePrices(90, [{ name: "4", price: 440, sessionCount: 4 }]);
-    expect(summary?.lowest).toBe(90);
-    expect(summary?.showFrom).toBe(true);
-  });
-
-  it("drops 'de la' when there is only one price", () => {
+  it("falls back to the session rate when there are no packages", () => {
     expect(summarizePrices(140, [])).toEqual({
       lowest: 140,
       showFrom: false,
+      lowestPackSessions: null,
       options: [{ kind: "single", sessions: 1, total: 140, perSession: 140 }],
     });
   });
 
-  it("drops 'de la' when every option costs the same per session", () => {
-    const summary = summarizePrices(100, [{ name: "5", price: 500, sessionCount: 5 }]);
+  it("drops 'de la' when every pack costs the same per session", () => {
+    const summary = summarizePrices(null, [
+      { name: "5", price: 500, sessionCount: 5 },
+      { name: "10", price: 1000, sessionCount: 10 },
+    ]);
     expect(summary?.showFrom).toBe(false);
+    expect(summary?.lowestPackSessions).toBeNull();
   });
 
-  it("ignores a missing session rate and broken packages", () => {
+  it("skips broken packages", () => {
     const summary = summarizePrices(null, [
       { name: "ok", price: 300, sessionCount: 3 },
       { name: "zero sessions", price: 100, sessionCount: 0 },
@@ -40,7 +53,6 @@ describe("summarizePrices", () => {
     ]);
     expect(summary?.options).toHaveLength(1);
     expect(summary?.lowest).toBe(100);
-    expect(summary?.showFrom).toBe(false);
   });
 
   it("returns null when there is no price at all", () => {

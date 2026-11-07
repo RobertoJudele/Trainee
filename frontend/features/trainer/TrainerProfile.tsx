@@ -58,6 +58,7 @@ import {
 import { fonts } from "../../src/lib/fonts";
 import { FieldError } from "../../src/components/ui";
 import { useFieldErrors } from "../../src/lib/useFieldErrors";
+import { summarizePrices, formatLei } from "../../src/lib/trainerPage";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const MAX_TRAINER_IMAGES = 5;
@@ -149,6 +150,9 @@ function TrainerProfile() {
   // ── Packages ──
   const { data: packagesResponse } = useGetTrainerPackagesQuery(trainer?.id ?? 0, { skip: !trainer?.id });
   const trainerPackages = packagesResponse?.data ?? [];
+  // Same price summary the clients see on the trainer page. The old session rate
+  // is a leftover trainers can't edit, so it only counts without packages.
+  const ownPriceSummary = summarizePrices(trainer?.sessionRate, trainerPackages);
   const [createPkg] = useCreateTrainerPackageMutation();
   const [updatePkg] = useUpdateTrainerPackageMutation();
   const [deletePkg] = useDeleteTrainerPackageMutation();
@@ -520,10 +524,15 @@ function TrainerProfile() {
                 <Text style={styles.infoLabel}>{t("experience")}</Text>
                 <Text style={styles.infoValue}>{trainer.experienceYears || 0} {t("years")}</Text>
               </View>
-              {trainer.sessionRate ? (
+              {ownPriceSummary ? (
                 <View style={styles.infoCard}>
                   <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-                  <Text style={styles.infoValue}>{t("fromPerSession").replace("%s", String(trainer.sessionRate))}</Text>
+                  <Text style={styles.infoValue}>
+                    {t(ownPriceSummary.showFrom ? "priceFromHeadline" : "priceHeadline").replace(
+                      "%s",
+                      formatLei(ownPriceSummary.lowest, language === "ro" ? "ro" : "en")
+                    )}
+                  </Text>
                 </View>
               ) : null}
             </View>

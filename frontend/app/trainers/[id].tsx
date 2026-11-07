@@ -619,6 +619,16 @@ export default function TrainerDetailsScreen() {
           {priceHeadline ? (
             <View onLayout={onPriceLayout} style={styles.priceBlock}>
               <Text style={styles.priceHeadline}>{priceHeadline}</Text>
+              {priceSummary?.lowestPackSessions ? (
+                <Text style={styles.priceWithPack}>
+                  {t("cheapestWithPack").replace(
+                    "%s",
+                    lang === "ro"
+                      ? roCount(priceSummary.lowestPackSessions, "ședință", "ședințe")
+                      : `${priceSummary.lowestPackSessions}-session`
+                  )}
+                </Text>
+              ) : null}
               {priceSummary && priceSummary.options.length > 1 ? (
                 <View style={styles.priceRows}>
                   {priceSummary.options.map((option, index) => (
@@ -628,7 +638,7 @@ export default function TrainerDetailsScreen() {
                     >
                       <Text style={styles.priceRowLabel}>
                         {option.kind === "single" ? t("oneSessionRow") : option.name}
-                        {option.kind === "package" ? (
+                        {option.sessions > 1 ? (
                           <Text style={styles.priceRowMuted}>
                             {"  ·  "}
                             {t("perSessionSuffix").replace("%s", formatLei(option.perSession, lang))}
@@ -1000,6 +1010,12 @@ const styles = StyleSheet.create({
     fontSize: 24,
     lineHeight: 30,
     color: theme.colors.text,
+  },
+  priceWithPack: {
+    ...typography.small,
+    fontSize: 15,
+    color: "#334155",
+    marginTop: 2,
   },
   priceRows: {
     marginTop: 10,
