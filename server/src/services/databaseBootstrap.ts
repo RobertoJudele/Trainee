@@ -172,6 +172,11 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     "ALTER TABLE client_preferences DROP COLUMN IF EXISTS longitude;"
   );
 
+  // Contact-button name in the dative ("lui Andrei"); see the Trainer model.
+  await sequelize.query(
+    "ALTER TABLE trainer_profiles ADD COLUMN IF NOT EXISTS contact_name_dative VARCHAR(60);"
+  );
+
   // Shrunk rating for search ordering. Backfilled once from the columns already
   // there; Review.updateTrainerRating keeps it current from then on.
   await sequelize.query(

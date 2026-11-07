@@ -403,6 +403,12 @@ export const updateTrainerValidation = [
       }
       return true;
     }),
+  body("contactNameDative")
+    .optional({ values: "null" })
+    .isString()
+    .trim()
+    .isLength({ max: 60 })
+    .withMessage("Contact name must be at most 60 characters."),
   body("specializationIds")
     .optional()
     .isArray()
@@ -425,6 +431,7 @@ export const updateTrainerValidation = [
       "instagramUrl",
       "facebookUrl",
       "whatsappUrl",
+      "contactNameDative",
       "specializationIds",
     ],
   }),

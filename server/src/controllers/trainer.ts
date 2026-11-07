@@ -512,6 +512,7 @@ export const getTrainer = async (
         "instagramUrl",
         "facebookUrl",
         "whatsappUrl",
+        "contactNameDative",
         "isFeatured",
         "isAvailable",
         "profileViews",
@@ -707,6 +708,7 @@ export const updateTrainer = async (req: Request, res: Response) => {
       instagramUrl,
       facebookUrl,
       whatsappUrl,
+      contactNameDative,
       specializationIds,
     } = req.body;
     if (!userId) {
@@ -754,6 +756,8 @@ export const updateTrainer = async (req: Request, res: Response) => {
       facebookUrl === undefined ? trainer.facebookUrl : facebookUrl || null;
     const nextWhatsappUrl =
       whatsappUrl === undefined ? trainer.whatsappUrl : whatsappUrl || null;
+    const nextContactNameDative =
+      contactNameDative === undefined ? trainer.contactNameDative : contactNameDative || null;
 
     await trainer.update({
       bio: bio ?? trainer.bio,
@@ -768,6 +772,7 @@ export const updateTrainer = async (req: Request, res: Response) => {
       instagramUrl: nextInstagramUrl,
       facebookUrl: nextFacebookUrl,
       whatsappUrl: nextWhatsappUrl,
+      contactNameDative: nextContactNameDative,
       location: nextLocation ?? trainer.location,
     });
 

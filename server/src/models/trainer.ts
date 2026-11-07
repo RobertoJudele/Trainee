@@ -107,6 +107,13 @@ export class Trainer extends Model<
   @Column({ type: DataType.STRING(255), field: "whatsapp_url" })
   whatsappUrl?: string;
 
+  // The trainer's name as the contact button needs it in Romanian, in the
+  // dative: "lui Andrei", "Elenei". Typed in by hand at onboarding, because a
+  // grammar rule gets names like Alex or Ilie wrong. Empty means the app falls
+  // back to a button without a name.
+  @Column({ type: DataType.STRING(60), field: "contact_name_dative" })
+  contactNameDative?: string;
+
   @Column({ type: DataType.GEOMETRY("POINT", 4326), field: "location" })
   location?: {
     type: "Point";

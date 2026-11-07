@@ -158,6 +158,30 @@ describe("Trainer API", () => {
       expect(prices).toEqual([...prices].sort((a: number, b: number) => a - b));
     });
 
+    // "de la X" has to be the lowest price a client can get, so a single session
+    // cheaper than every package wins over the package rate.
+    it("uses the session rate when it is cheaper than every package", async () => {
+      const { user } = await createTestUser({ role: "trainer" });
+      const trainer = await Trainer.create({
+        userId: user.id,
+        bio: "Cheap single session trainer",
+        experienceYears: 3,
+        sessionRate: 90,
+        subscriptionStatus: subStatus.TRIAL,
+        trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      } as any);
+      await TrainerPackage.bulkCreate([
+        { trainerId: trainer.id, name: "4 pack", price: 440, sessionCount: 4 },
+      ] as any);
+
+      const res = await request(app).get("/trainer/search").query({ q: "Cheap single session" });
+
+      expect(res.status).toBe(200);
+      const found = res.body.data.trainers.find((t: any) => t.internalId === trainer.id);
+      // 440/4 = 110 per session in the pack, but one session costs 90.
+      expect(Number(found.minSessionPrice)).toBe(90);
+    });
+
     it("falls back to the session rate when a trainer has no packages", async () => {
       const { user } = await createTestUser({ role: "trainer" });
       const trainer = await Trainer.create({
@@ -295,6 +319,30 @@ describe("Trainer API", () => {
       expect(res.body.specializations.map((s: any) => s.id).sort()).toEqual(
         specs.map((s) => s.id).sort()
       );
+    });
+
+    // The contact button reads "Scrie-i lui Andrei": the dative name is typed in
+    // at onboarding through the profile update and has to come back here.
+    it("returns the contact name saved through the profile update", async () => {
+      const { trainer, token } = await createTestTrainer();
+
+      const update = await request(app)
+        .put("/trainer")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ contactNameDative: "  lui Andrei  " });
+      expect(update.status).toBe(200);
+
+      const res = await request(app).get(`/trainer/${trainer.publicId}`);
+      expect(res.status).toBe(200);
+      expect(res.body.contactNameDative).toBe("lui Andrei");
+
+      // An empty string clears it, so the app falls back to a button without a name.
+      await request(app)
+        .put("/trainer")
+        .set("Authorization", `Bearer ${token}`)
+        .send({ contactNameDative: "" });
+      const cleared = await request(app).get(`/trainer/${trainer.publicId}`);
+      expect(cleared.body.contactNameDative).toBeNull();
     });
 
     it("should return 400 for invalid trainer ID format", async () => {
