@@ -8,7 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useForgotPasswordMutation } from "../features/auth/authApiSlice";
 import { theme, typography } from "../src/lib/theme";
@@ -57,14 +56,9 @@ export default function ForgotPasswordScreen() {
     >
       <View style={styles.content}>
         <FadeInUp delay={0} style={styles.header}>
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconContainer}
-          >
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="lock-closed-outline" size={36} color="#FFFFFF" />
-          </LinearGradient>
+          </View>
           <Text style={styles.title}>{t("forgotPasswordTitle")}</Text>
           <Text style={styles.subtitle}>
             {t("forgotPasswordSubtitle")}

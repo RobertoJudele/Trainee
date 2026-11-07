@@ -1,7 +1,6 @@
 import React from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { theme, typography } from "../lib/theme";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import type { ReleaseNotes } from "../lib/releaseNotes";
@@ -27,15 +26,10 @@ export default function ReleaseNotesModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.header}
-          >
+          <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="sparkles" size={22} color="#FFFFFF" />
             <Text style={styles.version}>{notes.version}</Text>
-          </LinearGradient>
+          </View>
 
           <View style={styles.body}>
             <Text style={styles.title}>{notes.title}</Text>

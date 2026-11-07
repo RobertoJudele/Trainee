@@ -9,7 +9,6 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
@@ -97,14 +96,9 @@ export default function Login() {
             { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) },
           ]}
         >
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconContainer}
-          >
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="barbell" size={40} color="#FFFFFF" />
-          </LinearGradient>
+          </View>
           <Text style={styles.title}>{t("welcomeBack")}</Text>
           <Text style={styles.subtitle}>{t("signInSubtitle")}</Text>
         </FadeInUp>

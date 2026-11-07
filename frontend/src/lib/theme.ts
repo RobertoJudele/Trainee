@@ -67,12 +67,6 @@ export const theme = {
       elevation: 8,
     },
   },
-  // Gradient palettes used across the app for a cohesive, premium feel.
-  gradients: {
-    primary: ['#047857', '#065F46'] as const,
-    brand: ['#047857', '#0F766E'] as const,
-    surface: ['#FFFFFF', '#F8FAFC'] as const,
-  },
   // Motion tokens — keep transitions consistent and snappy across screens.
   motion: {
     fast: 160,

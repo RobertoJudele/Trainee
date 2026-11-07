@@ -7,7 +7,6 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -92,14 +91,9 @@ export default function CompleteProfile() {
             { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) },
           ]}
         >
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconContainer}
-          >
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="person-add" size={40} color="#FFFFFF" />
-          </LinearGradient>
+          </View>
           <Text style={styles.title}>{t('completeProfileTitle')}</Text>
           <Text style={styles.subtitle}>{t('completeProfileSubtitle')}</Text>
           {params.email ? <Text style={styles.email}>{params.email}</Text> : null}

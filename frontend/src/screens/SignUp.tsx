@@ -8,7 +8,6 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSignupMutation, UserRole } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
@@ -83,14 +82,9 @@ export default function SignUp() {
             { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) },
           ]}
         >
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconContainer}
-          >
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="person-add" size={38} color="#FFFFFF" />
-          </LinearGradient>
+          </View>
           <Text style={styles.title}>{t("createAccount")}</Text>
           <Text style={styles.subtitle}>{t("signUpSubtitle")}</Text>
         </FadeInUp>

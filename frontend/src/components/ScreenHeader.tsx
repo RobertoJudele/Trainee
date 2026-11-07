@@ -1,6 +1,5 @@
 import React from "react";
 import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -41,10 +40,7 @@ export default function ScreenHeader({
   const handleBack = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace("/")));
 
   return (
-    <LinearGradient
-      colors={[theme.colors.primary, theme.colors.tertiary]}
-      style={[styles.gradient, { paddingTop: Math.max(insets.top + 12, 48) }, style]}
-    >
+    <View style={[styles.gradient, { paddingTop: Math.max(insets.top + 12, 48) }, style, { backgroundColor: theme.colors.primary }]}>
       {showBack && (
         <Pressable
           style={styles.backButton}
@@ -72,7 +68,7 @@ export default function ScreenHeader({
       {title ? <Text style={styles.title}>{title}</Text> : null}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {children}
-    </LinearGradient>
+    </View>
   );
 }
 

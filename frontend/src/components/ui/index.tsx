@@ -18,7 +18,6 @@ import {
   ViewStyle,
   ActivityIndicator,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { presets, theme, typography } from '../../lib/theme';
 import { fonts } from '../../lib/fonts';

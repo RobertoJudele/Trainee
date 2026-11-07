@@ -23,7 +23,6 @@ import { apiSlice } from "../api/apiSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography, presets } from "../lib/theme";
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, PressableScale } from "../components/ui";
 import { useTourTarget } from "../components/onboarding/TourContext";
@@ -329,7 +328,7 @@ export default function Home() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header Profile Area (Gradient) */}
-      <LinearGradient colors={[theme.colors.primary, theme.colors.tertiary]} style={styles.headerGradient}>
+      <View style={[styles.headerGradient, { backgroundColor: theme.colors.primary }]}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top + theme.spacing.sm, theme.spacing.xxl) }]}>
           <View>
             <Text style={styles.greeting}>{getGreeting()}</Text>
@@ -355,7 +354,7 @@ export default function Home() {
             )}
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.contentWrap}>
         {/* Search bar */}

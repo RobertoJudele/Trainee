@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, Dimensions, Image } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, typography } from '../../src/lib/theme';
@@ -16,10 +15,7 @@ export default function Welcome() {
   const { t } = useLanguage();
 
   return (
-    <LinearGradient
-      colors={[theme.colors.primary, theme.colors.tertiary]}
-      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
-    >
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }, { backgroundColor: theme.colors.primary }]}>
       <View style={styles.content}>
         <FadeInUp delay={80} duration={theme.motion.slow} style={styles.header}>
           <Image
@@ -59,7 +55,7 @@ export default function Welcome() {
           </FadeInUp>
         </View>
       </View>
-    </LinearGradient>
+    </View>
   );
 }
 
