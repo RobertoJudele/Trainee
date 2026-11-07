@@ -522,7 +522,7 @@ function TrainerProfile() {
           {isEditing ? (
             <View>
               {editingPackages.map((pkg, index) => (
-                <View key={pkg.id ?? `new-${index}`} style={{ marginBottom: 12, padding: 14, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border }}>
+                <View key={pkg.id ?? `new-${index}`} style={{ marginBottom: 12, padding: 14, backgroundColor: theme.colors.surfaceSunken, borderRadius: theme.radius.control }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <Text style={{ fontSize: 13, fontFamily: fonts.uiSemiBold, color: theme.colors.text }}>
                       {t("addPackage")} {index + 1}
@@ -541,13 +541,13 @@ function TrainerProfile() {
                 </View>
               ))}
               {editingPackages.length < 5 && (
-                <Pressable onPress={addEditPackageRow} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed', marginTop: 4 }}>
+                <Pressable onPress={addEditPackageRow} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: theme.radius.control, borderWidth: 1.5, borderColor: theme.colors.primary, borderStyle: 'dashed', marginTop: 4 }}>
                   <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
                   <Text style={{ color: theme.colors.primary, fontFamily: fonts.uiSemiBold, fontSize: 14 }}>{t("addPackage")}</Text>
                 </Pressable>
               )}
               <Pressable
-                style={({ pressed }) => [{ marginTop: 14, backgroundColor: theme.colors.primary, padding: 14, borderRadius: 12, alignItems: 'center' }, pressed && { opacity: 0.8 }]}
+                style={({ pressed }) => [{ marginTop: 14, backgroundColor: theme.colors.primary, height: 52, justifyContent: 'center', borderRadius: theme.radius.control, alignItems: 'center' }, pressed && { backgroundColor: theme.colors.primaryPressed }]}
                 onPress={() => { void handleSavePackages(); }}
               >
                 <Text style={{ color: '#fff', fontFamily: fonts.uiSemiBold }}>{t("saveChanges")}</Text>
@@ -888,7 +888,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.control,
     gap: 8,
   },
-  primaryAction: { backgroundColor: theme.colors.primary, ...theme.shadows.small },
+  primaryAction: { backgroundColor: theme.colors.primary },
   primaryActionText: { color: "#fff", fontSize: 16, fontFamily: fonts.uiSemiBold },
   secondaryAction: { backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border },
   secondaryActionText: { color: theme.colors.textSecondary, fontSize: 16, fontFamily: fonts.uiSemiBold },

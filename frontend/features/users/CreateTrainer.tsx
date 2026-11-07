@@ -376,7 +376,7 @@ export default function CreateTrainer() {
               </View>
 
               {packages.map((pkg, index) => (
-                <View key={index} style={{marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border}}>
+                <View key={index} style={{marginBottom: 16, padding: 16, backgroundColor: theme.colors.surfaceSunken, borderRadius: theme.radius.control}}>
                   <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
                     <Text style={{fontSize: 14, fontFamily: fonts.uiSemiBold, color: theme.colors.text}}>
                       {t("addPackage")} {index + 1}
@@ -424,7 +424,7 @@ export default function CreateTrainer() {
               {packages.length < 5 && (
                 <Pressable
                   onPress={addPackageRow}
-                  style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed'}}
+                  style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: theme.radius.control, borderWidth: 1.5, borderColor: theme.colors.primary, borderStyle: 'dashed'}}
                 >
                   <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
                   <Text style={{color: theme.colors.primary, fontFamily: fonts.uiSemiBold }}>{t("addPackage")}</Text>
