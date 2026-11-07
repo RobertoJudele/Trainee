@@ -1,6 +1,5 @@
 import React, { useRef, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import {
   Animated,
   Easing,
@@ -15,10 +14,11 @@ import {
   View,
   ViewStyle,
 } from "react-native";
-import { theme, typography } from "../../lib/theme";
+import { theme, typography, presets } from "../../lib/theme";
 import { formatDate, formatTime } from "../../lib/datetime";
 import { useLanguage } from "../../lib/i18n/LanguageContext";
 import { fonts } from "../../lib/fonts";
+import { Button } from "../ui";
 
 export const scheduleDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -175,19 +175,10 @@ type OutlineButtonProps = {
   disabled?: boolean;
 };
 
+// Schedule screens' names for the shared Button, kept so their call sites
+// (label/onPress/disabled) don't change. Medium size: these sit in dense rows.
 export function OutlineButton({ label, onPress, disabled }: OutlineButtonProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [styles.outlineBtn, pressed && styles.outlineBtnPressed, disabled && styles.btnDisabled]}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <Text style={styles.outlineBtnText}>{label}</Text>
-    </Pressable>
-  );
+  return <Button title={label} onPress={onPress} disabled={disabled} variant="secondary" size="md" />;
 }
 
 type GradientActionButtonProps = {
@@ -197,25 +188,7 @@ type GradientActionButtonProps = {
 };
 
 export function GradientActionButton({ label, onPress, disabled }: GradientActionButtonProps) {
-  return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [styles.gradientBtnWrap, pressed && styles.gradientPressed, disabled && styles.btnDisabled]}
-      accessible={true}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-    >
-      <LinearGradient
-        colors={[theme.colors.secondary, theme.colors.primary]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.gradientBtn}
-      >
-        <Text style={styles.gradientBtnText}>{label}</Text>
-      </LinearGradient>
-    </Pressable>
-  );
+  return <Button title={label} onPress={onPress} disabled={disabled} variant="primary" size="md" />;
 }
 
 type DayPillProps = {
@@ -290,13 +263,9 @@ export function BottomSheet({ visible, title, subtitle, onClose, children, foote
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "#DEE5EE",
+    ...presets.card,
     padding: 14,
     gap: 10,
-    ...theme.shadows.small,
   },
   cardHeader: {
     flexDirection: "row",
@@ -330,68 +299,20 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
   },
-  outlineBtn: {
-    borderWidth: 1,
-    borderColor: "#CED7E3",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  outlineBtnPressed: {
-    opacity: 0.82,
-  },
-  outlineBtnText: {
-    ...typography.body2,
-    color: theme.colors.text,
-    fontFamily: fonts.uiBold,
-    lineHeight: 18,
-  },
-  gradientBtnWrap: {
-    borderRadius: 12,
-    overflow: "hidden",
-  },
-  gradientBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gradientBtnText: {
-    ...typography.body2,
-    color: "#FFFFFF",
-    fontFamily: fonts.uiBold,
-    lineHeight: 18,
-  },
-  gradientPressed: {
-    opacity: 0.85,
-  },
-  btnDisabled: {
-    opacity: 0.6,
-  },
   dayPill: {
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderWidth: 1,
-    borderColor: "#D8E1EC",
-    backgroundColor: "#FFFFFF",
+    ...presets.chip,
   },
   dayPillActive: {
-    borderColor: theme.colors.primary,
-    backgroundColor: `${theme.colors.primary}18`,
+    ...presets.chipSelected,
   },
   dayPillPressed: {
-    opacity: 0.82,
+    backgroundColor: theme.colors.surfaceSunken,
   },
   dayPillText: {
-    ...typography.caption,
-    color: theme.colors.textSecondary,
-    textTransform: "none",
-    fontFamily: fonts.monoSemiBold,
+    ...presets.chipText,
   },
   dayPillTextActive: {
-    color: theme.colors.primary,
+    ...presets.chipTextSelected,
   },
   statusBadge: {
     alignSelf: "flex-start",
@@ -413,8 +334,8 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
   },
   sheetPanel: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: theme.radius.sheet,
+    borderTopRightRadius: theme.radius.sheet,
     backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingTop: 10,

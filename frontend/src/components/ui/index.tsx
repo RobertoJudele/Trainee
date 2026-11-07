@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { theme, typography } from '../../lib/theme';
+import { presets, theme, typography } from '../../lib/theme';
 import { fonts } from '../../lib/fonts';
 
 // Mirrors the system "Reduce Motion" setting. Read at render time rather than
@@ -141,31 +141,53 @@ export function PressableScale({
 }
 
 /* -------------------------------------------------------------------------- */
-/*  GradientButton — primary CTA with gradient fill, icon, loading + press.    */
+/*  Button — the one button. Solid, no gradients.                              */
+/*    primary   green, the main action on a screen (one per screen)            */
+/*    secondary outlined, the alternative next to a primary                    */
+/*    ghost     text only, low-emphasis actions                                */
+/*    danger    red, destructive actions                                       */
+/*  Sizes: lg 52 (main actions), md 44, sm 36 (+ hitSlop, so taps reach 44).   */
 /* -------------------------------------------------------------------------- */
-export function GradientButton({
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonSize = 'lg' | 'md' | 'sm';
+
+const BUTTON_HEIGHT: Record<ButtonSize, number> = { lg: 52, md: 44, sm: 36 };
+
+const BUTTON_COLORS: Record<ButtonVariant, { bg: string; pressed: string; fg: string; border?: string }> = {
+  primary: { bg: theme.colors.primary, pressed: theme.colors.primaryPressed, fg: '#FFFFFF' },
+  secondary: { bg: theme.colors.surface, pressed: theme.colors.surfaceSunken, fg: theme.colors.text, border: theme.colors.borderStrong },
+  ghost: { bg: 'transparent', pressed: theme.colors.surfaceSunken, fg: theme.colors.primary },
+  danger: { bg: theme.colors.error, pressed: theme.colors.errorPressed, fg: '#FFFFFF' },
+};
+
+export function Button({
   title,
   onPress,
-  loading = false,
-  disabled = false,
+  variant = 'primary',
+  size = 'lg',
   icon,
   iconRight,
+  loading = false,
+  disabled = false,
   style,
-  colors = theme.gradients.primary,
   accessibilityLabel,
 }: {
   title: string;
   onPress?: () => void;
-  loading?: boolean;
-  disabled?: boolean;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
   icon?: keyof typeof Ionicons.glyphMap;
   iconRight?: keyof typeof Ionicons.glyphMap;
+  loading?: boolean;
+  disabled?: boolean;
   style?: StyleProp<ViewStyle>;
-  colors?: readonly [string, string, ...string[]];
   accessibilityLabel?: string;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
   const isDisabled = disabled || loading;
+  const c = BUTTON_COLORS[variant];
+  const fg = isDisabled && variant !== 'ghost' ? theme.colors.textDisabled : c.fg;
+  const iconSize = size === 'sm' ? 16 : 20;
 
   const animate = (toValue: number) =>
     !reduceMotion && Animated.spring(scale, {
@@ -180,57 +202,134 @@ export function GradientButton({
       onPressIn={() => !isDisabled && animate(0.97)}
       onPressOut={() => animate(1)}
       onPress={isDisabled ? undefined : onPress}
+      hitSlop={size === 'sm' ? 4 : undefined}
       accessible
       accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled }}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       accessibilityLabel={accessibilityLabel ?? title}
+      style={style}
     >
-      <Animated.View style={[{ transform: [{ scale }] }, isDisabled && { opacity: 0.6 }, style]}>
-        <LinearGradient
-          colors={colors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={btn.gradient}
+      {({ pressed }) => (
+        <Animated.View
+          style={[
+            btn.base,
+            {
+              height: BUTTON_HEIGHT[size],
+              paddingHorizontal: size === 'sm' ? 14 : 20,
+              backgroundColor: isDisabled && variant !== 'ghost'
+                ? theme.colors.surfaceSunken
+                : pressed ? c.pressed : c.bg,
+              borderWidth: c.border ? 1.5 : 0,
+              borderColor: c.border,
+              transform: [{ scale }],
+            },
+          ]}
         >
           {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={fg} />
           ) : (
-            <View style={btn.row}>
-              {icon ? <Ionicons name={icon} size={20} color="#FFFFFF" /> : null}
-              <Text style={btn.text}>{title}</Text>
-              {iconRight ? <Ionicons name={iconRight} size={20} color="#FFFFFF" /> : null}
-            </View>
+            <>
+              {icon ? <Ionicons name={icon} size={iconSize} color={fg} /> : null}
+              <Text
+                style={[size === 'sm' ? btn.textSmall : btn.text, { color: fg }]}
+                numberOfLines={1}
+              >
+                {title}
+              </Text>
+              {iconRight ? <Ionicons name={iconRight} size={iconSize} color={fg} /> : null}
+            </>
           )}
-        </LinearGradient>
-      </Animated.View>
+        </Animated.View>
+      )}
     </Pressable>
   );
 }
 
+/** Older name for a primary Button; `colors` is ignored now that buttons are solid. */
+export function GradientButton({
+  colors: _colors,
+  ...props
+}: Omit<React.ComponentProps<typeof Button>, 'variant'> & { colors?: readonly string[] }) {
+  return <Button {...props} variant="primary" />;
+}
+
+/** Older name for a secondary Button. */
+export function OutlineButton(props: Omit<React.ComponentProps<typeof Button>, 'variant'>) {
+  return <Button {...props} variant="secondary" />;
+}
+
 /* -------------------------------------------------------------------------- */
-/*  OutlineButton — secondary action with press scale.                         */
+/*  Card — flat white panel with a hairline border. `raised` adds a shadow,    */
+/*  for things that float over the screen. With onPress it is tappable.       */
 /* -------------------------------------------------------------------------- */
-export function OutlineButton({
-  title,
+export function Card({
+  children,
+  raised = false,
   onPress,
   style,
   accessibilityLabel,
 }: {
-  title: string;
+  children: React.ReactNode;
+  raised?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
 }) {
+  const surface = [raised ? presets.cardRaised : presets.card, { padding: 16 }, style];
+  if (!onPress) return <View style={surface}>{children}</View>;
   return (
     <PressableScale
       onPress={onPress}
-      style={[btn.outline, style]}
-      accessible
+      scaleTo={0.99}
+      style={surface}
       accessibilityRole="button"
-      accessibilityLabel={accessibilityLabel ?? title}
+      accessibilityLabel={accessibilityLabel}
     >
-      <Text style={btn.outlineText}>{title}</Text>
+      {children}
     </PressableScale>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Chip — pill for filters and tags. Selected is ink with white text.         */
+/* -------------------------------------------------------------------------- */
+export function Chip({
+  label,
+  selected = false,
+  onPress,
+  icon,
+  disabled = false,
+  style,
+  accessibilityLabel,
+}: {
+  label: string;
+  selected?: boolean;
+  onPress?: () => void;
+  icon?: keyof typeof Ionicons.glyphMap;
+  disabled?: boolean;
+  style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
+}) {
+  const fg = selected ? '#FFFFFF' : disabled ? theme.colors.textDisabled : theme.colors.text;
+  return (
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      hitSlop={4}
+      accessibilityRole={onPress ? 'button' : 'text'}
+      accessibilityState={{ selected, disabled }}
+      accessibilityLabel={accessibilityLabel ?? label}
+      style={({ pressed }) => [
+        presets.chip,
+        selected && presets.chipSelected,
+        pressed && !selected && { backgroundColor: theme.colors.surfaceSunken },
+        style,
+      ]}
+    >
+      {icon ? <Ionicons name={icon} size={16} color={fg} /> : null}
+      <Text style={[presets.chipText, { color: fg }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -266,7 +365,7 @@ export function Field({
     ? theme.colors.error
     : focus.interpolate({
         inputRange: [0, 1],
-        outputRange: [theme.colors.border, theme.colors.primary],
+        outputRange: [theme.colors.borderInput, theme.colors.primary],
       });
 
   return (
@@ -277,7 +376,7 @@ export function Field({
           field.wrap,
           {
             borderColor,
-            shadowOpacity: focus.interpolate({ inputRange: [0, 1], outputRange: [0, 0.12] }),
+            borderWidth: focused || error ? 2 : 1,
           },
         ]}
       >
@@ -316,31 +415,15 @@ export function Field({
 }
 
 const btn = StyleSheet.create({
-  gradient: {
-    borderRadius: theme.roundness,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
+  base: {
+    borderRadius: theme.radius.control,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 5,
+    gap: theme.spacing.sm,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
-  text: { ...typography.h3, color: '#FFFFFF', fontFamily: fonts.uiBold },
-  outline: {
-    borderRadius: theme.roundness,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: theme.colors.primary,
-    backgroundColor: 'transparent',
-  },
-  outlineText: { ...typography.h3, color: theme.colors.primary, fontFamily: fonts.uiBold },
+  text: { ...typography.button },
+  textSmall: { ...typography.button, fontSize: 14 },
 });
 
 const field = StyleSheet.create({
@@ -348,21 +431,17 @@ const field = StyleSheet.create({
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 52,
     backgroundColor: theme.colors.surface,
-    borderWidth: 1.5,
-    borderRadius: theme.roundness,
-    shadowColor: theme.colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
-    elevation: 0,
+    borderRadius: theme.radius.control,
   },
   input: {
     flex: 1,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    ...typography.body1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    ...typography.body,
     color: theme.colors.text,
   },
   eye: { paddingHorizontal: theme.spacing.md },
-  error: { ...typography.caption, color: theme.colors.error, textTransform: 'none' },
+  error: { ...typography.small, color: theme.colors.error },
 });

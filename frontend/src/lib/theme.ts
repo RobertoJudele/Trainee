@@ -20,9 +20,22 @@ export const theme = {
     text: '#0F172A', // Slate 900
     textSecondary: '#64748B', // Slate 500
     border: '#E2E8F0', // Slate 200
+    borderStrong: '#CBD5E1', // Slate 300: outlined buttons and chips
+    borderInput: '#8492A6', // Input edges: 3.2:1 on white, the WCAG minimum for form fields
     card: '#FFFFFF',
+    surfaceSunken: '#F1F5F9', // Slate 100: disabled fills, pressed ghost
+    primaryPressed: '#065F46', // Emerald 800
+    errorPressed: '#B91C1C',
+    textDisabled: '#94A3B8',
   },
-  roundness: 16, // Softer curves for modern look
+  roundness: 14, // Controls: buttons and inputs. Cards and sheets use radius below.
+  radius: {
+    xs: 6, // Tiny tags and badges
+    control: 14, // Buttons, inputs
+    card: 20, // Cards and list rows
+    sheet: 28, // Bottom sheets
+    pill: 999, // Chips, avatars, search bar
+  },
   spacing: {
     xs: 4,
     sm: 8,
@@ -118,4 +131,48 @@ export const typography = {
   body1: body,
   body2: small,
   caption: label,
+};
+
+// Shared surfaces. Spread these into a screen's StyleSheet instead of
+// re-describing a card or chip per screen:  card: { ...presets.card, padding: 16 }
+// Cards are flat (hairline border, no shadow); only things that float above the
+// screen, like the map sheet or a sticky bar, use cardRaised.
+export const presets = {
+  card: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.card,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
+  cardRaised: {
+    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.card,
+    ...theme.shadows.medium,
+  },
+  chip: {
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: theme.radius.pill,
+    borderWidth: 1,
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surface,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    gap: 6,
+  },
+  // Selected is ink, not green: green stays reserved for the main action.
+  chipSelected: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
+  chipText: { ...small, fontFamily: fonts.uiSemiBold, color: theme.colors.text },
+  chipTextSelected: { color: '#FFFFFF' },
+  input: {
+    minHeight: 52,
+    paddingHorizontal: 16,
+    borderRadius: theme.radius.control,
+    borderWidth: 1,
+    borderColor: theme.colors.borderInput,
+    backgroundColor: theme.colors.surface,
+    ...body,
+    color: theme.colors.text,
+  },
 };
