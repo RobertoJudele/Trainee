@@ -21,7 +21,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { apiSlice } from "../api/apiSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
-import { theme, typography } from "../lib/theme";
+import { theme, typography, presets } from "../lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -596,11 +596,9 @@ const styles = StyleSheet.create({
     width: (width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
   },
   actionCard: {
-    backgroundColor: theme.colors.surface,
+    ...presets.card,
     padding: theme.spacing.md,
-    borderRadius: theme.roundness,
     alignItems: "flex-start",
-    ...theme.shadows.small,
   },
   actionIconWrap: {
     backgroundColor: theme.colors.background,
@@ -624,10 +622,8 @@ const styles = StyleSheet.create({
 
   trainerCard: {
     flexDirection: "row",
-    backgroundColor: theme.colors.surface,
+    ...presets.card,
     padding: theme.spacing.md,
-    borderRadius: theme.roundness,
-    ...theme.shadows.small,
   },
   trainerAvatar: { width: 60, height: 60, borderRadius: 30, marginRight: theme.spacing.md },
   trainerAvatarPlaceholder: {
@@ -647,7 +643,7 @@ const styles = StyleSheet.create({
   matchBadge: {
     flexShrink: 0,
     backgroundColor: theme.colors.primary,
-    borderRadius: 10,
+    borderRadius: theme.radius.xs,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
@@ -683,9 +679,10 @@ const styles = StyleSheet.create({
   retryButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.roundness,
-    ...theme.shadows.small,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: theme.radius.control,
   },
   retryButtonText: { ...typography.body2, color: "#FFFFFF", fontFamily: fonts.uiBold },
   emptyContainer: { alignItems: "center", paddingVertical: theme.spacing.xl },

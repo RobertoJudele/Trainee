@@ -879,6 +879,7 @@ const en: Record<string, string> = {
   a11yDemoTrainer: "Demo trainer, tap to continue",
   a11yMoreOptions: "More options",
   a11yRemovePackage: "Remove package",
+  a11yShowFilters: "Show filters",
 };
 
 const ro: Record<string, string> = {
@@ -1756,6 +1757,7 @@ const ro: Record<string, string> = {
   a11yDemoTrainer: "Antrenor demo, atinge pentru a continua",
   a11yMoreOptions: "Mai multe opțiuni",
   a11yRemovePackage: "Elimină pachetul",
+  a11yShowFilters: "Arată filtrele",
 };
 
 export const translations = { en, ro };

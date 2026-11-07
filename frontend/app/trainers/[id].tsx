@@ -35,7 +35,7 @@ import {
 } from "../../features/block/blockApiSlice";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { UserRole } from "../../features/auth/authApiSlice";
-import { theme, typography } from "../../src/lib/theme";
+import { theme, typography, presets } from "../../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
@@ -712,7 +712,7 @@ export default function TrainerDetailsScreen() {
             accessibilityRole="button"
             accessibilityLabel={t("writeReview")}
           >
-            <Ionicons name="star-outline" size={16} color={theme.colors.primary} style={{ marginRight: 6 }} />
+            <Ionicons name="star-outline" size={16} color={theme.colors.primary} />
             <Text style={styles.writeReviewBtnText}>{t("writeReview")}</Text>
           </Pressable>
         )}
@@ -807,13 +807,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   headerCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.lg,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.small,
   },
   avatar: {
     width: 88,
@@ -878,13 +874,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     gap: 8,
-    ...theme.shadows.small,
   },
   sectionTitle: {
     ...typography.h3,
@@ -892,14 +884,12 @@ const styles = StyleSheet.create({
   },
   specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   specChip: {
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: theme.radius.xs,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     backgroundColor: `${theme.colors.primary}15`,
-    borderWidth: 1,
-    borderColor: `${theme.colors.primary}40`,
   },
-  specChipText: { ...typography.caption, color: theme.colors.primary, fontFamily: fonts.monoSemiBold },
+  specChipText: { ...typography.label, color: theme.colors.primary },
   sectionText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
@@ -948,30 +938,28 @@ const styles = StyleSheet.create({
   primaryButton: {
     marginTop: 4,
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: 14,
+    borderRadius: theme.radius.control,
+    height: 52,
     alignItems: "center",
-    ...theme.shadows.medium,
+    justifyContent: "center",
   },
   primaryButtonText: {
-    ...typography.body1,
+    ...typography.button,
     color: "#fff",
-    fontFamily: fonts.uiBold,
   },
   secondaryButton: {
     marginTop: 2,
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    paddingVertical: 14,
+    borderRadius: theme.radius.control,
+    height: 52,
     alignItems: "center",
-    borderWidth: 1,
+    justifyContent: "center",
+    borderWidth: 1.5,
     borderColor: theme.colors.error,
-    ...theme.shadows.small,
   },
   secondaryButtonText: {
-    ...typography.body1,
-    color: "#B91C1C",
-    fontFamily: fonts.uiBold,
+    ...typography.button,
+    color: theme.colors.error,
   },
   socialRow: {
     flexDirection: "row",
@@ -982,13 +970,12 @@ const styles = StyleSheet.create({
   socialIconButton: {
     width: 52,
     height: 52,
-    borderRadius: 26,
+    borderRadius: theme.radius.pill,
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     justifyContent: "center",
     alignItems: "center",
-    ...theme.shadows.small,
   },
   reviewCard: {
     borderTopWidth: 1,
@@ -1030,7 +1017,10 @@ const styles = StyleSheet.create({
     marginLeft: "auto",
   },
   reviewActionBtn: {
-    padding: 4,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   reviewText: {
     ...typography.body2,
@@ -1041,18 +1031,19 @@ const styles = StyleSheet.create({
   writeReviewBtn: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
     marginTop: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: theme.radius.control,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     alignSelf: "flex-start",
   },
   writeReviewBtnText: {
-    ...typography.body2,
-    color: theme.colors.primary,
-    fontFamily: fonts.uiBold,
+    ...typography.button,
+    fontSize: 15,
+    color: theme.colors.text,
   },
   reviewForm: {
     marginTop: 8,
@@ -1068,15 +1059,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   reviewInput: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
-    padding: 12,
-    minHeight: 80,
+    ...presets.input,
+    minHeight: 96,
+    paddingTop: 12,
     textAlignVertical: "top",
-    ...typography.body2,
-    color: theme.colors.text,
-    backgroundColor: theme.colors.background,
   },
   charCount: {
     ...typography.caption,
@@ -1089,28 +1075,27 @@ const styles = StyleSheet.create({
   },
   cancelFormBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    height: 52,
+    borderRadius: theme.radius.control,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     alignItems: "center",
+    justifyContent: "center",
   },
   cancelFormBtnText: {
-    ...typography.body2,
-    color: theme.colors.textSecondary,
-    fontFamily: fonts.uiBold,
+    ...typography.button,
+    color: theme.colors.text,
   },
   submitFormBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: theme.roundness,
+    height: 52,
+    borderRadius: theme.radius.control,
     backgroundColor: theme.colors.primary,
     alignItems: "center",
-    ...theme.shadows.small,
+    justifyContent: "center",
   },
   submitFormBtnText: {
-    ...typography.body2,
+    ...typography.button,
     color: "#fff",
-    fontFamily: fonts.uiBold,
   },
 });
