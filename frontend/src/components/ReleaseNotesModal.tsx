@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { theme, typography } from "../lib/theme";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import type { ReleaseNotes } from "../lib/releaseNotes";
+import { fonts } from "../lib/fonts";
 
 /**
  * "What's new" sheet, shown once after the user updates. Dismissible, unlike the
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
   version: {
     ...typography.body2,
     color: "#FFFFFF",
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   body: {
     padding: 18,
@@ -90,7 +91,7 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h3,
     color: theme.colors.text,
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   // Capped so a long changelog scrolls instead of pushing the button off screen.
   scroll: {
@@ -110,6 +111,6 @@ const styles = StyleSheet.create({
   buttonText: {
     ...typography.body1,
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
 });

@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { fonts } from "../src/lib/fonts";
 
 type LegalSection = {
   heading: string;
@@ -431,7 +432,7 @@ const styles = StyleSheet.create({
   segmentLabel: {
     ...typography.body2,
     color: theme.colors.textSecondary,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   segmentLabelActive: {
     color: "#FFFFFF",
@@ -469,7 +470,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.body1,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   sectionBody: {
     ...typography.body2,

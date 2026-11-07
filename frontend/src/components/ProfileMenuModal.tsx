@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../lib/theme";
+import { fonts } from "../lib/fonts";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 
@@ -120,7 +121,7 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 15,
     color: theme.colors.text,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
     flex: 1,
   },
   divider: {

@@ -24,6 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { FadeInUp, PressableScale } from "../src/components/ui";
 import ScreenHeader from "../src/components/ScreenHeader";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
+import { fonts } from '../src/lib/fonts';
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -615,7 +616,7 @@ const styles = StyleSheet.create({
   },
   filterSection: {
     ...typography.body2,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.sm,
@@ -642,7 +643,7 @@ const styles = StyleSheet.create({
   },
   specPillActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary },
   specPillText: { ...typography.caption, color: theme.colors.textSecondary },
-  specPillTextActive: { color: "#fff", fontWeight: "700" },
+  specPillTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   sortRow: { marginBottom: theme.spacing.sm },
   sortChip: {
     paddingHorizontal: 16,
@@ -655,7 +656,7 @@ const styles = StyleSheet.create({
   },
   sortChipActive: { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
   sortChipText: { ...typography.caption, color: theme.colors.textSecondary },
-  sortChipTextActive: { color: theme.colors.primary, fontWeight: "700" },
+  sortChipTextActive: { color: theme.colors.primary, fontFamily: fonts.uiBold },
   filterActions: { flexDirection: "row", gap: 12, marginTop: theme.spacing.md, marginBottom: theme.spacing.sm },
   clearFilterBtn: {
     flex: 1,
@@ -665,7 +666,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     alignItems: "center",
   },
-  clearFilterText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  clearFilterText: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   applyBtn: {
     flex: 2,
     paddingVertical: 14,
@@ -674,7 +675,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...theme.shadows.medium,
   },
-  applyBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  applyBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
 
   // Active chips
   activeChips: { marginTop: theme.spacing.xs },
@@ -687,7 +688,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     marginRight: 8,
   },
-  activeChipText: { ...typography.caption, color: theme.colors.primary, fontWeight: "700" },
+  activeChipText: { ...typography.caption, color: theme.colors.primary, fontFamily: fonts.monoSemiBold },
 
   // List
   listContent: { padding: theme.spacing.md, paddingBottom: 40 },
@@ -718,7 +719,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitials: { ...typography.h3, color: theme.colors.primary, fontWeight: "700" },
+  avatarInitials: { ...typography.h3, color: theme.colors.primary, fontFamily: fonts.uiBold },
   availableDot: {
     width: 12,
     height: 12,
@@ -731,9 +732,9 @@ const styles = StyleSheet.create({
   },
   cardBody: { flex: 1, justifyContent: 'center' },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  cardName: { ...typography.h3, color: theme.colors.text, fontWeight: "700", fontSize: 16 },
+  cardName: { ...typography.h3, color: theme.colors.text, fontFamily: fonts.uiBold, fontSize: 16 },
   featuredBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  featuredText: { fontSize: 10, color: "#92400E", fontWeight: "700", textTransform: 'uppercase' },
+  featuredText: { fontSize: 10, color: "#92400E", fontFamily: fonts.uiBold, textTransform: 'uppercase' },
   cardBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 8 },
   specRow: { marginBottom: 8 },
   specChip: {
@@ -743,11 +744,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginRight: 6,
   },
-  specChipText: { fontSize: 11, color: theme.colors.primary, fontWeight: "700", textTransform: 'uppercase' },
+  specChipText: { fontSize: 11, color: theme.colors.primary, fontFamily: fonts.uiBold, textTransform: 'uppercase' },
   cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   ratingRow: { flexDirection: "row", alignItems: "center" },
   ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 6, textTransform: 'none' },
-  cardPrice: { ...typography.body1, fontWeight: "800", color: theme.colors.primary },
+  cardPrice: { ...typography.body1, fontFamily: fonts.uiExtraBold, color: theme.colors.primary },
   locationContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 2},
   cardLocation: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: 'none' },
 
@@ -765,7 +766,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
     ...theme.shadows.medium,
   },
-  clearBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  clearBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
   loadMoreBtn: {
     alignItems: "center",
     paddingVertical: 14,
@@ -775,5 +776,5 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
   },
-  loadMoreText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  loadMoreText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
 });

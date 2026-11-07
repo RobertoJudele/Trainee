@@ -1,4 +1,5 @@
 import { MD3LightTheme as DefaultTheme } from 'react-native-paper';
+import { fonts } from './fonts';
 
 export const theme = {
   ...DefaultTheme,
@@ -69,38 +70,52 @@ export const theme = {
   },
 };
 
+// Option A, "Poster": condensed uppercase headings over calm Manrope text, mono
+// for numbers. Families come from fonts.ts; weights are separate families, so
+// these styles carry no fontWeight. Line heights leave room above uppercase
+// diacritics (Î, Â) and below the comma of Ș and Ț.
+const display = {
+  fontFamily: fonts.display,
+  fontSize: 36,
+  lineHeight: 40,
+  letterSpacing: -0.5,
+  textTransform: 'uppercase' as const,
+};
+const title = {
+  fontFamily: fonts.display,
+  fontSize: 26,
+  lineHeight: 30,
+  letterSpacing: -0.2,
+  textTransform: 'uppercase' as const,
+};
+const heading = { fontFamily: fonts.uiBold, fontSize: 18, lineHeight: 24 };
+const body = { fontFamily: fonts.ui, fontSize: 16, lineHeight: 24 };
+const small = { fontFamily: fonts.ui, fontSize: 14, lineHeight: 20 };
+const button = { fontFamily: fonts.uiBold, fontSize: 16, lineHeight: 20 };
+const label = {
+  fontFamily: fonts.monoSemiBold,
+  fontSize: 12,
+  lineHeight: 16,
+  letterSpacing: 0.96,
+  textTransform: 'uppercase' as const,
+};
+const price = { fontFamily: fonts.monoSemiBold, fontSize: 17, lineHeight: 22 };
+
 export const typography = {
-  h1: {
-    fontSize: 34,
-    fontWeight: '800' as const,
-    lineHeight: 42,
-    letterSpacing: -0.5,
-  },
-  h2: {
-    fontSize: 26,
-    fontWeight: '700' as const,
-    lineHeight: 34,
-    letterSpacing: -0.3,
-  },
-  h3: {
-    fontSize: 20,
-    fontWeight: '600' as const,
-    lineHeight: 28,
-  },
-  body1: {
-    fontSize: 16,
-    fontWeight: '400' as const,
-    lineHeight: 24,
-  },
-  body2: {
-    fontSize: 14,
-    fontWeight: '400' as const,
-    lineHeight: 20,
-  },
-  caption: {
-    fontSize: 12,
-    fontWeight: '500' as const,
-    lineHeight: 16,
-    textTransform: 'uppercase' as const,
-  },
+  display,
+  title,
+  heading,
+  body,
+  small,
+  button,
+  label,
+  price,
+  // Older names, still used across the screens. Each points at its new style
+  // until the screens move over to the names above.
+  h1: display,
+  h2: title,
+  h3: heading,
+  body1: body,
+  body2: small,
+  caption: label,
 };

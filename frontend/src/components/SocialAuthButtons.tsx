@@ -20,6 +20,7 @@ import {
   signInWithApple,
   signInWithGoogle,
 } from '../lib/socialAuth';
+import { fonts } from '../lib/fonts';
 
 interface Props {
   /** Surfaced inline on SignUp, via Alert on Login — the caller decides. */
@@ -151,7 +152,7 @@ const styles = StyleSheet.create({
   },
   googleText: {
     ...typography.h3,
-    fontWeight: '700',
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
   },
   appleButton: {

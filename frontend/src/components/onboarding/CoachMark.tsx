@@ -27,6 +27,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../../lib/theme";
 import { useTour } from "./TourContext";
 import { useLanguage } from "../../lib/i18n/LanguageContext";
+import { fonts } from "../../lib/fonts";
 
 const SPOTLIGHT_PAD = 6;
 
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-  demoMarkerBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  demoMarkerBadgeText: { color: "#fff", fontSize: 10, fontFamily: fonts.uiExtraBold },
   demoMarkerTip: {
     width: 0,
     height: 0,
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     ...typography.caption,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
     textTransform: "none",
     backgroundColor: "#fff",
     paddingHorizontal: 8,
@@ -415,8 +416,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  demoAvatarText: { ...typography.body1, color: "#fff", fontWeight: "700" },
-  demoTrainerName: { fontSize: 15, fontWeight: "700", color: theme.colors.text },
+  demoAvatarText: { ...typography.body1, color: "#fff", fontFamily: fonts.uiBold },
+  demoTrainerName: { fontSize: 15, fontFamily: fonts.uiBold, color: theme.colors.text },
   demoTrainerMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
   demoTrainerMetaText: {
     ...typography.caption,
@@ -450,7 +451,7 @@ const styles = StyleSheet.create({
   skip: {
     ...typography.body2,
     color: theme.colors.textSecondary,
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
   },
   counter: {
     ...typography.caption,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
   backText: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   nextBtn: {
     backgroundColor: theme.colors.primary,
@@ -483,12 +484,12 @@ const styles = StyleSheet.create({
   nextText: {
     ...typography.body2,
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   hint: {
     ...typography.caption,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
     textTransform: "none",
     fontStyle: "italic",
   },

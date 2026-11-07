@@ -21,6 +21,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, typography } from '../../lib/theme';
+import { fonts } from '../../lib/fonts';
 
 // Mirrors the system "Reduce Motion" setting. Read at render time rather than
 // through state: a screen that mounts after the setting changes picks it up, and
@@ -328,7 +329,7 @@ const btn = StyleSheet.create({
     elevation: 5,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
-  text: { ...typography.h3, color: '#FFFFFF', fontWeight: '700' },
+  text: { ...typography.h3, color: '#FFFFFF', fontFamily: fonts.uiBold },
   outline: {
     borderRadius: theme.roundness,
     paddingVertical: theme.spacing.md,
@@ -339,11 +340,11 @@ const btn = StyleSheet.create({
     borderColor: theme.colors.primary,
     backgroundColor: 'transparent',
   },
-  outlineText: { ...typography.h3, color: theme.colors.primary, fontWeight: '700' },
+  outlineText: { ...typography.h3, color: theme.colors.primary, fontFamily: fonts.uiBold },
 });
 
 const field = StyleSheet.create({
-  label: { ...typography.body2, fontWeight: '600', color: theme.colors.text },
+  label: { ...typography.body2, fontFamily: fonts.uiSemiBold, color: theme.colors.text },
   wrap: {
     flexDirection: 'row',
     alignItems: 'center',

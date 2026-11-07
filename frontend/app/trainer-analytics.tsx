@@ -18,6 +18,7 @@ import {
 } from "../features/trainer/trainerApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { fonts } from "../src/lib/fonts";
 
 const formatPercent = (value: number, total: number) => {
   if (!total) {
@@ -303,7 +304,7 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   heroCard: {
     backgroundColor: theme.colors.surface,
@@ -354,7 +355,10 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   metricValue: {
-    ...typography.h2,
+    // Numbers read in mono, like prices: digits line up across the cards.
+    ...typography.price,
+    fontSize: 26,
+    lineHeight: 32,
     color: theme.colors.text,
   },
   metricHint: {
@@ -404,7 +408,7 @@ const styles = StyleSheet.create({
   trendBarValue: {
     color: "#fff",
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   trendLabel: {
     ...typography.caption,
@@ -462,7 +466,7 @@ const styles = StyleSheet.create({
   recentTitle: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   recentSubtitle: {
     ...typography.caption,

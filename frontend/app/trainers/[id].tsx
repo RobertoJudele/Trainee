@@ -48,6 +48,7 @@ import {
   normalizeSocialUrl,
   getWhatsAppContactUrls,
 } from "../../src/lib/contactLinks";
+import { fonts } from '../../src/lib/fonts';
 
 type ContactOption = {
   label: "Instagram" | "Facebook" | "WhatsApp";
@@ -505,7 +506,7 @@ export default function TrainerDetailsScreen() {
         {minSessionPriceLabel && (
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-            <Text style={styles.infoValue}>{minSessionPriceLabel}</Text>
+            <Text style={[styles.infoValue, typography.price]}>{minSessionPriceLabel}</Text>
           </View>
         )}
       </View>
@@ -516,12 +517,12 @@ export default function TrainerDetailsScreen() {
           {trainerPackages.map((pkg) => (
             <View key={pkg.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6'}}>
               <View>
-                <Text style={{fontSize: 15, fontWeight: '600', color: theme.colors.text}}>{pkg.name}</Text>
-                <Text style={{fontSize: 13, color: theme.colors.textSecondary, marginTop: 2}}>
+                <Text style={{fontSize: 15, fontFamily: fonts.uiSemiBold, color: theme.colors.text}}>{pkg.name}</Text>
+                <Text style={{ fontFamily: fonts.ui,fontSize: 13, color: theme.colors.textSecondary, marginTop: 2}}>
                   {pkg.sessionCount} {t("sessions")}
                 </Text>
               </View>
-              <Text style={{fontSize: 16, fontWeight: '700', color: theme.colors.primary}}>{Number(pkg.price).toFixed(2)} lei</Text>
+              <Text style={{ ...typography.price, color: theme.colors.primary }}>{Number(pkg.price).toFixed(2)} lei</Text>
             </View>
           ))}
         </View>
@@ -832,7 +833,7 @@ const styles = StyleSheet.create({
   avatarInitials: {
     ...typography.h3,
     color: "#fff",
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   name: {
     ...typography.h3,
@@ -850,7 +851,7 @@ const styles = StyleSheet.create({
   availabilityText: {
     ...typography.caption,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   ratingRow: {
     flexDirection: "row",
@@ -866,7 +867,7 @@ const styles = StyleSheet.create({
   ratingText: {
     ...typography.body1,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   reviewsText: {
     ...typography.caption,
@@ -898,7 +899,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${theme.colors.primary}40`,
   },
-  specChipText: { ...typography.caption, color: theme.colors.primary, fontWeight: "600" },
+  specChipText: { ...typography.caption, color: theme.colors.primary, fontFamily: fonts.monoSemiBold },
   sectionText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
@@ -917,7 +918,7 @@ const styles = StyleSheet.create({
   infoValue: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   gymRow: {
     flexDirection: "row",
@@ -932,7 +933,7 @@ const styles = StyleSheet.create({
   gymName: {
     ...typography.body1,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   gymAddress: {
     ...typography.caption,
@@ -942,7 +943,7 @@ const styles = StyleSheet.create({
   gymRating: {
     ...typography.caption,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   primaryButton: {
     marginTop: 4,
@@ -955,7 +956,7 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...typography.body1,
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   secondaryButton: {
     marginTop: 2,
@@ -970,7 +971,7 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     ...typography.body1,
     color: "#B91C1C",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   socialRow: {
     flexDirection: "row",
@@ -1011,12 +1012,12 @@ const styles = StyleSheet.create({
   reviewerInitial: {
     ...typography.caption,
     color: "#fff",
-    fontWeight: "800",
+    fontFamily: fonts.monoSemiBold,
   },
   reviewerName: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   starsRow: {
     flexDirection: "row",
@@ -1051,7 +1052,7 @@ const styles = StyleSheet.create({
   writeReviewBtnText: {
     ...typography.body2,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   reviewForm: {
     marginTop: 8,
@@ -1060,7 +1061,7 @@ const styles = StyleSheet.create({
   reviewFormTitle: {
     ...typography.body1,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   starSelector: {
     flexDirection: "row",
@@ -1097,7 +1098,7 @@ const styles = StyleSheet.create({
   cancelFormBtnText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   submitFormBtn: {
     flex: 1,
@@ -1110,6 +1111,6 @@ const styles = StyleSheet.create({
   submitFormBtnText: {
     ...typography.body2,
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
 });

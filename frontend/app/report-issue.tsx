@@ -20,6 +20,7 @@ import {
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 export default function ReportIssueScreen() {
   const router = useRouter();
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
     gap: 12,
     ...theme.shadows.small,
   },
-  label: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
   gymRequestCta: {
     borderWidth: 1,
     borderColor: theme.colors.primary,
@@ -246,7 +247,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
-  gymRequestCtaText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  gymRequestCtaText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
   contextText: { ...typography.caption, color: theme.colors.textSecondary },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
@@ -259,7 +260,7 @@ const styles = StyleSheet.create({
   },
   chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   chipText: { ...typography.caption, color: theme.colors.text },
-  chipTextActive: { color: "#fff", fontWeight: "700" },
+  chipTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -279,5 +280,5 @@ const styles = StyleSheet.create({
     ...theme.shadows.medium,
   },
   submitButtonDisabled: { opacity: 0.7 },
-  submitText: { ...typography.body1, color: "#fff", fontWeight: "700" },
+  submitText: { ...typography.body1, color: "#fff", fontFamily: fonts.uiBold },
 });

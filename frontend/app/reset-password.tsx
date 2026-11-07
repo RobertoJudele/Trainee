@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorCode, getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 /** Matches the server's per-user cooldown between two codes. */
 const RESEND_COOLDOWN_S = 60;
@@ -248,6 +249,6 @@ const styles = StyleSheet.create({
   subtitle: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
   backButton: { alignItems: "center", marginTop: theme.spacing.sm },
   backButtonText: { ...typography.body2, color: theme.colors.textSecondary },
-  resendText: { ...typography.body2, color: theme.colors.primary, fontWeight: "600" },
+  resendText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiSemiBold },
   resendTextDisabled: { color: theme.colors.textSecondary },
 });

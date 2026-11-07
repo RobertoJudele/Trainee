@@ -25,6 +25,7 @@ import {
   RateType,
 } from "../features/recommendations/recommendationApiSlice";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { fonts } from "../src/lib/fonts";
 
 const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
   const R = 6371;
@@ -463,7 +464,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
-  chipText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  chipText: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   chipTextActive: { color: "#fff" },
 
   showMoreButton: {
@@ -473,7 +474,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.xs,
     marginTop: theme.spacing.xs,
   },
-  showMoreText: { ...typography.body2, color: theme.colors.primary, fontWeight: "600" },
+  showMoreText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiSemiBold },
 
   segmentRow: { flexDirection: "row", gap: theme.spacing.sm },
   segment: {
@@ -489,12 +490,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
-  segmentText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  segmentText: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   segmentTextActive: { color: "#fff" },
 
   row: { flexDirection: "row", gap: theme.spacing.md },
   halfWidth: { flex: 1, gap: theme.spacing.xs },
-  label: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -517,7 +518,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.primary,
   },
-  selectedGymText: { ...typography.body2, color: theme.colors.text, flex: 1, fontWeight: "600" },
+  selectedGymText: { ...typography.body2, color: theme.colors.text, flex: 1, fontFamily: fonts.uiSemiBold },
 
   gymList: { gap: theme.spacing.xs, marginTop: theme.spacing.xs },
   gymRow: {
@@ -531,6 +532,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   gymRowActive: { borderColor: theme.colors.primary },
-  gymName: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  gymName: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
   gymLocation: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
 });

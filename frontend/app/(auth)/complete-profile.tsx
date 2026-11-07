@@ -18,6 +18,7 @@ import { useLanguage } from '../../src/lib/i18n/LanguageContext';
 import { getApiErrorMessage } from '../../src/lib/errors';
 import { setCredentials } from '../../features/auth/authSlice';
 import { useCompleteSocialSignupMutation } from '../../features/auth/authApiSlice';
+import { fonts } from '../../src/lib/fonts';
 
 /**
  * Step 2 of Google/Apple sign-in. Google and Apple never return a phone number
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
-    fontWeight: '600',
+    fontFamily: fonts.uiSemiBold,
   },
   form: {
     gap: theme.spacing.md,

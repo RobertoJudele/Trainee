@@ -29,6 +29,7 @@ import { FadeInUp, PressableScale } from "../components/ui";
 import { useTourTarget } from "../components/onboarding/TourContext";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { formatFromPerSession } from "../lib/price";
+import { fonts } from '../lib/fonts';
 
 const { width } = Dimensions.get("window");
 
@@ -297,7 +298,7 @@ export default function Home() {
           {item.worksAtPreferredGym ? (
             <View style={[styles.metaBadge, { marginLeft: 8 }]}>
               <Ionicons name="business" size={12} color={theme.colors.primary} />
-              <Text style={[styles.location, { color: theme.colors.primary, fontWeight: "700" }]}>
+              <Text style={[styles.location, { color: theme.colors.primary, fontFamily: fonts.uiBold }]}>
                 {t("worksAtYourGym")}
               </Text>
             </View>
@@ -556,8 +557,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xxl, 
   },
-  greeting: { ...typography.body1, color: "rgba(255, 255, 255, 0.8)", fontWeight: "500" },
-  userName: { ...typography.h1, color: "#FFFFFF", fontWeight: "800" },
+  greeting: { ...typography.body1, color: "rgba(255, 255, 255, 0.8)", fontFamily: fonts.ui },
+  userName: { ...typography.h1, color: "#FFFFFF" },
   profileAvatar: {
     width: 52,
     height: 52,
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.5)",
   },
-  profileInitials: { ...typography.h3, color: "#FFFFFF", fontWeight: "700" },
+  profileInitials: { ...typography.h3, color: "#FFFFFF", fontFamily: fonts.uiBold },
 
   searchBarTouchable: { 
     paddingHorizontal: theme.spacing.lg, 
@@ -607,7 +608,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: theme.spacing.sm,
   },
-  actionTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text, marginBottom: 2 },
+  actionTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text, marginBottom: 2 },
   actionDesc: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
 
   trainersSection: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
@@ -617,7 +618,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: theme.spacing.md,
   },
-  seeAllButton: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  seeAllButton: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
 
   trainerCard: {
     flexDirection: "row",
@@ -636,7 +637,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: theme.spacing.md,
   },
-  trainerInitials: { ...typography.h3, color: theme.colors.primary, fontWeight: "700" },
+  trainerInitials: { ...typography.h3, color: theme.colors.primary, fontFamily: fonts.uiBold },
   trainerInfo: { flex: 1, justifyContent: "center" },
   trainerName: { ...typography.h3, color: theme.colors.text, marginBottom: 2 },
   suggestedNameRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
@@ -648,7 +649,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  matchBadgeText: { ...typography.caption, color: "#fff", fontWeight: "700", textTransform: "none" },
+  matchBadgeText: { ...typography.caption, color: "#fff", fontFamily: fonts.monoSemiBold, textTransform: "none" },
   preferencesPrompt: {
     flexDirection: "row",
     alignItems: "center",
@@ -661,13 +662,13 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     ...theme.shadows.small,
   },
-  preferencesPromptTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text },
+  preferencesPromptTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text },
   preferencesPromptText: { ...typography.body2, color: theme.colors.textSecondary },
   trainerBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 4 },
-  trainerSpec: { ...typography.caption, color: theme.colors.primary, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
+  trainerSpec: { ...typography.caption, color: theme.colors.primary, fontFamily: fonts.monoSemiBold, marginBottom: 6, textTransform: "uppercase" },
   trainerMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   metaBadge: { flexDirection: "row", alignItems: "center", backgroundColor: theme.colors.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  rating: { ...typography.caption, fontWeight: "700", color: theme.colors.text, marginLeft: 4 },
+  rating: { ...typography.caption, fontFamily: fonts.monoSemiBold, color: theme.colors.text, marginLeft: 4 },
   reviewCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 2, textTransform: "none" },
   location: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: "none" },
   
@@ -676,7 +677,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     paddingTop: theme.spacing.xs,
   },
-  hourlyRate: { ...typography.body2, fontWeight: "800", color: theme.colors.primary },
+  hourlyRate: { ...typography.price, fontSize: 15, lineHeight: 20, color: theme.colors.primary },
 
   loadingContainer: { alignItems: "center", paddingVertical: theme.spacing.xl },
   loadingText: { ...typography.body2, color: theme.colors.textSecondary, marginTop: theme.spacing.sm },
@@ -689,7 +690,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
     ...theme.shadows.small,
   },
-  retryButtonText: { ...typography.body2, color: "#FFFFFF", fontWeight: "700" },
+  retryButtonText: { ...typography.body2, color: "#FFFFFF", fontFamily: fonts.uiBold },
   emptyContainer: { alignItems: "center", paddingVertical: theme.spacing.xl },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary, marginTop: theme.spacing.sm },
 });

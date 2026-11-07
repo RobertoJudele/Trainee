@@ -9,7 +9,7 @@ import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import { store, persistor } from "./store";
 import { PersistGate } from "redux-persist/integration/react";
 import { selectCurrentUser } from "../features/auth/authSlice";
-import { theme } from "../src/lib/theme";
+import { theme, typography } from "../src/lib/theme";
 import { StatusBar } from "expo-status-bar";
 import { TourProvider } from "../src/components/onboarding/TourContext";
 import CoachMark from "../src/components/onboarding/CoachMark";
@@ -17,6 +17,8 @@ import TourGate from "../src/components/onboarding/TourGate";
 import { LanguageProvider, useLanguage } from "../src/lib/i18n/LanguageContext";
 import UpdateGate from "../src/components/UpdateGate";
 import * as Notifications from "expo-notifications";
+import { useFonts } from "expo-font";
+import { fontAssets } from "../src/lib/fonts";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -147,7 +149,7 @@ function LocalizedStack() {
       screenOptions={{
         headerStyle: { backgroundColor: theme.colors.primary },
         headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "bold" },
+        headerTitleStyle: { fontFamily: typography.title.fontFamily, fontSize: 22 },
         headerShadowVisible: false,
         animation: "slide_from_right",
         animationDuration: 280,
@@ -186,6 +188,13 @@ function LocalizedStack() {
 
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+  // Fonts are bundled, so this resolves in a few frames. On a load error the app
+  // still starts, falling back to the system font.
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <StripeProvider

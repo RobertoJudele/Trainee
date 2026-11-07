@@ -55,6 +55,7 @@ import {
   useDeleteTrainerPackageMutation,
   TrainerPackageItem,
 } from "./trainerPackageApiSlice";
+import { fonts } from "../../src/lib/fonts";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const MAX_TRAINER_IMAGES = 5;
@@ -523,7 +524,7 @@ function TrainerProfile() {
               {editingPackages.map((pkg, index) => (
                 <View key={pkg.id ?? `new-${index}`} style={{ marginBottom: 12, padding: 14, backgroundColor: '#F9FAFB', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: theme.colors.text }}>
+                    <Text style={{ fontSize: 13, fontFamily: fonts.uiSemiBold, color: theme.colors.text }}>
                       {t("addPackage")} {index + 1}
                     </Text>
                     {editingPackages.length > 0 && (
@@ -542,14 +543,14 @@ function TrainerProfile() {
               {editingPackages.length < 5 && (
                 <Pressable onPress={addEditPackageRow} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed', marginTop: 4 }}>
                   <Ionicons name="add-circle-outline" size={18} color={theme.colors.primary} style={{ marginRight: 6 }} />
-                  <Text style={{ color: theme.colors.primary, fontWeight: '600', fontSize: 14 }}>{t("addPackage")}</Text>
+                  <Text style={{ color: theme.colors.primary, fontFamily: fonts.uiSemiBold, fontSize: 14 }}>{t("addPackage")}</Text>
                 </Pressable>
               )}
               <Pressable
                 style={({ pressed }) => [{ marginTop: 14, backgroundColor: theme.colors.primary, padding: 14, borderRadius: 12, alignItems: 'center' }, pressed && { opacity: 0.8 }]}
                 onPress={() => { void handleSavePackages(); }}
               >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>{t("saveChanges")}</Text>
+                <Text style={{ color: '#fff', fontFamily: fonts.uiSemiBold }}>{t("saveChanges")}</Text>
               </Pressable>
             </View>
           ) : trainerPackages.length > 0 ? (
@@ -557,17 +558,17 @@ function TrainerProfile() {
               {trainerPackages.map((pkg) => (
                 <View key={pkg.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' }}>
                   <View>
-                    <Text style={{ fontSize: 15, fontWeight: '600', color: theme.colors.text }}>{pkg.name}</Text>
-                    <Text style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
+                    <Text style={{ fontSize: 15, fontFamily: fonts.uiSemiBold, color: theme.colors.text }}>{pkg.name}</Text>
+                    <Text style={{ fontFamily: fonts.ui, fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
                       {pkg.sessionCount} {t("sessions")} — {(Number(pkg.price) / pkg.sessionCount).toFixed(2)} lei{t("perSession")}
                     </Text>
                   </View>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: theme.colors.primary }}>{Number(pkg.price).toFixed(2)} lei</Text>
+                  <Text style={{ fontSize: 16, fontFamily: fonts.uiBold, color: theme.colors.primary }}>{Number(pkg.price).toFixed(2)} lei</Text>
                 </View>
               ))}
             </View>
           ) : (
-            <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>{t("noPackages")}</Text>
+            <Text style={{ fontFamily: fonts.ui, color: theme.colors.textSecondary, fontSize: 14 }}>{t("noPackages")}</Text>
           )}
         </View>
 
@@ -773,67 +774,67 @@ const styles = StyleSheet.create({
   statusBadge: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, marginBottom: 10 },
   available: { backgroundColor: "#d4edda" },
   unavailable: { backgroundColor: "#f8d7da" },
-  statusText: { fontSize: 14, fontWeight: "600", color: "#333" },
+  statusText: { fontSize: 14, fontFamily: fonts.uiSemiBold, color: "#333" },
   featuredBadge: { backgroundColor: "#fff3cd", paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20 },
-  featuredText: { fontSize: 14, fontWeight: "600", color: "#856404" },
+  featuredText: { fontSize: 14, fontFamily: fonts.uiSemiBold, color: "#856404" },
   section: { backgroundColor: theme.colors.surface, borderRadius: theme.roundness, padding: 20, marginBottom: 20, ...theme.shadows.medium },
   sectionTitle: { ...typography.h3, color: theme.colors.text, marginBottom: 15 },
-  bioText: { fontSize: 16, lineHeight: 24, color: "#666" },
-  input: { borderWidth: 1, borderColor: "#D1D5DB", backgroundColor: "#fff", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#111827" },
+  bioText: { fontFamily: fonts.ui, fontSize: 16, lineHeight: 24, color: "#666" },
+  input: { fontFamily: fonts.ui, borderWidth: 1, borderColor: "#D1D5DB", backgroundColor: "#fff", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, fontSize: 15, color: "#111827" },
   textArea: { minHeight: 90, textAlignVertical: "top" },
   editGrid: { gap: 10 },
   specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   specLoadingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  specLoadingText: { fontSize: 13, color: "#6B7280" },
+  specLoadingText: { fontFamily: fonts.ui, fontSize: 13, color: "#6B7280" },
   specFallbackBox: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, padding: 12, gap: 10 },
-  specFallbackText: { fontSize: 13, color: "#6B7280" },
+  specFallbackText: { fontFamily: fonts.ui, fontSize: 13, color: "#6B7280" },
   specRetryButton: { alignSelf: "flex-start", backgroundColor: theme.colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
-  specRetryText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  specRetryText: { color: "#fff", fontSize: 12, fontFamily: fonts.uiBold },
   specChip: { borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff" },
   specChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  specChipText: { color: "#374151", fontSize: 13, fontWeight: "600" },
+  specChipText: { color: "#374151", fontSize: 13, fontFamily: fonts.uiSemiBold },
   specChipTextActive: { color: "#fff" },
   specChipReadOnly: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#E5E7EB" },
-  specChipReadOnlyText: { color: "#374151", fontSize: 13, fontWeight: "600" },
+  specChipReadOnlyText: { color: "#374151", fontSize: 13, fontFamily: fonts.uiSemiBold },
   infoGrid: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: 10 },
   infoCard: { backgroundColor: "#f8f9fa", borderRadius: 8, padding: 15, flex: 1, minWidth: 100, alignItems: "center" },
-  infoLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 5, textTransform: "uppercase" },
-  infoValue: { fontSize: 16, fontWeight: "bold", color: "#333" },
-  locationText: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 5 },
-  locationSubtext: { fontSize: 14, color: "#666" },
+  infoLabel: { fontFamily: fonts.ui, fontSize: 12, color: theme.colors.textSecondary, marginBottom: 5, textTransform: "uppercase" },
+  infoValue: { fontSize: 16, fontFamily: fonts.uiBold, color: "#333" },
+  locationText: { fontSize: 16, fontFamily: fonts.uiSemiBold, color: "#333", marginBottom: 5 },
+  locationSubtext: { fontFamily: fonts.ui, fontSize: 14, color: "#666" },
   socialList: { gap: 6 },
-  socialItem: { fontSize: 14, color: "#374151" },
+  socialItem: { fontFamily: fonts.ui, fontSize: 14, color: "#374151" },
   statsGrid: { flexDirection: "row", justifyContent: "space-around", gap: 15 },
   statCard: { alignItems: "center", flex: 1 },
-  statNumber: { fontSize: 24, fontWeight: "bold", color: "#007AFF", marginBottom: 5 },
-  statLabel: { fontSize: 12, color: "#666", textAlign: "center" },
-  starsText: { fontSize: 12, marginTop: 2 },
+  statNumber: { fontSize: 24, fontFamily: fonts.uiBold, color: "#007AFF", marginBottom: 5 },
+  statLabel: { fontFamily: fonts.ui, fontSize: 12, color: "#666", textAlign: "center" },
+  starsText: { fontFamily: fonts.ui, fontSize: 12, marginTop: 2 },
   accountInfo: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  accountLabel: { fontSize: 14, color: "#666" },
-  accountValue: { fontSize: 14, fontWeight: "600", color: "#333" },
+  accountLabel: { fontFamily: fonts.ui, fontSize: 14, color: "#666" },
+  accountValue: { fontSize: 14, fontFamily: fonts.uiSemiBold, color: "#333" },
   buttonSection: { gap: 15, marginTop: 20, marginBottom: 40 },
   gymsButton: { backgroundColor: "white", borderRadius: theme.roundness, borderWidth: 2, borderColor: theme.colors.primary, overflow: "hidden", ...theme.shadows.medium },
   gymsButtonInner: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
-  gymsButtonTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.primary, marginBottom: 2 },
-  gymsButtonSub: { fontSize: 12, color: "#6B7280" },
+  gymsButtonTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.primary, marginBottom: 2 },
+  gymsButtonSub: { fontFamily: fonts.ui, fontSize: 12, color: "#6B7280" },
   buttonPressed: { opacity: 0.8 },
   actionContainer: { marginTop: theme.spacing.xl, gap: theme.spacing.md },
   actionHeader: { ...typography.h3, color: theme.colors.text, marginBottom: theme.spacing.xs },
   actionButton: { flexDirection: "row", alignItems: "center", justifyContent: "center", padding: 16, borderRadius: theme.roundness, gap: 8 },
   primaryAction: { backgroundColor: theme.colors.primary, ...theme.shadows.small },
-  primaryActionText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  primaryActionText: { color: "#fff", fontSize: 16, fontFamily: fonts.uiSemiBold },
   secondaryAction: { backgroundColor: theme.colors.background, borderWidth: 1, borderColor: theme.colors.border },
-  secondaryActionText: { color: theme.colors.textSecondary, fontSize: 16, fontWeight: "600" },
+  secondaryActionText: { color: theme.colors.textSecondary, fontSize: 16, fontFamily: fonts.uiSemiBold },
   analyticsButton: { backgroundColor: theme.colors.surface, borderRadius: theme.roundness, borderWidth: 1, borderColor: theme.colors.border, overflow: "hidden", marginBottom: 20, ...theme.shadows.small },
   analyticsButtonInner: { flexDirection: "row", alignItems: "center", padding: 16, gap: 14 },
-  analyticsButtonTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text, marginBottom: 2 },
-  analyticsButtonSub: { fontSize: 12, color: theme.colors.textSecondary },
+  analyticsButtonTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text, marginBottom: 2 },
+  analyticsButtonSub: { fontFamily: fonts.ui, fontSize: 12, color: theme.colors.textSecondary },
   buttonDisabled: { opacity: 0.6 },
-  errorText: { fontSize: 16, color: theme.colors.error, textAlign: "center" },
+  errorText: { fontFamily: fonts.ui, fontSize: 16, color: theme.colors.error, textAlign: "center" },
   button: { backgroundColor: theme.colors.primary, padding: 16, borderRadius: theme.roundness, alignItems: "center", width: "100%" },
-  buttonText: { color: "#fff", fontSize: 16, fontWeight: "600" },
+  buttonText: { color: "#fff", fontSize: 16, fontFamily: fonts.uiSemiBold },
   langBadge: { backgroundColor: theme.colors.primary, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  langBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  langBadgeText: { color: "#fff", fontSize: 11, fontFamily: fonts.uiBold },
 });
 
 export default TrainerProfile;

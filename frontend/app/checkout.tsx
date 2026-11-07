@@ -24,6 +24,7 @@ import { selectCurrentUser } from "../features/auth/authSlice";
 import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { fonts } from "../src/lib/fonts";
 
 const LOOKUP_KEY = "MonthlySubscription-349c6bd";
 const REVENUECAT_ENTITLEMENT_ID =
@@ -1380,12 +1381,12 @@ const styles = StyleSheet.create({
 	buttonText: {
 		...typography.body2,
 		color: "#ffffff",
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 	},
 	secondaryButtonText: {
 		...typography.body2,
 		color: theme.colors.primary,
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 	},
 	message: {
 		...typography.body2,
@@ -1425,7 +1426,7 @@ const styles = StyleSheet.create({
 	packageTitle: {
 		...typography.body1,
 		color: theme.colors.text,
-		fontWeight: "600",
+		fontFamily: fonts.uiSemiBold,
 	},
 	packageSubtitle: {
 		...typography.caption,
@@ -1433,9 +1434,8 @@ const styles = StyleSheet.create({
 		marginTop: 4,
 	},
 	packagePrice: {
-		...typography.body2,
+		...typography.price,
 		color: theme.colors.text,
-		fontWeight: "700",
 		marginLeft: 8,
 	},
 	packagePriceSelected: {
@@ -1470,7 +1470,7 @@ const styles = StyleSheet.create({
 	benefitsHeading: {
 		...typography.body1,
 		color: theme.colors.text,
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 	},
 	benefitsNote: {
 		...typography.caption,
@@ -1499,7 +1499,7 @@ const styles = StyleSheet.create({
 	benefitTitle: {
 		...typography.body2,
 		color: theme.colors.text,
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 	},
 	benefitBody: {
 		...typography.caption,
@@ -1510,7 +1510,7 @@ const styles = StyleSheet.create({
 	trialNote: {
 		...typography.body2,
 		color: theme.colors.primary,
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 		textAlign: "center",
 		marginBottom: 12,
 	},
@@ -1523,7 +1523,7 @@ const styles = StyleSheet.create({
 	skipButtonText: {
 		...typography.body2,
 		color: theme.colors.textSecondary,
-		fontWeight: "600",
+		fontFamily: fonts.uiSemiBold,
 	},
 	legalDisclaimer: {
 		...typography.caption,
@@ -1540,7 +1540,7 @@ const styles = StyleSheet.create({
 	legalLink: {
 		...typography.caption,
 		color: theme.colors.primary,
-		fontWeight: "600",
+		fontFamily: fonts.monoSemiBold,
 	},
 	legalLinkSeparator: {
 		...typography.caption,
@@ -1556,7 +1556,7 @@ const styles = StyleSheet.create({
 	debugErrorTitle: {
 		...typography.body1,
 		color: "#dc2626",
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 		marginBottom: 6,
 	},
 	debugErrorText: {
@@ -1578,7 +1578,7 @@ const styles = StyleSheet.create({
 	futurePricingTitle: {
 		...typography.body2,
 		color: theme.colors.text,
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 		marginBottom: 4,
 	},
 	futurePricingNote: {
@@ -1597,12 +1597,12 @@ const styles = StyleSheet.create({
 	detailsLabel: {
 		...typography.body2,
 		color: theme.colors.textSecondary,
-		fontWeight: "500",
+		fontFamily: fonts.ui,
 	},
 	detailsValue: {
 		...typography.body2,
 		color: theme.colors.text,
-		fontWeight: "600",
+		fontFamily: fonts.uiSemiBold,
 	},
 	badge: {
 		paddingHorizontal: 12,
@@ -1614,7 +1614,7 @@ const styles = StyleSheet.create({
 	badgeText: {
 		...typography.caption,
 		fontSize: 10,
-		fontWeight: "700",
+		fontFamily: fonts.monoSemiBold,
 	},
 	errorBanner: {
 		flexDirection: "row",
@@ -1692,7 +1692,7 @@ const styles = StyleSheet.create({
 	transactionDate: {
 		...typography.body2,
 		color: theme.colors.text,
-		fontWeight: "600",
+		fontFamily: fonts.uiSemiBold,
 	},
 	transactionIdText: {
 		...typography.caption,
@@ -1706,7 +1706,7 @@ const styles = StyleSheet.create({
 	transactionAmount: {
 		...typography.body2,
 		color: theme.colors.text,
-		fontWeight: "700",
+		fontFamily: fonts.uiBold,
 	},
 	smallBadge: {
 		paddingHorizontal: 8,
@@ -1717,6 +1717,6 @@ const styles = StyleSheet.create({
 	smallBadgeText: {
 		...typography.caption,
 		fontSize: 9,
-		fontWeight: "700",
+		fontFamily: fonts.monoSemiBold,
 	},
 });

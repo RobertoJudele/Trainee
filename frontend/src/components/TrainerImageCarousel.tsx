@@ -22,6 +22,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../lib/theme";
 import { TrainerImageItem } from "../../features/trainer/trainerApiSlice";
 import { useLanguage } from "../lib/i18n/LanguageContext";
+import { fonts } from "../lib/fonts";
 
 interface Props {
   title: string;
@@ -218,7 +219,7 @@ const styles = StyleSheet.create({
   counterText: {
     ...typography.caption,
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   dotsRow: {
     flexDirection: "row",

@@ -29,6 +29,7 @@ import { selectCurrentUser } from "../features/auth/authSlice";
 import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 export default function MyGymsScreen() {
   const { t } = useLanguage();
@@ -408,14 +409,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  headerTitle: { ...typography.h2, color: theme.colors.text, fontWeight: "700" },
+  headerTitle: { ...typography.h2, color: theme.colors.text },
   addBtn: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: theme.roundness,
   },
-  addBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  addBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
 
   listContent: { padding: theme.spacing.md, gap: theme.spacing.md },
 
@@ -439,11 +440,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   gymCardLeft: { flex: 1, marginRight: 12 },
-  gymCardName: { ...typography.body1, fontWeight: "700", color: theme.colors.text, marginBottom: 2 },
+  gymCardName: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text, marginBottom: 2 },
   gymCardAddress: { ...typography.caption, color: theme.colors.textSecondary, marginBottom: 2 },
   gymCardHours: { ...typography.caption, color: theme.colors.textSecondary },
   toggleBox: { alignItems: "center", gap: 4 },
-  toggleLabel: { ...typography.caption, color: theme.colors.textSecondary, fontWeight: "600" },
+  toggleLabel: { ...typography.caption, color: theme.colors.textSecondary, fontFamily: fonts.monoSemiBold },
   availRow: {
     padding: 8,
     borderRadius: 8,
@@ -472,9 +473,9 @@ const styles = StyleSheet.create({
   staffBtnText: {
     ...typography.caption,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
-  availText: { ...typography.caption, color: "#374151", fontWeight: "600" },
+  availText: { ...typography.caption, color: "#374151", fontFamily: fonts.monoSemiBold },
   leaveBtn: {
     alignSelf: "flex-start",
     paddingHorizontal: 12,
@@ -483,12 +484,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
-  leaveBtnText: { ...typography.caption, color: theme.colors.error, fontWeight: "700" },
+  leaveBtnText: { ...typography.caption, color: theme.colors.error, fontFamily: fonts.monoSemiBold },
 
   // Empty / centered
   centeredBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40, gap: 10 },
-  emptyIcon: { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { ...typography.h3, color: theme.colors.text, fontWeight: "700" },
+  emptyIcon: { fontFamily: fonts.ui, fontSize: 48, marginBottom: 8 },
+  emptyTitle: { ...typography.h3, color: theme.colors.text, fontFamily: fonts.uiBold },
   emptyDesc: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
   primaryBtn: {
     marginTop: 8,
@@ -497,7 +498,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: theme.roundness,
   },
-  primaryBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  primaryBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
 
   // Modal
   modal: { flex: 1, backgroundColor: theme.colors.background },
@@ -510,8 +511,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
   },
-  modalTitle: { ...typography.h2, color: theme.colors.text, fontWeight: "700" },
-  modalClose: { fontSize: 20, color: theme.colors.textSecondary },
+  modalTitle: { ...typography.h2, color: theme.colors.text },
+  modalClose: { fontFamily: fonts.ui, fontSize: 20, color: theme.colors.textSecondary },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -523,7 +524,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   },
-  searchIcon: { fontSize: 16, marginRight: 8 },
+  searchIcon: { fontFamily: fonts.ui, fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, ...typography.body1, color: theme.colors.text },
   browserList: { paddingHorizontal: theme.spacing.md, paddingBottom: 40 },
   requestGymLink: {
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
-  requestGymLinkText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  requestGymLinkText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
   noResults: {
     ...typography.body2,
     color: theme.colors.textSecondary,
@@ -550,7 +551,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   browserRowLeft: { flex: 1 },
-  browserGymName: { ...typography.body1, fontWeight: "700", color: theme.colors.text },
+  browserGymName: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text },
   browserGymAddr: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 1 },
   browserGymMeta: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 2 },
   joinBtn: {
@@ -560,12 +561,12 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
   },
   joinBtnDisabled: { opacity: 0.5 },
-  joinBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  joinBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
   joinedBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: theme.roundness,
     backgroundColor: "#D1FAE5",
   },
-  joinedBadgeText: { ...typography.caption, color: "#065F46", fontWeight: "700" },
+  joinedBadgeText: { ...typography.caption, color: "#065F46", fontFamily: fonts.monoSemiBold },
 });

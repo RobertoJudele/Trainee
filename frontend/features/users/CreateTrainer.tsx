@@ -28,6 +28,7 @@ import { theme, typography } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { ApiEnvelope, TrainerProfileAttributes } from "../../src/types/api";
+import { fonts } from "../../src/lib/fonts";
 export default function CreateTrainer() {
   const { t } = useLanguage();
   const [bio, setBio] = useState("");
@@ -377,7 +378,7 @@ export default function CreateTrainer() {
               {packages.map((pkg, index) => (
                 <View key={index} style={{marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border}}>
                   <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
-                    <Text style={{fontSize: 14, fontWeight: '600', color: theme.colors.text}}>
+                    <Text style={{fontSize: 14, fontFamily: fonts.uiSemiBold, color: theme.colors.text}}>
                       {t("addPackage")} {index + 1}
                     </Text>
                     {packages.length > 1 && (
@@ -426,7 +427,7 @@ export default function CreateTrainer() {
                   style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed'}}
                 >
                   <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
-                  <Text style={{color: theme.colors.primary, fontWeight: '600'}}>{t("addPackage")}</Text>
+                  <Text style={{color: theme.colors.primary, fontFamily: fonts.uiSemiBold }}>{t("addPackage")}</Text>
                 </Pressable>
               )}
             </View>
@@ -526,7 +527,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
     color: "#374151",
     marginBottom: 8,
   },
@@ -563,7 +564,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#DC2626",
     fontSize: 14,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
   },
   buttonContainer: {
     marginTop: 20,
@@ -585,7 +586,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontSize: 18,
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
   },
   loadingContainer: {
     flexDirection: "row",
@@ -593,6 +594,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerText: {
+    fontFamily: fonts.ui,
     textAlign: "center",
     marginTop: 16,
     fontSize: 14,
@@ -605,6 +607,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   specLoadingText: {
+    fontFamily: fonts.ui,
     color: "#6B7280",
     fontSize: 14,
   },
@@ -614,6 +617,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   specFallbackText: {
+    fontFamily: fonts.ui,
     color: "#6B7280",
     fontSize: 14,
   },
@@ -628,7 +632,7 @@ const styles = StyleSheet.create({
   specRetryText: {
     color: "#fff",
     fontSize: 13,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   specGrid: {
     flexDirection: "row",
@@ -650,7 +654,7 @@ const styles = StyleSheet.create({
   specChipText: {
     color: "#374151",
     fontSize: 13,
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
   },
   specChipTextActive: {
     color: "#fff",

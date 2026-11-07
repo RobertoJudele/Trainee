@@ -71,7 +71,8 @@ All screens use expo-router file-based routing:
 
 | Path | What |
 |------|------|
-| `src/lib/theme.ts` | Colors, typography, shadows, spacing, gradients, motion tokens |
+| `src/lib/theme.ts` | Colors, typography (8 text styles), shadows, spacing, gradients, motion tokens |
+| `src/lib/fonts.ts` | Font families (Archivo Condensed, Manrope, IBM Plex Mono) + assets loaded in `_layout` |
 | `src/lib/i18n/translations.ts` | EN + RO translation strings (~600 keys) |
 | `src/lib/i18n/LanguageContext.tsx` | Language context + AsyncStorage persistence |
 | `src/lib/imageUpload.ts` | Image picker + FormData helpers |

@@ -18,6 +18,7 @@ import {
 import { theme, typography } from "../../lib/theme";
 import { formatDate, formatTime } from "../../lib/datetime";
 import { useLanguage } from "../../lib/i18n/LanguageContext";
+import { fonts } from "../../lib/fonts";
 
 export const scheduleDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -310,7 +311,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     ...typography.body1,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   cardSubtitle: {
     ...typography.caption,
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
   outlineBtnText: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     lineHeight: 18,
   },
   gradientBtnWrap: {
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   gradientBtnText: {
     ...typography.body2,
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     lineHeight: 18,
   },
   gradientPressed: {
@@ -387,7 +388,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: theme.colors.textSecondary,
     textTransform: "none",
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   dayPillTextActive: {
     color: theme.colors.primary,
@@ -401,7 +402,7 @@ const styles = StyleSheet.create({
   statusText: {
     ...typography.caption,
     textTransform: "capitalize",
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   sheetRoot: {
     flex: 1,
@@ -434,7 +435,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     ...typography.h3,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   sheetSubtitle: {
     ...typography.body2,

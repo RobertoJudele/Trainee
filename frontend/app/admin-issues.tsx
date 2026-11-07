@@ -23,6 +23,7 @@ import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
   "open",
@@ -325,7 +326,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     ...theme.shadows.small,
   },
-  title: { ...typography.body1, color: theme.colors.text, fontWeight: "700" },
+  title: { ...typography.body1, color: theme.colors.text, fontFamily: fonts.uiBold },
   meta: { ...typography.caption, color: theme.colors.textSecondary },
   description: { ...typography.body2, color: theme.colors.text },
   status: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 4 },
@@ -343,7 +344,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.primary,
   },
   statusButtonText: { ...typography.caption, color: theme.colors.text },
-  statusButtonTextActive: { color: "#fff", fontWeight: "700" },
+  statusButtonTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   tabBar: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
   tab: {
     borderWidth: 1,
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
   },
   tabActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   tabText: { ...typography.caption, color: theme.colors.text },
-  tabTextActive: { color: "#fff", fontWeight: "700" },
+  tabTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   filterRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   filterChip: {
     borderWidth: 1,
@@ -370,7 +371,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.text,
   },
   filterChipText: { ...typography.caption, color: theme.colors.text },
-  filterChipTextActive: { color: "#fff", fontWeight: "700" },
+  filterChipTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   gymMeta: { gap: 2, marginTop: 2 },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary },
   retryButton: {
@@ -380,5 +381,5 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     ...theme.shadows.small,
   },
-  retryText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  retryText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
 });

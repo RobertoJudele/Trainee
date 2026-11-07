@@ -18,6 +18,7 @@ import {
   shouldShowReleaseNotes,
   type ReleaseNotes,
 } from "../lib/releaseNotes";
+import { fonts } from "../lib/fonts";
 
 interface UpdateInfo {
   updateRequired: boolean;
@@ -122,12 +123,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
     marginBottom: 12,
     textAlign: "center",
   },
   message: {
+    fontFamily: fonts.ui,
     fontSize: 16,
     color: theme.colors.text,
     textAlign: "center",
@@ -143,6 +145,6 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#fff",
     fontSize: 16,
-    fontWeight: "bold",
+    fontFamily: fonts.uiBold,
   },
 });

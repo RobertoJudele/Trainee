@@ -22,6 +22,7 @@ import {
   startOfWeek,
   toDateKey,
 } from "../../src/components/schedule/SchedulePrimitives";
+import { fonts } from "../../src/lib/fonts";
 
 const isValidDateKey = (value?: string) => {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     ...typography.h2,
     color: theme.colors.text,
-    fontWeight: "800",
+    
   },
   weekLabel: {
     ...typography.body2,
@@ -273,7 +274,7 @@ const styles = StyleSheet.create({
   metricValue: {
     ...typography.h3,
     color: theme.colors.text,
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   loadingWrap: {
     paddingVertical: 10,
@@ -298,7 +299,7 @@ const styles = StyleSheet.create({
   slotTimeText: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   slotClientText: {
     ...typography.caption,
@@ -323,7 +324,7 @@ const styles = StyleSheet.create({
   blockedBadgeText: {
     ...typography.caption,
     color: "#475569",
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
     textTransform: "none",
   },
 });

@@ -16,6 +16,7 @@ import { useCreateIssueMutation } from "../features/support/issueApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 // Bucharest fallback when no pin params are passed.
 const FALLBACK = { latitude: 44.4268, longitude: 26.1025 };
@@ -154,7 +155,7 @@ const styles = StyleSheet.create({
     gap: 12,
     ...theme.shadows.small,
   },
-  label: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
   input: {
     borderWidth: 1,
     borderColor: theme.colors.border,
@@ -180,5 +181,5 @@ const styles = StyleSheet.create({
     ...theme.shadows.medium,
   },
   submitButtonDisabled: { opacity: 0.7 },
-  submitText: { ...typography.body1, color: "#fff", fontWeight: "700" },
+  submitText: { ...typography.body1, color: "#fff", fontFamily: fonts.uiBold },
 });

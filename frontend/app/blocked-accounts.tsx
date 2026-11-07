@@ -18,6 +18,7 @@ import {
 } from "../features/block/blockApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { fonts } from "../src/lib/fonts";
 
 export default function BlockedAccountsScreen() {
   const router = useRouter();
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { color: "#fff", fontWeight: "700" },
+  avatarInitial: { color: "#fff", fontFamily: fonts.uiBold },
   name: { ...typography.body1, color: theme.colors.text, flex: 1 },
   unblockButton: {
     borderWidth: 1,
@@ -137,7 +138,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
   },
-  unblockText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  unblockText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
   empty: { alignItems: "center", justifyContent: "center", marginTop: 48, gap: 8 },
   emptyText: { ...typography.body2, color: theme.colors.textSecondary },
 });

@@ -40,6 +40,7 @@ import { selectCurrentUser } from "../features/auth/authSlice";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { formatFromPerSession } from "../src/lib/price";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from '../src/lib/fonts';
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
@@ -1461,7 +1462,7 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   resultMeta: { flex: 1 },
-  resultName: { ...typography.body2, fontWeight: "700", color: theme.colors.text },
+  resultName: { ...typography.body2, fontFamily: fonts.uiBold, color: theme.colors.text },
   resultCity: { ...typography.caption, color: theme.colors.textSecondary },
   resultBadge: {
     backgroundColor: theme.colors.primary,
@@ -1472,7 +1473,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  resultBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  resultBadgeText: { color: "#fff", fontSize: 11, fontFamily: fonts.uiExtraBold },
   resultsEmpty: {
     ...typography.body2,
     color: theme.colors.textSecondary,
@@ -1488,8 +1489,8 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.xl,
     gap: 14,
   },
-  filterTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.text },
-  filterLabel: { ...typography.body2, fontWeight: "600", color: theme.colors.text },
+  filterTitle: { fontSize: 18, fontFamily: fonts.uiExtraBold, color: theme.colors.text },
+  filterLabel: { ...typography.body2, fontFamily: fonts.uiSemiBold, color: theme.colors.text },
   chipRow: { flexDirection: "row", gap: 8 },
   chip: {
     paddingHorizontal: 16,
@@ -1500,7 +1501,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.surface,
   },
   chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  chipText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  chipText: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   chipTextActive: { color: "#fff" },
   filterSwitchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   filterActions: { flexDirection: "row", gap: 12, marginTop: 6 },
@@ -1512,7 +1513,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     alignItems: "center",
   },
-  filterResetText: { ...typography.body2, fontWeight: "700", color: theme.colors.text },
+  filterResetText: { ...typography.body2, fontFamily: fonts.uiBold, color: theme.colors.text },
   filterApplyBtn: {
     flex: 1,
     paddingVertical: 13,
@@ -1520,7 +1521,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     alignItems: "center",
   },
-  filterApplyText: { ...typography.body2, fontWeight: "700", color: "#fff" },
+  filterApplyText: { ...typography.body2, fontFamily: fonts.uiBold, color: "#fff" },
   centerButton: {
     position: "absolute",
     right: theme.spacing.lg,
@@ -1541,7 +1542,7 @@ const styles = StyleSheet.create({
     zIndex: 5,
     ...theme.shadows.medium,
   },
-  requestGymBtnText: { color: "#fff", fontWeight: "700" },
+  requestGymBtnText: { color: "#fff", fontFamily: fonts.uiBold },
   listSelfBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -1554,7 +1555,7 @@ const styles = StyleSheet.create({
     ...theme.shadows.small,
   },
   listSelfBtnDisabled: { opacity: 0.6 },
-  listSelfBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  listSelfBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
   listSelfJoined: {
     flexDirection: "row",
     alignItems: "center",
@@ -1568,7 +1569,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   listSelfJoinedText: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  listSelfJoinedLabel: { ...typography.body2, color: theme.colors.text, fontWeight: "600", flex: 1 },
+  listSelfJoinedLabel: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold, flex: 1 },
   map: { flex: 1 },
   mapLoading: {
     flex: 1,
@@ -1593,7 +1594,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: "#FFF7ED",
     textAlign: "center",
-    fontWeight: "600",
+    fontFamily: fonts.monoSemiBold,
   },
 
   // ── Marker ──────────────────────────────────────────────
@@ -1613,7 +1614,7 @@ const styles = StyleSheet.create({
     // (worse the larger the bubble), so we omit elevation there.
     ...(Platform.OS === "ios" ? theme.shadows.medium : null),
   },
-  markerEmoji: { fontSize: 28 },
+  markerEmoji: { fontFamily: fonts.ui, fontSize: 28 },
   markerBadge: {
     position: "absolute",
     top: -7,
@@ -1628,7 +1629,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-  markerBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  markerBadgeText: { color: "#fff", fontSize: 10, fontFamily: fonts.uiExtraBold },
   markerTip: {
     width: 0,
     height: 0,
@@ -1650,7 +1651,7 @@ const styles = StyleSheet.create({
     // See markerBubble: Android elevation clips the snapshot, so iOS-only.
     ...(Platform.OS === "ios" ? theme.shadows.medium : null),
   },
-  clusterCount: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  clusterCount: { color: "#fff", fontSize: 13, fontFamily: fonts.uiExtraBold },
   clusterTip: {
     width: 0,
     height: 0,
@@ -1700,7 +1701,7 @@ const styles = StyleSheet.create({
   sheetHeaderLeft: { flex: 1, marginRight: 12 },
   sheetGymName: {
     fontSize: 20,
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
     color: theme.colors.text,
     marginBottom: 2,
   },
@@ -1716,7 +1717,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  closeBtnText: { fontSize: 14, color: "#6B7280", fontWeight: "700" },
+  closeBtnText: { fontSize: 14, color: "#6B7280", fontFamily: fonts.uiBold },
   expandHintRow: {
     alignItems: "center",
     marginTop: 8,
@@ -1724,7 +1725,7 @@ const styles = StyleSheet.create({
   expandHintText: {
     fontSize: 12,
     color: theme.colors.textSecondary,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
     letterSpacing: 0.3,
   },
 
@@ -1750,11 +1751,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  quickInfoIcon: { fontSize: 13 },
+  quickInfoIcon: { fontFamily: fonts.ui, fontSize: 13 },
   quickInfoText: {
     ...typography.caption,
     color: theme.colors.text,
-    fontWeight: "500",
+    fontFamily: fonts.mono,
   },
 
   gymAddress: {
@@ -1768,11 +1769,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     gap: 3,
   },
-  starOn: { fontSize: 15, color: "#F59E0B" },
-  starOff: { fontSize: 15, color: "#E5E7EB" },
+  starOn: { fontFamily: fonts.ui, fontSize: 15, color: "#F59E0B" },
+  starOff: { fontFamily: fonts.ui, fontSize: 15, color: "#E5E7EB" },
   ratingVal: {
     ...typography.body2,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
     marginLeft: 4,
   },
@@ -1793,7 +1794,7 @@ const styles = StyleSheet.create({
   },
   trainersTitle: {
     fontSize: 17,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
   },
   trainerCountBadge: {
@@ -1805,7 +1806,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 6,
   },
-  trainerCountText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  trainerCountText: { color: "#fff", fontSize: 13, fontFamily: fonts.uiBold },
   noTrainers: { alignItems: "center", paddingVertical: theme.spacing.lg },
   noTrainersText: { ...typography.body2, color: theme.colors.textSecondary },
 
@@ -1829,7 +1830,7 @@ const styles = StyleSheet.create({
   trainerInitials: {
     ...typography.body1,
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   trainerMeta: { flex: 1 },
   trainerNameRow: {
@@ -1840,7 +1841,7 @@ const styles = StyleSheet.create({
   },
   trainerName: {
     fontSize: 15,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
     flex: 1,
   },
@@ -1852,7 +1853,7 @@ const styles = StyleSheet.create({
   },
   availBadgeOn: { backgroundColor: "#D1FAE5" },
   availBadgeOff: { backgroundColor: "#FEE2E2" },
-  availBadgeText: { fontSize: 11, fontWeight: "700", color: "#374151" },
+  availBadgeText: { fontSize: 11, fontFamily: fonts.uiBold, color: "#374151" },
   trainerBio: {
     ...typography.caption,
     color: theme.colors.textSecondary,
@@ -1867,11 +1868,11 @@ const styles = StyleSheet.create({
   trainerStatPrice: {
     ...typography.caption,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   trainerViewLink: {
     ...typography.caption,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
 });

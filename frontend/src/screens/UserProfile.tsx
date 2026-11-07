@@ -19,6 +19,7 @@ import { useLanguage } from "../lib/i18n/LanguageContext";
 import ProfileMenuModal, { type ProfileMenuItem } from "../components/ProfileMenuModal";
 import ScreenHeader from "../components/ScreenHeader";
 import { useAccountActions } from "../hooks/useAccountActions";
+import { fonts } from "../lib/fonts";
 
 export default function UserProfile() {
   const router = useRouter();
@@ -171,7 +172,7 @@ const styles = StyleSheet.create({
   },
   avatarInitials: {
     fontSize: 28,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     color: "#fff",
   },
   name: {
@@ -189,7 +190,7 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     color: "#fff",
     fontSize: 12,
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
     color: theme.colors.textSecondary,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
   infoValue: {
     fontSize: 15,
     color: theme.colors.text,
-    fontWeight: "400",
+    fontFamily: fonts.ui,
   },
   langBadge: {
     backgroundColor: theme.colors.primary,
@@ -231,6 +232,6 @@ const styles = StyleSheet.create({
   langBadgeText: {
     color: "#fff",
     fontSize: 11,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
 });

@@ -18,6 +18,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../lib/theme";
 import { TrainerImageItem } from "../../features/trainer/trainerApiSlice";
 import { useLanguage } from "../lib/i18n/LanguageContext";
+import { fonts } from "../lib/fonts";
 
 interface Props {
   title: string;
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
   count: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   subtitle: {
     ...typography.caption,
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
   addText: {
     ...typography.caption,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
     marginTop: 2,
   },
 });

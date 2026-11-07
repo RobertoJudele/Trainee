@@ -62,6 +62,7 @@ import {
   toDateKey,
 } from "../../src/components/schedule/SchedulePrimitives";
 import { useTourTarget } from "../../src/components/onboarding/TourContext";
+import { fonts } from "../../src/lib/fonts";
 
 type SlotRect = {
   x: number;
@@ -1308,7 +1309,7 @@ const styles = StyleSheet.create({
   heroTitle: {
     ...typography.h2,
     color: theme.colors.text,
-    fontWeight: "800",
+    
   },
   heroStatsRow: {
     flexDirection: "row",
@@ -1332,7 +1333,7 @@ const styles = StyleSheet.create({
   statValue: {
     ...typography.h3,
     color: theme.colors.text,
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   slotCard: {
     borderWidth: 1,
@@ -1363,7 +1364,7 @@ const styles = StyleSheet.create({
   controlLabel: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   controlRow: {
     flexDirection: "row",
@@ -1403,12 +1404,12 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: theme.colors.error,
     textTransform: "none",
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   slotTimeText: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   selectionText: {
     ...typography.body2,
@@ -1431,7 +1432,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: theme.colors.text,
     textTransform: "none",
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   clientPool: {
     borderWidth: 1,
@@ -1448,7 +1449,7 @@ const styles = StyleSheet.create({
   clientPoolTitle: {
     ...typography.body1,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   clientPoolHint: {
     ...typography.body2,
@@ -1527,7 +1528,7 @@ const styles = StyleSheet.create({
   clientName: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   clientSub: {
     ...typography.caption,
@@ -1584,6 +1585,6 @@ const styles = StyleSheet.create({
   inviteBtnText: {
     ...typography.body2,
     color: theme.colors.primary,
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
   },
 });

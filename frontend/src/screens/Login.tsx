@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
 import SocialAuthButtons from '../components/SocialAuthButtons';
 import { useLanguage } from '../lib/i18n/LanguageContext';
+import { fonts } from '../lib/fonts';
 
 export default function Login() {
   const router = useRouter();
@@ -238,7 +239,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     ...typography.body2,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontFamily: fonts.uiSemiBold,
   },
   divider: {
     flexDirection: 'row',
