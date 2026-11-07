@@ -22,7 +22,7 @@ import {
   GymMarker,
   MyGym,
 } from "../features/gym/gymApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
@@ -413,25 +413,18 @@ const styles = StyleSheet.create({
   addBtn: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: theme.roundness,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
-  addBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
+  addBtnText: { ...typography.button, fontSize: 14, color: "#fff" },
 
   listContent: { padding: theme.spacing.md, gap: theme.spacing.md },
 
   // Gym card
   gymCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
   },
   gymCardTop: {
     flexDirection: "row",
@@ -440,7 +433,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   gymCardLeft: { flex: 1, marginRight: 12 },
-  gymCardName: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text, marginBottom: 2 },
+  gymCardName: { ...typography.heading, color: theme.colors.text, marginBottom: 2 },
   gymCardAddress: { ...typography.caption, color: theme.colors.textSecondary, marginBottom: 2 },
   gymCardHours: { ...typography.caption, color: theme.colors.textSecondary },
   toggleBox: { alignItems: "center", gap: 4 },
@@ -463,24 +456,27 @@ const styles = StyleSheet.create({
   },
   staffText: { ...typography.label, color: theme.colors.text },
   staffBtn: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     alignItems: "center",
     marginBottom: 10,
   },
   staffBtnText: {
-    ...typography.button, fontSize: 14,
-    color: theme.colors.primary,
+    ...typography.button,
+    fontSize: 14,
+    color: theme.colors.text,
   },
   availText: { ...typography.label, color: "#374151", fontFamily: fonts.monoSemiBold },
   leaveBtn: {
     alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 14,
+    minHeight: 36,
+    justifyContent: "center",
+    borderRadius: theme.radius.pill,
+    borderWidth: 1.5,
     borderColor: theme.colors.error,
   },
   leaveBtnText: { ...typography.button, fontSize: 14, color: theme.colors.error },
@@ -494,10 +490,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: theme.roundness,
+    height: 52,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
-  primaryBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
+  primaryBtnText: { ...typography.button, color: "#fff" },
 
   // Modal
   modal: { flex: 1, backgroundColor: theme.colors.background },
@@ -556,16 +553,17 @@ const styles = StyleSheet.create({
   joinBtn: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: theme.roundness,
+    minHeight: 36,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
   joinBtnDisabled: { opacity: 0.5 },
-  joinBtnText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
+  joinBtnText: { ...typography.button, fontSize: 14, color: "#fff" },
   joinedBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.xs,
     backgroundColor: "#D1FAE5",
   },
-  joinedBadgeText: { ...typography.label, color: "#065F46", fontFamily: fonts.monoSemiBold },
+  joinedBadgeText: { ...typography.label, color: "#065F46" },
 });

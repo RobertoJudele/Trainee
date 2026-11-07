@@ -3,7 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { fonts } from "../src/lib/fonts";
 
@@ -374,13 +374,9 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   headerCard: {
-    borderRadius: 24,
-    backgroundColor: theme.colors.surface,
+    ...presets.card,
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.small,
   },
   headerRow: {
     flexDirection: "row",
@@ -388,10 +384,10 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F1F5F9",
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceSunken,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -418,16 +414,17 @@ const styles = StyleSheet.create({
   },
   segmentButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    height: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     alignItems: "center",
   },
   segmentButtonActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.text,
+    borderColor: theme.colors.text,
   },
   segmentLabel: {
     ...typography.body2,
@@ -438,13 +435,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
   },
   documentCard: {
-    borderRadius: 22,
-    backgroundColor: "#FFFFFF",
+    ...presets.card,
     padding: theme.spacing.lg,
     gap: 6,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.small,
   },
   documentTitle: {
     ...typography.h3,
@@ -460,17 +453,13 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   sectionCard: {
-    borderRadius: 18,
-    backgroundColor: "#FFFFFF",
+    ...presets.card,
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
   },
   sectionTitle: {
-    ...typography.body1,
+    ...typography.heading,
     color: theme.colors.text,
-    fontFamily: fonts.uiBold,
   },
   sectionBody: {
     ...typography.body2,
@@ -478,7 +467,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   footerCard: {
-    borderRadius: 18,
+    borderRadius: theme.radius.card,
     backgroundColor: "#ECFDF5",
     borderWidth: 1,
     borderColor: "#A7F3D0",

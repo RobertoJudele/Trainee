@@ -16,7 +16,7 @@ import {
   TrainerAnalyticsBreakdown,
   useGetTrainerAnalyticsQuery,
 } from "../features/trainer/trainerApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { fonts } from "../src/lib/fonts";
 
@@ -298,22 +298,19 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: theme.colors.primary,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 999,
+    paddingHorizontal: 20,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
   primaryButtonText: {
+    ...typography.button,
     color: "#fff",
-    fontFamily: fonts.uiBold,
   },
   heroCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    ...presets.card,
     padding: theme.spacing.lg,
     gap: 16,
-    ...theme.shadows.small,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -343,11 +340,9 @@ const styles = StyleSheet.create({
   },
   metricCard: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
-    borderRadius: 14,
+    backgroundColor: theme.colors.surfaceSunken,
+    borderRadius: theme.radius.control,
     padding: 12,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     gap: 4,
   },
   metricLabel: {
@@ -366,13 +361,9 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   sectionCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    ...presets.card,
     padding: theme.spacing.lg,
     gap: 12,
-    ...theme.shadows.small,
   },
   sectionHeader: {
     flexDirection: "row",

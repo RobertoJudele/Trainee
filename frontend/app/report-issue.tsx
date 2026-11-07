@@ -17,7 +17,7 @@ import {
   IssueTargetType,
   useCreateIssueMutation,
 } from "../features/support/issueApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
 import { fonts } from "../src/lib/fonts";
@@ -231,13 +231,9 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, color: theme.colors.text },
   subtitle: { ...typography.body2, color: theme.colors.textSecondary },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    ...presets.card,
     padding: 16,
     gap: 12,
-    ...theme.shadows.small,
   },
   label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
   gymRequestCta: {
@@ -251,33 +247,22 @@ const styles = StyleSheet.create({
   contextText: { ...typography.caption, color: theme.colors.textSecondary },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "#fff",
+    ...presets.chip,
   },
-  chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  chipText: { ...typography.label, color: theme.colors.text },
-  chipTextActive: { color: "#fff", fontFamily: fonts.uiBold },
+  chipActive: { ...presets.chipSelected },
+  chipText: { ...presets.chipText },
+  chipTextActive: { ...presets.chipTextSelected },
   input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text,
+    ...presets.input,
   },
   textArea: { minHeight: 120 },
   marginTop: { marginTop: 6 },
   submitButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: 14,
+    borderRadius: theme.radius.control,
+    height: 52,
+    justifyContent: "center",
     alignItems: "center",
-    ...theme.shadows.medium,
   },
   submitButtonDisabled: { opacity: 0.7 },
   submitText: { ...typography.body1, color: "#fff", fontFamily: fonts.uiBold },

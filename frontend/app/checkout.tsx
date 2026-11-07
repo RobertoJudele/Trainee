@@ -21,7 +21,7 @@ import {
 	useGetBillingTransactionsQuery,
 } from "../features/billing/billingApiSlice";
 import { selectCurrentUser } from "../features/auth/authSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { fonts } from "../src/lib/fonts";
@@ -1327,12 +1327,8 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 	},
 	section: {
-		backgroundColor: theme.colors.surface,
-		borderRadius: theme.roundness,
-		padding: 20,
-		borderWidth: 1,
-		borderColor: theme.colors.border,
-		...theme.shadows.medium,
+	  ...presets.card,
+	  padding: 20,
 	},
 	productRow: {
 		flexDirection: "row",
@@ -1358,35 +1354,32 @@ const styles = StyleSheet.create({
 		color: theme.colors.textSecondary,
 	},
 	button: {
-		backgroundColor: theme.colors.primary,
-		borderRadius: theme.roundness,
-		height: 48,
-		alignItems: "center",
-		justifyContent: "center",
-		...theme.shadows.small,
+	  backgroundColor: theme.colors.primary,
+	  borderRadius: theme.radius.control,
+	  height: 52,
+	  alignItems: "center",
+	  justifyContent: "center",
 	},
 	secondaryButton: {
-		marginTop: 12,
-		borderRadius: theme.roundness,
-		height: 48,
-		alignItems: "center",
-		justifyContent: "center",
-		borderWidth: 1,
-		borderColor: theme.colors.primary,
-		backgroundColor: theme.colors.surface,
+	  marginTop: 12,
+	  borderRadius: theme.radius.control,
+	  height: 52,
+	  alignItems: "center",
+	  justifyContent: "center",
+	  borderWidth: 1.5,
+	  borderColor: theme.colors.borderStrong,
+	  backgroundColor: theme.colors.surface,
 	},
 	buttonPressed: {
 		opacity: 0.9,
 	},
 	buttonText: {
-		...typography.body2,
-		color: "#ffffff",
-		fontFamily: fonts.uiBold,
+	  ...typography.button,
+	  color: "#ffffff",
 	},
 	secondaryButtonText: {
-		...typography.body2,
-		color: theme.colors.primary,
-		fontFamily: fonts.uiBold,
+	  ...typography.button,
+	  color: theme.colors.text,
 	},
 	message: {
 		...typography.body2,
@@ -1405,20 +1398,17 @@ const styles = StyleSheet.create({
 		marginVertical: 16,
 	},
 	packageItem: {
-		backgroundColor: theme.colors.surface,
-		borderRadius: theme.roundness,
-		padding: 16,
-		borderWidth: 2,
-		borderColor: theme.colors.border,
-		marginBottom: 12,
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "space-between",
-		...theme.shadows.small,
+	  ...presets.card,
+	  padding: 16,
+	  borderWidth: 1.5,
+	  marginBottom: 12,
+	  flexDirection: "row",
+	  alignItems: "center",
+	  justifyContent: "space-between",
 	},
 	packageItemSelected: {
-		borderColor: theme.colors.primary,
-		backgroundColor: theme.colors.surface,
+	  borderColor: theme.colors.text,
+	  borderWidth: 2,
 	},
 	packageInfo: {
 		flex: 1,
@@ -1521,9 +1511,9 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	skipButtonText: {
-		...typography.body2,
-		color: theme.colors.textSecondary,
-		fontFamily: fonts.uiSemiBold,
+	  ...typography.button,
+	  fontSize: 15,
+	  color: theme.colors.textSecondary,
 	},
 	legalDisclaimer: {
 		...typography.caption,
@@ -1604,16 +1594,15 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.uiSemiBold,
 	},
 	badge: {
-		paddingHorizontal: 12,
-		paddingVertical: 4,
-		borderRadius: 12,
-		alignItems: "center",
-		justifyContent: "center",
+	  paddingHorizontal: 10,
+	  paddingVertical: 4,
+	  borderRadius: theme.radius.xs,
+	  alignItems: "center",
+	  justifyContent: "center",
 	},
 	badgeText: {
-		...typography.label,
-		fontSize: 10,
-		fontFamily: fonts.monoSemiBold,
+	  ...typography.label,
+	  fontSize: 11,
 	},
 	errorBanner: {
 		flexDirection: "row",
@@ -1708,14 +1697,13 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.uiBold,
 	},
 	smallBadge: {
-		paddingHorizontal: 8,
-		paddingVertical: 2,
-		borderRadius: 8,
-		marginTop: 4,
+	  paddingHorizontal: 6,
+	  paddingVertical: 2,
+	  borderRadius: theme.radius.xs,
+	  marginTop: 4,
 	},
 	smallBadgeText: {
-		...typography.label,
-		fontSize: 9,
-		fontFamily: fonts.monoSemiBold,
+	  ...typography.label,
+	  fontSize: 11,
 	},
 });

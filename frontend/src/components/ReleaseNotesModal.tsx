@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 20,
+    borderRadius: theme.radius.card,
     overflow: "hidden",
     ...theme.shadows.medium,
   },
@@ -104,13 +104,13 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 999,
-    paddingVertical: 13,
+    borderRadius: theme.radius.control,
+    height: 52,
+    justifyContent: "center",
     alignItems: "center",
   },
   buttonText: {
-    ...typography.body1,
+    ...typography.button,
     color: "#FFFFFF",
-    fontFamily: fonts.uiBold,
   },
 });

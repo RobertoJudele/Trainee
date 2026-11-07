@@ -24,7 +24,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { theme, typography } from "../../lib/theme";
+import { theme, typography, presets } from "../../lib/theme";
 import { useTour } from "./TourContext";
 import { useLanguage } from "../../lib/i18n/LanguageContext";
 import { fonts } from "../../lib/fonts";
@@ -400,12 +400,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.cardRaised,
     padding: theme.spacing.md,
-    borderWidth: 2,
-    borderColor: "#FACC15",
-    ...theme.shadows.large,
   },
   demoAvatar: {
     width: 48,
@@ -425,7 +421,7 @@ const styles = StyleSheet.create({
   tooltip: {
     position: "absolute",
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.card,
     padding: theme.spacing.lg,
     gap: 8,
     ...theme.shadows.large,
@@ -462,18 +458,19 @@ const styles = StyleSheet.create({
   },
   navBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
   backBtn: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
   },
   backText: {
-    ...typography.body2,
+    ...typography.button,
+    fontSize: 14,
     color: theme.colors.text,
-    fontFamily: fonts.uiBold,
   },
   nextBtn: {
     backgroundColor: theme.colors.primary,
