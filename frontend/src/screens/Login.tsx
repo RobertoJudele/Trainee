@@ -257,8 +257,10 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.sm,
   },
   backButton: {
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    marginTop: theme.spacing.xs,
   },
   backButtonText: {
     ...typography.body2,

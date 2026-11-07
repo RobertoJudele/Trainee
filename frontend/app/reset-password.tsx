@@ -247,7 +247,12 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.h1, color: theme.colors.text, textAlign: "center" },
   subtitle: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
-  backButton: { alignItems: "center", marginTop: theme.spacing.sm },
+  backButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    marginTop: theme.spacing.xs,
+  },
   backButtonText: { ...typography.body2, color: theme.colors.textSecondary },
   resendText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiSemiBold },
   resendTextDisabled: { color: theme.colors.textSecondary },

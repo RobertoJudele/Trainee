@@ -101,29 +101,28 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   button: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.roundness,
+    height: 52,
+    paddingHorizontal: 20,
+    borderRadius: theme.radius.control,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
   primaryButton: {
     backgroundColor: '#FFFFFF',
-    ...theme.shadows.medium,
   },
   secondaryButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
   },
   primaryButtonText: {
-    ...typography.h3,
+    ...typography.button,
     color: theme.colors.primary,
   },
   secondaryButtonText: {
-    ...typography.h3,
+    ...typography.button,
     color: '#FFFFFF',
   },
 });
