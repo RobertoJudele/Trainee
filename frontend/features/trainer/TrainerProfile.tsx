@@ -238,6 +238,8 @@ function TrainerProfile() {
         instagramUrl: instagramPayload,
         facebookUrl: facebookPayload,
         whatsappUrl: whatsappPayload,
+        // Empty clears it on the server, so the button drops back to no name.
+        contactNameDative: form.contactNameDative.trim(),
         specializationIds: form.selectedSpecializationIds,
       }).unwrap();
       if (response?.data) dispatch(setTrainerProfile(response.data));
@@ -632,6 +634,17 @@ function TrainerProfile() {
               <FieldError message={fieldErrors.errors.facebook} />
               <TextInput style={[styles.input, fieldErrors.errors.whatsapp && presets.inputError]} value={form.whatsappUrl} onChangeText={(v) => { fieldErrors.clear("whatsapp"); form.setWhatsappUrl(v); }} autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" placeholder={t("whatsappPlaceholder")} />
               <FieldError message={fieldErrors.errors.whatsapp} />
+              <Text style={styles.contactNameLabel}>{t("contactNameLabel")}</Text>
+              <TextInput
+                style={styles.input}
+                value={form.contactNameDative}
+                onChangeText={form.setContactNameDative}
+                autoCorrect={false}
+                maxLength={60}
+                placeholder="lui Andrei"
+                accessibilityLabel={t("contactNameLabel")}
+              />
+              <Text style={styles.contactNameHint}>{t("contactNameHint")}</Text>
             </View>
           ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
             <View style={styles.socialList}>
@@ -886,6 +899,8 @@ const styles = StyleSheet.create({
   locationSubtext: { fontFamily: fonts.ui, fontSize: 14, color: "#666" },
   socialList: { gap: 6 },
   socialItem: { fontFamily: fonts.ui, fontSize: 14, color: "#374151" },
+  contactNameLabel: { ...typography.small, fontFamily: fonts.uiSemiBold, color: theme.colors.text, marginTop: 6 },
+  contactNameHint: { ...typography.small, fontSize: 13, color: theme.colors.textSecondary },
   statsGrid: { flexDirection: "row", justifyContent: "space-around", gap: 15 },
   statCard: { alignItems: "center", flex: 1 },
   statNumber: { fontSize: 24, fontFamily: fonts.uiBold, color: "#007AFF", marginBottom: 5 },

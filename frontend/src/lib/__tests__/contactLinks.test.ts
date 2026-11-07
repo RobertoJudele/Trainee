@@ -71,6 +71,24 @@ describe("normalizeWhatsAppPhoneDigits", () => {
 });
 
 describe("getWhatsAppContactUrls", () => {
+  // The trainer page pre-fills the first message. Diacritics, spaces and "!"
+  // have to survive the trip through both URL forms.
+  it("adds an encoded message to both urls", () => {
+    const message = "Bună, Andrei! Te-am găsit pe Salvio.";
+    const encoded = encodeURIComponent(message);
+    expect(getWhatsAppContactUrls("+40721234567", message)).toEqual({
+      appUrl: `whatsapp://send?phone=40721234567&text=${encoded}`,
+      webUrl: `https://wa.me/40721234567?text=${encoded}`,
+    });
+  });
+
+  it("leaves the urls bare when the message is blank", () => {
+    expect(getWhatsAppContactUrls("+40721234567", "   ")).toEqual({
+      appUrl: "whatsapp://send?phone=40721234567",
+      webUrl: "https://wa.me/40721234567",
+    });
+  });
+
   it("builds both urls from a raw phone number", () => {
     expect(getWhatsAppContactUrls("+40721234567")).toEqual({
       appUrl: "whatsapp://send?phone=40721234567",

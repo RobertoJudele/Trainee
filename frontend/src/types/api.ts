@@ -49,6 +49,7 @@ export interface TrainerProfileAttributes {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
+  contactNameDative?: string | null;
   isFeatured: boolean;
   isAvailable: boolean;
   profileViews: number;

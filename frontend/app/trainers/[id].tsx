@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -12,8 +12,13 @@ import {
   Linking,
   TextInput,
   Pressable,
+  LayoutChangeEvent,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import * as Clipboard from "expo-clipboard";
 import { useSelector } from "react-redux";
 import {
   useGetTrainerByIdQuery,
@@ -36,13 +41,20 @@ import {
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography, presets } from "../../src/lib/theme";
-import { FieldError } from "../../src/components/ui";
+import { Button, FieldError } from "../../src/components/ui";
 import { useFieldErrors } from "../../src/lib/useFieldErrors";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
 import { getApiErrorMessage } from "../../src/lib/errors";
 import { formatFromPerSession } from "../../src/lib/price";
+import {
+  summarizePrices,
+  formatLei,
+  roCount,
+  contactButtonLabel,
+  ContactChannel,
+} from "../../src/lib/trainerPage";
 // Extracted so they can be unit-tested: the raw-digit fallback used to turn any
 // URL with enough digits in it (a Facebook profile id, say) into a WhatsApp
 // number. See src/lib/__tests__/contactLinks.test.ts.
@@ -322,20 +334,19 @@ export default function TrainerDetailsScreen() {
       ? trainer.isAvailable
       : params.isAvailableAtGym === "1";
 
+  const firstName = trainer?.user?.firstName ?? params.firstName ?? "";
+  // The first message a shy client would otherwise have to write themselves.
+  // WhatsApp opens with it typed in; Instagram and Facebook can't take text in a
+  // link, so for those it goes to the clipboard instead (see handleContact).
+  const prefilledMessage = firstName
+    ? t("contactPrefill").replace("%s", firstName)
+    : t("contactPrefill").replace(", %s", "").replace(" %s", "");
+
+  // WhatsApp first: it is the only channel that can carry the pre-filled message.
   const contactOptions = React.useMemo<ContactOption[]>(() => {
     const options: ContactOption[] = [];
 
-    const instagramUrl = normalizeSocialUrl(trainer?.instagramUrl);
-    if (instagramUrl) {
-      options.push({ label: "Instagram", channel: "instagram", url: instagramUrl, icon: "logo-instagram", color: "#E1306C" });
-    }
-
-    const facebookUrl = normalizeSocialUrl(trainer?.facebookUrl);
-    if (facebookUrl) {
-      options.push({ label: "Facebook", channel: "facebook", url: facebookUrl, icon: "logo-facebook", color: "#1877F2" });
-    }
-
-    const whatsappContactUrls = getWhatsAppContactUrls(trainer?.whatsappUrl);
+    const whatsappContactUrls = getWhatsAppContactUrls(trainer?.whatsappUrl, prefilledMessage);
     if (whatsappContactUrls) {
       options.push({
         label: "WhatsApp",
@@ -347,8 +358,21 @@ export default function TrainerDetailsScreen() {
       });
     }
 
+    const instagramUrl = normalizeSocialUrl(trainer?.instagramUrl);
+    if (instagramUrl) {
+      options.push({ label: "Instagram", channel: "instagram", url: instagramUrl, icon: "logo-instagram", color: "#E1306C" });
+    }
+
+    const facebookUrl = normalizeSocialUrl(trainer?.facebookUrl);
+    if (facebookUrl) {
+      options.push({ label: "Facebook", channel: "facebook", url: facebookUrl, icon: "logo-facebook", color: "#1877F2" });
+    }
+
     return options;
-  }, [trainer?.facebookUrl, trainer?.instagramUrl, trainer?.whatsappUrl]);
+  }, [trainer?.facebookUrl, trainer?.instagramUrl, trainer?.whatsappUrl, prefilledMessage]);
+
+  const primaryContact = contactOptions[0];
+  const otherContacts = contactOptions.slice(1);
 
   const openContactUrl = React.useCallback(async (url: string, fallbackUrl?: string) => {
     try {
@@ -371,6 +395,103 @@ export default function TrainerDetailsScreen() {
       Alert.alert(t("error"), t("failedOpenSocial"));
     }
   }, [t]);
+
+  const handleContact = useCallback(async (option: ContactOption) => {
+    // Sent before opening the link: once WhatsApp or Instagram is in
+    // front, the app may be suspended before a later request leaves.
+    // A tracking failure must never get in the way of the contact.
+    recordTrainerContact({ trainerId: trainerPublicId, channel: option.channel })
+      .unwrap()
+      .catch(() => {});
+    if (option.channel !== "whatsapp") {
+      await Clipboard.setStringAsync(prefilledMessage).catch(() => {});
+    }
+    await openContactUrl(option.url, option.fallbackUrl);
+  }, [recordTrainerContact, trainerPublicId, prefilledMessage, openContactUrl]);
+
+  const handleMoreOptions = useCallback(() => {
+    Alert.alert(fullName, undefined, [
+      {
+        text: t("reportIssue"),
+        onPress: () =>
+          router.push({
+            pathname: "/report-issue",
+            params: {
+              targetType: "trainer",
+              trainerId: trainer?.internalId ? String(trainer.internalId) : "",
+              trainerPublicId,
+            },
+          }),
+      },
+      { text: t("blockTrainer"), style: "destructive", onPress: handleBlockTrainer },
+      { text: t("cancel"), style: "cancel" },
+    ]);
+  }, [fullName, t, router, trainer?.internalId, trainerPublicId, handleBlockTrainer]);
+
+  // ── Price ──
+  // One summary feeds the headline, the rows and the bottom bar, so they can't
+  // disagree. "de la" only when there really are several prices.
+  const priceSummary = summarizePrices(sessionRate, trainerPackages);
+  const lang = language === "ro" ? "ro" : "en";
+  const priceHeadline = priceSummary
+    ? t(priceSummary.showFrom ? "priceFromHeadline" : "priceHeadline").replace(
+        "%s",
+        formatLei(priceSummary.lowest, lang)
+      )
+    : minSessionPriceLabel;
+
+  // The bar repeats the price only once the price above has scrolled away.
+  const insets = useSafeAreaInsets();
+  const priceBottomRef = useRef(0);
+  const [priceScrolledAway, setPriceScrolledAway] = useState(false);
+  const onPriceLayout = useCallback((e: LayoutChangeEvent) => {
+    priceBottomRef.current = e.nativeEvent.layout.y + e.nativeEvent.layout.height;
+  }, []);
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const away = e.nativeEvent.contentOffset.y > priceBottomRef.current;
+    setPriceScrolledAway((prev) => (prev === away ? prev : away));
+  }, []);
+
+  // ── Facts line: "Forță, slăbire · 6 ani · 4,8 din 23 de recenzii" ──
+  const yearsText =
+    experienceYears > 0
+      ? lang === "ro"
+        ? roCount(experienceYears, "an", "ani")
+        : `${experienceYears} ${experienceYears === 1 ? "year" : "years"}`
+      : null;
+  const ratingText = Number(rating).toFixed(1).replace(".", lang === "ro" ? "," : ".");
+  const reviewsText =
+    reviewCount > 0
+      ? t("reviewsSummary")
+          .replace("%r", ratingText)
+          .replace(
+            "%n",
+            lang === "ro"
+              ? roCount(reviewCount, "recenzie", "recenzii")
+              : `${reviewCount} ${reviewCount === 1 ? "review" : "reviews"}`
+          )
+      : t("noReviewsOnSalvio");
+  const factsLine = [
+    specializations.map((spec) => spec.name).join(", "),
+    yearsText,
+    reviewsText,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  // The first sentence of the bio, in the trainer's own voice, reads as a quote.
+  const bioText = (trainer?.bio ?? params.bio ?? "").trim();
+  const bioMatch = bioText.match(/^(.{12,140}?[.!?])\s+([\s\S]+)$/);
+  const bioQuote = bioMatch ? bioMatch[1] : null;
+  const bioRest = bioMatch ? bioMatch[2] : bioText;
+
+  const photoUrl = trainer?.user?.profileImageUrl ?? params.profileImageUrl ?? null;
+  const initials = fullName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   if (!hasValidTrainerId) {
     return (
@@ -445,339 +566,353 @@ export default function TrainerDetailsScreen() {
     );
   }
 
+  const barHeight = 52 + 24 + Math.max(insets.bottom, 12);
+
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      automaticallyAdjustKeyboardInsets
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.headerCard}>
-        {params.profileImageUrl ? (
-          <Image source={{ uri: params.profileImageUrl }} style={styles.avatar} />
-        ) : (
-          <View style={styles.avatarFallback}>
-            <Text style={styles.avatarInitials}>
-              {(params.firstName?.[0] ?? "") + (params.lastName?.[0] ?? "")}
-            </Text>
-          </View>
-        )}
-
-        <Text style={styles.name}>{fullName}</Text>
-        <View style={[styles.availabilityBadge, isAvailable ? styles.badgeOn : styles.badgeOff]}>
-          <Text style={styles.availabilityText}>{isAvailable ? t("available") : t("unavailable")}</Text>
-        </View>
-
-        <View style={styles.ratingRow}>
-          <Ionicons name="star" size={16} color="#F59E0B" />
-          <Text style={styles.ratingText}>{Number(rating).toFixed(1)}</Text>
-          <Text style={styles.reviewsText}>({reviewCount} {t("reviewsCount")})</Text>
-        </View>
-
-        <View style={styles.viewRow}>
-          <Ionicons name="eye-outline" size={16} color={theme.colors.textSecondary} />
-          <Text style={styles.viewText}>{trainer?.profileViews ?? 0} {t("viewsCount")}</Text>
-        </View>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("about")}</Text>
-        <Text style={styles.sectionText}>{bio}</Text>
-      </View>
-
-      {specializations.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("specializations")}</Text>
-          <View style={styles.specGrid}>
-            {specializations.map((spec) => (
-              <View key={spec.id} style={styles.specChip}>
-                <Text style={styles.specChipText}>{spec.name}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      )}
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("experienceAndRates")}</Text>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>{t("experience")}</Text>
-          <Text style={styles.infoValue}>{experienceYears} {t("years")}</Text>
-        </View>
-        {minSessionPriceLabel && (
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>{t("sessionRate")}</Text>
-            <Text style={[styles.infoValue, typography.price]}>{minSessionPriceLabel}</Text>
-          </View>
-        )}
-      </View>
-
-      {trainerPackages.length > 0 && (
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>{t("myPackages")}</Text>
-          {trainerPackages.map((pkg) => (
-            <View key={pkg.id} style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#F3F4F6'}}>
-              <View>
-                <Text style={{fontSize: 15, fontFamily: fonts.uiSemiBold, color: theme.colors.text}}>{pkg.name}</Text>
-                <Text style={{ fontFamily: fonts.ui,fontSize: 13, color: theme.colors.textSecondary, marginTop: 2}}>
-                  {pkg.sessionCount} {t("sessions")}
-                </Text>
-              </View>
-              <Text style={{ ...typography.price, color: theme.colors.primary }}>{Number(pkg.price).toFixed(2)} lei</Text>
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: barHeight + 32 }}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+      >
+        {/* ── Photo, with the name below it rather than over it ── */}
+        <View style={styles.photoWrap}>
+          {photoUrl ? (
+            <Image source={{ uri: photoUrl }} style={styles.photo} resizeMode="cover" />
+          ) : (
+            <View style={[styles.photo, styles.photoFallback]}>
+              <Text style={styles.photoInitials}>{initials}</Text>
             </View>
-          ))}
+          )}
+          <Pressable
+            onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+            style={[styles.overlayButton, { top: insets.top + 8, left: 12 }]}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={t("goBack")}
+          >
+            <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
+          </Pressable>
+          <Pressable
+            onPress={handleMoreOptions}
+            style={[styles.overlayButton, { top: insets.top + 8, right: 12 }]}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={t("a11yMoreOptions")}
+          >
+            <Ionicons name="ellipsis-horizontal" size={22} color="#FFFFFF" />
+          </Pressable>
         </View>
-      )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("location")}</Text>
-        <Text style={styles.sectionText}>{locationText || t("locationNotSpecified")}</Text>
-      </View>
+        <View style={styles.body}>
+          <Text style={styles.name}>{fullName}</Text>
+          {factsLine ? <Text style={styles.facts}>{factsLine}</Text> : null}
+          <Text style={[styles.availability, !isAvailable && styles.availabilityOff]}>
+            {isAvailable ? t("acceptsNewClients") : t("notTakingClients")}
+          </Text>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("availableGyms")}</Text>
-        {trainer?.availableGyms && trainer.availableGyms.length > 0 ? (
-          trainer.availableGyms.map((gym) => (
-            <View key={gym.id} style={styles.gymRow}>
-              <View style={styles.gymMeta}>
-                <Text style={styles.gymName}>{gym.name}</Text>
-                <Text style={styles.gymAddress}>
-                  {[gym.address, gym.city, gym.state].filter(Boolean).join(", ")}
-                </Text>
-              </View>
-              <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                <Ionicons name="star" size={12} color="#F59E0B" style={{marginRight: 2}} />
-                <Text style={styles.gymRating}>{Number(gym.rating ?? 0).toFixed(1)}</Text>
-              </View>
-            </View>
-          ))
-        ) : (
-          <Text style={styles.sectionText}>{t("noAvailableGyms")}</Text>
-        )}
-      </View>
-
-      {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
-        <TrainerImageCarousel title={t("gallery")} images={trainer.galleryImages} />
-      )}
-
-      {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
-        <TrainerImageCarousel
-          title={t("certificationsAwards")}
-          images={trainer.credentialImages}
-          resizeMode="contain"
-        />
-      )}
-
-      {/* ── Reviews ── */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{t("reviews")} ({reviews.length})</Text>
-
-        {reviews.length === 0 && reviewMode === "idle" && (
-          <Text style={styles.sectionText}>{t("noReviewsYet")}</Text>
-        )}
-
-        {reviews.map((review) => {
-          const isOwn = review.client?.id === currentUser?.id;
-          return (
-            <View key={review.id} style={styles.reviewCard}>
-              <View style={styles.reviewHeader}>
-                <View style={styles.reviewerAvatar}>
-                  <Text style={styles.reviewerInitial}>
-                    {review.client?.firstName?.[0] ?? "?"}
-                  </Text>
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.reviewerName}>
-                    {review.client
-                      ? `${review.client.firstName} ${review.client.lastName}`
-                      : "Anonymous"}
-                  </Text>
-                  <View style={styles.starsRow}>
-                    {[1, 2, 3, 4, 5].map((s) => (
-                      <Ionicons
-                        key={s}
-                        name={s <= review.rating ? "star" : "star-outline"}
-                        size={13}
-                        color="#F59E0B"
-                      />
-                    ))}
-                  </View>
-                </View>
-                {isOwn && (
-                  <View style={styles.reviewActions}>
-                    <Pressable
-                      onPress={() => openEditForm(review)}
-                      accessible
-                      accessibilityRole="button"
-                      accessibilityLabel={t("a11yEditReview")}
-                      style={styles.reviewActionBtn}
+          {/* ── Price, second thing on screen ── */}
+          {priceHeadline ? (
+            <View onLayout={onPriceLayout} style={styles.priceBlock}>
+              <Text style={styles.priceHeadline}>{priceHeadline}</Text>
+              {priceSummary && priceSummary.options.length > 1 ? (
+                <View style={styles.priceRows}>
+                  {priceSummary.options.map((option, index) => (
+                    <View
+                      key={`${option.kind}-${option.name ?? ""}-${index}`}
+                      style={[styles.priceRow, index === priceSummary.options.length - 1 && styles.priceRowLast]}
                     >
-                      <Ionicons name="pencil-outline" size={16} color={theme.colors.primary} />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => handleDeleteReview(review.id)}
-                      disabled={isDeleting}
-                      accessible
-                      accessibilityRole="button"
-                      accessibilityLabel={t("deleteReview")}
-                      style={styles.reviewActionBtn}
-                    >
-                      <Ionicons name="trash-outline" size={16} color={theme.colors.error} />
-                    </Pressable>
-                  </View>
-                )}
-                {!isOwn && (
-                  <Pressable
-                    onPress={() => handleReviewOptions(review)}
-                    accessible
-                    accessibilityRole="button"
-                    accessibilityLabel={t("reviewOptions")}
-                    style={styles.reviewActionBtn}
-                  >
-                    <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textSecondary} />
-                  </Pressable>
-                )}
-              </View>
-              {review.reviewText ? (
-                <Text style={styles.reviewText}>{review.reviewText}</Text>
+                      <Text style={styles.priceRowLabel}>
+                        {option.kind === "single" ? t("oneSessionRow") : option.name}
+                        {option.kind === "package" ? (
+                          <Text style={styles.priceRowMuted}>
+                            {"  ·  "}
+                            {t("perSessionSuffix").replace("%s", formatLei(option.perSession, lang))}
+                          </Text>
+                        ) : null}
+                      </Text>
+                      <Text style={styles.priceRowValue}>{formatLei(option.total, lang)} lei</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : priceSummary ? (
+                <Text style={styles.priceNote}>{t("singleSessionsOnly")}</Text>
+              ) : null}
+              {firstName ? (
+                <Text style={styles.priceSetBy}>{t("pricesSetBy").replace("%s", firstName)}</Text>
               ) : null}
             </View>
-          );
-        })}
+          ) : null}
 
-        {/* Write / Edit form */}
-        {(reviewMode === "write" || reviewMode === "edit") && (
-          <View style={styles.reviewForm}>
-            <Text style={styles.reviewFormTitle}>
-              {reviewMode === "edit" ? t("editYourReview") : t("writeAReview")}
-            </Text>
-            <View style={styles.starSelector}>
-              {[1, 2, 3, 4, 5].map((s) => (
-                <Pressable
-                  key={s}
-                  onPress={() => setFormRating(s)}
-                  accessible
-                  accessibilityRole="button"
-                  accessibilityLabel={`Rate ${s} star${s !== 1 ? "s" : ""}`}
-                >
-                  <Ionicons
-                    name={s <= formRating ? "star" : "star-outline"}
-                    size={30}
-                    color="#F59E0B"
-                    style={{ marginHorizontal: 4 }}
-                  />
-                </Pressable>
-              ))}
+          {/* ── About ── */}
+          {bioText ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>
+                {firstName ? t("aboutName").replace("%s", firstName) : t("about")}
+              </Text>
+              {bioQuote ? <Text style={styles.bioQuote}>„{bioQuote}”</Text> : null}
+              {bioRest ? <Text style={styles.bodyText}>{bioRest}</Text> : null}
             </View>
-            <TextInput
-              style={[styles.reviewInput, fieldErrors.errors.text && presets.inputError]}
-              placeholder={t("addComment")}
-              placeholderTextColor={theme.colors.textSecondary}
-              value={formText}
-              onChangeText={(v) => { fieldErrors.clear("text"); setFormText(v); }}
-              multiline
-              maxLength={100}
+          ) : null}
+
+          {/* ── Where they train ── */}
+          {trainer?.availableGyms && trainer.availableGyms.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("whereTheyTrain")}</Text>
+              <View>
+                {trainer.availableGyms.map((gym, index) => (
+                  <View
+                    key={gym.id}
+                    style={[styles.gymRow, index === trainer.availableGyms!.length - 1 && styles.gymRowLast]}
+                  >
+                    <Text style={styles.gymName}>{gym.name}</Text>
+                    <Text style={styles.gymAddress}>
+                      {[gym.address, gym.city].filter(Boolean).join(", ")}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ) : locationText ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("whereTheyTrain")}</Text>
+              <Text style={styles.bodyText}>{t("trainsIn").replace("%s", locationText)}</Text>
+            </View>
+          ) : null}
+
+          {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
+            <TrainerImageCarousel title={t("gallery")} images={trainer.galleryImages} />
+          )}
+
+          {trainer?.credentialImages && trainer.credentialImages.length > 0 && (
+            <TrainerImageCarousel
+              title={t("certificationsAwards")}
+              images={trainer.credentialImages}
+              resizeMode="contain"
             />
-            <FieldError message={fieldErrors.errors.text} />
-            <Text style={styles.charCount}>{formText.length}/100</Text>
-            <View style={styles.reviewFormActions}>
-              <Pressable
-                style={styles.cancelFormBtn}
-                onPress={cancelForm}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel={t("cancel")}
-              >
-                <Text style={styles.cancelFormBtnText}>{t("cancel")}</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.submitFormBtn, (isCreating || isUpdating) && { opacity: 0.6 }]}
-                onPress={submitReview}
-                disabled={isCreating || isUpdating}
-                accessible
-                accessibilityRole="button"
-                accessibilityLabel={t("submit")}
-              >
-                <Text style={styles.submitFormBtnText}>
-                  {isCreating || isUpdating ? t("saving") : t("submit")}
+          )}
+
+          {/* ── Reviews ── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t("whatClientsSay")}</Text>
+
+            {reviews.length === 0 && reviewMode === "idle" && (
+              <Text style={styles.bodyText}>{t("noReviewsYet")}</Text>
+            )}
+
+        {reviews.map((review) => {
+              const isOwn = review.client?.id === currentUser?.id;
+              return (
+                <View key={review.id} style={styles.reviewCard}>
+                  <View style={styles.reviewHeader}>
+                    <View style={styles.reviewerAvatar}>
+                      <Text style={styles.reviewerInitial}>
+                        {review.client?.firstName?.[0] ?? "?"}
+                      </Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewerName}>
+                        {review.client
+                          ? `${review.client.firstName} ${review.client.lastName}`
+                          : "Anonymous"}
+                      </Text>
+                      <View style={styles.starsRow}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Ionicons
+                            key={s}
+                            name={s <= review.rating ? "star" : "star-outline"}
+                            size={13}
+                            color="#F59E0B"
+                          />
+                        ))}
+                      </View>
+                    </View>
+                    {isOwn && (
+                      <View style={styles.reviewActions}>
+                        <Pressable
+                          onPress={() => openEditForm(review)}
+                          accessible
+                          accessibilityRole="button"
+                          accessibilityLabel={t("a11yEditReview")}
+                          style={styles.reviewActionBtn}
+                        >
+                          <Ionicons name="pencil-outline" size={16} color={theme.colors.primary} />
+                        </Pressable>
+                        <Pressable
+                          onPress={() => handleDeleteReview(review.id)}
+                          disabled={isDeleting}
+                          accessible
+                          accessibilityRole="button"
+                          accessibilityLabel={t("deleteReview")}
+                          style={styles.reviewActionBtn}
+                        >
+                          <Ionicons name="trash-outline" size={16} color={theme.colors.error} />
+                        </Pressable>
+                      </View>
+                    )}
+                    {!isOwn && (
+                      <Pressable
+                        onPress={() => handleReviewOptions(review)}
+                        accessible
+                        accessibilityRole="button"
+                        accessibilityLabel={t("reviewOptions")}
+                        style={styles.reviewActionBtn}
+                      >
+                        <Ionicons name="ellipsis-horizontal" size={18} color={theme.colors.textSecondary} />
+                      </Pressable>
+                    )}
+                  </View>
+                  {review.reviewText ? (
+                    <Text style={styles.reviewText}>{review.reviewText}</Text>
+                  ) : null}
+                </View>
+              );
+            })}
+
+            {/* Write / Edit form */}
+            {(reviewMode === "write" || reviewMode === "edit") && (
+              <View style={styles.reviewForm}>
+                <Text style={styles.reviewFormTitle}>
+                  {reviewMode === "edit" ? t("editYourReview") : t("writeAReview")}
                 </Text>
+                <View style={styles.starSelector}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Pressable
+                      key={s}
+                      onPress={() => setFormRating(s)}
+                      accessible
+                      accessibilityRole="button"
+                      accessibilityLabel={`Rate ${s} star${s !== 1 ? "s" : ""}`}
+                    >
+                      <Ionicons
+                        name={s <= formRating ? "star" : "star-outline"}
+                        size={30}
+                        color="#F59E0B"
+                        style={{ marginHorizontal: 4 }}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+                <TextInput
+                  style={[styles.reviewInput, fieldErrors.errors.text && presets.inputError]}
+                  placeholder={t("addComment")}
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={formText}
+                  onChangeText={(v) => { fieldErrors.clear("text"); setFormText(v); }}
+                  multiline
+                  maxLength={100}
+                />
+                <FieldError message={fieldErrors.errors.text} />
+                <Text style={styles.charCount}>{formText.length}/100</Text>
+                <View style={styles.reviewFormActions}>
+                  <Pressable
+                    style={styles.cancelFormBtn}
+                    onPress={cancelForm}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={t("cancel")}
+                  >
+                    <Text style={styles.cancelFormBtnText}>{t("cancel")}</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.submitFormBtn, (isCreating || isUpdating) && { opacity: 0.6 }]}
+                    onPress={submitReview}
+                    disabled={isCreating || isUpdating}
+                    accessible
+                    accessibilityRole="button"
+                    accessibilityLabel={t("submit")}
+                  >
+                    <Text style={styles.submitFormBtnText}>
+                      {isCreating || isUpdating ? t("saving") : t("submit")}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {canWriteReview && (
+              <Pressable
+                style={styles.writeReviewBtn}
+                onPress={openWriteForm}
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel={t("writeReview")}
+              >
+                <Ionicons name="star-outline" size={16} color={theme.colors.primary} />
+                <Text style={styles.writeReviewBtnText}>{t("writeReview")}</Text>
               </Pressable>
-            </View>
+            )}
+
+            {showReviewGateHint && (
+              <Text style={styles.bodyText}>{t("reviewRequiresSession")}</Text>
+            )}
           </View>
-        )}
 
-        {canWriteReview && (
-          <Pressable
-            style={styles.writeReviewBtn}
-            onPress={openWriteForm}
-            accessible
-            accessibilityRole="button"
-            accessibilityLabel={t("writeReview")}
-          >
-            <Ionicons name="star-outline" size={16} color={theme.colors.primary} />
-            <Text style={styles.writeReviewBtnText}>{t("writeReview")}</Text>
-          </Pressable>
-        )}
-
-        {showReviewGateHint && (
-          <Text style={styles.sectionText}>{t("reviewRequiresSession")}</Text>
-        )}
-      </View>
-
-      {contactOptions.length > 0 && (
-        <View style={styles.socialRow}>
-          {contactOptions.map((option) => (
-            <TouchableOpacity
-              key={option.label}
-              style={styles.socialIconButton}
-              onPress={() => {
-                // Sent before opening the link: once WhatsApp or Instagram is in
-                // front, the app may be suspended before a later request leaves.
-                // A tracking failure must never get in the way of the contact.
-                recordTrainerContact({ trainerId: trainerPublicId, channel: option.channel })
-                  .unwrap()
-                  .catch(() => {});
-                void openContactUrl(option.url, option.fallbackUrl);
-              }}
-              accessible={true}
-              accessibilityRole="button"
-              accessibilityLabel={option.label}
-            >
-              <Ionicons name={option.icon} size={28} color={option.color} />
-            </TouchableOpacity>
-          ))}
+          {/* ── Other ways to get in touch ── */}
+          {otherContacts.length > 0 ? (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("otherContactWays")}</Text>
+              <View style={styles.otherContacts}>
+                {otherContacts.map((option) => (
+                  <Button
+                    key={option.channel}
+                    title={option.label}
+                    icon={option.icon}
+                    variant="secondary"
+                    size="md"
+                    style={{ flex: 1 }}
+                    onPress={() => void handleContact(option)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
         </View>
-      )}
+      </ScrollView>
 
-      <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={() =>
-          router.push({
-            pathname: "/report-issue",
-            params: {
-              targetType: "trainer",
-              trainerId: trainer?.internalId ? String(trainer.internalId) : "",
-              trainerPublicId,
-            },
-          })
-        }
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={t("reportIssue")}
-      >
-        <Text style={styles.secondaryButtonText}>{t("reportIssue")}</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={styles.secondaryButton}
-        onPress={handleBlockTrainer}
-        accessible={true}
-        accessibilityRole="button"
-        accessibilityLabel={t("blockTrainer")}
-      >
-        <Text style={styles.secondaryButtonText}>{t("blockTrainer")}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      {/* ── Contact bar, always within reach ── */}
+      {primaryContact ? (
+        <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
+          <View style={styles.barRow}>
+            {priceScrolledAway && priceSummary ? (
+              <View style={styles.barPrice}>
+                {priceSummary.showFrom ? (
+                  <Text style={styles.barPriceFrom}>{lang === "ro" ? "de la" : "from"}</Text>
+                ) : null}
+                <Text style={styles.barPriceValue}>{formatLei(priceSummary.lowest, lang)} lei</Text>
+              </View>
+            ) : null}
+            <Button
+              title={contactButtonLabel(
+                primaryContact.channel as ContactChannel,
+                lang,
+                firstName,
+                trainer?.contactNameDative
+              )}
+              style={{ flex: 1 }}
+              onPress={() => void handleContact(primaryContact)}
+            />
+            {primaryContact.channel === "whatsapp" && otherContacts[0] ? (
+              <Pressable
+                onPress={() => void handleContact(otherContacts[0])}
+                style={styles.barIconButton}
+                accessibilityRole="button"
+                accessibilityLabel={otherContacts[0].label}
+              >
+                <Ionicons name={otherContacts[0].icon} size={22} color={theme.colors.text} />
+              </Pressable>
+            ) : null}
+          </View>
+          {primaryContact.channel !== "whatsapp" ? (
+            <Text style={styles.barHint}>{t("contactCopiedHint")}</Text>
+          ) : null}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
@@ -785,11 +920,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: theme.colors.background,
-  },
-  content: {
-    padding: theme.spacing.lg,
-    paddingBottom: 36,
-    gap: 14,
   },
   centered: {
     flex: 1,
@@ -808,140 +938,159 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     textAlign: "center",
   },
-  headerCard: {
-    ...presets.card,
-    padding: theme.spacing.lg,
+  photoWrap: {
+    position: "relative",
+  },
+  photo: {
+    width: "100%",
+    height: 300,
+    backgroundColor: theme.colors.surfaceSunken,
+  },
+  photoFallback: {
     alignItems: "center",
-  },
-  avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    marginBottom: 10,
-  },
-  avatarFallback: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: theme.colors.primary,
     justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 10,
   },
-  avatarInitials: {
-    ...typography.h3,
-    color: "#fff",
-    fontFamily: fonts.uiExtraBold,
+  photoInitials: {
+    ...typography.display,
+    fontSize: 72,
+    lineHeight: 80,
+    color: theme.colors.textSecondary,
+  },
+  overlayButton: {
+    position: "absolute",
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.pill,
+    backgroundColor: "rgba(15,23,42,0.45)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  body: {
+    paddingHorizontal: 20,
+    paddingTop: 18,
   },
   name: {
-    ...typography.h3,
+    ...typography.display,
+    fontSize: 40,
+    lineHeight: 44,
     color: theme.colors.text,
-    marginBottom: 8,
   },
-  availabilityBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginBottom: 10,
+  facts: {
+    ...typography.small,
+    fontSize: 15,
+    lineHeight: 22,
+    color: "#334155",
+    marginTop: 6,
   },
-  badgeOn: { backgroundColor: "#DCFCE7" },
-  badgeOff: { backgroundColor: "#FEE2E2" },
-  availabilityText: {
-    ...typography.label,
+  availability: {
+    ...typography.small,
+    fontSize: 15,
+    fontFamily: fonts.uiSemiBold,
+    color: "#065F46",
+    marginTop: 4,
+  },
+  availabilityOff: {
+    color: theme.colors.textSecondary,
+  },
+  priceBlock: {
+    marginTop: 20,
+  },
+  priceHeadline: {
+    fontFamily: fonts.uiBold,
+    fontSize: 24,
+    lineHeight: 30,
     color: theme.colors.text,
-    fontFamily: fonts.monoSemiBold,
   },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  viewRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
+  priceRows: {
     marginTop: 10,
   },
-  ratingText: {
-    ...typography.body1,
+  priceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  priceRowLast: {
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.border,
+  },
+  priceRowLabel: {
+    ...typography.body,
+    fontSize: 15,
     color: theme.colors.text,
-    fontFamily: fonts.uiBold,
+    flexShrink: 1,
   },
-  reviewsText: {
-    ...typography.label,
+  priceRowMuted: {
     color: theme.colors.textSecondary,
   },
-  viewText: {
-    ...typography.label,
+  priceRowValue: {
+    ...typography.price,
+    fontSize: 15,
+    color: theme.colors.text,
+  },
+  priceNote: {
+    ...typography.body,
+    fontSize: 15,
+    color: "#334155",
+    marginTop: 6,
+  },
+  priceSetBy: {
+    ...typography.small,
+    fontSize: 13,
     color: theme.colors.textSecondary,
+    marginTop: 8,
   },
   section: {
-    ...presets.card,
-    padding: theme.spacing.lg,
-    gap: 8,
+    marginTop: 40,
+    gap: 10,
   },
   sectionTitle: {
-    ...typography.h3,
+    ...typography.heading,
     color: theme.colors.text,
   },
-  specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  specChip: {
-    borderRadius: theme.radius.xs,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: `${theme.colors.primary}15`,
-  },
-  specChipText: { ...typography.label, color: theme.colors.primary },
-  sectionText: {
-    ...typography.body2,
-    color: theme.colors.textSecondary,
-    lineHeight: 22,
-  },
-  infoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 4,
-  },
-  infoLabel: {
-    ...typography.body2,
-    color: theme.colors.textSecondary,
-  },
-  infoValue: {
-    ...typography.body2,
+  bioQuote: {
+    fontFamily: fonts.uiSemiBold,
+    fontSize: 20,
+    lineHeight: 28,
     color: theme.colors.text,
-    fontFamily: fonts.uiBold,
+  },
+  bodyText: {
+    ...typography.body,
+    color: "#334155",
   },
   gymRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    paddingVertical: 8,
+    gap: 12,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+  },
+  gymRowLast: {
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
-    gap: 10,
   },
-  gymMeta: { flex: 1 },
   gymName: {
-    ...typography.body1,
-    color: theme.colors.text,
+    ...typography.body,
     fontFamily: fonts.uiBold,
+    color: theme.colors.text,
   },
   gymAddress: {
-    ...typography.caption,
+    ...typography.small,
     color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  gymRating: {
-    ...typography.label,
-    color: theme.colors.text,
-    fontFamily: fonts.monoSemiBold,
+    textAlign: "right",
+    flexShrink: 1,
   },
   primaryButton: {
     marginTop: 4,
     backgroundColor: theme.colors.primary,
     borderRadius: theme.radius.control,
     height: 52,
+    paddingHorizontal: 20,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -949,35 +1098,56 @@ const styles = StyleSheet.create({
     ...typography.button,
     color: "#fff",
   },
-  secondaryButton: {
-    marginTop: 2,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radius.control,
-    height: 52,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: theme.colors.error,
-  },
-  secondaryButtonText: {
-    ...typography.button,
-    color: theme.colors.error,
-  },
-  socialRow: {
+  otherContacts: {
     flexDirection: "row",
-    justifyContent: "center",
-    gap: 14,
-    marginTop: 2,
+    gap: 10,
   },
-  socialIconButton: {
+  bar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: theme.colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.border,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    ...theme.shadows.medium,
+  },
+  barRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  barPrice: {
+    flexShrink: 0,
+  },
+  barPriceFrom: {
+    ...typography.small,
+    fontSize: 12,
+    lineHeight: 16,
+    color: theme.colors.textSecondary,
+  },
+  barPriceValue: {
+    ...typography.price,
+    color: theme.colors.text,
+  },
+  barIconButton: {
     width: 52,
     height: 52,
-    borderRadius: theme.radius.pill,
-    backgroundColor: theme.colors.surface,
+    borderRadius: theme.radius.control,
     borderWidth: 1.5,
     borderColor: theme.colors.borderStrong,
-    justifyContent: "center",
+    backgroundColor: theme.colors.surface,
     alignItems: "center",
+    justifyContent: "center",
+  },
+  barHint: {
+    ...typography.small,
+    fontSize: 13,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
+    marginTop: 6,
   },
   reviewCard: {
     borderTopWidth: 1,

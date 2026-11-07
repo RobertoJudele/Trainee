@@ -9,6 +9,7 @@ export interface TrainerFormFields {
   instagramUrl: string;
   facebookUrl: string;
   whatsappUrl: string;
+  contactNameDative: string;
   selectedSpecializationIds: number[];
 }
 
@@ -21,6 +22,7 @@ export interface TrainerFormSetters {
   setInstagramUrl: (v: string) => void;
   setFacebookUrl: (v: string) => void;
   setWhatsappUrl: (v: string) => void;
+  setContactNameDative: (v: string) => void;
   toggleSpecialization: (id: number) => void;
 }
 
@@ -33,6 +35,7 @@ interface TrainerLike {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
+  contactNameDative?: string | null;
   specializations?: Array<{ id: number }>;
 }
 
@@ -55,6 +58,7 @@ function hydrateFromTrainer(trainer: TrainerLike | null | undefined) {
     instagramUrl: trainer?.instagramUrl ?? "",
     facebookUrl: trainer?.facebookUrl ?? "",
     whatsappUrl: trainer?.whatsappUrl ?? "",
+    contactNameDative: trainer?.contactNameDative ?? "",
     selectedSpecializationIds: Array.isArray(trainer?.specializations)
       ? trainer.specializations.map((s) => s.id) : [],
   };
@@ -73,6 +77,7 @@ export function useTrainerFormState(
   const [instagramUrl, setInstagramUrl] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
+  const [contactNameDative, setContactNameDative] = useState("");
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -86,6 +91,7 @@ export function useTrainerFormState(
     setInstagramUrl(values.instagramUrl);
     setFacebookUrl(values.facebookUrl);
     setWhatsappUrl(values.whatsappUrl);
+    setContactNameDative(values.contactNameDative);
     setSelectedSpecializationIds(values.selectedSpecializationIds);
   }, [initialTrainer]);
 
@@ -105,6 +111,7 @@ export function useTrainerFormState(
     setInstagramUrl(values.instagramUrl);
     setFacebookUrl(values.facebookUrl);
     setWhatsappUrl(values.whatsappUrl);
+    setContactNameDative(values.contactNameDative);
     setSelectedSpecializationIds(values.selectedSpecializationIds);
   }, []);
 
@@ -117,6 +124,7 @@ export function useTrainerFormState(
     instagramUrl, setInstagramUrl,
     facebookUrl, setFacebookUrl,
     whatsappUrl, setWhatsappUrl,
+    contactNameDative, setContactNameDative,
     selectedSpecializationIds,
     toggleSpecialization,
     resetToTrainer,

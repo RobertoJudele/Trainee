@@ -53,9 +53,13 @@ export const normalizeWhatsAppPhoneDigits = (value: string): string | null => {
  * WhatsApp needs two URLs: the app scheme, and an https fallback for when the
  * app isn't installed. Accepts a raw phone number or a wa.me / api.whatsapp.com
  * link and digs the number out of either.
+ *
+ * `message` pre-fills the chat, so a shy client doesn't start from an empty box.
+ * Only WhatsApp supports this; Instagram and Facebook links can't carry text.
  */
 export const getWhatsAppContactUrls = (
-  value?: string | null
+  value?: string | null,
+  message?: string
 ): { appUrl: string; webUrl: string } | null => {
   if (!value) {
     return null;
@@ -106,8 +110,9 @@ export const getWhatsAppContactUrls = (
     return null;
   }
 
+  const text = message?.trim() ? encodeURIComponent(message.trim()) : null;
   return {
-    appUrl: `whatsapp://send?phone=${phoneDigits}`,
-    webUrl: `https://wa.me/${phoneDigits}`,
+    appUrl: `whatsapp://send?phone=${phoneDigits}${text ? `&text=${text}` : ""}`,
+    webUrl: `https://wa.me/${phoneDigits}${text ? `?text=${text}` : ""}`,
   };
 };

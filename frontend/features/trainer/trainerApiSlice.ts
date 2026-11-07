@@ -25,6 +25,7 @@ interface TrainerUpdateRequest {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
+  contactNameDative?: string | null;
   specializationIds?: number[];
 }
 
@@ -111,6 +112,8 @@ export interface PublicTrainerProfile {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
+  /** Name in the dative for the contact button ("lui Andrei"); typed in at onboarding. */
+  contactNameDative?: string | null;
   isFeatured: boolean;
   isAvailable: boolean;
   profileViews: number;
