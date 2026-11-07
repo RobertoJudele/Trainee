@@ -56,6 +56,8 @@ import {
   TrainerPackageItem,
 } from "./trainerPackageApiSlice";
 import { fonts } from "../../src/lib/fonts";
+import { FieldError } from "../../src/components/ui";
+import { useFieldErrors } from "../../src/lib/useFieldErrors";
 
 const { height: SCREEN_H } = Dimensions.get("window");
 const MAX_TRAINER_IMAGES = 5;
@@ -140,6 +142,9 @@ function TrainerProfile() {
   const { pickAndUpload, isUploading: isUploadingAvatar } = useProfilePictureUpload();
   const images = useTrainerImages();
   const form = useTrainerFormState({ initialTrainer: trainer });
+  const fieldErrors = useFieldErrors<"experience" | "specs" | "instagram" | "facebook" | "whatsapp">();
+  // Keys: {row}.{name|price|sessionCount}
+  const packageErrors = useFieldErrors<string>();
 
   // ── Packages ──
   const { data: packagesResponse } = useGetTrainerPackagesQuery(trainer?.id ?? 0, { skip: !trainer?.id });
@@ -207,22 +212,21 @@ function TrainerProfile() {
     if (!trainer) return;
 
     const parsedExperience = form.experienceYears.trim() === "" ? undefined : Number(form.experienceYears);
-
-    if (parsedExperience !== undefined && (!Number.isFinite(parsedExperience) || parsedExperience < 0)) {
-      Alert.alert(t("invalidInput"), t("invalidExperience"));
-      return;
-    }
-    if (form.selectedSpecializationIds.length === 0) {
-      Alert.alert(t("invalidInput"), t("invalidSpecializations"));
-      return;
-    }
-
     const instagramPayload = normalizeSocialUrlForSave(form.instagramUrl);
-    if (instagramPayload === "INVALID") { Alert.alert(t("invalidInput"), t("invalidInstagram")); return; }
     const facebookPayload = normalizeSocialUrlForSave(form.facebookUrl);
-    if (facebookPayload === "INVALID") { Alert.alert(t("invalidInput"), t("invalidFacebook")); return; }
     const whatsappPayload = normalizeWhatsAppForSave(form.whatsappUrl);
-    if (whatsappPayload === "INVALID") { Alert.alert(t("invalidInput"), t("invalidWhatsApp")); return; }
+
+    // Every problem at once, each under its own field.
+    const valid = fieldErrors.setAll({
+      ...(parsedExperience !== undefined && (!Number.isFinite(parsedExperience) || parsedExperience < 0)
+        ? { experience: t("invalidExperience") } : {}),
+      ...(form.selectedSpecializationIds.length === 0 ? { specs: t("invalidSpecializations") } : {}),
+      ...(instagramPayload === "INVALID" ? { instagram: t("invalidInstagram") } : {}),
+      ...(facebookPayload === "INVALID" ? { facebook: t("invalidFacebook") } : {}),
+      ...(whatsappPayload === "INVALID" ? { whatsapp: t("invalidWhatsApp") } : {}),
+    });
+    // The payload checks repeat `valid` so TypeScript narrows "INVALID" out below.
+    if (!valid || instagramPayload === "INVALID" || facebookPayload === "INVALID" || whatsappPayload === "INVALID") return;
 
     try {
       const response = await updateTrainerProfile({
@@ -242,7 +246,7 @@ function TrainerProfile() {
     } catch (error: unknown) {
       Alert.alert(t("error"), getApiErrorMessage(error, t("updateError")));
     }
-  }, [trainer, form, updateTrainerProfile, dispatch, t]);
+  }, [trainer, form, fieldErrors, updateTrainerProfile, dispatch, t]);
 
   // ── Package editing ──
   const addEditPackageRow = useCallback(() => {
@@ -252,19 +256,34 @@ function TrainerProfile() {
 
   const removeEditPackageRow = useCallback((index: number) => {
     setEditingPackages((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+    packageErrors.setAll({}); // keyed by row index, which just shifted
+  }, [packageErrors]);
 
   const updateEditPackageField = useCallback(
     (index: number, field: "name" | "price" | "sessionCount", value: string) => {
+      packageErrors.clear(`${index}.${field}`);
       setEditingPackages((prev) =>
         prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
       );
     },
-    []
+    [packageErrors]
   );
 
   const handleSavePackages = useCallback(async () => {
     if (!trainer) return;
+
+    // Validate every row before touching the server. This used to run inside the
+    // save loop, after deletions and earlier rows had already been written, so one
+    // bad price left the packages half saved.
+    const problems: Record<string, string> = {};
+    editingPackages.forEach((pkg, i) => {
+      const price = parseFloat(pkg.price);
+      const sessionCount = parseInt(pkg.sessionCount);
+      if (!pkg.name.trim()) problems[`${i}.name`] = t("packageNameRequired");
+      if (isNaN(price) || price <= 0) problems[`${i}.price`] = t("packagePriceRequired");
+      if (isNaN(sessionCount) || sessionCount < 1) problems[`${i}.sessionCount`] = t("sessionCountRequired");
+    });
+    if (!packageErrors.setAll(problems)) return;
 
     try {
       const existingIds = new Set(editingPackages.filter((p) => p.id).map((p) => p.id!));
@@ -278,11 +297,6 @@ function TrainerProfile() {
         const price = parseFloat(pkg.price);
         const sessionCount = parseInt(pkg.sessionCount);
 
-        if (!pkg.name.trim() || isNaN(price) || price <= 0 || isNaN(sessionCount) || sessionCount < 1) {
-          Alert.alert(t("invalidInput"), t("packagePriceRequired"));
-          return;
-        }
-
         if (pkg.id) {
           await updatePkg({ id: pkg.id, name: pkg.name.trim(), price, sessionCount, sortOrder: i });
         } else {
@@ -294,7 +308,7 @@ function TrainerProfile() {
     } catch (error: unknown) {
       Alert.alert(t("error"), getApiErrorMessage(error, t("updateError")));
     }
-  }, [trainer, editingPackages, trainerPackages, createPkg, updatePkg, deletePkg, t]);
+  }, [trainer, editingPackages, trainerPackages, packageErrors, createPkg, updatePkg, deletePkg, t]);
 
   // ── Menu items ──
   const menuItems: ProfileMenuItem[] = useMemo(() => [
@@ -495,7 +509,8 @@ function TrainerProfile() {
           <Text style={styles.sectionTitle}>{t("experience")}</Text>
           {isEditing ? (
             <View style={styles.editGrid}>
-              <TextInput style={styles.input} keyboardType="number-pad" value={form.experienceYears} onChangeText={form.setExperienceYears} placeholder={t("experiencePlaceholder")} />
+              <TextInput style={[styles.input, fieldErrors.errors.experience && presets.inputError]} keyboardType="number-pad" value={form.experienceYears} onChangeText={(v) => { fieldErrors.clear("experience"); form.setExperienceYears(v); }} placeholder={t("experiencePlaceholder")} />
+              <FieldError message={fieldErrors.errors.experience} />
             </View>
           ) : (
             <View style={styles.infoGrid}>
@@ -533,10 +548,17 @@ function TrainerProfile() {
                       </Pressable>
                     )}
                   </View>
-                  <TextInput style={styles.input} value={pkg.name} onChangeText={(v) => updateEditPackageField(index, "name", v)} placeholder={t("packageName")} />
+                  <TextInput style={[styles.input, packageErrors.errors[`${index}.name`] && presets.inputError]} value={pkg.name} onChangeText={(v) => updateEditPackageField(index, "name", v)} placeholder={t("packageName")} />
+                  <FieldError message={packageErrors.errors[`${index}.name`]} />
                   <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-                    <TextInput style={[styles.input, { flex: 1 }]} value={pkg.price} onChangeText={(v) => updateEditPackageField(index, "price", v)} placeholder={t("packagePrice")} keyboardType="numeric" />
-                    <TextInput style={[styles.input, { flex: 1 }]} value={pkg.sessionCount} onChangeText={(v) => updateEditPackageField(index, "sessionCount", v)} placeholder={t("sessionCount")} keyboardType="number-pad" />
+                    <View style={{ flex: 1 }}>
+                      <TextInput style={[styles.input, packageErrors.errors[`${index}.price`] && presets.inputError]} value={pkg.price} onChangeText={(v) => updateEditPackageField(index, "price", v)} placeholder={t("packagePrice")} keyboardType="numeric" />
+                      <FieldError message={packageErrors.errors[`${index}.price`]} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <TextInput style={[styles.input, packageErrors.errors[`${index}.sessionCount`] && presets.inputError]} value={pkg.sessionCount} onChangeText={(v) => updateEditPackageField(index, "sessionCount", v)} placeholder={t("sessionCount")} keyboardType="number-pad" />
+                      <FieldError message={packageErrors.errors[`${index}.sessionCount`]} />
+                    </View>
                   </View>
                 </View>
               ))}
@@ -604,9 +626,12 @@ function TrainerProfile() {
           </View>
           {isEditing ? (
             <View style={styles.editGrid}>
-              <TextInput style={styles.input} value={form.instagramUrl} onChangeText={form.setInstagramUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("instagramPlaceholder")} />
-              <TextInput style={styles.input} value={form.facebookUrl} onChangeText={form.setFacebookUrl} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("facebookPlaceholder")} />
-              <TextInput style={styles.input} value={form.whatsappUrl} onChangeText={form.setWhatsappUrl} autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" placeholder={t("whatsappPlaceholder")} />
+              <TextInput style={[styles.input, fieldErrors.errors.instagram && presets.inputError]} value={form.instagramUrl} onChangeText={(v) => { fieldErrors.clear("instagram"); form.setInstagramUrl(v); }} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("instagramPlaceholder")} />
+              <FieldError message={fieldErrors.errors.instagram} />
+              <TextInput style={[styles.input, fieldErrors.errors.facebook && presets.inputError]} value={form.facebookUrl} onChangeText={(v) => { fieldErrors.clear("facebook"); form.setFacebookUrl(v); }} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder={t("facebookPlaceholder")} />
+              <FieldError message={fieldErrors.errors.facebook} />
+              <TextInput style={[styles.input, fieldErrors.errors.whatsapp && presets.inputError]} value={form.whatsappUrl} onChangeText={(v) => { fieldErrors.clear("whatsapp"); form.setWhatsappUrl(v); }} autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" placeholder={t("whatsappPlaceholder")} />
+              <FieldError message={fieldErrors.errors.whatsapp} />
             </View>
           ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
             <View style={styles.socialList}>
@@ -636,11 +661,12 @@ function TrainerProfile() {
                 {specializationOptions.map((spec) => {
                   const active = form.selectedSpecializationIds.includes(spec.id);
                   return (
-                    <Pressable key={spec.id} style={[styles.specChip, active && styles.specChipActive]} onPress={() => form.toggleSpecialization(spec.id)}>
+                    <Pressable key={spec.id} style={[styles.specChip, active && styles.specChipActive]} onPress={() => { fieldErrors.clear("specs"); form.toggleSpecialization(spec.id); }}>
                       <Text style={[styles.specChipText, active && styles.specChipTextActive]}>{spec.name}</Text>
                     </Pressable>
                   );
                 })}
+                <FieldError message={fieldErrors.errors.specs} style={{ width: "100%" }} />
               </View>
             ) : (
               <View style={styles.specFallbackBox}>
@@ -741,9 +767,11 @@ function TrainerProfile() {
                 <Ionicons name={isUpdating ? "sync" : "save-outline"} size={18} color="#fff" />
                 <Text style={styles.primaryActionText}>{isUpdating ? t("saving") : t("saveProfile")}</Text>
               </Pressable>
+              {/* The field messages can be far above; say so next to the button. */}
+              <FieldError message={fieldErrors.hasErrors ? t("fixHighlightedFields") : undefined} />
               <Pressable
                 style={({ pressed }) => [styles.actionButton, styles.secondaryAction, pressed && styles.buttonPressed]}
-                onPress={() => { if (trainer) form.resetToTrainer(trainer); setIsEditing(false); }}
+                onPress={() => { if (trainer) form.resetToTrainer(trainer); fieldErrors.setAll({}); setIsEditing(false); }}
               >
                 <Text style={styles.secondaryActionText}>{t("cancel")}</Text>
               </Pressable>

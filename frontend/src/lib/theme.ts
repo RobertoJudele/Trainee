@@ -168,6 +168,8 @@ export const presets = {
   chipSelected: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
   chipText: { ...small, fontFamily: fonts.uiSemiBold, color: theme.colors.text },
   chipTextSelected: { color: '#FFFFFF' },
+  // Added to an input's style when its field has a validation message.
+  inputError: { borderColor: theme.colors.error, borderWidth: 2 },
   input: {
     minHeight: 52,
     paddingHorizontal: 16,

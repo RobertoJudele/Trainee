@@ -29,6 +29,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { ApiEnvelope, TrainerProfileAttributes } from "../../src/types/api";
 import { fonts } from "../../src/lib/fonts";
+import { FieldError } from "../../src/components/ui";
+import { useFieldErrors } from "../../src/lib/useFieldErrors";
 export default function CreateTrainer() {
   const { t } = useLanguage();
   const [bio, setBio] = useState("");
@@ -45,6 +47,8 @@ export default function CreateTrainer() {
   const user = useSelector(selectCurrentUser);
   const trainer = useSelector(selectCurrentTrainer)
   const errRef = useRef<Text>(null);
+  // Keys: bio, exp, specs, city, county, country, and pkg{i}.{name|price|sessionCount}.
+  const fieldErrors = useFieldErrors<string>();
   const [errMsg, setErrMsg] = useState("");
   const token = useSelector(selectCurrentToken);
   const [creatingTrainer, { isLoading }] = useCreateTrainerMutation();
@@ -59,6 +63,7 @@ export default function CreateTrainer() {
   const dispatch = useDispatch();
 
   const toggleSpecialization = useCallback((id: number) => {
+    fieldErrors.clear("specs");
     setSelectedSpecializationIds((prev) =>
       prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
     );
@@ -71,10 +76,15 @@ export default function CreateTrainer() {
 
   const removePackageRow = useCallback((index: number) => {
     setPackages((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+    // Package messages are keyed by row index, which just shifted.
+    fieldErrors.setAll(
+      Object.fromEntries(Object.entries(fieldErrors.errors).filter(([k]) => !k.startsWith("pkg")))
+    );
+  }, [fieldErrors]);
 
   const updatePackageField = useCallback(
     (index: number, field: "name" | "price" | "sessionCount", value: string) => {
+      fieldErrors.clear(`pkg${index}.${field}`);
       setPackages((prev) =>
         prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
       );
@@ -82,63 +92,27 @@ export default function CreateTrainer() {
     []
   );
 
+  // Collects every problem at once so each shows under its own field.
   const validateForm = () => {
-    if (!bio.trim()) {
-      setErrMsg(t("bioIsRequired"));
-      return false;
-    }
-    if (!exp.trim()) {
-      setErrMsg(t("experienceIsRequired"));
-      return false;
-    }
-    if (packages.length === 0) {
-      setErrMsg(t("packageNameRequired"));
-      return false;
-    }
-    for (const pkg of packages) {
-      if (!pkg.name.trim()) {
-        setErrMsg(t("packageNameRequired"));
-        return false;
-      }
+    const next: Record<string, string> = {};
+    if (!bio.trim()) next.bio = t("bioIsRequired");
+    if (!exp.trim()) next.exp = t("experienceIsRequired");
+    if (selectedSpecializationIds.length === 0) next.specs = t("invalidSpecializations");
+    packages.forEach((pkg, i) => {
+      if (!pkg.name.trim()) next[`pkg${i}.name`] = t("packageNameRequired");
       if (!pkg.price.trim() || isNaN(parseFloat(pkg.price)) || parseFloat(pkg.price) <= 0) {
-        setErrMsg(t("packagePriceRequired"));
-        return false;
+        next[`pkg${i}.price`] = t("packagePriceRequired");
       }
       if (!pkg.sessionCount.trim() || isNaN(parseInt(pkg.sessionCount)) || parseInt(pkg.sessionCount) < 1) {
-        setErrMsg(t("sessionCountRequired"));
-        return false;
+        next[`pkg${i}.sessionCount`] = t("sessionCountRequired");
       }
-    }
-    if (!city.trim()) {
-      setErrMsg(t("cityIsRequired"));
-      return false;
-    }
-    if (!county.trim()) {
-      setErrMsg(t("countyIsRequired"));
-      return false;
-    }
-    if (!country.trim()) {
-      setErrMsg(t("countryIsRequired"));
-      return false;
-    }
-    if (country.trim().length < 2) {
-      setErrMsg(t("countryMinLength"));
-      return false;
-    }
-    if (county.trim().length < 2) {
-      setErrMsg(t("countryMinLength"));
-      return false;
-    }
-    if (city.trim().length < 2) {
-      setErrMsg(t("cityIsRequired"));
-      return false;
-    }
-    if (selectedSpecializationIds.length === 0) {
-      setErrMsg(t("invalidSpecializations"));
-      return false;
-    }
-
-    return true;
+    });
+    if (city.trim().length < 2) next.city = t("cityIsRequired");
+    if (!county.trim()) next.county = t("countyIsRequired");
+    else if (county.trim().length < 2) next.county = t("countyMinLength");
+    if (!country.trim()) next.country = t("countryIsRequired");
+    else if (country.trim().length < 2) next.country = t("countryMinLength");
+    return fieldErrors.setAll(next);
   };
 
   const handleSubmit = useCallback(async () => {
@@ -276,15 +250,6 @@ export default function CreateTrainer() {
           />
 
           <View style={styles.form}>
-            {/* Error Message */}
-            {errMsg ? (
-              <View style={styles.errorContainer}>
-                <Text ref={errRef} style={styles.errorText}>
-                  {errMsg}
-                </Text>
-              </View>
-            ) : null}
-
             {/* Bio Section */}
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
@@ -295,25 +260,27 @@ export default function CreateTrainer() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t("bioRequired")}</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, fieldErrors.errors.bio && presets.inputError]}
                   value={bio}
                   placeholder={t("bioPlaceholderLong")}
-                  onChangeText={setBio}
+                  onChangeText={(v) => { fieldErrors.clear("bio"); setBio(v); }}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
                 />
+                <FieldError message={fieldErrors.errors.bio} />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t("experienceRequired")}</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, fieldErrors.errors.exp && presets.inputError]}
                   value={exp}
                   placeholder={t("experiencePlaceholderLong")}
-                  onChangeText={setExp}
+                  onChangeText={(v) => { fieldErrors.clear("exp"); setExp(v); }}
                   keyboardType="number-pad"
                 />
+                <FieldError message={fieldErrors.errors.exp} />
               </View>
             </View>
 
@@ -366,6 +333,7 @@ export default function CreateTrainer() {
                   </Pressable>
                 </View>
               )}
+              <FieldError message={fieldErrors.errors.specs} />
             </View>
 
             {/* Packages Section */}
@@ -390,32 +358,35 @@ export default function CreateTrainer() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>{t("packageName")}</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, fieldErrors.errors[`pkg${index}.name`] && presets.inputError]}
                       value={pkg.name}
                       placeholder="e.g. Starter Pack"
                       onChangeText={(v) => updatePackageField(index, "name", v)}
                     />
+                    <FieldError message={fieldErrors.errors[`pkg${index}.name`]} />
                   </View>
                   <View style={styles.row}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>{t("packagePrice")}</Text>
                       <TextInput
-                        style={styles.input}
+                        style={[styles.input, fieldErrors.errors[`pkg${index}.price`] && presets.inputError]}
                         value={pkg.price}
                         placeholder="120"
                         onChangeText={(v) => updatePackageField(index, "price", v)}
                         keyboardType="numeric"
                       />
+                      <FieldError message={fieldErrors.errors[`pkg${index}.price`]} />
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>{t("sessionCount")}</Text>
                       <TextInput
-                        style={styles.input}
+                        style={[styles.input, fieldErrors.errors[`pkg${index}.sessionCount`] && presets.inputError]}
                         value={pkg.sessionCount}
                         placeholder="4"
                         onChangeText={(v) => updatePackageField(index, "sessionCount", v)}
                         keyboardType="number-pad"
                       />
+                      <FieldError message={fieldErrors.errors[`pkg${index}.sessionCount`]} />
                     </View>
                   </View>
                 </View>
@@ -442,32 +413,35 @@ export default function CreateTrainer() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t("cityRequired")}</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, fieldErrors.errors.city && presets.inputError]}
                   value={city}
                   placeholder={t("enterYourCity")}
-                  onChangeText={setCity}
+                  onChangeText={(v) => { fieldErrors.clear("city"); setCity(v); }}
                 />
+                <FieldError message={fieldErrors.errors.city} />
               </View>
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>{t("countyRequired")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.county && presets.inputError]}
                     value={county}
                     placeholder={t("countyState")}
-                    onChangeText={setCounty}
+                    onChangeText={(v) => { fieldErrors.clear("county"); setCounty(v); }}
                   />
+                  <FieldError message={fieldErrors.errors.county} />
                 </View>
 
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>{t("countryRequired")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.country && presets.inputError]}
                     value={country}
                     placeholder={t("country")}
-                    onChangeText={setCountry}
+                    onChangeText={(v) => { fieldErrors.clear("country"); setCountry(v); }}
                   />
+                  <FieldError message={fieldErrors.errors.country} />
                 </View>
               </View>
             </View>
@@ -491,6 +465,17 @@ export default function CreateTrainer() {
                   <Text style={styles.buttonText}>{t("createTrainerButton")}</Text>
                 )}
               </Pressable>
+
+              {/* Next to the button: on this long form the field messages can be
+                  off screen when the user taps it. */}
+              <FieldError message={fieldErrors.hasErrors ? t("fixHighlightedFields") : undefined} />
+              {errMsg ? (
+                <View style={styles.errorContainer}>
+                  <Text ref={errRef} style={styles.errorText}>
+                    {errMsg}
+                  </Text>
+                </View>
+              ) : null}
 
               <Text style={styles.footerText}>
                 {t("requiredFields")}

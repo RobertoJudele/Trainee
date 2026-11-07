@@ -18,6 +18,8 @@ import {
   useCreateIssueMutation,
 } from "../features/support/issueApiSlice";
 import { theme, typography, presets } from "../src/lib/theme";
+import { FieldError } from "../src/components/ui";
+import { useFieldErrors } from "../src/lib/useFieldErrors";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
 import { fonts } from "../src/lib/fonts";
@@ -96,18 +98,15 @@ export default function ReportIssueScreen() {
       : "technical_bug"
   );
   const [title, setTitle] = useState("");
+  const fieldErrors = useFieldErrors<"title" | "description">();
   const [description, setDescription] = useState("");
 
   const onSubmit = async () => {
-    if (title.trim().length < 5) {
-      Alert.alert(t("validation"), t("titleMinLength"));
-      return;
-    }
-
-    if (description.trim().length < 10) {
-      Alert.alert(t("validation"), t("descriptionMinLength"));
-      return;
-    }
+    const valid = fieldErrors.setAll({
+      ...(title.trim().length < 5 ? { title: t("titleMinLength") } : {}),
+      ...(description.trim().length < 10 ? { description: t("descriptionMinLength") } : {}),
+    });
+    if (!valid) return;
 
     const payload: CreateIssueRequest =
       targetType === "review"
@@ -191,23 +190,25 @@ export default function ReportIssueScreen() {
       <View style={styles.card}>
         <Text style={styles.label}>{t("title")}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, fieldErrors.errors.title && presets.inputError]}
           value={title}
-          onChangeText={setTitle}
+          onChangeText={(v) => { fieldErrors.clear("title"); setTitle(v); }}
           placeholder={t("shortSummary")}
           maxLength={140}
         />
+        <FieldError message={fieldErrors.errors.title} />
 
         <Text style={[styles.label, styles.marginTop]}>{t("description")}</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, fieldErrors.errors.description && presets.inputError]}
           value={description}
-          onChangeText={setDescription}
+          onChangeText={(v) => { fieldErrors.clear("description"); setDescription(v); }}
           multiline
           textAlignVertical="top"
           placeholder={t("describeWhatHappened")}
           maxLength={2000}
         />
+        <FieldError message={fieldErrors.errors.description} />
       </View>
 
       <Pressable

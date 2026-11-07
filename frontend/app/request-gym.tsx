@@ -14,6 +14,8 @@ import MapView, { Marker, Region } from "react-native-maps";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCreateIssueMutation } from "../features/support/issueApiSlice";
 import { theme, typography, presets } from "../src/lib/theme";
+import { FieldError } from "../src/components/ui";
+import { useFieldErrors } from "../src/lib/useFieldErrors";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
 import { fonts } from "../src/lib/fonts";
@@ -34,6 +36,7 @@ export default function RequestGymScreen() {
   };
 
   const [name, setName] = useState("");
+  const fieldErrors = useFieldErrors<"name" | "address">();
   const [address, setAddress] = useState("");
   const [coords, setCoords] = useState(start);
   const [createIssue, { isLoading }] = useCreateIssueMutation();
@@ -45,14 +48,11 @@ export default function RequestGymScreen() {
   };
 
   const onSubmit = async () => {
-    if (name.trim().length < 5) {
-      Alert.alert(t("validation"), t("gymNameMinLength"));
-      return;
-    }
-    if (address.trim().length < 5) {
-      Alert.alert(t("validation"), t("gymAddressRequired"));
-      return;
-    }
+    const valid = fieldErrors.setAll({
+      ...(name.trim().length < 5 ? { name: t("gymNameMinLength") } : {}),
+      ...(address.trim().length < 5 ? { address: t("gymAddressRequired") } : {}),
+    });
+    if (!valid) return;
 
     try {
       await createIssue({
@@ -90,21 +90,23 @@ export default function RequestGymScreen() {
         <View style={styles.card}>
           <Text style={styles.label}>{t("gymName")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, fieldErrors.errors.name && presets.inputError]}
             value={name}
-            onChangeText={setName}
+            onChangeText={(v) => { fieldErrors.clear("name"); setName(v); }}
             placeholder={t("gymNamePlaceholder")}
             maxLength={100}
           />
+          <FieldError message={fieldErrors.errors.name} />
 
           <Text style={[styles.label, { marginTop: 6 }]}>{t("gymAddress")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, fieldErrors.errors.address && presets.inputError]}
             value={address}
-            onChangeText={setAddress}
+            onChangeText={(v) => { fieldErrors.clear("address"); setAddress(v); }}
             placeholder={t("gymAddressPlaceholder")}
             maxLength={200}
           />
+          <FieldError message={fieldErrors.errors.address} />
         </View>
 
         <View style={styles.card}>

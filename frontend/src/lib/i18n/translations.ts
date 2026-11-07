@@ -880,6 +880,8 @@ const en: Record<string, string> = {
   a11yMoreOptions: "More options",
   a11yRemovePackage: "Remove package",
   a11yShowFilters: "Show filters",
+  fixHighlightedFields: "Check the fields marked in red.",
+  countyMinLength: "County must be at least 2 characters long",
 };
 
 const ro: Record<string, string> = {
@@ -1758,6 +1760,8 @@ const ro: Record<string, string> = {
   a11yMoreOptions: "Mai multe opțiuni",
   a11yRemovePackage: "Elimină pachetul",
   a11yShowFilters: "Arată filtrele",
+  fixHighlightedFields: "Verifică câmpurile marcate cu roșu.",
+  countyMinLength: "Județul trebuie să aibă cel puțin 2 caractere",
 };
 
 export const translations = { en, ro };

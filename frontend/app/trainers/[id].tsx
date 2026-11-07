@@ -36,6 +36,8 @@ import {
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { UserRole } from "../../features/auth/authApiSlice";
 import { theme, typography, presets } from "../../src/lib/theme";
+import { FieldError } from "../../src/components/ui";
+import { useFieldErrors } from "../../src/lib/useFieldErrors";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
@@ -137,6 +139,7 @@ export default function TrainerDetailsScreen() {
   const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
   const [formRating, setFormRating] = useState(5);
   const [formText, setFormText] = useState("");
+  const fieldErrors = useFieldErrors<"text">();
 
   const myReview = reviews.find((r) => r.client?.id === currentUser?.id);
 
@@ -177,19 +180,17 @@ export default function TrainerDetailsScreen() {
   const cancelForm = useCallback(() => {
     setReviewMode("idle");
     setEditingReviewId(null);
-  }, []);
+    fieldErrors.setAll({});
+  }, [fieldErrors]);
 
   const submitReview = useCallback(async () => {
     if (!trainerInternalId) return;
     const text = formText.trim();
-    if (text && text.length < 10) {
-      Alert.alert(t("tooShort"), t("reviewTooShort"));
-      return;
-    }
-    if (text && text.length > 100) {
-      Alert.alert(t("tooLong"), t("reviewTooLong"));
-      return;
-    }
+    const valid = fieldErrors.setAll({
+      ...(text && text.length < 10 ? { text: t("reviewTooShort") } : {}),
+      ...(text && text.length > 100 ? { text: t("reviewTooLong") } : {}),
+    });
+    if (!valid) return;
     try {
       if (reviewMode === "write") {
         await createReview({
@@ -215,7 +216,7 @@ export default function TrainerDetailsScreen() {
           : getApiErrorMessage(err, t("couldNotSaveReview"));
       Alert.alert(t("error"), message);
     }
-  }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview, t]);
+  }, [trainerInternalId, reviewMode, formRating, formText, editingReviewId, createReview, updateReview, fieldErrors, t]);
 
   const handleDeleteReview = useCallback((reviewId: number) => {
     if (!trainerInternalId) return;
@@ -669,14 +670,15 @@ export default function TrainerDetailsScreen() {
               ))}
             </View>
             <TextInput
-              style={styles.reviewInput}
+              style={[styles.reviewInput, fieldErrors.errors.text && presets.inputError]}
               placeholder={t("addComment")}
               placeholderTextColor={theme.colors.textSecondary}
               value={formText}
-              onChangeText={setFormText}
+              onChangeText={(v) => { fieldErrors.clear("text"); setFormText(v); }}
               multiline
               maxLength={100}
             />
+            <FieldError message={fieldErrors.errors.text} />
             <Text style={styles.charCount}>{formText.length}/100</Text>
             <View style={styles.reviewFormActions}>
               <Pressable

@@ -14,7 +14,8 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { theme, typography, presets } from "../src/lib/theme";
-import { GradientButton } from "../src/components/ui";
+import { useFieldErrors } from "../src/lib/useFieldErrors";
+import { GradientButton, FieldError } from "../src/components/ui";
 import ScreenHeader from "../src/components/ScreenHeader";
 import { useGetSpecializationsQuery, SpecializationItem } from "../features/trainer/trainerApiSlice";
 import { useGetAllGymsQuery, GymMarker } from "../features/gym/gymApiSlice";
@@ -68,6 +69,7 @@ export default function PreferencesScreen() {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null);
   const [budgetMin, setBudgetMin] = useState("");
+  const fieldErrors = useFieldErrors<"budgetMin" | "budgetMax" | "distance">();
   const [budgetMax, setBudgetMax] = useState("");
   const [rateType, setRateType] = useState<RateType>("session");
   const [maxDistanceKm, setMaxDistanceKm] = useState("");
@@ -156,18 +158,12 @@ export default function PreferencesScreen() {
     const maxVal = budgetMax.trim() ? parseFloat(budgetMax) : null;
     const distanceVal = maxDistanceKm.trim() ? parseFloat(maxDistanceKm) : null;
 
-    if (minVal !== null && isNaN(minVal)) {
-      Alert.alert(t("invalidInput"), t("budgetMinNumber"));
-      return;
-    }
-    if (maxVal !== null && isNaN(maxVal)) {
-      Alert.alert(t("invalidInput"), t("budgetMaxNumber"));
-      return;
-    }
-    if (distanceVal !== null && isNaN(distanceVal)) {
-      Alert.alert(t("invalidInput"), t("maxDistanceNumber"));
-      return;
-    }
+    const valid = fieldErrors.setAll({
+      ...(minVal !== null && isNaN(minVal) ? { budgetMin: t("budgetMinNumber") } : {}),
+      ...(maxVal !== null && isNaN(maxVal) ? { budgetMax: t("budgetMaxNumber") } : {}),
+      ...(distanceVal !== null && isNaN(distanceVal) ? { distance: t("maxDistanceNumber") } : {}),
+    });
+    if (!valid) return;
 
     try {
       await updatePreferences({
@@ -325,24 +321,26 @@ export default function PreferencesScreen() {
                 <View style={styles.halfWidth}>
                   <Text style={styles.label}>{t("minBudget")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.budgetMin && presets.inputError]}
                     value={budgetMin}
-                    onChangeText={setBudgetMin}
+                    onChangeText={(v) => { fieldErrors.clear("budgetMin"); setBudgetMin(v); }}
                     placeholder="0"
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.textSecondary}
                   />
+                  <FieldError message={fieldErrors.errors.budgetMin} />
                 </View>
                 <View style={styles.halfWidth}>
                   <Text style={styles.label}>{t("maxBudget")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.budgetMax && presets.inputError]}
                     value={budgetMax}
-                    onChangeText={setBudgetMax}
+                    onChangeText={(v) => { fieldErrors.clear("budgetMax"); setBudgetMax(v); }}
                     placeholder="100"
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.textSecondary}
                   />
+                  <FieldError message={fieldErrors.errors.budgetMax} />
                 </View>
               </View>
             </View>
@@ -419,13 +417,14 @@ export default function PreferencesScreen() {
                 {t("maxDistanceSubtitle")}
               </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, fieldErrors.errors.distance && presets.inputError]}
                 value={maxDistanceKm}
-                onChangeText={setMaxDistanceKm}
+                onChangeText={(v) => { fieldErrors.clear("distance"); setMaxDistanceKm(v); }}
                 placeholder="50"
                 keyboardType="numeric"
                 placeholderTextColor={theme.colors.textSecondary}
               />
+              <FieldError message={fieldErrors.errors.distance} />
             </View>
 
             <GradientButton

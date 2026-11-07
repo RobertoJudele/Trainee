@@ -414,6 +414,25 @@ export function Field({
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/*  FieldError — the validation message under a field. Renders nothing without */
+/*  a message; announced by screen readers when it appears.                    */
+/* -------------------------------------------------------------------------- */
+export function FieldError({ message, style }: { message?: string; style?: StyleProp<ViewStyle> }) {
+  if (!message) return null;
+  return (
+    <View style={[fieldError.row, style]} accessibilityLiveRegion="polite" accessibilityRole="alert">
+      <Ionicons name="alert-circle" size={16} color={theme.colors.error} />
+      <Text style={fieldError.text}>{message}</Text>
+    </View>
+  );
+}
+
+const fieldError = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 6 },
+  text: { ...typography.small, color: theme.colors.error, flex: 1 },
+});
+
 const btn = StyleSheet.create({
   base: {
     borderRadius: theme.radius.control,
