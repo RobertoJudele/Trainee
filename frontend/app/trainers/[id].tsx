@@ -456,7 +456,6 @@ export default function TrainerDetailsScreen() {
           )
       : t("noReviewsOnSalvio");
   const factsLine = [
-    specializations.map((spec) => spec.name).join(", "),
     yearsText,
     reviewsText,
   ]
@@ -594,6 +593,15 @@ export default function TrainerDetailsScreen() {
 
         <View style={styles.body}>
           <Text style={styles.name}>{fullName}</Text>
+          {specializations.length > 0 ? (
+            <View style={styles.specPills}>
+              {specializations.map((spec) => (
+                <View key={spec.id} style={styles.specPill}>
+                  <Text style={styles.specPillText}>{spec.name}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
           {factsLine ? <Text style={styles.facts}>{factsLine}</Text> : null}
           <Text style={[styles.availability, !isAvailable && styles.availabilityOff]}>
             {isAvailable ? t("acceptsNewClients") : t("notTakingClients")}
@@ -965,6 +973,23 @@ const styles = StyleSheet.create({
     fontSize: 40,
     lineHeight: 44,
     color: theme.colors.text,
+  },
+  specPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 10,
+  },
+  specPill: {
+    backgroundColor: theme.colors.primary,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  specPillText: {
+    ...typography.small,
+    fontFamily: fonts.uiSemiBold,
+    color: "#FFFFFF",
   },
   facts: {
     ...typography.small,
