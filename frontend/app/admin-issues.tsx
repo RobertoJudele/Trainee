@@ -119,7 +119,7 @@ export default function AdminIssuesScreen() {
           onPress={() => refetch()}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Retry loading issues"
+          accessibilityLabel={t("retry")}
         >
           <Text style={styles.retryText}>{t("retry")}</Text>
         </Pressable>

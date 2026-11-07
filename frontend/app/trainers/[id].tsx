@@ -444,7 +444,12 @@ export default function TrainerDetailsScreen() {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      automaticallyAdjustKeyboardInsets
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.headerCard}>
         {params.profileImageUrl ? (
           <Image source={{ uri: params.profileImageUrl }} style={styles.avatar} />
@@ -602,7 +607,7 @@ export default function TrainerDetailsScreen() {
                       onPress={() => openEditForm(review)}
                       accessible
                       accessibilityRole="button"
-                      accessibilityLabel="Edit review"
+                      accessibilityLabel={t("a11yEditReview")}
                       style={styles.reviewActionBtn}
                     >
                       <Ionicons name="pencil-outline" size={16} color={theme.colors.primary} />
@@ -612,7 +617,7 @@ export default function TrainerDetailsScreen() {
                       disabled={isDeleting}
                       accessible
                       accessibilityRole="button"
-                      accessibilityLabel="Delete review"
+                      accessibilityLabel={t("deleteReview")}
                       style={styles.reviewActionBtn}
                     >
                       <Ionicons name="trash-outline" size={16} color={theme.colors.error} />
@@ -678,7 +683,7 @@ export default function TrainerDetailsScreen() {
                 onPress={cancelForm}
                 accessible
                 accessibilityRole="button"
-                accessibilityLabel="Cancel"
+                accessibilityLabel={t("cancel")}
               >
                 <Text style={styles.cancelFormBtnText}>{t("cancel")}</Text>
               </Pressable>
@@ -688,7 +693,7 @@ export default function TrainerDetailsScreen() {
                 disabled={isCreating || isUpdating}
                 accessible
                 accessibilityRole="button"
-                accessibilityLabel="Submit review"
+                accessibilityLabel={t("submit")}
               >
                 <Text style={styles.submitFormBtnText}>
                   {isCreating || isUpdating ? t("saving") : t("submit")}
@@ -704,7 +709,7 @@ export default function TrainerDetailsScreen() {
             onPress={openWriteForm}
             accessible
             accessibilityRole="button"
-            accessibilityLabel="Write a review"
+            accessibilityLabel={t("writeReview")}
           >
             <Ionicons name="star-outline" size={16} color={theme.colors.primary} style={{ marginRight: 6 }} />
             <Text style={styles.writeReviewBtnText}>{t("writeReview")}</Text>

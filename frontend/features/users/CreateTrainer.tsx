@@ -324,7 +324,7 @@ export default function CreateTrainer() {
               </View>
               {specializationsLoading ? (
                 <View style={styles.specLoadingRow}>
-                  <ActivityIndicator size="small" color="#3B82F6" />
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
                   <Text style={styles.specLoadingText}>{t("loadingSpecializations")}</Text>
                 </View>
               ) : specializationOptions.length > 0 ? (
@@ -355,7 +355,7 @@ export default function CreateTrainer() {
                     disabled={specializationsFetching}
                     accessible={true}
                     accessibilityRole="button"
-                    accessibilityLabel="Retry loading specializations"
+                    accessibilityLabel={t("retry")}
                   >
                     {specializationsFetching ? (
                       <ActivityIndicator size="small" color="#fff" />
@@ -381,7 +381,7 @@ export default function CreateTrainer() {
                       {t("addPackage")} {index + 1}
                     </Text>
                     {packages.length > 1 && (
-                      <Pressable onPress={() => removePackageRow(index)}>
+                      <Pressable onPress={() => removePackageRow(index)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("a11yRemovePackage")}>
                         <Ionicons name="trash-outline" size={20} color="#DC2626" />
                       </Pressable>
                     )}

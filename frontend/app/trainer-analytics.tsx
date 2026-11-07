@@ -118,7 +118,7 @@ export default function TrainerAnalyticsScreen() {
           onPress={() => router.back()}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("goBack")}
         >
           <Text style={styles.primaryButtonText}>{t("goBack")}</Text>
         </Pressable>
@@ -146,7 +146,7 @@ export default function TrainerAnalyticsScreen() {
           onPress={() => refetch()}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Try again"
+          accessibilityLabel={t("tryAgain")}
         >
           <Text style={styles.primaryButtonText}>{t("tryAgain")}</Text>
         </Pressable>
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     width: "100%",
     minHeight: 16,
     borderRadius: 14,
-    backgroundColor: "#10B981",
+    backgroundColor: theme.colors.primary,
     justifyContent: "flex-end",
     alignItems: "center",
     paddingBottom: 6,

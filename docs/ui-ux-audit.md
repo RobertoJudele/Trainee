@@ -6,13 +6,19 @@ files under `frontend/app`, `src` and `features`. Each finding below was checked
 by hand. **Not covered:** nothing was run on a device. VoiceOver/TalkBack,
 largest-text and small-screen checks still need a phone (see the end).
 
+## Status
+
+Branch `ui/audit-fixes` fixes findings 1–7, 10 and 11, and the off-brand colours from 8.
+Not done yet: 8 (replacing all 75 raw hex values with tokens), 9 (inline errors)
+and 12 (lists).
+
 ## Summary
 
 | # | Finding | Rule (skill priority) | Severity |
 |---|---------|----------------------|----------|
 | 1 | White text on the brand green fails contrast (2.5:1) on every primary button | Accessibility (1) | Critical |
 | 2 | Green text on white/background fails contrast (2.5:1) in ~40 places | Accessibility (1) | Critical |
-| 3 | The trainer contact buttons (WhatsApp, Instagram, phone…) have no screen-reader label | Accessibility (1) | High |
+| 3 | Four icon-only buttons have no screen-reader label | Accessibility (1) | High |
 | 4 | Accessibility labels are hard-coded English, so Romanian users hear English | Accessibility (1) | High |
 | 5 | The trainer profile edit form (11 fields) has no keyboard handling | Forms (8) | High |
 | 6 | Some touch targets are under 44pt with no `hitSlop` | Touch (2) | Medium |
@@ -24,7 +30,7 @@ largest-text and small-screen checks still need a phone (see the end).
 | 12 | Long lists rendered as `ScrollView` + `.map()` | Performance (3) | Low |
 
 What's already good: almost every icon-only button has `accessibilityRole` and a
-label (21 of 25). Vector icons come from one family (Ionicons), with no emoji
+label (21 of 25, plus the contact buttons). Vector icons come from one family (Ionicons), with no emoji
 in live screens. Animations use the native driver. Inputs keep taps working with
 `keyboardShouldPersistTaps`. The debug panel in checkout only shows in `__DEV__`
 builds. Trainer cards on Home show the rate.
@@ -61,16 +67,13 @@ background.
 **Fix:** add a `primaryText: '#047857'` token (5.2–5.5:1) and use it for all
 green *text*. Keep `#10B981` for fills, dots and icons that sit next to a text label.
 
-## 3 · Contact buttons have no label
+## 3 · Icon-only buttons without a label
 
-`app/trainers/[id].tsx:722`: the row of contact icons (WhatsApp, Instagram,
-phone, email) is the main conversion action on a trainer's page. Each is a
-`TouchableOpacity` with only an icon inside, so VoiceOver and TalkBack read
-"button" with no name.
-**Fix:** `accessibilityRole="button"` and
-`accessibilityLabel={t("contactVia", { channel: option.label })}`.
+*Correction:* an earlier version of this report listed the trainer contact buttons
+(`app/trainers/[id].tsx`) here. They are labelled (`accessibilityLabel={option.label}`);
+the scan missed it.
 
-Other unlabeled icon-only buttons:
+Unlabeled icon-only buttons:
 - `features/trainer/TrainerProfile.tsx:411`: back arrow
 - `features/trainer/TrainerProfile.tsx:416`: ⋯ menu
 - `features/trainer/TrainerProfile.tsx:525`: delete package row

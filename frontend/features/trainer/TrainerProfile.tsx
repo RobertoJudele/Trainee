@@ -374,7 +374,7 @@ function TrainerProfile() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#6366F1" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -403,17 +403,22 @@ function TrainerProfile() {
 
   return (
     <>
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        showsVerticalScrollIndicator={false}
+        automaticallyAdjustKeyboardInsets
+        keyboardShouldPersistTaps="handled"
+      >
 
         {/* ── Header ── */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Pressable style={styles.backBtn} onPress={() => router.back()}>
+            <Pressable style={styles.backBtn} onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={t("goBack")}>
               <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
             </Pressable>
             <Text style={styles.title}>{t("trainerProfile")}</Text>
             {!isEditing && (
-              <Pressable style={styles.menuIconButton} onPress={() => setMenuVisible(true)}>
+              <Pressable style={styles.menuIconButton} onPress={() => setMenuVisible(true)} accessibilityRole="button" accessibilityLabel={t("a11yMoreOptions")}>
                 <Ionicons name="ellipsis-horizontal" size={24} color={theme.colors.text} />
               </Pressable>
             )}
@@ -522,7 +527,7 @@ function TrainerProfile() {
                       {t("addPackage")} {index + 1}
                     </Text>
                     {editingPackages.length > 0 && (
-                      <Pressable onPress={() => removeEditPackageRow(index)}>
+                      <Pressable onPress={() => removeEditPackageRow(index)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("a11yRemovePackage")}>
                         <Ionicons name="trash-outline" size={18} color="#DC2626" />
                       </Pressable>
                     )}
@@ -622,7 +627,7 @@ function TrainerProfile() {
           {isEditing ? (
             isSpecializationsLoading ? (
               <View style={styles.specLoadingRow}>
-                <ActivityIndicator size="small" color="#6366F1" />
+                <ActivityIndicator size="small" color={theme.colors.primary} />
                 <Text style={styles.specLoadingText}>{t("loadingSpecializations")}</Text>
               </View>
             ) : specializationOptions.length > 0 ? (
@@ -782,17 +787,17 @@ const styles = StyleSheet.create({
   specLoadingText: { fontSize: 13, color: "#6B7280" },
   specFallbackBox: { backgroundColor: "#F9FAFB", borderWidth: 1, borderColor: "#E5E7EB", borderRadius: 10, padding: 12, gap: 10 },
   specFallbackText: { fontSize: 13, color: "#6B7280" },
-  specRetryButton: { alignSelf: "flex-start", backgroundColor: "#6366F1", borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
+  specRetryButton: { alignSelf: "flex-start", backgroundColor: theme.colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 },
   specRetryText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   specChip: { borderWidth: 1, borderColor: "#D1D5DB", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#fff" },
-  specChipActive: { backgroundColor: "#3B82F6", borderColor: "#3B82F6" },
+  specChipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
   specChipText: { color: "#374151", fontSize: 13, fontWeight: "600" },
   specChipTextActive: { color: "#fff" },
   specChipReadOnly: { borderRadius: 20, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: "#E5E7EB" },
   specChipReadOnlyText: { color: "#374151", fontSize: 13, fontWeight: "600" },
   infoGrid: { flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: 10 },
   infoCard: { backgroundColor: "#f8f9fa", borderRadius: 8, padding: 15, flex: 1, minWidth: 100, alignItems: "center" },
-  infoLabel: { fontSize: 12, color: "#999", marginBottom: 5, textTransform: "uppercase" },
+  infoLabel: { fontSize: 12, color: theme.colors.textSecondary, marginBottom: 5, textTransform: "uppercase" },
   infoValue: { fontSize: 16, fontWeight: "bold", color: "#333" },
   locationText: { fontSize: 16, fontWeight: "600", color: "#333", marginBottom: 5 },
   locationSubtext: { fontSize: 14, color: "#666" },

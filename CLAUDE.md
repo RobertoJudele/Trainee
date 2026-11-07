@@ -80,7 +80,6 @@ All screens use expo-router file-based routing:
 | `src/constants/config.ts` | API_URL from env |
 | `src/components/ui/index.tsx` | Shared UI: FadeInUp, PressableScale, Field, GradientButton, OutlineButton |
 | `src/components/EditableAvatar.tsx` | Avatar with upload overlay |
-| `src/components/TrainerCard.tsx` | Trainer list card |
 | `src/components/TrainerImageSection.tsx` | Gallery/credential image grid |
 | `src/components/TrainerImageCarousel.tsx` | Horizontal image carousel |
 | `src/components/schedule/MonthCalendar.tsx` | Monthly calendar with slot indicators |
@@ -101,7 +100,6 @@ All screens use expo-router file-based routing:
 | `features/trainer/TrainerProfile.tsx` | Trainer profile screen (large file, ~1350 lines) |
 | `features/users/usersApiSlicet.ts` | User CRUD, create-trainer, profile deletion (note: typo in filename) |
 | `features/users/CreateTrainer.tsx` | Create trainer form component |
-| `features/users/UserList.tsx` | (unused/old) |
 | `features/gym/gymApiSlice.ts` | Gym CRUD, join/leave, availability |
 | `features/schedule/scheduleApiSlice.ts` | Working hours, slots, generate, block, assign, check-in codes |
 | `features/billing/billingApiSlice.ts` | IAP validation, entitlement, transactions |

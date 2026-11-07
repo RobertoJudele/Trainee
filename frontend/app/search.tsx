@@ -318,7 +318,7 @@ export default function SearchScreen() {
                 onPress={() => setQuery("")}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Clear search"
+                accessibilityLabel={t("a11yClearSearch")}
               >
                 <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
@@ -369,6 +369,7 @@ export default function SearchScreen() {
             showsVerticalScrollIndicator={false}
             // Without this the first tap on Apply only dismisses the keyboard.
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
             <Text style={styles.filterSection}>{t("sortBy")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortRow}>
@@ -456,7 +457,7 @@ export default function SearchScreen() {
                 onPress={handleClear}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Clear All filters"
+                accessibilityLabel={t("clearAll")}
               >
                 <Text style={styles.clearFilterText}>{t("clearAll")}</Text>
               </TouchableOpacity>
@@ -465,7 +466,7 @@ export default function SearchScreen() {
                 onPress={() => { handleSearch(); toggleFilters(); }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Apply Filters"
+                accessibilityLabel={t("applyFilters")}
               >
                 <Text style={styles.applyBtnText}>{t("applyFilters")}</Text>
               </TouchableOpacity>
@@ -533,7 +534,7 @@ export default function SearchScreen() {
                 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Load More trainers"
+                accessibilityLabel={t("loadMore")}
               >
                 <Text style={styles.loadMoreText}>{t("loadMore")}</Text>
               </TouchableOpacity>

@@ -21,6 +21,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../lib/theme";
 import { TrainerImageItem } from "../../features/trainer/trainerApiSlice";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 interface Props {
   title: string;
@@ -39,6 +40,7 @@ export default function TrainerImageCarousel({
   resizeMode = "cover",
   height = 240,
 }: Props) {
+  const { t } = useLanguage();
   const [slideWidth, setSlideWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
@@ -171,7 +173,7 @@ export default function TrainerImageCarousel({
             style={styles.viewerClose}
             onPress={() => setViewerIndex(null)}
             accessibilityRole="button"
-            accessibilityLabel="Close fullscreen image viewer"
+            accessibilityLabel={t("close")}
           >
             <Ionicons name="close" size={26} color="#fff" />
           </Pressable>

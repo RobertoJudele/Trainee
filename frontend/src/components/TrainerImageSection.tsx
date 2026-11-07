@@ -17,6 +17,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { theme, typography } from "../lib/theme";
 import { TrainerImageItem } from "../../features/trainer/trainerApiSlice";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 interface Props {
   title: string;
@@ -41,6 +42,7 @@ export default function TrainerImageSection({
   onAdd,
   onDelete,
 }: Props) {
+  const { t } = useLanguage();
   const atLimit = images.length >= max;
 
   const confirmDelete = (id: number) =>
@@ -65,10 +67,11 @@ export default function TrainerImageSection({
             <Image source={{ uri: img.imageUrl }} style={styles.tileImage} />
             <Pressable
               style={styles.deleteBtn}
+              hitSlop={10}
               onPress={() => confirmDelete(img.id)}
               disabled={deletingId === img.id}
               accessibilityRole="button"
-              accessibilityLabel="Delete image"
+              accessibilityLabel={t("a11yDeleteImage")}
             >
               {deletingId === img.id ? (
                 <ActivityIndicator size="small" color="#fff" />

@@ -287,7 +287,7 @@ export default function MyGymsScreen() {
           onPress={() => setShowBrowser(true)}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Add Gym"
+          accessibilityLabel={t("a11yAddGym")}
         >
           <Text style={styles.addBtnText}>{t("addGym")}</Text>
         </TouchableOpacity>
@@ -338,7 +338,7 @@ export default function MyGymsScreen() {
               onPress={() => setShowBrowser(false)}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Close gym browser"
+              accessibilityLabel={t("close")}
             >
               <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>

@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { theme, typography } from "../lib/theme";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 interface ScreenHeaderProps {
   /** Centered title. Omit when passing richer content via children (e.g. an avatar block). */
@@ -34,6 +35,7 @@ export default function ScreenHeader({
   children,
   style,
 }: ScreenHeaderProps) {
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const handleBack = onBack ?? (() => (router.canGoBack() ? router.back() : router.replace("/")));
@@ -49,7 +51,7 @@ export default function ScreenHeader({
           onPress={handleBack}
           accessible
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("goBack")}
         >
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </Pressable>

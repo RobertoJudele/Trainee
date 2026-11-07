@@ -868,6 +868,17 @@ const en: Record<string, string> = {
   weekBlockedOff: "This day is blocked off.",
   weekNoSlotsCreated: "No slots created for this day.",
   weekNoClientAssigned: "No client assigned",
+  // ─── Accessibility labels ─────────────────────────────────
+  a11yClearSearch: "Clear search",
+  a11yClearPreferredGym: "Clear preferred gym",
+  a11yAddGym: "Add gym",
+  a11yEditReview: "Edit review",
+  a11yChangePhoto: "Change profile picture",
+  a11yDeleteImage: "Delete image",
+  a11yDemoGym: "Demo gym, tap to see its trainers",
+  a11yDemoTrainer: "Demo trainer, tap to continue",
+  a11yMoreOptions: "More options",
+  a11yRemovePackage: "Remove package",
 };
 
 const ro: Record<string, string> = {
@@ -1734,6 +1745,17 @@ const ro: Record<string, string> = {
   weekBlockedOff: "Această zi este blocată.",
   weekNoSlotsCreated: "Niciun interval creat pentru această zi.",
   weekNoClientAssigned: "Niciun client alocat",
+  // ─── Accessibility labels ─────────────────────────────────
+  a11yClearSearch: "Șterge căutarea",
+  a11yClearPreferredGym: "Elimină sala preferată",
+  a11yAddGym: "Adaugă sală",
+  a11yEditReview: "Editează recenzia",
+  a11yChangePhoto: "Schimbă poza de profil",
+  a11yDeleteImage: "Șterge imaginea",
+  a11yDemoGym: "Sală demo, atinge pentru a vedea antrenorii",
+  a11yDemoTrainer: "Antrenor demo, atinge pentru a continua",
+  a11yMoreOptions: "Mai multe opțiuni",
+  a11yRemovePackage: "Elimină pachetul",
 };
 
 export const translations = { en, ro };

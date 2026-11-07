@@ -17,6 +17,7 @@ import {
 } from "react-native";
 import { theme, typography } from "../../lib/theme";
 import { formatDate, formatTime } from "../../lib/datetime";
+import { useLanguage } from "../../lib/i18n/LanguageContext";
 
 export const scheduleDayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -258,6 +259,7 @@ type BottomSheetProps = {
 };
 
 export function BottomSheet({ visible, title, subtitle, onClose, children, footer }: BottomSheetProps) {
+  const { t } = useLanguage();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView
@@ -269,7 +271,7 @@ export function BottomSheet({ visible, title, subtitle, onClose, children, foote
           onPress={onClose}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Close sheet"
+          accessibilityLabel={t("close")}
         />
         <View style={styles.sheetPanel}>
           <View style={styles.sheetHandle} />

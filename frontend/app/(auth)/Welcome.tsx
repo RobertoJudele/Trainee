@@ -23,7 +23,7 @@ export default function Welcome() {
       <View style={styles.content}>
         <FadeInUp delay={80} duration={theme.motion.slow} style={styles.header}>
           <Image
-            source={require('../../assets/salvio-mark.png')}
+            source={require('../../assets/salvio-mark-white.png')}
             style={styles.logo}
             resizeMode="contain"
             accessibilityIgnoresInvertColors

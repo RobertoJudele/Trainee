@@ -6,6 +6,7 @@
 import React from "react";
 import { View, Text, Image, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../lib/i18n/LanguageContext";
 
 interface Props {
   imageUrl?: string | null;
@@ -24,6 +25,7 @@ export default function EditableAvatar({
   uploading = false,
   onPress,
 }: Props) {
+  const { t } = useLanguage();
   const radius = size / 2;
 
   const inner = (
@@ -65,7 +67,7 @@ export default function EditableAvatar({
       onPress={onPress}
       disabled={uploading}
       accessibilityRole="button"
-      accessibilityLabel="Change profile picture"
+      accessibilityLabel={t("a11yChangePhoto")}
     >
       {inner}
     </Pressable>

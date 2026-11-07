@@ -1051,7 +1051,7 @@ export default function MapScreen() {
           onPress={() => router.back()}
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("goBack")}
         >
           <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
@@ -1201,10 +1201,11 @@ export default function MapScreen() {
               </View>
               <TouchableOpacity
                 style={styles.closeBtn}
+                hitSlop={8}
                 onPress={closeSheet}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Close gym details"
+                accessibilityLabel={t("close")}
               >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
@@ -1214,10 +1215,11 @@ export default function MapScreen() {
               <Text style={styles.sheetGymName}>{t("loading")}</Text>
               <TouchableOpacity
                 style={styles.closeBtn}
+                hitSlop={8}
                 onPress={closeSheet}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Close gym details"
+                accessibilityLabel={t("close")}
               >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
@@ -1720,8 +1722,8 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   expandHintText: {
-    fontSize: 11,
-    color: "#9CA3AF",
+    fontSize: 12,
+    color: theme.colors.textSecondary,
     fontWeight: "500",
     letterSpacing: 0.3,
   },

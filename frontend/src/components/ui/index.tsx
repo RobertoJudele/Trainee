@@ -3,6 +3,7 @@
 // Provides consistent motion (entrance, press, focus) across every screen.
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  AccessibilityInfo,
   Animated,
   Easing,
   Pressable,
@@ -21,6 +22,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { theme, typography } from '../../lib/theme';
 
+// Mirrors the system "Reduce Motion" setting. Read at render time rather than
+// through state: a screen that mounts after the setting changes picks it up, and
+// no component re-renders just because the setting flipped.
+let reduceMotion = false;
+AccessibilityInfo.isReduceMotionEnabled().then((v) => { reduceMotion = v; }).catch(() => {});
+AccessibilityInfo.addEventListener('reduceMotionChanged', (v) => { reduceMotion = v; });
+
 /* -------------------------------------------------------------------------- */
 /*  FadeInUp — entrance animation (fade + rise). Use `delay` to stagger.       */
 /* -------------------------------------------------------------------------- */
@@ -37,9 +45,13 @@ export function FadeInUp({
   duration?: number;
   style?: StyleProp<ViewStyle>;
 }) {
-  const progress = useRef(new Animated.Value(0)).current;
+  const progress = useRef(new Animated.Value(reduceMotion ? 1 : 0)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      progress.setValue(1);
+      return;
+    }
     const anim = Animated.timing(progress, {
       toValue: 1,
       duration,
@@ -106,7 +118,7 @@ export function PressableScale({
   const scale = useRef(new Animated.Value(1)).current;
 
   const animate = (toValue: number) =>
-    Animated.spring(scale, {
+    !reduceMotion && Animated.spring(scale, {
       toValue,
       useNativeDriver: true,
       speed: 40,
@@ -155,7 +167,7 @@ export function GradientButton({
   const isDisabled = disabled || loading;
 
   const animate = (toValue: number) =>
-    Animated.spring(scale, {
+    !reduceMotion && Animated.spring(scale, {
       toValue,
       useNativeDriver: true,
       speed: 40,

@@ -221,7 +221,7 @@ export default function CoachMark() {
           <Pressable
             onPress={next}
             accessibilityRole="button"
-            accessibilityLabel="Demo gym, tap to see its trainers"
+            accessibilityLabel={t("a11yDemoGym")}
             style={styles.demoGymPress}
           >
             <View style={styles.demoGymHighlight}>
@@ -243,7 +243,7 @@ export default function CoachMark() {
         <Pressable
           onPress={next}
           accessibilityRole="button"
-          accessibilityLabel="Demo trainer, tap to continue"
+          accessibilityLabel={t("a11yDemoTrainer")}
           style={[styles.demoTrainerCard, { bottom: insets.bottom + 16 }]}
         >
           <View style={styles.demoAvatar}>

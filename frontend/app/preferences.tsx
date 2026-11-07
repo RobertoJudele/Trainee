@@ -361,7 +361,7 @@ export default function PreferencesScreen() {
                     onPress={clearGym}
                     accessible
                     accessibilityRole="button"
-                    accessibilityLabel="Clear preferred gym"
+                    accessibilityLabel={t("a11yClearPreferredGym")}
                   >
                     <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
                   </Pressable>

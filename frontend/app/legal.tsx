@@ -304,10 +304,11 @@ export default function LegalScreen() {
         <View style={styles.headerRow}>
           <Pressable
             style={styles.backButton}
+            hitSlop={4}
             onPress={() => router.back()}
             accessible={true}
             accessibilityRole="button"
-            accessibilityLabel="Go back"
+            accessibilityLabel={t("goBack")}
           >
             <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
           </Pressable>

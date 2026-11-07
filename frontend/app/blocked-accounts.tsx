@@ -60,6 +60,7 @@ export default function BlockedAccountsScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backButton}
+          hitSlop={4}
           onPress={() => router.back()}
           accessible
           accessibilityRole="button"

@@ -4,14 +4,18 @@ export const theme = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
-    primary: '#10B981', // Emerald Green
-    secondary: '#0D9488', // Teal
-    tertiary: '#059669', // Dark Emerald
+    // Every token below that carries text, or sits under white text, passes
+    // WCAG AA (4.5:1) on white. The bright logo green fails as text (2.5:1),
+    // so it lives in brandBright for fills and marks that carry no text.
+    primary: '#047857', // Emerald 700 — white on it 5.5:1
+    secondary: '#0F766E', // Teal 700
+    tertiary: '#065F46', // Emerald 800
+    brandBright: '#10B981', // App-icon green: decoration only, never under text
     background: '#F8FAFC', // Crisp cool grey background
     surface: '#FFFFFF',
-    error: '#EF4444',
-    success: '#10B981',
-    warning: '#F59E0B',
+    error: '#DC2626', // 4.8:1 on white
+    success: '#047857',
+    warning: '#D97706', // icons only (3.2:1)
     text: '#0F172A', // Slate 900
     textSecondary: '#64748B', // Slate 500
     border: '#E2E8F0', // Slate 200
@@ -51,8 +55,8 @@ export const theme = {
   },
   // Gradient palettes used across the app for a cohesive, premium feel.
   gradients: {
-    primary: ['#10B981', '#059669'] as const,
-    brand: ['#10B981', '#0D9488'] as const,
+    primary: ['#047857', '#065F46'] as const,
+    brand: ['#047857', '#0F766E'] as const,
     surface: ['#FFFFFF', '#F8FAFC'] as const,
   },
   // Motion tokens — keep transitions consistent and snappy across screens.

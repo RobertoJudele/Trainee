@@ -328,7 +328,7 @@ export default function MyScheduleScreen() {
                   onPress={() => handleCancelBooking(item.id, item.startsAt)}
                   disabled={cancellingSlotId === item.id}
                   accessibilityRole="button"
-                  accessibilityLabel="Cancel this booking"
+                  accessibilityLabel={t("cancelBooking")}
                 >
                   <Ionicons name="close-circle-outline" size={16} color={theme.colors.error} style={{ marginRight: 6 }} />
                   <Text style={styles.cancelBtnText}>

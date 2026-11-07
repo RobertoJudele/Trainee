@@ -120,12 +120,13 @@ function RevenueCatIdentityBridge() {
 // screen (react-native-screens hit-test glitch) until another screen re-layouts.
 function HeaderBackButton({ tintColor }: { tintColor?: string }) {
   const router = useRouter();
+  const { t } = useLanguage();
   return (
     <Pressable
       onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
       hitSlop={12}
       accessibilityRole="button"
-      accessibilityLabel="Go back"
+      accessibilityLabel={t("goBack")}
       style={{ paddingRight: 16, paddingVertical: 4 }}
     >
       <Ionicons name="arrow-back" size={24} color={tintColor ?? "#fff"} />
