@@ -1244,20 +1244,14 @@ export default function MapScreen() {
             scrollEventThrottle={16}
           >
             {/* Quick info row */}
-            <View style={styles.quickInfoRow}>
-              <View style={styles.quickInfoChip}>
-                <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.quickInfoText} numberOfLines={1}>
-                  {gymDetail.openingHours ?? t("hoursNA")}
-                </Text>
-              </View>
-              {gymDetail.phone && (
+            {gymDetail.phone && (
+              <View style={styles.quickInfoRow}>
                 <View style={styles.quickInfoChip}>
                   <Ionicons name="call-outline" size={16} color={theme.colors.textSecondary} />
                   <Text style={styles.quickInfoText}>{gymDetail.phone}</Text>
                 </View>
-              )}
-            </View>
+              </View>
+            )}
 
             {/* Rating */}
             <View style={styles.ratingRow}>

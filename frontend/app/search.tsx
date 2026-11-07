@@ -481,7 +481,7 @@ export default function SearchScreen() {
             {activeParams.state && <ActiveChip label={activeParams.state} onRemove={() => { setState(""); setActiveParams(p => { const n = {...p}; delete n.state; return n; }); }} />}
             {(activeParams.minRate || activeParams.maxRate) && (
               <ActiveChip
-                label={`$${activeParams.minRate ?? 0}–$${activeParams.maxRate ?? "∞"}`}
+                label={`${activeParams.minRate ?? 0}–${activeParams.maxRate ?? "∞"} lei`}
                 onRemove={() => { setMinPrice(""); setMaxPrice(""); setActiveParams(p => { const n = {...p}; delete n.minRate; delete n.maxRate; return n; }); }}
               />
             )}

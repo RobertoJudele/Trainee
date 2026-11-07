@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Image } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,9 +22,12 @@ export default function Welcome() {
     >
       <View style={styles.content}>
         <FadeInUp delay={80} duration={theme.motion.slow} style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="barbell" size={64} color="#FFFFFF" />
-          </View>
+          <Image
+            source={require('../../assets/salvio-mark.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
           <Text style={styles.title}>Salvio</Text>
           <Text style={styles.subtitle}>
             {t("welcomeTagline")}
@@ -54,24 +57,9 @@ export default function Welcome() {
               <Text style={styles.secondaryButtonText}>{t("signIn")}</Text>
             </PressableScale>
           </FadeInUp>
-
-          <View style={styles.features}>
-            <FeatureItem icon="checkmark-circle" text={t("certifiedTrainers")} delay={theme.motion.stagger * 5} />
-            <FeatureItem icon="checkmark-circle" text={t("personalizedPrograms")} delay={theme.motion.stagger * 6} />
-            <FeatureItem icon="checkmark-circle" text={t("trackYourProgress")} delay={theme.motion.stagger * 7} />
-          </View>
         </View>
       </View>
     </LinearGradient>
-  );
-}
-
-function FeatureItem({ icon, text, delay }: { icon: React.ComponentProps<typeof Ionicons>["name"]; text: string; delay: number }) {
-  return (
-    <FadeInUp delay={delay} style={styles.featureItem}>
-      <Ionicons name={icon} size={22} color="#FFFFFF" />
-      <Text style={styles.featureText}>{text}</Text>
-    </FadeInUp>
   );
 }
 
@@ -89,15 +77,17 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
   },
-  iconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: theme.spacing.md,
-    borderRadius: 100,
+  logo: {
+    // Mark is 419×721; keep its aspect ratio.
+    height: 112,
+    width: 112 * (419 / 721),
     marginBottom: theme.spacing.md,
   },
   title: {
     ...typography.h1,
     fontSize: 48,
+    // h1's 42px line height is for 34px text; at 48px it clips the glyphs.
+    lineHeight: 58,
     color: '#FFFFFF',
     marginBottom: theme.spacing.sm,
   },
@@ -135,20 +125,5 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     ...typography.h3,
     color: '#FFFFFF',
-  },
-  features: {
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    alignItems: 'center',
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  featureText: {
-    ...typography.body1,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontWeight: '500',
   },
 });
