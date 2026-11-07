@@ -664,9 +664,6 @@ export default function TrainerDetailsScreen() {
                     style={[styles.gymRow, index === trainer.availableGyms!.length - 1 && styles.gymRowLast]}
                   >
                     <Text style={styles.gymName}>{gym.name}</Text>
-                    <Text style={styles.gymAddress}>
-                      {[gym.address, gym.city].filter(Boolean).join(", ")}
-                    </Text>
                   </View>
                 ))}
               </View>
@@ -1062,10 +1059,6 @@ const styles = StyleSheet.create({
     color: "#334155",
   },
   gymRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: 12,
     paddingVertical: 12,
     borderTopWidth: 1,
     borderTopColor: theme.colors.border,
@@ -1078,12 +1071,6 @@ const styles = StyleSheet.create({
     ...typography.body,
     fontFamily: fonts.uiBold,
     color: theme.colors.text,
-  },
-  gymAddress: {
-    ...typography.small,
-    color: theme.colors.textSecondary,
-    textAlign: "right",
-    flexShrink: 1,
   },
   primaryButton: {
     marginTop: 4,
