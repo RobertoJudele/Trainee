@@ -225,11 +225,11 @@ export default function Home() {
             </View>
           )}
         </View>
-      </View>
-      <View style={styles.priceTag}>
-        <Text style={styles.hourlyRate}>
-          {formatFromPerSession(item.minSessionPrice, t) ?? ""}
-        </Text>
+        {formatFromPerSession(item.minSessionPrice, t) && (
+          <Text style={styles.hourlyRate}>
+            {formatFromPerSession(item.minSessionPrice, t)}
+          </Text>
+        )}
       </View>
     </PressableScale>
     </FadeInUp>
@@ -313,11 +313,11 @@ export default function Home() {
             )
           )}
         </View>
-      </View>
-      <View style={styles.priceTag}>
-        <Text style={styles.hourlyRate}>
-          {formatFromPerSession(item.minSessionPrice, t) ?? ""}
-        </Text>
+        {formatFromPerSession(item.minSessionPrice, t) && (
+          <Text style={styles.hourlyRate}>
+            {formatFromPerSession(item.minSessionPrice, t)}
+          </Text>
+        )}
       </View>
     </PressableScale>
     </FadeInUp>
@@ -417,7 +417,7 @@ export default function Home() {
         {isClient && (
           <View style={styles.trainersSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t("suggestedForYou")}</Text>
+              <Text style={[styles.sectionTitle, styles.sectionHeaderTitle]}>{t("suggestedForYou")}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/preferences")}
                 accessible={true}
@@ -487,7 +487,7 @@ export default function Home() {
         {!isClient && (
           <View style={styles.trainersSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t("topRatedTrainers")}</Text>
+              <Text style={[styles.sectionTitle, styles.sectionHeaderTitle]}>{t("topRatedTrainers")}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/search")}
                 accessible={true}
@@ -618,6 +618,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: theme.spacing.md,
   },
+  // The title wraps rather than pushing the link off-screen in longer languages.
+  sectionHeaderTitle: { flexShrink: 1, marginBottom: 0, marginRight: theme.spacing.md },
   seeAllButton: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
 
   trainerCard: {
@@ -672,12 +674,7 @@ const styles = StyleSheet.create({
   reviewCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 2, textTransform: "none" },
   location: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: "none" },
   
-  priceTag: {
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    paddingTop: theme.spacing.xs,
-  },
-  hourlyRate: { ...typography.price, fontSize: 15, lineHeight: 20, color: theme.colors.primary },
+  hourlyRate: { ...typography.price, fontSize: 15, lineHeight: 20, color: theme.colors.primary, marginTop: 6 },
 
   loadingContainer: { alignItems: "center", paddingVertical: theme.spacing.xl },
   loadingText: { ...typography.body2, color: theme.colors.textSecondary, marginTop: theme.spacing.sm },
