@@ -1302,9 +1302,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   heroEyebrow: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   heroTitle: {
     ...typography.h2,
@@ -1328,7 +1327,6 @@ const styles = StyleSheet.create({
   statLabel: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   statValue: {
     ...typography.h3,
@@ -1379,7 +1377,6 @@ const styles = StyleSheet.create({
   controlHint: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   blockedBanner: {
     borderRadius: 12,
@@ -1401,10 +1398,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   blockBtnText: {
-    ...typography.caption,
+    ...typography.button, fontSize: 14,
     color: theme.colors.error,
-    textTransform: "none",
-    fontFamily: fonts.monoSemiBold,
   },
   slotTimeText: {
     ...typography.body2,
@@ -1429,10 +1424,8 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   unassignBtnText: {
-    ...typography.caption,
+    ...typography.button, fontSize: 14,
     color: theme.colors.text,
-    textTransform: "none",
-    fontFamily: fonts.monoSemiBold,
   },
   clientPool: {
     borderWidth: 1,
@@ -1533,7 +1526,6 @@ const styles = StyleSheet.create({
   clientSub: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   emptyText: {
     ...typography.body2,

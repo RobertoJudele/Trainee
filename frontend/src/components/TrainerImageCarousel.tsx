@@ -217,7 +217,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   counterText: {
-    ...typography.caption,
+    ...typography.label,
     color: "#fff",
     fontFamily: fonts.monoSemiBold,
   },

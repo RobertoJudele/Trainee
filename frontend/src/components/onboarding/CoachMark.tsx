@@ -383,8 +383,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     ...typography.caption,
     color: theme.colors.text,
-    fontFamily: fonts.monoSemiBold,
-    textTransform: "none",
+    fontFamily: fonts.uiSemiBold,
     backgroundColor: "#fff",
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -422,7 +421,6 @@ const styles = StyleSheet.create({
   demoTrainerMetaText: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   tooltip: {
     position: "absolute",
@@ -456,7 +454,6 @@ const styles = StyleSheet.create({
   counter: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   navBtns: {
     flexDirection: "row",
@@ -489,8 +486,7 @@ const styles = StyleSheet.create({
   hint: {
     ...typography.caption,
     color: theme.colors.primary,
-    fontFamily: fonts.monoSemiBold,
-    textTransform: "none",
+    fontFamily: fonts.uiSemiBold,
     fontStyle: "italic",
   },
 });

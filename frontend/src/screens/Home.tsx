@@ -607,7 +607,7 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.sm,
   },
   actionTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text, marginBottom: 2 },
-  actionDesc: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  actionDesc: { ...typography.caption, color: theme.colors.textSecondary },
 
   trainersSection: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   sectionHeader: {
@@ -647,7 +647,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  matchBadgeText: { ...typography.caption, color: "#fff", fontFamily: fonts.monoSemiBold, textTransform: "none" },
+  matchBadgeText: { ...typography.caption, color: "#fff", fontFamily: fonts.uiSemiBold },
   preferencesPrompt: {
     flexDirection: "row",
     alignItems: "center",
@@ -663,12 +663,12 @@ const styles = StyleSheet.create({
   preferencesPromptTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text },
   preferencesPromptText: { ...typography.body2, color: theme.colors.textSecondary },
   trainerBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 4 },
-  trainerSpec: { ...typography.caption, color: theme.colors.primary, fontFamily: fonts.monoSemiBold, marginBottom: 6, textTransform: "uppercase" },
+  trainerSpec: { ...typography.label, color: theme.colors.primary, fontFamily: fonts.monoSemiBold, marginBottom: 6, textTransform: "uppercase" },
   trainerMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   metaBadge: { flexDirection: "row", alignItems: "center", backgroundColor: theme.colors.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  rating: { ...typography.caption, fontFamily: fonts.monoSemiBold, color: theme.colors.text, marginLeft: 4 },
-  reviewCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 2, textTransform: "none" },
-  location: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: "none" },
+  rating: { ...typography.label, fontFamily: fonts.monoSemiBold, color: theme.colors.text, marginLeft: 4 },
+  reviewCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 2 },
+  location: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4 },
   
   hourlyRate: { ...typography.price, fontSize: 15, lineHeight: 20, color: theme.colors.primary, marginTop: 6 },
 

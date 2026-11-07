@@ -351,7 +351,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   metricLabel: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
   },
   metricValue: {
@@ -364,7 +364,6 @@ const styles = StyleSheet.create({
   metricHint: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   sectionCard: {
     backgroundColor: theme.colors.surface,
@@ -413,7 +412,6 @@ const styles = StyleSheet.create({
   trendLabel: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   breakdownStack: {
     gap: 10,
@@ -439,7 +437,6 @@ const styles = StyleSheet.create({
   breakdownValue: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   barTrack: {
     height: 8,
@@ -472,12 +469,10 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: theme.colors.textSecondary,
     marginTop: 2,
-    textTransform: "none",
   },
   recentTime: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   emptyText: {
     ...typography.body2,

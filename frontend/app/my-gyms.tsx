@@ -444,7 +444,7 @@ const styles = StyleSheet.create({
   gymCardAddress: { ...typography.caption, color: theme.colors.textSecondary, marginBottom: 2 },
   gymCardHours: { ...typography.caption, color: theme.colors.textSecondary },
   toggleBox: { alignItems: "center", gap: 4 },
-  toggleLabel: { ...typography.caption, color: theme.colors.textSecondary, fontFamily: fonts.monoSemiBold },
+  toggleLabel: { ...typography.label, color: theme.colors.textSecondary, fontFamily: fonts.monoSemiBold },
   availRow: {
     padding: 8,
     borderRadius: 8,
@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     marginBottom: 10,
   },
-  staffText: { ...typography.caption, color: theme.colors.text },
+  staffText: { ...typography.label, color: theme.colors.text },
   staffBtn: {
     paddingVertical: 10,
     borderRadius: 8,
@@ -471,11 +471,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   staffBtnText: {
-    ...typography.caption,
+    ...typography.button, fontSize: 14,
     color: theme.colors.primary,
-    fontFamily: fonts.monoSemiBold,
   },
-  availText: { ...typography.caption, color: "#374151", fontFamily: fonts.monoSemiBold },
+  availText: { ...typography.label, color: "#374151", fontFamily: fonts.monoSemiBold },
   leaveBtn: {
     alignSelf: "flex-start",
     paddingHorizontal: 12,
@@ -484,7 +483,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.error,
   },
-  leaveBtnText: { ...typography.caption, color: theme.colors.error, fontFamily: fonts.monoSemiBold },
+  leaveBtnText: { ...typography.button, fontSize: 14, color: theme.colors.error },
 
   // Empty / centered
   centeredBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40, gap: 10 },
@@ -553,7 +552,7 @@ const styles = StyleSheet.create({
   browserRowLeft: { flex: 1 },
   browserGymName: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text },
   browserGymAddr: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 1 },
-  browserGymMeta: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 2 },
+  browserGymMeta: { ...typography.label, color: theme.colors.textSecondary, marginTop: 2 },
   joinBtn: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
@@ -568,5 +567,5 @@ const styles = StyleSheet.create({
     borderRadius: theme.roundness,
     backgroundColor: "#D1FAE5",
   },
-  joinedBadgeText: { ...typography.caption, color: "#065F46", fontFamily: fonts.monoSemiBold },
+  joinedBadgeText: { ...typography.label, color: "#065F46", fontFamily: fonts.monoSemiBold },
 });

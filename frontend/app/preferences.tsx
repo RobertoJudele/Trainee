@@ -533,5 +533,5 @@ const styles = StyleSheet.create({
   },
   gymRowActive: { borderColor: theme.colors.primary },
   gymName: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
-  gymLocation: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  gymLocation: { ...typography.caption, color: theme.colors.textSecondary },
 });

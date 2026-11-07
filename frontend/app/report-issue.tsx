@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  chipText: { ...typography.caption, color: theme.colors.text },
+  chipText: { ...typography.label, color: theme.colors.text },
   chipTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   input: {
     borderWidth: 1,

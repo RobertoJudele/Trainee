@@ -232,9 +232,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   heroEyebrow: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   heroTitle: {
     ...typography.h2,
@@ -269,7 +268,6 @@ const styles = StyleSheet.create({
   metricLabel: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   metricValue: {
     ...typography.h3,
@@ -304,12 +302,10 @@ const styles = StyleSheet.create({
   slotClientText: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   slotClientPlaceholder: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   emptyText: {
     ...typography.body2,
@@ -324,7 +320,6 @@ const styles = StyleSheet.create({
   blockedBadgeText: {
     ...typography.caption,
     color: "#475569",
-    fontFamily: fonts.monoSemiBold,
-    textTransform: "none",
+    fontFamily: fonts.uiSemiBold,
   },
 });

@@ -113,6 +113,8 @@ const label = {
   textTransform: 'uppercase' as const,
 };
 const price = { fontFamily: fonts.monoSemiBold, fontSize: 17, lineHeight: 22 };
+// Short secondary sentences: addresses, bios, notes. Small labels use `label`.
+const caption = { fontFamily: fonts.ui, fontSize: 12, lineHeight: 16 };
 
 export const typography = {
   display,
@@ -123,14 +125,15 @@ export const typography = {
   button,
   label,
   price,
+  caption,
   // Older names, still used across the screens. Each points at its new style
-  // until the screens move over to the names above.
+  // until the screens move over to the names above. (`caption` is a real style
+  // again: it was an uppercase label, now labels use `label`.)
   h1: display,
   h2: title,
   h3: heading,
   body1: body,
   body2: small,
-  caption: label,
 };
 
 // Shared surfaces. Spread these into a screen's StyleSheet instead of

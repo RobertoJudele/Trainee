@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   count: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
     fontFamily: fonts.monoSemiBold,
   },
@@ -171,9 +171,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   addText: {
-    ...typography.caption,
+    ...typography.button, fontSize: 14,
     color: theme.colors.primary,
-    fontFamily: fonts.monoSemiBold,
     marginTop: 2,
   },
 });

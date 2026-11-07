@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   eyebrow: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
     textTransform: "uppercase",
   },
@@ -455,7 +455,7 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   effectiveDate: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.primary,
     marginTop: 2,
   },

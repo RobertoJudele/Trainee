@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
   badgeOn: { backgroundColor: "#DCFCE7" },
   badgeOff: { backgroundColor: "#FEE2E2" },
   availabilityText: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.text,
     fontFamily: fonts.monoSemiBold,
   },
@@ -866,11 +866,11 @@ const styles = StyleSheet.create({
     fontFamily: fonts.uiBold,
   },
   reviewsText: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
   },
   viewText: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
   },
   section: {
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   gymRating: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.text,
     fontFamily: fonts.monoSemiBold,
   },
@@ -997,7 +997,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   reviewerInitial: {
-    ...typography.caption,
+    ...typography.label,
     color: "#fff",
     fontFamily: fonts.monoSemiBold,
   },
@@ -1065,7 +1065,7 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   charCount: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
     alignSelf: "flex-end",
   },

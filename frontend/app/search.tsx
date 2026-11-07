@@ -731,10 +731,10 @@ const styles = StyleSheet.create({
   specChipText: { ...typography.label, fontSize: 11, color: theme.colors.primary },
   cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
   ratingRow: { flexDirection: "row", alignItems: "center" },
-  ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 6, textTransform: 'none' },
+  ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 6 },
   cardPrice: { ...typography.price, color: theme.colors.primary },
   locationContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 2},
-  cardLocation: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: 'none' },
+  cardLocation: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4 },
 
   // States
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, marginTop: 40 },

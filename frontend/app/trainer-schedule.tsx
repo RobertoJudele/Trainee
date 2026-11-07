@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: "row", justifyContent: "center", gap: theme.spacing.lg },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  legendLabel: { ...typography.caption, color: theme.colors.textSecondary },
 
   dayPillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   timeRow: { flexDirection: "row", gap: theme.spacing.sm },

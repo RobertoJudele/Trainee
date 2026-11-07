@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   title: { ...typography.body1, color: theme.colors.text, fontFamily: fonts.uiBold },
   meta: { ...typography.caption, color: theme.colors.textSecondary },
   description: { ...typography.body2, color: theme.colors.text },
-  status: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 4 },
+  status: { ...typography.label, color: theme.colors.textSecondary, marginTop: 4 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
   statusButton: {
     borderWidth: 1,
@@ -343,7 +343,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
-  statusButtonText: { ...typography.caption, color: theme.colors.text },
+  statusButtonText: { ...typography.button, fontSize: 14, color: theme.colors.text },
   statusButtonTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   tabBar: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
   tab: {
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   tabActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  tabText: { ...typography.caption, color: theme.colors.text },
+  tabText: { ...typography.label, color: theme.colors.text },
   tabTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   filterRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   filterChip: {
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.text,
     borderColor: theme.colors.text,
   },
-  filterChipText: { ...typography.caption, color: theme.colors.text },
+  filterChipText: { ...typography.label, color: theme.colors.text },
   filterChipTextActive: { color: "#fff", fontFamily: fonts.uiBold },
   gymMeta: { gap: 2, marginTop: 2 },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary },

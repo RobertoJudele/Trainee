@@ -474,7 +474,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
   },
-  statusText: { ...typography.caption, fontFamily: fonts.monoSemiBold, textTransform: 'uppercase' },
+  statusText: { ...typography.label, fontFamily: fonts.monoSemiBold, textTransform: 'uppercase' },
   title: { ...typography.body1, color: theme.colors.text, fontFamily: fonts.uiBold },
   text: { ...typography.body2, color: theme.colors.textSecondary },
   emptyText: { ...typography.h3, color: theme.colors.text, textAlign: "center" },
@@ -486,9 +486,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  codeLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  codeLabel: { ...typography.caption, color: theme.colors.textSecondary },
   codeText: { ...typography.price, fontSize: 34, lineHeight: 40, color: theme.colors.primary, letterSpacing: 6 },
-  codeExpiry: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  codeExpiry: { ...typography.caption, color: theme.colors.textSecondary },
   cancelBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -501,7 +501,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   cancelBtnDisabled: { opacity: 0.5 },
-  cancelBtnText: { ...typography.caption, color: theme.colors.error, fontFamily: fonts.monoSemiBold, textTransform: "none" },
+  cancelBtnText: { ...typography.button, fontSize: 14, color: theme.colors.error },
   sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
   sheet: {
     backgroundColor: theme.colors.surface,
@@ -514,7 +514,7 @@ const styles = StyleSheet.create({
   },
   inviteRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
   myTrainersWrap: { marginTop: theme.spacing.sm, gap: 6 },
-  myTrainersLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  myTrainersLabel: { ...typography.caption, color: theme.colors.textSecondary },
   myTrainerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   myTrainerName: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold, flex: 1 },
   inviteInput: {

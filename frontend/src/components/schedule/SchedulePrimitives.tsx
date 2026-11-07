@@ -285,7 +285,6 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   cardContent: {
     gap: 8,
@@ -321,7 +320,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   statusText: {
-    ...typography.caption,
+    ...typography.label,
     textTransform: "capitalize",
     fontFamily: fonts.monoSemiBold,
   },

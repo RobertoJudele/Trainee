@@ -1538,12 +1538,12 @@ const styles = StyleSheet.create({
 		marginTop: 10,
 	},
 	legalLink: {
-		...typography.caption,
+		...typography.label,
 		color: theme.colors.primary,
 		fontFamily: fonts.monoSemiBold,
 	},
 	legalLinkSeparator: {
-		...typography.caption,
+		...typography.label,
 		color: theme.colors.textSecondary,
 		marginHorizontal: 8,
 	},
@@ -1583,7 +1583,6 @@ const styles = StyleSheet.create({
 	},
 	futurePricingNote: {
 		...typography.caption,
-		textTransform: "none",
 		color: theme.colors.textSecondary,
 		lineHeight: 18,
 		marginTop: 8,
@@ -1612,7 +1611,7 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	badgeText: {
-		...typography.caption,
+		...typography.label,
 		fontSize: 10,
 		fontFamily: fonts.monoSemiBold,
 	},
@@ -1695,7 +1694,7 @@ const styles = StyleSheet.create({
 		fontFamily: fonts.uiSemiBold,
 	},
 	transactionIdText: {
-		...typography.caption,
+		...typography.label,
 		color: theme.colors.textSecondary,
 		marginTop: 2,
 		fontSize: 10,
@@ -1715,7 +1714,7 @@ const styles = StyleSheet.create({
 		marginTop: 4,
 	},
 	smallBadgeText: {
-		...typography.caption,
+		...typography.label,
 		fontSize: 9,
 		fontFamily: fonts.monoSemiBold,
 	},
