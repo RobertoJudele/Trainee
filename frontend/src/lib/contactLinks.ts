@@ -116,3 +116,40 @@ export const getWhatsAppContactUrls = (
     webUrl: `https://wa.me/${phoneDigits}${text ? `?text=${text}` : ""}`,
   };
 };
+
+export interface LinkOpener {
+  canOpenURL: (url: string) => Promise<boolean>;
+  openURL: (url: string) => Promise<unknown>;
+}
+
+/**
+ * Opens the first url that works, trying them in order (an app scheme, then its
+ * https fallback). Resolves false only when none opened.
+ *
+ * A failed check never stops the loop: on iOS canOpenURL *throws* for a custom
+ * scheme missing from LSApplicationQueriesSchemes rather than answering false,
+ * which used to end the attempt before wa.me was tried. And an https url is
+ * opened even when the check says no, since Android 11+ answers false for
+ * anything not declared in the manifest's <queries>.
+ */
+export const openFirstAvailable = async (
+  urls: ReadonlyArray<string>,
+  linking: LinkOpener
+): Promise<boolean> => {
+  for (const url of urls) {
+    let canOpen = false;
+    try {
+      canOpen = await linking.canOpenURL(url);
+    } catch {
+      canOpen = false;
+    }
+    if (!canOpen && !/^https?:\/\//i.test(url)) continue;
+    try {
+      await linking.openURL(url);
+      return true;
+    } catch {
+      // try the next one
+    }
+  }
+  return false;
+};

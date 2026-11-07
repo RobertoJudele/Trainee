@@ -61,6 +61,7 @@ import {
 import {
   normalizeSocialUrl,
   getWhatsAppContactUrls,
+  openFirstAvailable,
 } from "../../src/lib/contactLinks";
 import { fonts } from '../../src/lib/fonts';
 
@@ -375,25 +376,8 @@ export default function TrainerDetailsScreen() {
   const otherContacts = contactOptions.slice(1);
 
   const openContactUrl = React.useCallback(async (url: string, fallbackUrl?: string) => {
-    try {
-      const canOpen = await Linking.canOpenURL(url);
-      if (canOpen) {
-        await Linking.openURL(url);
-        return;
-      }
-
-      if (fallbackUrl) {
-        const canOpenFallback = await Linking.canOpenURL(fallbackUrl);
-        if (canOpenFallback) {
-          await Linking.openURL(fallbackUrl);
-          return;
-        }
-      }
-
-      Alert.alert(t("unavailable"), t("couldNotOpenSocial"));
-    } catch {
-      Alert.alert(t("error"), t("failedOpenSocial"));
-    }
+    const opened = await openFirstAvailable(fallbackUrl ? [url, fallbackUrl] : [url], Linking);
+    if (!opened) Alert.alert(t("unavailable"), t("couldNotOpenSocial"));
   }, [t]);
 
   const handleContact = useCallback(async (option: ContactOption) => {

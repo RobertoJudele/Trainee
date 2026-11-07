@@ -2,6 +2,7 @@ import {
   normalizeSocialUrl,
   normalizeWhatsAppPhoneDigits,
   getWhatsAppContactUrls,
+  openFirstAvailable,
 } from "../contactLinks";
 
 describe("normalizeSocialUrl", () => {
@@ -149,5 +150,46 @@ describe("getWhatsAppContactUrls", () => {
 
   it.each([null, undefined, "", "   "])("returns null for %p", (value) => {
     expect(getWhatsAppContactUrls(value as string | null | undefined)).toBeNull();
+  });
+});
+
+describe("openFirstAvailable", () => {
+  // iOS: canOpenURL *rejects* for a custom scheme missing from
+  // LSApplicationQueriesSchemes instead of answering false. That used to abort
+  // before the wa.me fallback was ever tried.
+  it("moves on to the fallback when checking the first url throws", async () => {
+    const opened: string[] = [];
+    const linking = {
+      canOpenURL: jest.fn(async (url: string) => {
+        if (url.startsWith("whatsapp://")) throw new Error("Unable to open URL: add whatsapp to LSApplicationQueriesSchemes");
+        return true;
+      }),
+      openURL: jest.fn(async (url: string) => { opened.push(url); }),
+    };
+    await expect(
+      openFirstAvailable(["whatsapp://send?phone=40773880996", "https://wa.me/40773880996"], linking)
+    ).resolves.toBe(true);
+    expect(opened).toEqual(["https://wa.me/40773880996"]);
+  });
+
+  it("opens an https url even when canOpenURL says no", async () => {
+    // Android 11+ answers false for anything not declared in <queries>.
+    const opened: string[] = [];
+    const linking = {
+      canOpenURL: jest.fn(async () => false),
+      openURL: jest.fn(async (url: string) => { opened.push(url); }),
+    };
+    await expect(
+      openFirstAvailable(["whatsapp://send?phone=1", "https://wa.me/40773880996"], linking)
+    ).resolves.toBe(true);
+    expect(opened).toEqual(["https://wa.me/40773880996"]);
+  });
+
+  it("reports failure when nothing opens", async () => {
+    const linking = {
+      canOpenURL: jest.fn(async () => false),
+      openURL: jest.fn(async () => { throw new Error("no handler"); }),
+    };
+    await expect(openFirstAvailable(["whatsapp://x", "https://wa.me/1"], linking)).resolves.toBe(false);
   });
 });
