@@ -8,6 +8,7 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
@@ -15,7 +16,6 @@ import { useDispatch } from 'react-redux';
 import { getApiErrorMessage } from '../lib/errors';
 import { setCredentials } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
 import SocialAuthButtons from '../components/SocialAuthButtons';
@@ -97,7 +97,12 @@ export default function Login() {
           ]}
         >
           <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
-            <Ionicons name="barbell" size={40} color="#FFFFFF" />
+            <Image
+              source={require('../../assets/salvio-mark-white.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
           </View>
           <Text style={styles.title}>{t("welcomeBack")}</Text>
           <Text style={styles.subtitle}>{t("signInSubtitle")}</Text>
@@ -213,6 +218,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: theme.spacing.md,
     ...theme.shadows.large,
+  },
+  logo: {
+    // Mark is 419×721; keep its aspect ratio inside the 84px circle.
+    height: 52,
+    width: 52 * (419 / 721),
   },
   title: {
     ...typography.h1,
