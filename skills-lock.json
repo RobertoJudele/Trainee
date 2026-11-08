@@ -241,6 +241,12 @@
       "skillPath": "skills/emails/SKILL.md",
       "computedHash": "24be312d773945dda1d21b52fa172a523e9cb005cb3b700fe81f787980d5381c"
     },
+    "fashion-designer": {
+      "source": "nobodyonlyc/skills",
+      "sourceType": "github",
+      "skillPath": "skills/fashion-designer/SKILL.md",
+      "computedHash": "3e85c11b4bdb347073fe07bc55ff41fd8ae7e333b08e0a15005d2ed3fb1a547f"
+    },
     "free-tools": {
       "source": "coreyhaines31/marketingskills",
       "sourceType": "github",
