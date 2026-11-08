@@ -137,6 +137,7 @@ export const apiSlice = createApi({
     "ClientPreferences",
     "SuggestedTrainers",
     "TrainerImages",
+    "TrainerTransformations",
     "TrainerPackages",
     "ClientPacks",
     "TrainerClients",

@@ -36,6 +36,7 @@ import { trainerTour } from "../../src/components/onboarding/trainerTour";
 import { Ionicons } from "@expo/vector-icons";
 import EditableAvatar from "../../src/components/EditableAvatar";
 import TrainerImageSection from "../../src/components/TrainerImageSection";
+import TrainerTransformationSection from "../../src/components/TrainerTransformationSection";
 import { useProfilePictureUpload } from "../../src/lib/useProfilePictureUpload";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../../src/lib/errors";
@@ -48,6 +49,7 @@ import ProfileMenuModal, { type ProfileMenuItem } from "../../src/components/Pro
 import { useAccountActions } from "../../src/hooks/useAccountActions";
 import { useTrainerFormState } from "./hooks/useTrainerFormState";
 import { useTrainerImages } from "./hooks/useTrainerImages";
+import { useTrainerTransformations, MAX_TRANSFORMATIONS } from "./hooks/useTrainerTransformations";
 import {
   useGetTrainerPackagesQuery,
   useCreateTrainerPackageMutation,
@@ -142,6 +144,7 @@ function TrainerProfile() {
   // ── Extracted hooks ──
   const { pickAndUpload, isUploading: isUploadingAvatar } = useProfilePictureUpload();
   const images = useTrainerImages();
+  const transformations = useTrainerTransformations();
   const form = useTrainerFormState({ initialTrainer: trainer });
   const fieldErrors = useFieldErrors<"experience" | "specs" | "instagram" | "facebook" | "whatsapp">();
   // Keys: {row}.{name|price|sessionCount}
@@ -508,6 +511,14 @@ function TrainerProfile() {
           deletingId={images.deletingImageId}
           onAdd={() => images.addImages("credential")}
           onDelete={images.removeImage}
+        />
+        <TrainerTransformationSection
+          transformations={transformations.transformations}
+          max={MAX_TRANSFORMATIONS}
+          submitting={transformations.isCreating}
+          deletingId={transformations.deletingId}
+          onCreate={transformations.create}
+          onDelete={transformations.remove}
         />
 
         {/* ── Experience & Rates ── */}

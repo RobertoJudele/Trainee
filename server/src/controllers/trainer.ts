@@ -14,6 +14,7 @@ import { S3ImageService } from "../services/s3ImageService";
 import { Sequelize } from "sequelize";
 import "../utils/helper";
 import { TrainerImage } from "../models/trainerImage";
+import { TrainerTransformation } from "../models/trainerTransformation";
 import { TrainerSpecialization } from "../models/trainerSpecialization";
 import { TrainerGym } from "../models/trainerGym";
 import { Gym } from "../models/gym";
@@ -579,6 +580,17 @@ export const getTrainer = async (
 
     const specializationsMap = await getSpecializationsForTrainers([trainerNumericId]);
 
+    // Fetched on its own rather than as a second hasMany include, which would
+    // multiply the image rows by the transformation rows.
+    const transformations = await TrainerTransformation.findAll({
+      where: { trainerId: trainerNumericId },
+      attributes: ["id", "beforeImageUrl", "afterImageUrl", "description", "displayOrder"],
+      order: [
+        ["displayOrder", "ASC"],
+        ["createdAt", "ASC"],
+      ],
+    });
+
     const entitlement = resolveTrainerEntitlement(trainer);
     const trainerJson = trainer.toJSON() as any;
     // Split the included images into the two public-facing buckets and drop the
@@ -596,6 +608,7 @@ export const getTrainer = async (
       specializations: specializationsMap.get(trainerNumericId) ?? [],
       galleryImages,
       credentialImages,
+      transformations: transformations.map((t) => t.toJSON()),
       isActive: entitlement.isActive,
       entitlement,
     };
@@ -614,7 +627,7 @@ export const getTrainer = async (
 // trainer link is nulled.
 /**
  * Deletes a trainer profile and everything hanging off it, inside the caller's
- * transaction. Returns the gallery/credential image URLs it removed rows for, so
+ * transaction. Returns the gallery/credential/transformation image URLs it removed rows for, so
  * the caller can purge the objects from storage *after* the transaction commits
  * — an object deleted inside the transaction would be gone for good if the
  * transaction then rolled back.
@@ -628,13 +641,22 @@ export const cascadeDeleteTrainer = async (
     attributes: ["imageUrl"],
     transaction: t,
   });
-  const imageUrls = images.map((i) => i.imageUrl);
+  const transformations = await TrainerTransformation.findAll({
+    where: { trainerId },
+    attributes: ["beforeImageUrl", "afterImageUrl"],
+    transaction: t,
+  });
+  const imageUrls = [
+    ...images.map((i) => i.imageUrl),
+    ...transformations.flatMap((tr) => [tr.beforeImageUrl, tr.afterImageUrl]),
+  ];
 
   await TrainerScheduleSlot.destroy({ where: { trainerId }, transaction: t });
   await TrainerWorkingHour.destroy({ where: { trainerId }, transaction: t });
   await TrainerBlockedDate.destroy({ where: { trainerId }, transaction: t });
   await TrainerGym.destroy({ where: { trainerId }, transaction: t });
   await TrainerImage.destroy({ where: { trainerId }, transaction: t });
+  await TrainerTransformation.destroy({ where: { trainerId }, transaction: t });
   await TrainerSpecialization.destroy({ where: { trainerId }, transaction: t });
   await TrainerPackage.destroy({ where: { trainerId }, transaction: t });
   await Review.destroy({ where: { trainerId }, transaction: t });

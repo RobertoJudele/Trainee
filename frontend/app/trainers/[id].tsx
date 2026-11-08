@@ -45,6 +45,7 @@ import { Button, FieldError } from "../../src/components/ui";
 import { useFieldErrors } from "../../src/lib/useFieldErrors";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
+import TransformationCarousel from "../../src/components/TransformationCarousel";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
 import { getApiErrorMessage } from "../../src/lib/errors";
 import { formatFromPerSession } from "../../src/lib/price";
@@ -693,6 +694,21 @@ export default function TrainerDetailsScreen() {
             </View>
           ) : null}
 
+          {trainer?.transformations && trainer.transformations.length > 0 && (
+            <View style={styles.section}>
+              <TransformationCarousel
+                transformations={trainer.transformations}
+                renderHeader={(counter) => (
+                  <View style={styles.sectionHead} accessibilityRole="header">
+                    <Text style={styles.sectionTitle}>{t("clientResults")}</Text>
+                    <View style={styles.sectionRule} />
+                    {counter ? <Text style={styles.sectionCounter}>{counter}</Text> : null}
+                  </View>
+                )}
+              />
+            </View>
+          )}
+
           {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
             <View style={styles.section}>
               <TrainerImageCarousel
@@ -1106,6 +1122,10 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 2,
     backgroundColor: theme.colors.text,
+  },
+  sectionCounter: {
+    ...typography.label,
+    color: theme.colors.textSecondary,
   },
   bioQuote: {
     fontFamily: fonts.uiSemiBold,

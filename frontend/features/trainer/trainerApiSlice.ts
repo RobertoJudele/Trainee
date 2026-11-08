@@ -94,6 +94,14 @@ export interface TrainerImagesResponse {
   };
 }
 
+export interface TrainerTransformationItem {
+  id: number;
+  beforeImageUrl: string;
+  afterImageUrl: string;
+  description: string;
+  displayOrder?: number;
+}
+
 export interface PublicTrainerProfile {
   id: string;
   internalId?: number;
@@ -126,6 +134,7 @@ export interface PublicTrainerProfile {
   specializations?: TrainerSpecializationItem[];
   galleryImages?: TrainerImageItem[];
   credentialImages?: TrainerImageItem[];
+  transformations?: TrainerTransformationItem[];
 }
 
 export interface SearchParams {
@@ -344,6 +353,27 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       query: (id) => ({ url: `/trainer-images/${id}`, method: "DELETE" }),
       invalidatesTags: ["TrainerImages"],
     }),
+
+    // The authenticated trainer's own client transformations (for management).
+    getTrainerTransformations: builder.query<ApiEnvelope<TrainerTransformationItem[]>, void>({
+      query: () => "/trainer-transformations",
+      providesTags: ["TrainerTransformations"],
+    }),
+
+    // FormData: "before" + "after" files, "description", "consent" = "true".
+    createTrainerTransformation: builder.mutation<ApiEnvelope<TrainerTransformationItem>, FormData>({
+      query: (formData) => ({
+        url: "/trainer-transformations",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["TrainerTransformations"],
+    }),
+
+    deleteTrainerTransformation: builder.mutation<ApiEnvelope<void>, number>({
+      query: (id) => ({ url: `/trainer-transformations/${id}`, method: "DELETE" }),
+      invalidatesTags: ["TrainerTransformations"],
+    }),
   }),
 });
 
@@ -360,4 +390,7 @@ export const {
   useUploadGalleryImagesMutation,
   useUploadCredentialImagesMutation,
   useDeleteTrainerImageMutation,
+  useGetTrainerTransformationsQuery,
+  useCreateTrainerTransformationMutation,
+  useDeleteTrainerTransformationMutation,
 } = trainerApiSlice;

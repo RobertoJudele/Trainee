@@ -23,6 +23,7 @@ import { RATING_PRIOR } from "../utils/rating";
 import { TrainerSpecialization } from "./trainerSpecialization";
 import type { Specialization } from "./specialization";
 import { TrainerImage } from "./trainerImage";
+import { TrainerTransformation } from "./trainerTransformation";
 import { TrainerPackage } from "./trainerPackage";
 import { Review } from "./review";
 import { activeSubscriptionWhere } from "../services/billing/activeSubscriptionScope";
@@ -202,6 +203,8 @@ export class Trainer extends Model<
   @BelongsTo(() => User) user!: User;
 
   @HasMany(() => TrainerImage) images!: TrainerImage[];
+
+  @HasMany(() => TrainerTransformation) transformations!: TrainerTransformation[];
 
   @HasMany(() => TrainerPackage) packages!: TrainerPackage[];
 

@@ -14,6 +14,7 @@ import sequelize from "../db";
 import { User } from "../models/user";
 import { Trainer } from "../models/trainer";
 import { TrainerImage } from "../models/trainerImage";
+import { TrainerTransformation } from "../models/trainerTransformation";
 import { S3ImageService } from "../services/s3ImageService";
 
 type Mode = "demo" | "trainers" | "all";
@@ -57,10 +58,15 @@ async function run(mode: Mode, confirmed: boolean): Promise<void> {
     where: { trainerId: { [Op.in]: trainers.map((t) => t.id) } },
     attributes: ["imageUrl"],
   });
+  const transformations = await TrainerTransformation.findAll({
+    where: { trainerId: { [Op.in]: trainers.map((t) => t.id) } },
+    attributes: ["beforeImageUrl", "afterImageUrl"],
+  });
 
   const urls = [
     ...users.map((u) => u.profileImageUrl),
     ...images.map((i) => i.imageUrl),
+    ...transformations.flatMap((t) => [t.beforeImageUrl, t.afterImageUrl]),
   ].filter((u): u is string => Boolean(u));
 
   console.log(
