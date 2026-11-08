@@ -9,7 +9,8 @@ export interface TrainerFormFields {
   instagramUrl: string;
   facebookUrl: string;
   whatsappUrl: string;
-  contactNameDative: string;
+  freeFirstSession: boolean;
+  gender: "male" | "female" | null;
   selectedSpecializationIds: number[];
 }
 
@@ -22,7 +23,8 @@ export interface TrainerFormSetters {
   setInstagramUrl: (v: string) => void;
   setFacebookUrl: (v: string) => void;
   setWhatsappUrl: (v: string) => void;
-  setContactNameDative: (v: string) => void;
+  setFreeFirstSession: (v: boolean) => void;
+  setGender: (v: "male" | "female") => void;
   toggleSpecialization: (id: number) => void;
 }
 
@@ -35,7 +37,8 @@ interface TrainerLike {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
-  contactNameDative?: string | null;
+  freeFirstSession?: boolean;
+  gender?: "male" | "female" | null;
   specializations?: Array<{ id: number }>;
 }
 
@@ -58,7 +61,8 @@ function hydrateFromTrainer(trainer: TrainerLike | null | undefined) {
     instagramUrl: trainer?.instagramUrl ?? "",
     facebookUrl: trainer?.facebookUrl ?? "",
     whatsappUrl: trainer?.whatsappUrl ?? "",
-    contactNameDative: trainer?.contactNameDative ?? "",
+    freeFirstSession: trainer?.freeFirstSession ?? false,
+    gender: trainer?.gender ?? null,
     selectedSpecializationIds: Array.isArray(trainer?.specializations)
       ? trainer.specializations.map((s) => s.id) : [],
   };
@@ -77,7 +81,8 @@ export function useTrainerFormState(
   const [instagramUrl, setInstagramUrl] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
-  const [contactNameDative, setContactNameDative] = useState("");
+  const [freeFirstSession, setFreeFirstSession] = useState(false);
+  const [gender, setGender] = useState<"male" | "female" | null>(null);
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
 
   useEffect(() => {
@@ -91,7 +96,8 @@ export function useTrainerFormState(
     setInstagramUrl(values.instagramUrl);
     setFacebookUrl(values.facebookUrl);
     setWhatsappUrl(values.whatsappUrl);
-    setContactNameDative(values.contactNameDative);
+    setFreeFirstSession(values.freeFirstSession);
+    setGender(values.gender);
     setSelectedSpecializationIds(values.selectedSpecializationIds);
   }, [initialTrainer]);
 
@@ -111,7 +117,8 @@ export function useTrainerFormState(
     setInstagramUrl(values.instagramUrl);
     setFacebookUrl(values.facebookUrl);
     setWhatsappUrl(values.whatsappUrl);
-    setContactNameDative(values.contactNameDative);
+    setFreeFirstSession(values.freeFirstSession);
+    setGender(values.gender);
     setSelectedSpecializationIds(values.selectedSpecializationIds);
   }, []);
 
@@ -124,7 +131,8 @@ export function useTrainerFormState(
     instagramUrl, setInstagramUrl,
     facebookUrl, setFacebookUrl,
     whatsappUrl, setWhatsappUrl,
-    contactNameDative, setContactNameDative,
+    freeFirstSession, setFreeFirstSession,
+    gender, setGender,
     selectedSpecializationIds,
     toggleSpecialization,
     resetToTrainer,

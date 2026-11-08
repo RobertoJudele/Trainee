@@ -10,6 +10,7 @@ import {
   TextInput,
   Dimensions,
   Share,
+  Switch,
 } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import { useSelector, useDispatch } from "react-redux";
@@ -245,8 +246,8 @@ function TrainerProfile() {
         instagramUrl: instagramPayload,
         facebookUrl: facebookPayload,
         whatsappUrl: whatsappPayload,
-        // Empty clears it on the server, so the button drops back to no name.
-        contactNameDative: form.contactNameDative.trim(),
+        freeFirstSession: form.freeFirstSession,
+        ...(form.gender ? { gender: form.gender } : {}),
         specializationIds: form.selectedSpecializationIds,
       }).unwrap();
       if (response?.data) dispatch(setTrainerProfile(response.data));
@@ -491,17 +492,7 @@ function TrainerProfile() {
           )}
         </View>
 
-        {/* ── Gallery & credentials ── */}
-        <TrainerImageSection
-          title={t("gallery")}
-          subtitle={t("gallerySubtitle")}
-          images={images.galleryImages}
-          max={MAX_TRAINER_IMAGES}
-          uploading={images.isUploadingGallery}
-          deletingId={images.deletingImageId}
-          onAdd={() => images.addImages("gallery")}
-          onDelete={images.removeImage}
-        />
+        {/* ── Credentials ── */}
         <TrainerImageSection
           title={t("certificationsAwards")}
           subtitle={t("certificationsSubtitle")}
@@ -509,7 +500,7 @@ function TrainerProfile() {
           max={MAX_TRAINER_IMAGES}
           uploading={images.isUploadingCredential}
           deletingId={images.deletingImageId}
-          onAdd={() => images.addImages("credential")}
+          onAdd={images.addImages}
           onDelete={images.removeImage}
         />
         <TrainerTransformationSection
@@ -528,6 +519,40 @@ function TrainerProfile() {
             <View style={styles.editGrid}>
               <TextInput style={[styles.input, fieldErrors.errors.experience && presets.inputError]} keyboardType="number-pad" value={form.experienceYears} onChangeText={(v) => { fieldErrors.clear("experience"); form.setExperienceYears(v); }} placeholder={t("experiencePlaceholder")} />
               <FieldError message={fieldErrors.errors.experience} />
+              <Text style={styles.switchLabel}>{t("yourGender")}</Text>
+              {!form.gender ? <Text style={styles.switchHint}>{t("genderMissingHint")}</Text> : null}
+              <View style={styles.genderRow}>
+                {([
+                  ["female", t("genderFemale")],
+                  ["male", t("genderMale")],
+                ] as const).map(([value, label]) => {
+                  const active = form.gender === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      style={[presets.chip, active && presets.chipSelected]}
+                      onPress={() => form.setGender(value)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text style={[presets.chipText, active && presets.chipTextSelected]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <View style={styles.switchRow}>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={styles.switchLabel}>{t("offerFreeFirstSession")}</Text>
+                  <Text style={styles.switchHint}>{t("offerFreeFirstSessionHint")}</Text>
+                </View>
+                <Switch
+                  value={form.freeFirstSession}
+                  onValueChange={form.setFreeFirstSession}
+                  trackColor={{ false: theme.colors.borderStrong, true: theme.colors.primary }}
+                  thumbColor="#FFFFFF"
+                  accessibilityLabel={t("offerFreeFirstSession")}
+                />
+              </View>
             </View>
           ) : (
             <View style={styles.infoGrid}>
@@ -654,17 +679,6 @@ function TrainerProfile() {
               <FieldError message={fieldErrors.errors.facebook} />
               <TextInput style={[styles.input, fieldErrors.errors.whatsapp && presets.inputError]} value={form.whatsappUrl} onChangeText={(v) => { fieldErrors.clear("whatsapp"); form.setWhatsappUrl(v); }} autoCapitalize="none" autoCorrect={false} keyboardType="phone-pad" placeholder={t("whatsappPlaceholder")} />
               <FieldError message={fieldErrors.errors.whatsapp} />
-              <Text style={styles.contactNameLabel}>{t("contactNameLabel")}</Text>
-              <TextInput
-                style={styles.input}
-                value={form.contactNameDative}
-                onChangeText={form.setContactNameDative}
-                autoCorrect={false}
-                maxLength={60}
-                placeholder="lui Andrei"
-                accessibilityLabel={t("contactNameLabel")}
-              />
-              <Text style={styles.contactNameHint}>{t("contactNameHint")}</Text>
             </View>
           ) : trainer.instagramUrl || trainer.facebookUrl || trainer.whatsappUrl ? (
             <View style={styles.socialList}>
@@ -870,6 +884,10 @@ const styles = StyleSheet.create({
   input: { ...presets.input },
   textArea: { minHeight: 90, textAlignVertical: "top" },
   editGrid: { gap: 10 },
+  genderRow: { flexDirection: "row", gap: 8 },
+  switchRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, marginTop: 4 },
+  switchLabel: { ...typography.body, fontFamily: fonts.uiBold, color: theme.colors.text },
+  switchHint: { ...typography.small, fontSize: 13, color: theme.colors.textSecondary },
   specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   specLoadingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   specLoadingText: { ...typography.small, color: theme.colors.textSecondary },
@@ -919,8 +937,6 @@ const styles = StyleSheet.create({
   locationSubtext: { fontFamily: fonts.ui, fontSize: 14, color: "#666" },
   socialList: { gap: 6 },
   socialItem: { fontFamily: fonts.ui, fontSize: 14, color: "#374151" },
-  contactNameLabel: { ...typography.small, fontFamily: fonts.uiSemiBold, color: theme.colors.text, marginTop: 6 },
-  contactNameHint: { ...typography.small, fontSize: 13, color: theme.colors.textSecondary },
   statsGrid: { flexDirection: "row", justifyContent: "space-around", gap: 15 },
   statCard: { alignItems: "center", flex: 1 },
   statNumber: { fontSize: 24, fontFamily: fonts.uiBold, color: "#007AFF", marginBottom: 5 },

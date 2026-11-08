@@ -16,7 +16,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
 } from "react-native";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Clipboard from "expo-clipboard";
 import { useSelector } from "react-redux";
@@ -46,6 +46,7 @@ import { useFieldErrors } from "../../src/lib/useFieldErrors";
 import { Ionicons } from '@expo/vector-icons';
 import TrainerImageCarousel from "../../src/components/TrainerImageCarousel";
 import TransformationCarousel from "../../src/components/TransformationCarousel";
+import FreeSessionBadge from "../../src/components/FreeSessionBadge";
 import { useGetTrainerPackagesQuery } from "../../features/trainer/trainerPackageApiSlice";
 import { getApiErrorMessage } from "../../src/lib/errors";
 import { formatFromPerSession } from "../../src/lib/price";
@@ -487,9 +488,24 @@ export default function TrainerDetailsScreen() {
     .slice(0, 2)
     .toUpperCase();
 
+  // The screen has no header, so every state that replaces the profile needs
+  // its own way back.
+  const backButton = (
+    <Pressable
+      onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
+      style={[styles.overlayButton, styles.stateBackButton, { top: insets.top + 8, left: 12 }]}
+      hitSlop={4}
+      accessibilityRole="button"
+      accessibilityLabel={t("goBack")}
+    >
+      <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
+    </Pressable>
+  );
+
   if (!hasValidTrainerId) {
     return (
       <View style={styles.centered}>
+        {backButton}
         <Text style={styles.errorText}>{t("invalidTrainer")}</Text>
         <TouchableOpacity
           style={styles.primaryButton}
@@ -509,6 +525,7 @@ export default function TrainerDetailsScreen() {
   if (isLoading) {
     return (
       <View style={styles.centered}>
+        {backButton}
         <ActivityIndicator size="large" color={theme.colors.primary} />
         <Text style={styles.loadingText}>{t("loadingTrainerDetails")}</Text>
       </View>
@@ -518,6 +535,7 @@ export default function TrainerDetailsScreen() {
   if (isError) {
     return (
       <View style={styles.centered}>
+        {backButton}
         <Text style={styles.errorText}>{t("couldNotLoadTrainer")}</Text>
         <TouchableOpacity
           style={styles.primaryButton}
@@ -535,6 +553,7 @@ export default function TrainerDetailsScreen() {
   if (isTrainerBlocked) {
     return (
       <View style={styles.centered}>
+        {backButton}
         <Ionicons name="ban-outline" size={48} color={theme.colors.textSecondary} />
         <Text style={styles.errorText}>{t("trainerBlocked")}</Text>
         <Text style={styles.loadingText}>{t("trainerBlockedHint")}</Text>
@@ -564,7 +583,6 @@ export default function TrainerDetailsScreen() {
 
   return (
     <View style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         style={styles.container}
         contentContainerStyle={{ paddingBottom: barHeight + 32 }}
@@ -621,7 +639,13 @@ export default function TrainerDetailsScreen() {
           {/* ── Price, second thing on screen ── */}
           {priceHeadline ? (
             <View onLayout={onPriceLayout} style={styles.priceBlock}>
-              <Text style={styles.priceHeadline}>{priceHeadline}</Text>
+              <View style={styles.priceHeadlineRow}>
+                <Text style={styles.priceHeadline}>{priceHeadline}</Text>
+                {trainer?.freeFirstSession ? <FreeSessionBadge size="md" /> : null}
+              </View>
+              {trainer?.freeFirstSession ? (
+                <Text style={styles.freeSessionNote}>{t("freeFirstSessionNote")}</Text>
+              ) : null}
               {priceSummary?.lowestPackSessions ? (
                 <Text style={styles.priceWithPack}>
                   {t("cheapestWithPack").replace(
@@ -644,7 +668,9 @@ export default function TrainerDetailsScreen() {
                         {option.sessions > 1 ? (
                           <Text style={styles.priceRowMuted}>
                             {"  ·  "}
-                            {t("perSessionSuffix").replace("%s", formatLei(option.perSession, lang))}
+                            {t("perSessionTimesCount")
+                              .replace("%s", formatLei(option.perSession, lang))
+                              .replace("%n", String(option.sessions))}
                           </Text>
                         ) : null}
                       </Text>
@@ -705,17 +731,6 @@ export default function TrainerDetailsScreen() {
                     {counter ? <Text style={styles.sectionCounter}>{counter}</Text> : null}
                   </View>
                 )}
-              />
-            </View>
-          )}
-
-          {trainer?.galleryImages && trainer.galleryImages.length > 0 && (
-            <View style={styles.section}>
-              <TrainerImageCarousel
-                title={t("gallery")}
-                images={trainer.galleryImages}
-                plain
-                header={<SectionTitle>{t("gallery")}</SectionTitle>}
               />
             </View>
           )}
@@ -923,12 +938,7 @@ export default function TrainerDetailsScreen() {
               </View>
             ) : null}
             <Button
-              title={contactButtonLabel(
-                primaryContact.channel as ContactChannel,
-                lang,
-                firstName,
-                trainer?.contactNameDative
-              )}
+              title={contactButtonLabel(primaryContact.channel as ContactChannel, lang)}
               style={{ flex: 1 }}
               onPress={() => void handleContact(primaryContact)}
             />
@@ -1001,6 +1011,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  stateBackButton: {
+    backgroundColor: theme.colors.surfaceSunken,
+  },
   body: {
     paddingHorizontal: 20,
     paddingTop: 18,
@@ -1047,6 +1060,19 @@ const styles = StyleSheet.create({
   },
   priceBlock: {
     marginTop: 20,
+  },
+  priceHeadlineRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    columnGap: 10,
+    rowGap: 6,
+  },
+  freeSessionNote: {
+    ...typography.small,
+    fontSize: 15,
+    color: "#334155",
+    marginTop: 6,
   },
   priceHeadline: {
     fontFamily: fonts.uiBold,

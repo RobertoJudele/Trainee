@@ -60,6 +60,7 @@ export interface SuggestedTrainer {
   locationCountry?: string;
   isAvailable: boolean;
   isFeatured: boolean;
+  freeFirstSession?: boolean;
   totalRating: number;
   reviewCount: number;
   user: PublicTrainerUser;

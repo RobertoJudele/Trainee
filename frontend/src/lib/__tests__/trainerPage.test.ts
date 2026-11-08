@@ -80,21 +80,9 @@ describe("formatLei", () => {
 });
 
 describe("contactButtonLabel", () => {
-  it("uses the dative name typed in at onboarding", () => {
-    expect(contactButtonLabel("whatsapp", "ro", "Andrei", "lui Andrei")).toBe(
-      "Scrie-i lui Andrei pe WhatsApp"
-    );
-    expect(contactButtonLabel("instagram", "ro", "Elena", "Elenei")).toBe(
-      "Scrie-i Elenei pe Instagram"
-    );
-  });
-
-  it("drops the name instead of guessing the grammar", () => {
-    expect(contactButtonLabel("whatsapp", "ro", "Alex", null)).toBe("Scrie pe WhatsApp");
-    expect(contactButtonLabel("whatsapp", "ro", "Alex", "  ")).toBe("Scrie pe WhatsApp");
-  });
-
-  it("uses the first name in English", () => {
-    expect(contactButtonLabel("facebook", "en", "Andrei")).toBe("Message Andrei on Facebook");
+  it("names only the app, so the label fits beside the price", () => {
+    expect(contactButtonLabel("whatsapp", "ro")).toBe("Scrie-i pe WhatsApp");
+    expect(contactButtonLabel("instagram", "ro")).toBe("Scrie-i pe Instagram");
+    expect(contactButtonLabel("facebook", "en")).toBe("Message on Facebook");
   });
 });

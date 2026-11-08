@@ -8,8 +8,7 @@ import { useGetProfileQuery } from "./usersApiSlicet";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   useGetSpecializationsQuery,
-  SpecializationItem,
-} from "../trainer/trainerApiSlice";
+  SpecializationItem, TrainerGender } from "../trainer/trainerApiSlice";
 import { useCreateTrainerPackageMutation } from "../trainer/trainerPackageApiSlice";
 import {
   KeyboardAvoidingView,
@@ -44,6 +43,7 @@ export default function CreateTrainer() {
   const [latitude, setLatitude] = useState("0");
   const [longitude, setLongitude] = useState("0");
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
+  const [gender, setGender] = useState<TrainerGender | null>(null);
   const user = useSelector(selectCurrentUser);
   const trainer = useSelector(selectCurrentTrainer)
   const errRef = useRef<Text>(null);
@@ -97,6 +97,7 @@ export default function CreateTrainer() {
     const next: Record<string, string> = {};
     if (!bio.trim()) next.bio = t("bioIsRequired");
     if (!exp.trim()) next.exp = t("experienceIsRequired");
+    if (!gender) next.gender = t("genderRequired");
     if (selectedSpecializationIds.length === 0) next.specs = t("invalidSpecializations");
     packages.forEach((pkg, i) => {
       if (!pkg.name.trim()) next[`pkg${i}.name`] = t("packageNameRequired");
@@ -131,6 +132,7 @@ export default function CreateTrainer() {
         locationState: county.trim(),
         locationCountry: country.trim(),
         specializationIds: selectedSpecializationIds,
+        gender,
       };
 
       const result = await creatingTrainer(trainerData);
@@ -282,6 +284,31 @@ export default function CreateTrainer() {
                 />
                 <FieldError message={fieldErrors.errors.exp} />
               </View>
+            </View>
+
+            {/* Gender: drives the client-side gender filter in search */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("yourGender")}</Text>
+              <View style={styles.specGrid}>
+                {([
+                  ["female", t("genderFemale")],
+                  ["male", t("genderMale")],
+                ] as const).map(([value, label]) => {
+                  const active = gender === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      style={[styles.specChip, active && styles.specChipActive]}
+                      onPress={() => { fieldErrors.clear("gender"); setGender(value); }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text style={[styles.specChipText, active && styles.specChipTextActive]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <FieldError message={fieldErrors.errors.gender} />
             </View>
 
             {/* Specializations Section */}

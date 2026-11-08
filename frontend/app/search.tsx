@@ -15,7 +15,13 @@ import {
   Image,
   Animated,
 } from "react-native";
-import { useSearchTrainersQuery, useGetSpecializationsQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
+import {
+  useSearchTrainersQuery,
+  useGetSpecializationsQuery,
+  SearchParams,
+  TrainerSearchItem,
+  TrainerGender,
+} from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { formatFromPerSession } from "../src/lib/price";
@@ -25,6 +31,7 @@ import { FadeInUp, PressableScale } from "../src/components/ui";
 import ScreenHeader from "../src/components/ScreenHeader";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
 import { fonts } from '../src/lib/fonts';
+import FreeSessionBadge from "../src/components/FreeSessionBadge";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -52,6 +59,7 @@ export default function SearchScreen() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
+  const [gender, setGender] = useState<TrainerGender | "">("");
   const [sortBy, setSortBy] = useState<SearchParams["sortBy"]>("totalRating");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showFilters, setShowFilters] = useState(false);
@@ -92,12 +100,13 @@ export default function SearchScreen() {
     if (minPrice) params.minRate = parseFloat(minPrice);
     if (maxPrice) params.maxRate = parseFloat(maxPrice);
     if (selectedSpecs.length > 0) params.specializations = selectedSpecs.join(",");
+    if (gender) params.gender = gender;
     if (sortBy) params.sortBy = sortBy;
     params.sortOrder = sortOrder;
     params.page = 1;
     params.limit = 20;
     return params;
-  }, [query, city, state, minPrice, maxPrice, selectedSpecs, sortBy, sortOrder]);
+  }, [query, city, state, minPrice, maxPrice, selectedSpecs, gender, sortBy, sortOrder]);
 
   const handleSearch = useCallback(() => {
     setPage(1);
@@ -121,6 +130,7 @@ export default function SearchScreen() {
     setMinPrice("");
     setMaxPrice("");
     setSelectedSpecs([]);
+    setGender("");
     setSortBy("totalRating");
     setSortOrder("desc");
     setActiveParams({});
@@ -240,6 +250,12 @@ export default function SearchScreen() {
             ))}
           </ScrollView>
         )}
+
+        {item.freeFirstSession ? (
+          <View style={styles.freeSessionRow}>
+            <FreeSessionBadge />
+          </View>
+        ) : null}
 
         {/* Meta row */}
         <View style={styles.cardMeta}>
@@ -429,6 +445,29 @@ export default function SearchScreen() {
                 onChangeText={setMaxPrice}
                 keyboardType="numeric"
               />
+            </View>
+
+            <Text style={styles.filterSection}>{t("trainerGender")}</Text>
+            <View style={styles.genderRow}>
+              {([
+                ["", t("genderAny")],
+                ["female", t("genderFemale")],
+                ["male", t("genderMale")],
+              ] as const).map(([value, label]) => {
+                const active = gender === value;
+                return (
+                  <TouchableOpacity
+                    key={value || "any"}
+                    style={[styles.sortChip, active && styles.sortChipActive]}
+                    onPress={() => setGender(value)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t("trainerGender")}: ${label}`}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.sortChipText, active && styles.sortChipTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
 
             <Text style={styles.filterSection}>{t("specializations")}</Text>
@@ -633,6 +672,7 @@ const styles = StyleSheet.create({
   specPillText: { ...presets.chipText },
   specPillTextActive: { ...presets.chipTextSelected },
   sortRow: { marginBottom: theme.spacing.sm },
+  genderRow: { flexDirection: "row", marginBottom: theme.spacing.sm },
   sortChip: {
     ...presets.chip,
     marginRight: 8,
@@ -730,6 +770,7 @@ const styles = StyleSheet.create({
   },
   specChipText: { ...typography.label, fontSize: 11, color: theme.colors.primary },
   cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  freeSessionRow: { marginBottom: 6 },
   ratingRow: { flexDirection: "row", alignItems: "center" },
   ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 6 },
   cardPrice: { ...typography.price, color: theme.colors.primary },

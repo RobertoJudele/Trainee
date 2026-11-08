@@ -99,7 +99,6 @@ export const getPublicTrainerPage = async (req: Request, res: Response) => {
         .map((entry) => (entry as unknown as { gym?: { name: string; city?: string | null } }).gym)
         .filter((gym): gym is { name: string; city?: string | null } => Boolean(gym?.name))
         .map((gym) => ({ name: gym.name, city: gym.city ?? null })),
-      galleryImages: imageUrls("gallery"),
       credentialImages: imageUrls("credential"),
       priceLabel: formatPrice(trainer.sessionRate),
       instagramUrl: trainer.instagramUrl ?? null,

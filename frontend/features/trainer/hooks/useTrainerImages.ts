@@ -5,7 +5,6 @@ import { selectCurrentUser } from "../../auth/authSlice";
 import { UserRole } from "../../auth/authApiSlice";
 import {
   useGetTrainerImagesQuery,
-  useUploadGalleryImagesMutation,
   useUploadCredentialImagesMutation,
   useDeleteTrainerImageMutation,
 } from "../trainerApiSlice";
@@ -22,29 +21,22 @@ export function useTrainerImages() {
   const { data: imagesResp } = useGetTrainerImagesQuery(undefined, {
     skip: user?.role !== UserRole.TRAINER,
   });
-  const galleryImages = imagesResp?.data?.gallery ?? [];
   const credentialImages = imagesResp?.data?.credential ?? [];
 
-  const [uploadGallery, { isLoading: isUploadingGallery }] = useUploadGalleryImagesMutation();
   const [uploadCredential, { isLoading: isUploadingCredential }] = useUploadCredentialImagesMutation();
   const [deleteTrainerImage] = useDeleteTrainerImageMutation();
   const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
 
-  const addImages = useCallback(
-    async (category: "gallery" | "credential") => {
-      const current = category === "gallery" ? galleryImages.length : credentialImages.length;
-      const picked = await pickImages(MAX_TRAINER_IMAGES - current);
-      if (picked.length === 0) return;
-      const form = toImageFormData("images", picked);
-      try {
-        if (category === "gallery") await uploadGallery(form).unwrap();
-        else await uploadCredential(form).unwrap();
-      } catch (err: unknown) {
-        Alert.alert(t("uploadFailed"), getApiErrorMessage(err, t("uploadError")));
-      }
-    },
-    [galleryImages.length, credentialImages.length, uploadGallery, uploadCredential, t],
-  );
+  const addImages = useCallback(async () => {
+    const picked = await pickImages(MAX_TRAINER_IMAGES - credentialImages.length);
+    if (picked.length === 0) return;
+    const form = toImageFormData("images", picked);
+    try {
+      await uploadCredential(form).unwrap();
+    } catch (err: unknown) {
+      Alert.alert(t("uploadFailed"), getApiErrorMessage(err, t("uploadError")));
+    }
+  }, [credentialImages.length, uploadCredential, t]);
 
   const removeImage = useCallback(
     async (id: number) => {
@@ -61,11 +53,9 @@ export function useTrainerImages() {
   );
 
   return {
-    galleryImages,
     credentialImages,
     addImages,
     removeImage,
-    isUploadingGallery,
     isUploadingCredential,
     deletingImageId,
   };

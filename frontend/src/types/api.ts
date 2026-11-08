@@ -51,6 +51,9 @@ export interface TrainerProfileAttributes {
   whatsappUrl?: string | null;
   contactNameDative?: string | null;
   isFeatured: boolean;
+  freeFirstSession?: boolean;
+  /** The trainer's own gender, set on their account; null until they pick one. */
+  gender?: "male" | "female" | null;
   isAvailable: boolean;
   profileViews: number;
   totalRating: number;

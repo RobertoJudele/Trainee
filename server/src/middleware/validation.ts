@@ -409,6 +409,14 @@ export const updateTrainerValidation = [
     .trim()
     .isLength({ max: 60 })
     .withMessage("Contact name must be at most 60 characters."),
+  body("gender")
+    .optional()
+    .isIn(["male", "female"])
+    .withMessage("gender must be male or female."),
+  body("freeFirstSession")
+    .optional()
+    .isBoolean({ strict: true })
+    .withMessage("freeFirstSession must be true or false."),
   body("specializationIds")
     .optional()
     .isArray()
@@ -432,6 +440,8 @@ export const updateTrainerValidation = [
       "facebookUrl",
       "whatsappUrl",
       "contactNameDative",
+      "freeFirstSession",
+      "gender",
       "specializationIds",
     ],
   }),
@@ -869,6 +879,10 @@ export const trainerSearchValidation = [
     .optional()
     .isIn(["true", "false"])
     .withMessage("isFeatured must be true or false."),
+  query("gender")
+    .optional({ values: "falsy" })
+    .isIn(["male", "female"])
+    .withMessage("gender must be male or female."),
   query("sortBy")
     .optional()
     .isIn([
@@ -913,6 +927,7 @@ export const trainerSearchValidation = [
       "specializations",
       "isAvailable",
       "isFeatured",
+      "gender",
       "sortBy",
       "sortOrder",
       "page",

@@ -136,6 +136,7 @@ export const apiSlice = createApi({
     "BlockedDates",
     "ClientPreferences",
     "SuggestedTrainers",
+    "TrainerProfile",
     "TrainerImages",
     "TrainerTransformations",
     "TrainerPackages",

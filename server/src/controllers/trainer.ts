@@ -23,6 +23,7 @@ import { makeUniqueSlug, trainerSlugBase } from "../utils/slug";
 import { trainerPublicUrl } from "../utils/publicUrl";
 import { trackTrainerProfileView } from "../services/profileViewTracking";
 import { ProfileViewEvent } from "../models/profileViewEvent";
+import { getTrainerAnalytics as getTrainerAnalyticsData } from "../services/trainerAnalytics";
 import sequelize from "../db";
 import { TrainerScheduleSlot } from "../models/trainerScheduleSlot";
 import { TrainerWorkingHour } from "../models/trainerWorkingHour";
@@ -87,6 +88,7 @@ interface SearchQuery {
   // Availability
   isAvailable?: string; // 'true' or 'false'
   isFeatured?: string;
+  gender?: "male" | "female";
 
   // Sorting
   sortBy?:
@@ -153,33 +155,6 @@ const ensureTrainerPublicId = async (trainer: Trainer): Promise<string> => {
   return generated;
 };
 
-const computeAge = (birthDate?: Date | null) => {
-  if (!birthDate) {
-    return null;
-  }
-
-  const date = new Date(birthDate);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  const diff = Date.now() - date.getTime();
-  const ageDate = new Date(diff);
-  return Math.abs(ageDate.getUTCFullYear() - 1970);
-};
-
-const getAgeBucket = (age: number | null) => {
-  if (age === null) return "unknown";
-  if (age < 18) return "under_18";
-  if (age < 25) return "18_24";
-  if (age < 35) return "25_34";
-  if (age < 45) return "35_44";
-  if (age < 55) return "45_54";
-  return "55_plus";
-};
-
-const normalizeSex = (sex?: string | null) => sex ?? "unknown";
-
 export const getTrainerAnalytics = async (
   req: Request,
   res: Response
@@ -204,91 +179,29 @@ export const getTrainerAnalytics = async (
       return;
     }
 
-    const views = await ProfileViewEvent.findAll({
-      where: { trainerId: trainer.id },
-      include: [
-        {
-          model: User,
-          attributes: ["id", "birthDate", "sex", "createdAt"],
-        },
-      ],
-      order: [["createdAt", "DESC"]],
-    });
+    const analytics = await getTrainerAnalyticsData(trainer.id, trainer.profileViews || 0);
 
-    const now = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, index) => {
-      const date = new Date(now);
-      date.setDate(now.getDate() - (6 - index));
-      const key = date.toISOString().slice(0, 10);
-      return { key, label: key, count: 0 };
-    });
-
-    const sourceBreakdown = {
-      search: 0,
-      map: 0,
-      direct: 0,
-      other: 0,
+    // Builds released before this screen was rebuilt read the old fields and
+    // crash on Object.values(undefined) without them. They get the old shape
+    // with the demographics empty and no viewer IPs; drop this once the minimum
+    // app version is past that release.
+    const thisWeekViews = analytics.days.reduce((sum, d) => sum + d.views, 0);
+    const legacy = {
+      uniqueViewEvents: thisWeekViews,
+      viewsByDay: analytics.days.map((d) => ({ date: d.date, label: d.date, count: d.views })),
+      sourceBreakdown: analytics.sources,
+      ageBreakdown: {
+        under_18: 0, "18_24": 0, "25_34": 0, "35_44": 0, "45_54": 0, "55_plus": 0,
+        unknown: thisWeekViews,
+      },
+      sexBreakdown: {
+        male: 0, female: 0, non_binary: 0, other: 0, prefer_not_to_say: 0,
+        unknown: thisWeekViews,
+      },
+      recentViews: [],
     };
 
-    const ageBuckets = {
-      under_18: 0,
-      18_24: 0,
-      25_34: 0,
-      35_44: 0,
-      45_54: 0,
-      "55_plus": 0,
-      unknown: 0,
-    };
-
-    const sexBreakdown = {
-      male: 0,
-      female: 0,
-      non_binary: 0,
-      other: 0,
-      prefer_not_to_say: 0,
-      unknown: 0,
-    };
-
-    for (const view of views) {
-      const createdAt = new Date(view.createdAt);
-      const dayKey = createdAt.toISOString().slice(0, 10);
-      const matchingDay = last7Days.find((day) => day.key === dayKey);
-      if (matchingDay) {
-        matchingDay.count += 1;
-      }
-
-      const sourceType = (view.sourceType as keyof typeof sourceBreakdown) || "other";
-      sourceBreakdown[sourceType] += 1;
-
-      const viewerUser = view.viewerUser as User | undefined;
-      const ageBucket = getAgeBucket(computeAge(viewerUser?.birthDate ?? null));
-      ageBuckets[ageBucket as keyof typeof ageBuckets] += 1;
-
-      const normalizedSex = normalizeSex(viewerUser?.sex);
-      if (normalizedSex in sexBreakdown) {
-        sexBreakdown[normalizedSex as keyof typeof sexBreakdown] += 1;
-      } else {
-        sexBreakdown.unknown += 1;
-      }
-    }
-
-    sendSuccess(res, 200, "Trainer analytics retrieved successfully", {
-      totalViews: trainer.profileViews || 0,
-      uniqueViewEvents: views.length,
-      viewsByDay: last7Days.map(({ key, label, count }) => ({ date: key, label, count })),
-      sourceBreakdown,
-      ageBreakdown: ageBuckets,
-      sexBreakdown,
-      recentViews: views.slice(0, 20).map((view) => ({
-        id: view.id,
-        viewedAt: view.createdAt,
-        sourceType: view.sourceType,
-        viewerUserId: view.viewerUserId,
-        viewerIpAddress: view.viewerIpAddress,
-        age: computeAge((view.viewerUser as User | undefined)?.birthDate ?? null),
-        sex: normalizeSex((view.viewerUser as User | undefined)?.sex),
-      })),
-    });
+    sendSuccess(res, 200, "Trainer analytics retrieved successfully", { ...analytics, ...legacy });
   } catch (error) {
     console.error("Error while fetching trainer analytics", error);
     sendError(res, 500, "Failed to retrieve trainer analytics");
@@ -301,7 +214,12 @@ export const createTrainer = async (
 ) => {
   try {
     const userId = req.user.id;
-    const { specializationIds, ...profileData } = req.body;
+    // `gender` is stored on the user (users.sex), not the trainer profile.
+    // Optional here so builds released before the gender picker can still
+    // create a profile; the app makes it required.
+    const { specializationIds, gender, ...profileData } = req.body as TrainerProfileCreationAttributes & {
+      gender?: "male" | "female";
+    };
 
     if (req.user.role === "trainer") {
       sendError(res, 400, "You are a trainer already");
@@ -329,6 +247,7 @@ export const createTrainer = async (
     }
 
     user.role = UserRole.TRAINER;
+    if (gender) user.sex = gender;
     await user.save();
     const currentDate = new Date();
     const trialEndsAt = currentDate;
@@ -514,6 +433,7 @@ export const getTrainer = async (
         "facebookUrl",
         "whatsappUrl",
         "contactNameDative",
+        "freeFirstSession",
         "isFeatured",
         "isAvailable",
         "profileViews",
@@ -593,10 +513,10 @@ export const getTrainer = async (
 
     const entitlement = resolveTrainerEntitlement(trainer);
     const trainerJson = trainer.toJSON() as any;
-    // Split the included images into the two public-facing buckets and drop the
-    // raw `images` array so clients consume a stable, category-shaped response.
+    // Only credentials are public now: the gallery section was removed, and its
+    // stored rows are left alone rather than shown. Drop the raw `images` array
+    // so clients consume a stable, category-shaped response.
     const allImages: any[] = trainerJson.images ?? [];
-    const galleryImages = allImages.filter((i) => i.category === "gallery");
     const credentialImages = allImages.filter((i) => i.category === "credential");
     delete trainerJson.images;
 
@@ -606,7 +526,6 @@ export const getTrainer = async (
       internalId: trainerNumericId,
       availableGyms,
       specializations: specializationsMap.get(trainerNumericId) ?? [],
-      galleryImages,
       credentialImages,
       transformations: transformations.map((t) => t.toJSON()),
       isActive: entitlement.isActive,
@@ -731,6 +650,8 @@ export const updateTrainer = async (req: Request, res: Response) => {
       facebookUrl,
       whatsappUrl,
       contactNameDative,
+      freeFirstSession,
+      gender,
       specializationIds,
     } = req.body;
     if (!userId) {
@@ -795,6 +716,7 @@ export const updateTrainer = async (req: Request, res: Response) => {
       facebookUrl: nextFacebookUrl,
       whatsappUrl: nextWhatsappUrl,
       contactNameDative: nextContactNameDative,
+      freeFirstSession: freeFirstSession ?? trainer.freeFirstSession,
       location: nextLocation ?? trainer.location,
     });
 
@@ -837,12 +759,17 @@ export const updateTrainer = async (req: Request, res: Response) => {
       ],
     });
 
-    sendSuccess(
-      res,
-      200,
-      "Trainer updated succesfully",
-      updatedTrainer?.toJSON() as any
-    );
+    // The trainer's gender sits on their user row (users.sex); it drives the
+    // search filter.
+    if (gender !== undefined && gender !== user.sex) {
+      user.sex = gender;
+      await user.save();
+    }
+
+    sendSuccess(res, 200, "Trainer updated succesfully", {
+      ...(updatedTrainer?.toJSON() as any),
+      gender: user.sex ?? null,
+    });
   } catch (error: unknown) {
     console.error("Error at updating trainer", error);
     const validationErrors = getSequelizeValidationErrors(error);
@@ -878,9 +805,11 @@ export const getSelfTrainer = async (req: Request, res: Response) => {
       return;
     }
 
+    const owner = await User.findByPk(userId, { attributes: ["sex"] });
     const entitlement = resolveTrainerEntitlement(trainer);
     const responsePayload = {
       ...(trainer.toJSON() as any),
+      gender: owner?.sex ?? null,
       isActive: entitlement.isActive,
       entitlement,
       // Assembled here, not in the app: the app knows the API host, not the
@@ -925,6 +854,7 @@ export const searchTrainers = async (
       specializations,
       isAvailable,
       isFeatured,
+      gender,
       sortBy = "totalRating",
       sortOrder = "desc",
       page = "1",
@@ -1048,10 +978,16 @@ export const searchTrainers = async (
         unaccentILike('"Trainer"."location_city"', normalizedQuery),
         unaccentILike('"Trainer"."location_state"', normalizedQuery),
       ];
-      userWhere[Op.or] = [
-        unaccentILike('"User"."first_name"', normalizedQuery),
-        unaccentILike('"User"."last_name"', normalizedQuery),
-      ];
+      // Every word has to match the first or the last name, so "robi judele"
+      // and "judele robi" both find Robi Judele. Matching the whole phrase
+      // against each column alone found nobody for a full name.
+      const nameWords = normalizedQuery.split(/\s+/).filter(Boolean);
+      userWhere[Op.and] = nameWords.map((word) => ({
+        [Op.or]: [
+          unaccentILike('"User"."first_name"', word),
+          unaccentILike('"User"."last_name"', word),
+        ],
+      }));
     }
 
     const offset = (parseInt(page) - 1) * parseInt(limit);
@@ -1198,6 +1134,7 @@ export const searchTrainers = async (
       "whatsappUrl",
       "isAvailable",
       "isFeatured",
+      "freeFirstSession",
       "profileViews",
       "totalRating",
       "reviewCount",
@@ -1240,6 +1177,8 @@ export const searchTrainers = async (
           model: User,
           attributes: ["firstName", "lastName", "profileImageUrl"],
           required: true,
+          // Trainers who haven't set a gender drop out while the filter is on.
+          ...(gender ? { where: { sex: gender } } : {}),
         },
         {
           model: TrainerImage,
@@ -1278,6 +1217,7 @@ export const searchTrainers = async (
         whatsappUrl: json.whatsappUrl,
         isAvailable: json.isAvailable,
         isFeatured: json.isFeatured,
+        freeFirstSession: json.freeFirstSession,
         profileViews: json.profileViews,
         totalRating: json.totalRating,
         reviewCount: json.reviewCount,

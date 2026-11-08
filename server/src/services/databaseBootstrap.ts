@@ -177,6 +177,11 @@ export const ensureSpatialAndSearchInfrastructure = async (): Promise<void> => {
     "ALTER TABLE trainer_profiles ADD COLUMN IF NOT EXISTS contact_name_dative VARCHAR(60);"
   );
 
+  // "Prima ședință gratis" badge; see the Trainer model.
+  await sequelize.query(
+    "ALTER TABLE trainer_profiles ADD COLUMN IF NOT EXISTS free_first_session BOOLEAN NOT NULL DEFAULT FALSE;"
+  );
+
   // Shrunk rating for search ordering. Backfilled once from the columns already
   // there; Review.updateTrainerRating keeps it current from then on.
   await sequelize.query(

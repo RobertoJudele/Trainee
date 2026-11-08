@@ -115,6 +115,13 @@ export class Trainer extends Model<
   @Column({ type: DataType.STRING(60), field: "contact_name_dative" })
   contactNameDative?: string;
 
+  // Shown as a "Prima ședință gratis" badge on the search card and next to the
+  // price on the profile. A plain on/off: no duration or conditions.
+  @AllowNull(false)
+  @Default(false)
+  @Column({ type: DataType.BOOLEAN, field: "free_first_session" })
+  freeFirstSession!: boolean;
+
   @Column({ type: DataType.GEOMETRY("POINT", 4326), field: "location" })
   location?: {
     type: "Point";

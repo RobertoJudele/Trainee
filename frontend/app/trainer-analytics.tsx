@@ -13,20 +13,22 @@ import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
 import {
-  TrainerAnalyticsBreakdown,
+  TrainerAnalyticsChannels,
+  TrainerAnalyticsSources,
   useGetTrainerAnalyticsQuery,
 } from "../features/trainer/trainerApiSlice";
 import { theme, typography, presets } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { fonts } from "../src/lib/fonts";
 
-const formatPercent = (value: number, total: number) => {
-  if (!total) {
-    return "0%";
-  }
+// The screen answers one question: does the profile turn views into messages?
+// Views, contacts and the rate between them lead; the 7-day chart and the two
+// breakdowns explain the numbers.
 
-  return `${Math.round((value / total) * 100)}%`;
-};
+const VIEWS_COLOR = "#CBD5E1"; // Slate 300: the bar's background share
+const CONTACTS_COLOR = theme.colors.primary;
+
+const percent = (part: number, whole: number) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
 function MetricCard({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
@@ -38,39 +40,31 @@ function MetricCard({ label, value, hint }: { label: string; value: string | num
   );
 }
 
-function BreakdownRow({
-  label,
-  value,
-  total,
-  accent,
-}: {
-  label: string;
-  value: number;
-  total: number;
-  accent?: string;
-}) {
+function BreakdownRow({ label, value, total }: { label: string; value: number; total: number }) {
   const ratio = total > 0 ? value / total : 0;
-
   return (
     <View style={styles.breakdownRow}>
       <View style={styles.breakdownLabelRow}>
-        <View style={[styles.dot, { backgroundColor: accent ?? theme.colors.primary }]} />
         <Text style={styles.breakdownLabel}>{label}</Text>
+        <Text style={styles.breakdownValue}>
+          {value} · {percent(value, total)}%
+        </Text>
       </View>
-      <Text style={styles.breakdownValue}>
-        {value} · {formatPercent(value, total)}
-      </Text>
       <View style={styles.barTrack}>
         <View
-          style={[
-            styles.barFill,
-            {
-              width: `${Math.max(ratio * 100, value > 0 ? 8 : 0)}%`,
-              backgroundColor: accent ?? theme.colors.primary,
-            },
-          ]}
+          style={[styles.barFill, { width: `${Math.max(ratio * 100, value > 0 ? 6 : 0)}%` }]}
         />
       </View>
+    </View>
+  );
+}
+
+function SectionHeader({ icon, title, note }: { icon: keyof typeof Ionicons.glyphMap; title: string; note?: string }) {
+  return (
+    <View style={styles.sectionHeader}>
+      <Ionicons name={icon} size={18} color={theme.colors.primary} />
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {note ? <Text style={styles.sectionNote}>{note}</Text> : null}
     </View>
   );
 }
@@ -79,32 +73,7 @@ export default function TrainerAnalyticsScreen() {
   const router = useRouter();
   const { t, language } = useLanguage();
   const user = useSelector(selectCurrentUser);
-
-  const sourceLabels: Record<keyof TrainerAnalyticsBreakdown, string> = {
-    search: t("sourceSearch"),
-    map: t("sourceMap"),
-    direct: t("sourceDirect"),
-    other: t("sourceOther"),
-  };
-
-  const ageLabels: readonly (readonly [string, string])[] = [
-    ["under_18", "Under 18"],
-    ["18_24", "18-24"],
-    ["25_34", "25-34"],
-    ["35_44", "35-44"],
-    ["45_54", "45-54"],
-    ["55_plus", "55+"],
-    ["unknown", t("ageUnknown")],
-  ];
-
-  const sexLabels: readonly (readonly [string, string])[] = [
-    ["male", "Male"],
-    ["female", "Female"],
-    ["non_binary", "Non-binary"],
-    ["other", t("sourceOther")],
-    ["prefer_not_to_say", "Prefer not to say"],
-    ["unknown", t("ageUnknown")],
-  ];
+  const locale = language === "ro" ? "ro-RO" : "en-US";
 
   const { data, isLoading, isError, refetch } = useGetTrainerAnalyticsQuery(undefined, {
     skip: user?.role !== UserRole.TRAINER,
@@ -117,7 +86,6 @@ export default function TrainerAnalyticsScreen() {
         <Pressable
           style={styles.primaryButton}
           onPress={() => router.back()}
-          accessible={true}
           accessibilityRole="button"
           accessibilityLabel={t("goBack")}
         >
@@ -145,7 +113,6 @@ export default function TrainerAnalyticsScreen() {
         <Pressable
           style={styles.primaryButton}
           onPress={() => refetch()}
-          accessible={true}
           accessibilityRole="button"
           accessibilityLabel={t("tryAgain")}
         >
@@ -155,116 +122,118 @@ export default function TrainerAnalyticsScreen() {
     );
   }
 
-  const totalSourceViews = Object.values(data.sourceBreakdown).reduce((sum, value) => sum + value, 0);
-  const totalAgeViews = Object.values(data.ageBreakdown).reduce((sum, value) => sum + value, 0);
-  const totalSexViews = Object.values(data.sexBreakdown).reduce((sum, value) => sum + value, 0);
-  const maxDayCount = Math.max(...data.viewsByDay.map((item) => item.count), 1);
+  const { thisWeek, lastWeek } = data;
+  const delta = (now: number, before: number) => {
+    const diff = now - before;
+    if (diff === 0) return t("sameAsLastWeek");
+    return t("vsLastWeek").replace("%s", diff > 0 ? `+${diff}` : `−${Math.abs(diff)}`);
+  };
+
+  const sourceLabels: Record<keyof TrainerAnalyticsSources, string> = {
+    search: t("sourceSearch"),
+    map: t("sourceMap"),
+    direct: t("sourceDirect"),
+    other: t("sourceOther"),
+  };
+  const channelLabels: Record<keyof TrainerAnalyticsChannels, string> = {
+    whatsapp: "WhatsApp",
+    instagram: "Instagram",
+    facebook: "Facebook",
+  };
+  const totalSources = Object.values(data.sources).reduce((sum, v) => sum + v, 0);
+  const totalChannels = Object.values(data.channels).reduce((sum, v) => sum + v, 0);
+  const maxDayViews = Math.max(...data.days.map((d) => Math.max(d.views, d.contacts)), 1);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.heroCard}>
-        <View style={styles.heroTopRow}>
-          <View style={styles.heroIcon}>
-            <Ionicons name="analytics" size={24} color={theme.colors.primary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.heroTitle}>{t("analyticsTitle")}</Text>
-            <Text style={styles.heroSubtitle}>
-              {t("analyticsDescription")}
-            </Text>
-          </View>
-        </View>
+        <Text style={styles.heroTitle}>{t("analyticsTitle")}</Text>
+        <Text style={styles.heroSubtitle}>{t("analyticsDescription")}</Text>
 
+        <Text style={styles.periodLabel}>{t("thisWeek").toUpperCase()}</Text>
         <View style={styles.heroMetrics}>
-          <MetricCard label={t("totalViews")} value={data.totalViews} hint={t("deduplicatedViews")} />
-          <MetricCard label={t("uniqueEvents")} value={data.uniqueViewEvents} hint={t("countedSessions")} />
-          <MetricCard label={t("trackedDays")} value={data.viewsByDay.length} hint={t("last7Days")} />
+          <MetricCard
+            label={t("analyticsViews")}
+            value={thisWeek.views}
+            hint={delta(thisWeek.views, lastWeek.views)}
+          />
+          <MetricCard
+            label={t("contactsLabel")}
+            value={thisWeek.contacts}
+            hint={delta(thisWeek.contacts, lastWeek.contacts)}
+          />
+        </View>
+        <View style={styles.rateRow}>
+          <Text style={styles.rateValue}>{percent(thisWeek.contacts, thisWeek.views)}%</Text>
+          <Text style={styles.rateHint}>{t("contactRateHint")}</Text>
         </View>
       </View>
 
       <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="trending-up-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>{t("viewTrends")}</Text>
-        </View>
+        <SectionHeader icon="calendar-outline" title={t("last7Days")} />
         <View style={styles.trendRow}>
-          {data.viewsByDay.map((item) => {
-            const height = Math.max((item.count / maxDayCount) * 120, item.count > 0 ? 16 : 6);
+          {data.days.map((day) => {
+            const viewsHeight = Math.max((day.views / maxDayViews) * 110, day.views > 0 ? 10 : 4);
+            const contactsHeight =
+              day.contacts > 0 ? Math.max((day.contacts / maxDayViews) * 110, 10) : 0;
+            const weekday = new Date(`${day.date}T12:00:00Z`).toLocaleDateString(locale, {
+              weekday: "short",
+            });
             return (
-              <View key={item.date} style={styles.trendBarColumn}>
-                <View style={[styles.trendBar, { height }]}>
-                  <Text style={styles.trendBarValue}>{item.count}</Text>
+              <View
+                key={day.date}
+                style={styles.trendColumn}
+                accessible
+                accessibilityLabel={`${weekday}: ${day.views} ${t("legendViews")}, ${day.contacts} ${t("legendContacts")}`}
+              >
+                <Text style={styles.trendValue}>{day.views}</Text>
+                <View style={[styles.trendBar, { height: viewsHeight }]}>
+                  {contactsHeight > 0 ? (
+                    <View style={[styles.trendContacts, { height: Math.min(contactsHeight, viewsHeight) }]} />
+                  ) : null}
                 </View>
-                <Text style={styles.trendLabel}>{item.label.slice(5)}</Text>
+                <Text style={styles.trendLabel}>{weekday}</Text>
               </View>
             );
           })}
         </View>
+        <View style={styles.legendRow}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: VIEWS_COLOR }]} />
+            <Text style={styles.legendText}>{t("legendViews")}</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: CONTACTS_COLOR }]} />
+            <Text style={styles.legendText}>{t("legendContacts")}</Text>
+          </View>
+        </View>
       </View>
 
       <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="locate-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>{t("sourceBreakdown")}</Text>
-        </View>
+        <SectionHeader icon="locate-outline" title={t("whereViewersCome")} note={t("last30Days")} />
         <View style={styles.breakdownStack}>
-          {(Object.keys(data.sourceBreakdown) as Array<keyof TrainerAnalyticsBreakdown>).map((key) => (
-            <BreakdownRow
-              key={key}
-              label={sourceLabels[key]}
-              value={data.sourceBreakdown[key]}
-              total={totalSourceViews}
-              accent={key === "search" ? "#10B981" : key === "map" ? "#0EA5E9" : key === "direct" ? "#6366F1" : "#F59E0B"}
-            />
+          {(Object.keys(data.sources) as Array<keyof TrainerAnalyticsSources>).map((key) => (
+            <BreakdownRow key={key} label={sourceLabels[key]} value={data.sources[key]} total={totalSources} />
           ))}
         </View>
       </View>
 
       <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="people-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>{t("audienceAge")}</Text>
-        </View>
-        <View style={styles.breakdownStack}>
-          {ageLabels.map(([key, label]) => (
-            <BreakdownRow key={key} label={label} value={data.ageBreakdown[key as keyof typeof data.ageBreakdown]} total={totalAgeViews} />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="person-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>{t("audienceSex")}</Text>
-        </View>
-        <View style={styles.breakdownStack}>
-          {sexLabels.map(([key, label]) => (
-            <BreakdownRow key={key} label={label} value={data.sexBreakdown[key as keyof typeof data.sexBreakdown]} total={totalSexViews} />
-          ))}
-        </View>
-      </View>
-
-      <View style={styles.sectionCard}>
-        <View style={styles.sectionHeader}>
-          <Ionicons name="time-outline" size={18} color={theme.colors.primary} />
-          <Text style={styles.sectionTitle}>{t("recentViews")}</Text>
-        </View>
-        {data.recentViews.length > 0 ? (
-          data.recentViews.slice(0, 8).map((view) => (
-            <View key={view.id} style={styles.recentRow}>
-              <View style={styles.recentMeta}>
-                <Text style={styles.recentTitle}>{sourceLabels[view.sourceType]}</Text>
-                <Text style={styles.recentSubtitle}>
-                  {view.age !== null ? `${view.age} ${t("years")}` : t("ageUnknown")} · {view.sex.replace(/_/g, " ")}
-                </Text>
-              </View>
-              <Text style={styles.recentTime}>{new Date(view.viewedAt).toLocaleDateString(language === "ro" ? "ro-RO" : "en-US")}</Text>
-            </View>
-          ))
+        <SectionHeader icon="chatbubble-ellipses-outline" title={t("howTheyWrite")} note={t("last30Days")} />
+        {totalChannels > 0 ? (
+          <View style={styles.breakdownStack}>
+            {(Object.keys(data.channels) as Array<keyof TrainerAnalyticsChannels>).map((key) => (
+              <BreakdownRow key={key} label={channelLabels[key]} value={data.channels[key]} total={totalChannels} />
+            ))}
+          </View>
         ) : (
-          <Text style={styles.emptyText}>{t("noTrackedViews")}</Text>
+          <Text style={styles.emptyText}>{t("noContactsYet")}</Text>
         )}
       </View>
+
+      <Text style={styles.footer}>
+        {t("totalViewsAllTime").replace("%s", data.totalViews.toLocaleString(locale))}
+      </Text>
     </ScrollView>
   );
 }
@@ -310,33 +279,27 @@ const styles = StyleSheet.create({
   heroCard: {
     ...presets.card,
     padding: theme.spacing.lg,
-    gap: 16,
-  },
-  heroTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 18,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#ECFDF5",
+    gap: 6,
   },
   heroTitle: {
-    ...typography.h3,
+    ...typography.title,
+    fontSize: 24,
+    lineHeight: 28,
     color: theme.colors.text,
   },
   heroSubtitle: {
     ...typography.body2,
     color: theme.colors.textSecondary,
-    marginTop: 4,
+  },
+  periodLabel: {
+    ...typography.label,
+    color: theme.colors.textSecondary,
+    marginTop: 14,
   },
   heroMetrics: {
     flexDirection: "row",
     gap: 10,
+    marginTop: 4,
   },
   metricCard: {
     flex: 1,
@@ -352,13 +315,30 @@ const styles = StyleSheet.create({
   metricValue: {
     // Numbers read in mono, like prices: digits line up across the cards.
     ...typography.price,
-    fontSize: 26,
-    lineHeight: 32,
+    fontSize: 30,
+    lineHeight: 36,
     color: theme.colors.text,
   },
   metricHint: {
     ...typography.caption,
     color: theme.colors.textSecondary,
+  },
+  rateRow: {
+    flexDirection: "row",
+    alignItems: "baseline",
+    gap: 8,
+    marginTop: 10,
+  },
+  rateValue: {
+    ...typography.price,
+    fontSize: 22,
+    lineHeight: 28,
+    color: theme.colors.primary,
+  },
+  rateHint: {
+    ...typography.body2,
+    color: theme.colors.text,
+    flex: 1,
   },
   sectionCard: {
     ...presets.card,
@@ -374,38 +354,62 @@ const styles = StyleSheet.create({
     ...typography.h3,
     color: theme.colors.text,
   },
+  sectionNote: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    marginLeft: "auto",
+  },
   trendRow: {
     flexDirection: "row",
     alignItems: "flex-end",
-    justifyContent: "space-between",
     gap: 8,
     minHeight: 150,
   },
-  trendBarColumn: {
+  trendColumn: {
     flex: 1,
     alignItems: "center",
-    gap: 8,
+    gap: 6,
+  },
+  trendValue: {
+    fontFamily: fonts.monoSemiBold,
+    fontSize: 12,
+    color: theme.colors.text,
   },
   trendBar: {
     width: "100%",
-    minHeight: 16,
-    borderRadius: 14,
-    backgroundColor: theme.colors.primary,
+    borderRadius: 8,
+    backgroundColor: VIEWS_COLOR,
     justifyContent: "flex-end",
-    alignItems: "center",
-    paddingBottom: 6,
+    overflow: "hidden",
   },
-  trendBarValue: {
-    color: "#fff",
-    fontSize: 11,
-    fontFamily: fonts.uiBold,
+  trendContacts: {
+    width: "100%",
+    backgroundColor: CONTACTS_COLOR,
   },
   trendLabel: {
     ...typography.caption,
     color: theme.colors.textSecondary,
   },
+  legendRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  legendText: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+  },
   breakdownStack: {
-    gap: 10,
+    gap: 12,
   },
   breakdownRow: {
     gap: 6,
@@ -413,60 +417,35 @@ const styles = StyleSheet.create({
   breakdownLabelRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    justifyContent: "space-between",
   },
   breakdownLabel: {
     ...typography.body2,
     color: theme.colors.text,
-    flex: 1,
   },
   breakdownValue: {
-    ...typography.caption,
+    fontFamily: fonts.mono,
+    fontSize: 13,
     color: theme.colors.textSecondary,
   },
   barTrack: {
     height: 8,
     borderRadius: 999,
-    backgroundColor: "#E2E8F0",
+    backgroundColor: theme.colors.border,
     overflow: "hidden",
   },
   barFill: {
     height: "100%",
     borderRadius: 999,
-  },
-  recentRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: theme.colors.border,
-    gap: 10,
-  },
-  recentMeta: {
-    flex: 1,
-  },
-  recentTitle: {
-    ...typography.body2,
-    color: theme.colors.text,
-    fontFamily: fonts.uiBold,
-  },
-  recentSubtitle: {
-    ...typography.caption,
-    color: theme.colors.textSecondary,
-    marginTop: 2,
-  },
-  recentTime: {
-    ...typography.caption,
-    color: theme.colors.textSecondary,
+    backgroundColor: theme.colors.primary,
   },
   emptyText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
+  },
+  footer: {
+    ...typography.caption,
+    color: theme.colors.textSecondary,
+    textAlign: "center",
   },
 });

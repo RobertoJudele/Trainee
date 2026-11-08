@@ -85,18 +85,10 @@ const CHANNEL_NAME: Record<ContactChannel, string> = {
 };
 
 /**
- * "Scrie-i lui Andrei pe WhatsApp". The dative name is typed in at onboarding
- * (trainer.contactNameDative); without it the button drops the name rather than
- * guessing the grammar. English uses the first name, which needs no case.
+ * "Scrie-i pe WhatsApp". No trainer name: next to the price and the second
+ * contact icon a name truncated the button to "Scrie-i lui Andrei pe Whatsa…".
  */
-export const contactButtonLabel = (
-  channel: ContactChannel,
-  language: "en" | "ro",
-  firstName: string,
-  dativeName?: string | null
-): string => {
+export const contactButtonLabel = (channel: ContactChannel, language: "en" | "ro"): string => {
   const app = CHANNEL_NAME[channel];
-  if (language === "en") return firstName ? `Message ${firstName} on ${app}` : `Message on ${app}`;
-  const dative = dativeName?.trim();
-  return dative ? `Scrie-i ${dative} pe ${app}` : `Scrie pe ${app}`;
+  return language === "en" ? `Message on ${app}` : `Scrie-i pe ${app}`;
 };
