@@ -32,6 +32,10 @@ export class SequelizeParticipantRepo implements ParticipantRepository {
   }
 
   async searchClients(query: string, limit: number): Promise<ClientRecord[]> {
+    // Every word has to match the first or the last name, so "ana popescu" and
+    // "popescu ana" both find Ana Popescu; the whole phrase against each column
+    // alone found nobody for a full name.
+    const nameWords = query.trim().split(/\s+/).filter(Boolean);
     const rows = await User.findAll({
       where: {
         role: "client",
@@ -40,8 +44,14 @@ export class SequelizeParticipantRepo implements ParticipantRepository {
           // Email stays a plain ILIKE - it never carries diacritics, and this
           // way it keeps using its trigram index.
           { email: { [Op.iLike]: `%${query}%` } },
-          unaccentILike('"User"."first_name"', query),
-          unaccentILike('"User"."last_name"', query),
+          {
+            [Op.and]: nameWords.map((word) => ({
+              [Op.or]: [
+                unaccentILike('"User"."first_name"', word),
+                unaccentILike('"User"."last_name"', word),
+              ],
+            })),
+          },
         ],
       },
       limit,
