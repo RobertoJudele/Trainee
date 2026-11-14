@@ -3,6 +3,8 @@ import { describe, it, expect } from "@jest/globals";
 import request from "supertest";
 import { app } from "../index";
 import { createTestAdmin, createTestTrainer, createTestUser } from "./helpers";
+import { BillingTransaction } from "../models/billingTransaction";
+import { BillingProvider } from "../types/trainer";
 
 describe("Issue API", () => {
   describe("POST /issues", () => {
@@ -119,6 +121,87 @@ describe("Issue API", () => {
     });
   });
 
+  describe("POST /issues — payment billing snapshot", () => {
+    const paymentIssue = {
+      targetType: "app",
+      category: "payment_issue",
+      title: "I was charged twice this month",
+      description: "My card shows two charges for the monthly plan",
+    };
+
+    it("attaches the trainer's subscription and latest transaction", async () => {
+      const { trainer, token } = await createTestTrainer();
+      await trainer.update({
+        billingProvider: BillingProvider.APPLE,
+        iapProductId: "com.trainee.trainer_monthly",
+        appleOriginalTransactionId: "2000000111",
+      });
+      await BillingTransaction.create({
+        trainerId: trainer.id,
+        amount: 49,
+        currency: "RON",
+        status: "paid",
+        provider: "apple",
+        transactionId: "older-tx",
+        productId: "com.trainee.trainer_monthly",
+        paidAt: new Date("2026-09-01T10:00:00Z"),
+      } as any);
+      await BillingTransaction.create({
+        trainerId: trainer.id,
+        amount: 49,
+        currency: "RON",
+        status: "paid",
+        provider: "apple",
+        transactionId: "latest-tx",
+        productId: "com.trainee.trainer_monthly",
+        paidAt: new Date("2026-10-01T10:00:00Z"),
+      } as any);
+
+      const res = await request(app)
+        .post("/issues")
+        .set("Authorization", `Bearer ${token}`)
+        .send(paymentIssue);
+
+      expect(res.status).toBe(201);
+      const billing = res.body.data.metadata.billing;
+      expect(billing.trainerId).toBe(trainer.id);
+      expect(billing.billingProvider).toBe("apple");
+      expect(billing.appleOriginalTransactionId).toBe("2000000111");
+      expect(billing.lastTransaction.transactionId).toBe("latest-tx");
+    });
+
+    it("records that a client has no subscription", async () => {
+      const { token } = await createTestUser();
+
+      const res = await request(app)
+        .post("/issues")
+        .set("Authorization", `Bearer ${token}`)
+        .send(paymentIssue);
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.metadata.billing.trainerId).toBeNull();
+      expect(res.body.data.metadata.billing.lastTransaction).toBeNull();
+    });
+
+    it("ignores billing data sent by the client", async () => {
+      const { token } = await createTestUser();
+
+      const res = await request(app)
+        .post("/issues")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          targetType: "app",
+          category: "technical_bug",
+          title: "Spoofed billing metadata",
+          description: "The client should not be able to set this field",
+          metadata: { billing: { trainerId: 999 } },
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.metadata?.billing).toBeUndefined();
+    });
+  });
+
   describe("GET /issues/me", () => {
     it("should return own issues", async () => {
       const { token } = await createTestUser();
@@ -175,7 +258,11 @@ describe("Issue API", () => {
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(Array.isArray(res.body.data)).toBe(true);
+      expect(Array.isArray(res.body.data)).toBe(true);      const listed = res.body.data.find(
+        (issue: { title: string }) => issue.title === "Admin visible issue report"
+      );
+      expect(listed.reporter.email).toBeDefined();
+      expect(listed.reporter.firstName).toBe("Test");
     });
 
     it("should reject non-admin", async () => {

@@ -9,7 +9,7 @@ import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import { store, persistor } from "./store";
 import { PersistGate } from "redux-persist/integration/react";
 import { selectCurrentUser } from "../features/auth/authSlice";
-import { theme } from "../src/lib/theme";
+import { theme, typography } from "../src/lib/theme";
 import { StatusBar } from "expo-status-bar";
 import { TourProvider } from "../src/components/onboarding/TourContext";
 import CoachMark from "../src/components/onboarding/CoachMark";
@@ -17,6 +17,8 @@ import TourGate from "../src/components/onboarding/TourGate";
 import { LanguageProvider, useLanguage } from "../src/lib/i18n/LanguageContext";
 import UpdateGate from "../src/components/UpdateGate";
 import * as Notifications from "expo-notifications";
+import { useFonts } from "expo-font";
+import { fontAssets } from "../src/lib/fonts";
 
 const isNativeBillingPlatform = Platform.OS === "ios" || Platform.OS === "android";
 
@@ -120,12 +122,13 @@ function RevenueCatIdentityBridge() {
 // screen (react-native-screens hit-test glitch) until another screen re-layouts.
 function HeaderBackButton({ tintColor }: { tintColor?: string }) {
   const router = useRouter();
+  const { t } = useLanguage();
   return (
     <Pressable
       onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))}
       hitSlop={12}
       accessibilityRole="button"
-      accessibilityLabel="Go back"
+      accessibilityLabel={t("goBack")}
       style={{ paddingRight: 16, paddingVertical: 4 }}
     >
       <Ionicons name="arrow-back" size={24} color={tintColor ?? "#fff"} />
@@ -146,7 +149,7 @@ function LocalizedStack() {
       screenOptions={{
         headerStyle: { backgroundColor: theme.colors.primary },
         headerTintColor: "#fff",
-        headerTitleStyle: { fontWeight: "bold" },
+        headerTitleStyle: { fontFamily: typography.title.fontFamily, fontSize: 22 },
         headerShadowVisible: false,
         animation: "slide_from_right",
         animationDuration: 280,
@@ -164,7 +167,9 @@ function LocalizedStack() {
       <Stack.Screen name="search" options={{ headerShown: false }} />
       <Stack.Screen name="create-trainer" options={{ headerShown: false }} />
       <Stack.Screen name="map" options={{ headerShown: false }} />
-      <Stack.Screen name="trainers/[id]" options={{ title: t("trainerDetailsTitle"), headerBackButtonDisplayMode: "minimal" }} />
+      {/* Hidden here, not from inside the screen: hiding it on mount let the
+          first open render under the header and then jump up once it went. */}
+      <Stack.Screen name="trainers/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="my-gyms" options={{ title: t("myGyms") }} />
       <Stack.Screen name="checkout" options={{ title: t("checkoutTitle") }} />
       <Stack.Screen name="report-issue" options={{ title: t("reportIssue") }} />
@@ -185,6 +190,13 @@ function LocalizedStack() {
 
 export default function RootLayout() {
   const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+  // Fonts are bundled, so this resolves in a few frames. On a load error the app
+  // still starts, falling back to the system font.
+  const [fontsLoaded, fontError] = useFonts(fontAssets);
+
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
 
   return (
     <StripeProvider

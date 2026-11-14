@@ -5,6 +5,10 @@ import type { ProjectionAlias } from "sequelize";
  * Cheapest per-session price a trainer offers — the best price/session_count across
  * their packages, falling back to the flat session rate when they have no packages.
  *
+ * The session rate is a leftover from before packages: trainers can no longer edit
+ * it (a single session is a 1-session package now), so it often holds an old value
+ * and must not compete with real package prices.
+ *
  * This is what the trainer cards advertise ("De la 110 lei/ședință"), so it has to be
  * cheap to compute for a whole page of results: a correlated subquery keeps it to one
  * round trip instead of a second query plus a join in JS.

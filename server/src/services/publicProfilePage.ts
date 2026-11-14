@@ -20,7 +20,6 @@ export interface PublicProfileData {
   specializations: string[];
   gyms: { name: string; city?: string | null }[];
   /** Public image URLs in display order; empty or absent hides the section. */
-  galleryImages?: string[];
   credentialImages?: string[];
   priceLabel?: string | null;
   instagramUrl?: string | null;
@@ -180,7 +179,6 @@ li span{display:block;color:var(--muted);font-size:12px;margin-top:2px}
             .join("")}</ul>`
         : ""
     }
-    ${imageSection("Galerie", data.galleryImages)}
     ${imageSection("Certificări", data.credentialImages)}
     ${
       whatsapp

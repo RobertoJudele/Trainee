@@ -114,6 +114,14 @@ trainer; photos ride the existing S3 pipeline. Later becomes a marketplace hook
 Lean into "find a gym near you in Cluj": gym details, trainers-per-gym as the
 upsell surface.
 
+### Gym reviews (moderate build — to do)
+Let clients rate and review gyms in the app. Today the gym sheet on the map shows
+`rating` / `reviewCount` stored on the `gyms` row (imported data), not reviews
+from Salvio users. Needs a `gym_reviews` table, POST/GET (and edit/delete own)
+endpoints, a review list + "write a review" entry on the map's gym sheet, and
+rating/count recomputed from real reviews. The trainer review system
+(`review` model/controller, `reviewApiSlice`) is the pattern to copy.
+
 ### Saved / favorite trainers (small build — deferred)
 Heart on the trainer profile hero; a "Saved" list on the client profile. Came out
 of the 2026-08-12 profile redesign, where the mockup drew a heart the app has no

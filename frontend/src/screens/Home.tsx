@@ -21,14 +21,15 @@ import { useDispatch, useSelector } from "react-redux";
 import { selectCurrentUser } from "../../features/auth/authSlice";
 import { apiSlice } from "../api/apiSlice";
 import { UserRole } from "../../features/auth/authApiSlice";
-import { theme, typography } from "../lib/theme";
+import { theme, typography, presets } from "../lib/theme";
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, PressableScale } from "../components/ui";
 import { useTourTarget } from "../components/onboarding/TourContext";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { formatFromPerSession } from "../lib/price";
+import { fonts } from '../lib/fonts';
+import FreeSessionBadge from '../components/FreeSessionBadge';
 
 const { width } = Dimensions.get("window");
 
@@ -224,11 +225,16 @@ export default function Home() {
             </View>
           )}
         </View>
-      </View>
-      <View style={styles.priceTag}>
-        <Text style={styles.hourlyRate}>
-          {formatFromPerSession(item.minSessionPrice, t) ?? ""}
-        </Text>
+        {item.freeFirstSession ? (
+          <View style={styles.freeSessionRow}>
+            <FreeSessionBadge />
+          </View>
+        ) : null}
+        {formatFromPerSession(item.minSessionPrice, t) && (
+          <Text style={styles.hourlyRate}>
+            {formatFromPerSession(item.minSessionPrice, t)}
+          </Text>
+        )}
       </View>
     </PressableScale>
     </FadeInUp>
@@ -297,7 +303,7 @@ export default function Home() {
           {item.worksAtPreferredGym ? (
             <View style={[styles.metaBadge, { marginLeft: 8 }]}>
               <Ionicons name="business" size={12} color={theme.colors.primary} />
-              <Text style={[styles.location, { color: theme.colors.primary, fontWeight: "700" }]}>
+              <Text style={[styles.location, { color: theme.colors.primary, fontFamily: fonts.uiBold }]}>
                 {t("worksAtYourGym")}
               </Text>
             </View>
@@ -312,11 +318,16 @@ export default function Home() {
             )
           )}
         </View>
-      </View>
-      <View style={styles.priceTag}>
-        <Text style={styles.hourlyRate}>
-          {formatFromPerSession(item.minSessionPrice, t) ?? ""}
-        </Text>
+        {item.freeFirstSession ? (
+          <View style={styles.freeSessionRow}>
+            <FreeSessionBadge />
+          </View>
+        ) : null}
+        {formatFromPerSession(item.minSessionPrice, t) && (
+          <Text style={styles.hourlyRate}>
+            {formatFromPerSession(item.minSessionPrice, t)}
+          </Text>
+        )}
       </View>
     </PressableScale>
     </FadeInUp>
@@ -328,7 +339,7 @@ export default function Home() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Header Profile Area (Gradient) */}
-      <LinearGradient colors={[theme.colors.primary, theme.colors.tertiary]} style={styles.headerGradient}>
+      <View style={[styles.headerGradient, { backgroundColor: theme.colors.primary }]}>
         <View style={[styles.header, { paddingTop: Math.max(insets.top + theme.spacing.sm, theme.spacing.xxl) }]}>
           <View>
             <Text style={styles.greeting}>{getGreeting()}</Text>
@@ -354,7 +365,7 @@ export default function Home() {
             )}
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      </View>
 
       <View style={styles.contentWrap}>
         {/* Search bar */}
@@ -416,7 +427,7 @@ export default function Home() {
         {isClient && (
           <View style={styles.trainersSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t("suggestedForYou")}</Text>
+              <Text style={[styles.sectionTitle, styles.sectionHeaderTitle]}>{t("suggestedForYou")}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/preferences")}
                 accessible={true}
@@ -486,7 +497,7 @@ export default function Home() {
         {!isClient && (
           <View style={styles.trainersSection}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{t("topRatedTrainers")}</Text>
+              <Text style={[styles.sectionTitle, styles.sectionHeaderTitle]}>{t("topRatedTrainers")}</Text>
               <TouchableOpacity
                 onPress={() => router.push("/search")}
                 accessible={true}
@@ -556,8 +567,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.xxl, 
   },
-  greeting: { ...typography.body1, color: "rgba(255, 255, 255, 0.8)", fontWeight: "500" },
-  userName: { ...typography.h1, color: "#FFFFFF", fontWeight: "800" },
+  greeting: { ...typography.body1, color: "rgba(255, 255, 255, 0.8)", fontFamily: fonts.ui },
+  userName: { ...typography.h1, color: "#FFFFFF" },
   profileAvatar: {
     width: 52,
     height: 52,
@@ -568,7 +579,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.5)",
   },
-  profileInitials: { ...typography.h3, color: "#FFFFFF", fontWeight: "700" },
+  profileInitials: { ...typography.h3, color: "#FFFFFF", fontFamily: fonts.uiBold },
 
   searchBarTouchable: { 
     paddingHorizontal: theme.spacing.lg, 
@@ -580,9 +591,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.pill,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm + 4,
+    // Overlaps the header, so it keeps a shadow.
     ...theme.shadows.medium,
   },
   searchIcon: { marginRight: theme.spacing.sm },
@@ -595,11 +607,9 @@ const styles = StyleSheet.create({
     width: (width - theme.spacing.lg * 2 - theme.spacing.md) / 2,
   },
   actionCard: {
-    backgroundColor: theme.colors.surface,
+    ...presets.card,
     padding: theme.spacing.md,
-    borderRadius: theme.roundness,
     alignItems: "flex-start",
-    ...theme.shadows.small,
   },
   actionIconWrap: {
     backgroundColor: theme.colors.background,
@@ -607,8 +617,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginBottom: theme.spacing.sm,
   },
-  actionTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text, marginBottom: 2 },
-  actionDesc: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  actionTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text, marginBottom: 2 },
+  actionDesc: { ...typography.caption, color: theme.colors.textSecondary },
 
   trainersSection: { paddingHorizontal: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   sectionHeader: {
@@ -617,14 +627,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: theme.spacing.md,
   },
-  seeAllButton: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  // The title wraps rather than pushing the link off-screen in longer languages.
+  sectionHeaderTitle: { flexShrink: 1, marginBottom: 0, marginRight: theme.spacing.md },
+  seeAllButton: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
 
   trainerCard: {
     flexDirection: "row",
-    backgroundColor: theme.colors.surface,
+    ...presets.card,
     padding: theme.spacing.md,
-    borderRadius: theme.roundness,
-    ...theme.shadows.small,
   },
   trainerAvatar: { width: 60, height: 60, borderRadius: 30, marginRight: theme.spacing.md },
   trainerAvatarPlaceholder: {
@@ -636,47 +646,39 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: theme.spacing.md,
   },
-  trainerInitials: { ...typography.h3, color: theme.colors.primary, fontWeight: "700" },
+  trainerInitials: { ...typography.h3, color: theme.colors.primary, fontFamily: fonts.uiBold },
   trainerInfo: { flex: 1, justifyContent: "center" },
+  freeSessionRow: { marginTop: 6 },
   trainerName: { ...typography.h3, color: theme.colors.text, marginBottom: 2 },
   suggestedNameRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
   suggestedNameText: { flexShrink: 1, marginBottom: 0 },
   matchBadge: {
     flexShrink: 0,
     backgroundColor: theme.colors.primary,
-    borderRadius: 10,
+    borderRadius: theme.radius.xs,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  matchBadgeText: { ...typography.caption, color: "#fff", fontWeight: "700", textTransform: "none" },
+  matchBadgeText: { ...typography.caption, color: "#fff", fontFamily: fonts.uiSemiBold },
   preferencesPrompt: {
     flexDirection: "row",
     alignItems: "center",
     gap: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    ...theme.shadows.small,
   },
-  preferencesPromptTitle: { ...typography.body1, fontWeight: "700", color: theme.colors.text },
+  preferencesPromptTitle: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text },
   preferencesPromptText: { ...typography.body2, color: theme.colors.textSecondary },
   trainerBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 4 },
-  trainerSpec: { ...typography.caption, color: theme.colors.primary, fontWeight: "700", marginBottom: 6, textTransform: "uppercase" },
+  trainerSpec: { ...typography.label, color: theme.colors.primary, fontFamily: fonts.monoSemiBold, marginBottom: 6, textTransform: "uppercase" },
   trainerMeta: { flexDirection: "row", alignItems: "center", flexWrap: "wrap" },
   metaBadge: { flexDirection: "row", alignItems: "center", backgroundColor: theme.colors.background, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  rating: { ...typography.caption, fontWeight: "700", color: theme.colors.text, marginLeft: 4 },
-  reviewCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 2, textTransform: "none" },
-  location: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: "none" },
+  rating: { ...typography.label, fontFamily: fonts.monoSemiBold, color: theme.colors.text, marginLeft: 4 },
+  reviewCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 2 },
+  location: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4 },
   
-  priceTag: {
-    justifyContent: "flex-start",
-    alignItems: "flex-end",
-    paddingTop: theme.spacing.xs,
-  },
-  hourlyRate: { ...typography.body2, fontWeight: "800", color: theme.colors.primary },
+  hourlyRate: { ...typography.price, fontSize: 15, lineHeight: 20, color: theme.colors.primary, marginTop: 6 },
 
   loadingContainer: { alignItems: "center", paddingVertical: theme.spacing.xl },
   loadingText: { ...typography.body2, color: theme.colors.textSecondary, marginTop: theme.spacing.sm },
@@ -685,11 +687,12 @@ const styles = StyleSheet.create({
   retryButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: theme.spacing.lg,
-    paddingVertical: theme.spacing.sm,
-    borderRadius: theme.roundness,
-    ...theme.shadows.small,
+    minHeight: 44,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: theme.radius.control,
   },
-  retryButtonText: { ...typography.body2, color: "#FFFFFF", fontWeight: "700" },
+  retryButtonText: { ...typography.body2, color: "#FFFFFF", fontFamily: fonts.uiBold },
   emptyContainer: { alignItems: "center", paddingVertical: theme.spacing.xl },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary, marginTop: theme.spacing.sm },
 });

@@ -30,6 +30,7 @@ import { DayPill, ScheduleCard, scheduleDayLabels } from "../src/components/sche
 import { MonthCalendar } from "../src/components/schedule/MonthCalendar";
 import { useTour, useTourTarget } from "../src/components/onboarding/TourContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const monthStartKey = (year: number, month1: number) => `${year}-${pad(month1)}-01`;
@@ -340,14 +341,14 @@ const styles = StyleSheet.create({
   legendRow: { flexDirection: "row", justifyContent: "center", gap: theme.spacing.lg },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  legendLabel: { ...typography.caption, color: theme.colors.textSecondary },
 
   dayPillRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   timeRow: { flexDirection: "row", gap: theme.spacing.sm },
   timeField: { flex: 1 },
   durationField: { width: 84 },
   activeRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  activeLabel: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  activeLabel: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
 
   summaryWrap: {
     marginTop: theme.spacing.xs,
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   summaryRow: { flexDirection: "row", justifyContent: "space-between" },
-  summaryDay: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  summaryDay: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   summaryHours: { ...typography.body2, color: theme.colors.textSecondary },
   summaryInactive: { fontStyle: "italic" },
 });

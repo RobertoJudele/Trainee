@@ -7,7 +7,6 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useDispatch } from 'react-redux';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +17,7 @@ import { useLanguage } from '../../src/lib/i18n/LanguageContext';
 import { getApiErrorMessage } from '../../src/lib/errors';
 import { setCredentials } from '../../features/auth/authSlice';
 import { useCompleteSocialSignupMutation } from '../../features/auth/authApiSlice';
+import { fonts } from '../../src/lib/fonts';
 
 /**
  * Step 2 of Google/Apple sign-in. Google and Apple never return a phone number
@@ -91,14 +91,9 @@ export default function CompleteProfile() {
             { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) },
           ]}
         >
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconContainer}
-          >
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="person-add" size={40} color="#FFFFFF" />
-          </LinearGradient>
+          </View>
           <Text style={styles.title}>{t('completeProfileTitle')}</Text>
           <Text style={styles.subtitle}>{t('completeProfileSubtitle')}</Text>
           {params.email ? <Text style={styles.email}>{params.email}</Text> : null}
@@ -195,7 +190,7 @@ const styles = StyleSheet.create({
     ...typography.body2,
     color: theme.colors.textSecondary,
     marginTop: theme.spacing.xs,
-    fontWeight: '600',
+    fontFamily: fonts.uiSemiBold,
   },
   form: {
     gap: theme.spacing.md,

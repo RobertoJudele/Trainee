@@ -24,9 +24,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { theme, typography } from "../../lib/theme";
+import { theme, typography, presets } from "../../lib/theme";
 import { useTour } from "./TourContext";
 import { useLanguage } from "../../lib/i18n/LanguageContext";
+import { fonts } from "../../lib/fonts";
 
 const SPOTLIGHT_PAD = 6;
 
@@ -221,7 +222,7 @@ export default function CoachMark() {
           <Pressable
             onPress={next}
             accessibilityRole="button"
-            accessibilityLabel="Demo gym, tap to see its trainers"
+            accessibilityLabel={t("a11yDemoGym")}
             style={styles.demoGymPress}
           >
             <View style={styles.demoGymHighlight}>
@@ -243,7 +244,7 @@ export default function CoachMark() {
         <Pressable
           onPress={next}
           accessibilityRole="button"
-          accessibilityLabel="Demo trainer, tap to continue"
+          accessibilityLabel={t("a11yDemoTrainer")}
           style={[styles.demoTrainerCard, { bottom: insets.bottom + 16 }]}
         >
           <View style={styles.demoAvatar}>
@@ -366,7 +367,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-  demoMarkerBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  demoMarkerBadgeText: { color: "#fff", fontSize: 10, fontFamily: fonts.uiExtraBold },
   demoMarkerTip: {
     width: 0,
     height: 0,
@@ -382,8 +383,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     ...typography.caption,
     color: theme.colors.text,
-    fontWeight: "700",
-    textTransform: "none",
+    fontFamily: fonts.uiSemiBold,
     backgroundColor: "#fff",
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -400,12 +400,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.cardRaised,
     padding: theme.spacing.md,
-    borderWidth: 2,
-    borderColor: "#FACC15",
-    ...theme.shadows.large,
   },
   demoAvatar: {
     width: 48,
@@ -415,18 +411,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  demoAvatarText: { ...typography.body1, color: "#fff", fontWeight: "700" },
-  demoTrainerName: { fontSize: 15, fontWeight: "700", color: theme.colors.text },
+  demoAvatarText: { ...typography.body1, color: "#fff", fontFamily: fonts.uiBold },
+  demoTrainerName: { fontSize: 15, fontFamily: fonts.uiBold, color: theme.colors.text },
   demoTrainerMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
   demoTrainerMetaText: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   tooltip: {
     position: "absolute",
     backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.card,
     padding: theme.spacing.lg,
     gap: 8,
     ...theme.shadows.large,
@@ -450,12 +445,11 @@ const styles = StyleSheet.create({
   skip: {
     ...typography.body2,
     color: theme.colors.textSecondary,
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
   },
   counter: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   navBtns: {
     flexDirection: "row",
@@ -464,18 +458,19 @@ const styles = StyleSheet.create({
   },
   navBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 999,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
   backBtn: {
-    backgroundColor: theme.colors.background,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    backgroundColor: theme.colors.surface,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
   },
   backText: {
-    ...typography.body2,
+    ...typography.button,
+    fontSize: 14,
     color: theme.colors.text,
-    fontWeight: "700",
   },
   nextBtn: {
     backgroundColor: theme.colors.primary,
@@ -483,13 +478,12 @@ const styles = StyleSheet.create({
   nextText: {
     ...typography.body2,
     color: "#FFFFFF",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   hint: {
     ...typography.caption,
     color: theme.colors.primary,
-    fontWeight: "700",
-    textTransform: "none",
+    fontFamily: fonts.uiSemiBold,
     fontStyle: "italic",
   },
 });

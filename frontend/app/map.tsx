@@ -40,6 +40,7 @@ import { selectCurrentUser } from "../features/auth/authSlice";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { formatFromPerSession } from "../src/lib/price";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from '../src/lib/fonts';
 
 const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
 
@@ -56,7 +57,6 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.08,
 };
 
-const RATING_OPTIONS = [0, 3, 4, 4.5];
 
 const CLUSTER_RADIUS_PX = 56;
 const MIN_CLUSTER_DELTA = 0.0006;
@@ -412,7 +412,6 @@ export default function MapScreen() {
   const [selectedGymId, setSelectedGymId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filtersVisible, setFiltersVisible] = useState(false);
-  const [minRating, setMinRating] = useState(0);
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_REGION);
   const [stableGyms, setStableGyms] = useState<GymMarker[]>([]);
@@ -536,11 +535,9 @@ export default function MapScreen() {
   const filteredGyms = useMemo(
     () =>
       gyms.filter(
-        (gym) =>
-          Number(gym.rating) >= minRating &&
-          (!onlyAvailable || gym.availableTrainerCount > 0)
+        (gym) => !onlyAvailable || gym.availableTrainerCount > 0
       ),
-    [gyms, minRating, onlyAvailable]
+    [gyms, onlyAvailable]
   );
 
   const searchResults = useMemo(() => {
@@ -555,9 +552,8 @@ export default function MapScreen() {
       .slice(0, 12);
   }, [filteredGyms, searchQuery]);
 
-  const hasActiveFilters = minRating > 0 || onlyAvailable;
+  const hasActiveFilters = onlyAvailable;
   const resetFilters = useCallback(() => {
-    setMinRating(0);
     setOnlyAvailable(false);
   }, []);
 
@@ -950,17 +946,6 @@ export default function MapScreen() {
   }, [closeSheet]);
 
   // ── Helpers ───────────────────────────────────────────────
-  const renderStars = (rating: number) =>
-    Array.from({ length: 5 }, (_, i) => (
-      <Ionicons
-        key={i}
-        name={i < Math.floor(rating) ? "star" : "star-outline"}
-        size={14}
-        color={i < Math.floor(rating) ? "#F59E0B" : "#E5E7EB"}
-        style={{ marginRight: 2 }}
-      />
-    ));
-
   const renderTrainerRow = (trainer: GymTrainer) => {
     const priceLabel = formatFromPerSession(trainer.minSessionPrice, t);
 
@@ -1051,7 +1036,7 @@ export default function MapScreen() {
           onPress={() => router.back()}
           activeOpacity={0.8}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel={t("goBack")}
         >
           <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
@@ -1201,10 +1186,11 @@ export default function MapScreen() {
               </View>
               <TouchableOpacity
                 style={styles.closeBtn}
+                hitSlop={8}
                 onPress={closeSheet}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Close gym details"
+                accessibilityLabel={t("close")}
               >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
@@ -1214,10 +1200,11 @@ export default function MapScreen() {
               <Text style={styles.sheetGymName}>{t("loading")}</Text>
               <TouchableOpacity
                 style={styles.closeBtn}
+                hitSlop={8}
                 onPress={closeSheet}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Close gym details"
+                accessibilityLabel={t("close")}
               >
                 <Ionicons name="close" size={16} color="#6B7280" />
               </TouchableOpacity>
@@ -1244,31 +1231,14 @@ export default function MapScreen() {
             scrollEventThrottle={16}
           >
             {/* Quick info row */}
-            <View style={styles.quickInfoRow}>
-              <View style={styles.quickInfoChip}>
-                <Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />
-                <Text style={styles.quickInfoText} numberOfLines={1}>
-                  {gymDetail.openingHours ?? t("hoursNA")}
-                </Text>
-              </View>
-              {gymDetail.phone && (
+            {gymDetail.phone && (
+              <View style={styles.quickInfoRow}>
                 <View style={styles.quickInfoChip}>
                   <Ionicons name="call-outline" size={16} color={theme.colors.textSecondary} />
                   <Text style={styles.quickInfoText}>{gymDetail.phone}</Text>
                 </View>
-              )}
-            </View>
-
-            {/* Rating */}
-            <View style={styles.ratingRow}>
-              {renderStars(Number(gymDetail.rating))}
-              <Text style={styles.ratingVal}>
-                {Number(gymDetail.rating).toFixed(1)}
-              </Text>
-              <Text style={styles.ratingCount}>
-                ({gymDetail.reviewCount} reviews)
-              </Text>
-            </View>
+              </View>
+            )}
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <Ionicons name="location" size={16} color={theme.colors.textSecondary} style={{ marginRight: 4 }} />
@@ -1367,22 +1337,6 @@ export default function MapScreen() {
           <Pressable style={styles.filterCard} onPress={() => {}}>
             <Text style={styles.filterTitle}>{t("mapFilters")}</Text>
 
-            <Text style={styles.filterLabel}>{t("mapMinRating")}</Text>
-            <View style={styles.chipRow}>
-              {RATING_OPTIONS.map((r) => (
-                <TouchableOpacity
-                  key={r}
-                  style={[styles.chip, minRating === r && styles.chipActive]}
-                  onPress={() => setMinRating(r)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.chipText, minRating === r && styles.chipTextActive]}>
-                    {r === 0 ? t("mapAnyRating") : `${r}+`}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
             <View style={styles.filterSwitchRow}>
               <Text style={styles.filterLabel}>{t("mapOnlyAvailable")}</Text>
               <Switch
@@ -1428,7 +1382,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     ...theme.shadows.medium,
   },
-  iconBtnActive: { backgroundColor: theme.colors.primary },
+  iconBtnActive: { backgroundColor: theme.colors.text },
   searchPill: {
     flex: 1,
     flexDirection: "row",
@@ -1452,7 +1406,7 @@ const styles = StyleSheet.create({
     right: theme.spacing.lg,
     maxHeight: 280,
     backgroundColor: theme.colors.surface,
-    borderRadius: 16,
+    borderRadius: theme.radius.card,
     paddingVertical: 6,
     zIndex: 9,
     ...theme.shadows.large,
@@ -1465,18 +1419,18 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
   },
   resultMeta: { flex: 1 },
-  resultName: { ...typography.body2, fontWeight: "700", color: theme.colors.text },
+  resultName: { ...typography.body2, fontFamily: fonts.uiBold, color: theme.colors.text },
   resultCity: { ...typography.caption, color: theme.colors.textSecondary },
   resultBadge: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 10,
+    borderRadius: theme.radius.pill,
     minWidth: 20,
     height: 20,
     paddingHorizontal: 5,
     justifyContent: "center",
     alignItems: "center",
   },
-  resultBadgeText: { color: "#fff", fontSize: 11, fontWeight: "800" },
+  resultBadgeText: { color: "#fff", fontSize: 11, fontFamily: fonts.uiExtraBold },
   resultsEmpty: {
     ...typography.body2,
     color: theme.colors.textSecondary,
@@ -1486,45 +1440,35 @@ const styles = StyleSheet.create({
   filterBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "flex-end" },
   filterCard: {
     backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: theme.radius.sheet,
+    borderTopRightRadius: theme.radius.sheet,
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xl,
     gap: 14,
   },
-  filterTitle: { fontSize: 18, fontWeight: "800", color: theme.colors.text },
-  filterLabel: { ...typography.body2, fontWeight: "600", color: theme.colors.text },
-  chipRow: { flexDirection: "row", gap: 8 },
-  chip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-  },
-  chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  chipText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
-  chipTextActive: { color: "#fff" },
+  filterTitle: { ...typography.title, color: theme.colors.text },
+  filterLabel: { ...typography.body2, fontFamily: fonts.uiSemiBold, color: theme.colors.text },
   filterSwitchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   filterActions: { flexDirection: "row", gap: 12, marginTop: 6 },
   filterResetBtn: {
     flex: 1,
-    paddingVertical: 13,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    height: 52,
+    borderRadius: theme.radius.control,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     alignItems: "center",
+    justifyContent: "center",
   },
-  filterResetText: { ...typography.body2, fontWeight: "700", color: theme.colors.text },
+  filterResetText: { ...typography.button, color: theme.colors.text },
   filterApplyBtn: {
     flex: 1,
-    paddingVertical: 13,
-    borderRadius: 14,
+    height: 52,
+    borderRadius: theme.radius.control,
     backgroundColor: theme.colors.primary,
     alignItems: "center",
+    justifyContent: "center",
   },
-  filterApplyText: { ...typography.body2, fontWeight: "700", color: "#fff" },
+  filterApplyText: { ...typography.button, color: "#fff" },
   centerButton: {
     position: "absolute",
     right: theme.spacing.lg,
@@ -1539,26 +1483,26 @@ const styles = StyleSheet.create({
     bottom: 24,
     alignSelf: "center",
     backgroundColor: theme.colors.primary,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    borderRadius: theme.radius.pill,
+    paddingHorizontal: 20,
+    minHeight: 48,
+    justifyContent: "center",
     zIndex: 5,
     ...theme.shadows.medium,
   },
-  requestGymBtnText: { color: "#fff", fontWeight: "700" },
+  requestGymBtnText: { ...typography.button, color: "#fff" },
   listSelfBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: 12,
+    borderRadius: theme.radius.control,
+    height: 52,
     marginBottom: 12,
-    ...theme.shadows.small,
   },
   listSelfBtnDisabled: { opacity: 0.6 },
-  listSelfBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  listSelfBtnText: { ...typography.button, color: "#fff" },
   listSelfJoined: {
     flexDirection: "row",
     alignItems: "center",
@@ -1572,7 +1516,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   listSelfJoinedText: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
-  listSelfJoinedLabel: { ...typography.body2, color: theme.colors.text, fontWeight: "600", flex: 1 },
+  listSelfJoinedLabel: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold, flex: 1 },
   map: { flex: 1 },
   mapLoading: {
     flex: 1,
@@ -1597,7 +1541,7 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: "#FFF7ED",
     textAlign: "center",
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
   },
 
   // ── Marker ──────────────────────────────────────────────
@@ -1617,7 +1561,7 @@ const styles = StyleSheet.create({
     // (worse the larger the bubble), so we omit elevation there.
     ...(Platform.OS === "ios" ? theme.shadows.medium : null),
   },
-  markerEmoji: { fontSize: 28 },
+  markerEmoji: { fontFamily: fonts.ui, fontSize: 28 },
   markerBadge: {
     position: "absolute",
     top: -7,
@@ -1632,7 +1576,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#fff",
   },
-  markerBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
+  markerBadgeText: { color: "#fff", fontSize: 10, fontFamily: fonts.uiExtraBold },
   markerTip: {
     width: 0,
     height: 0,
@@ -1654,7 +1598,7 @@ const styles = StyleSheet.create({
     // See markerBubble: Android elevation clips the snapshot, so iOS-only.
     ...(Platform.OS === "ios" ? theme.shadows.medium : null),
   },
-  clusterCount: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  clusterCount: { color: "#fff", fontSize: 13, fontFamily: fonts.uiExtraBold },
   clusterTip: {
     width: 0,
     height: 0,
@@ -1703,8 +1647,7 @@ const styles = StyleSheet.create({
   },
   sheetHeaderLeft: { flex: 1, marginRight: 12 },
   sheetGymName: {
-    fontSize: 20,
-    fontWeight: "800",
+    ...typography.title,
     color: theme.colors.text,
     marginBottom: 2,
   },
@@ -1713,22 +1656,22 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
   },
   closeBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#F3F4F6",
+    width: 36,
+    height: 36,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceSunken,
     justifyContent: "center",
     alignItems: "center",
   },
-  closeBtnText: { fontSize: 14, color: "#6B7280", fontWeight: "700" },
+  closeBtnText: { fontSize: 14, color: "#6B7280", fontFamily: fonts.uiBold },
   expandHintRow: {
     alignItems: "center",
     marginTop: 8,
   },
   expandHintText: {
-    fontSize: 11,
-    color: "#9CA3AF",
-    fontWeight: "500",
+    fontSize: 12,
+    color: theme.colors.textSecondary,
+    fontFamily: fonts.ui,
     letterSpacing: 0.3,
   },
 
@@ -1754,11 +1697,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
-  quickInfoIcon: { fontSize: 13 },
+  quickInfoIcon: { fontFamily: fonts.ui, fontSize: 13 },
   quickInfoText: {
     ...typography.caption,
     color: theme.colors.text,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
   },
 
   gymAddress: {
@@ -1766,21 +1709,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginBottom: 4,
   },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 3,
-  },
-  starOn: { fontSize: 15, color: "#F59E0B" },
-  starOff: { fontSize: 15, color: "#E5E7EB" },
-  ratingVal: {
-    ...typography.body2,
-    fontWeight: "700",
-    color: theme.colors.text,
-    marginLeft: 4,
-  },
-  ratingCount: { ...typography.caption, color: theme.colors.textSecondary },
 
   divider: {
     height: 1,
@@ -1796,20 +1724,19 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   trainersTitle: {
-    fontSize: 17,
-    fontWeight: "700",
+    ...typography.heading,
     color: theme.colors.text,
   },
   trainerCountBadge: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 12,
+    borderRadius: theme.radius.pill,
     minWidth: 26,
     height: 26,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 6,
   },
-  trainerCountText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  trainerCountText: { ...typography.label, color: "#fff" },
   noTrainers: { alignItems: "center", paddingVertical: theme.spacing.lg },
   noTrainersText: { ...typography.body2, color: theme.colors.textSecondary },
 
@@ -1833,7 +1760,7 @@ const styles = StyleSheet.create({
   trainerInitials: {
     ...typography.body1,
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   trainerMeta: { flex: 1 },
   trainerNameRow: {
@@ -1843,8 +1770,8 @@ const styles = StyleSheet.create({
     marginBottom: 3,
   },
   trainerName: {
-    fontSize: 15,
-    fontWeight: "700",
+    ...typography.heading,
+    fontSize: 16,
     color: theme.colors.text,
     flex: 1,
   },
@@ -1856,7 +1783,7 @@ const styles = StyleSheet.create({
   },
   availBadgeOn: { backgroundColor: "#D1FAE5" },
   availBadgeOff: { backgroundColor: "#FEE2E2" },
-  availBadgeText: { fontSize: 11, fontWeight: "700", color: "#374151" },
+  availBadgeText: { fontSize: 11, fontFamily: fonts.uiBold, color: "#374151" },
   trainerBio: {
     ...typography.caption,
     color: theme.colors.textSecondary,
@@ -1867,15 +1794,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexWrap: "wrap",
   },
-  trainerStat: { ...typography.caption, color: theme.colors.textSecondary },
+  trainerStat: { ...typography.label, color: theme.colors.textSecondary },
   trainerStatPrice: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   trainerViewLink: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.primary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
 });

@@ -15,15 +15,23 @@ import {
   Image,
   Animated,
 } from "react-native";
-import { useSearchTrainersQuery, useGetSpecializationsQuery, SearchParams, TrainerSearchItem } from "../features/trainer/trainerApiSlice";
+import {
+  useSearchTrainersQuery,
+  useGetSpecializationsQuery,
+  SearchParams,
+  TrainerSearchItem,
+  TrainerGender,
+} from "../features/trainer/trainerApiSlice";
 import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { formatFromPerSession } from "../src/lib/price";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { FadeInUp, PressableScale } from "../src/components/ui";
 import ScreenHeader from "../src/components/ScreenHeader";
 import { useTourTarget } from "../src/components/onboarding/TourContext";
+import { fonts } from '../src/lib/fonts';
+import FreeSessionBadge from "../src/components/FreeSessionBadge";
 
 if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -51,6 +59,8 @@ export default function SearchScreen() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
+  const [gender, setGender] = useState<TrainerGender | "">("");
+  const [freeFirstSessionOnly, setFreeFirstSessionOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SearchParams["sortBy"]>("totalRating");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showFilters, setShowFilters] = useState(false);
@@ -91,12 +101,14 @@ export default function SearchScreen() {
     if (minPrice) params.minRate = parseFloat(minPrice);
     if (maxPrice) params.maxRate = parseFloat(maxPrice);
     if (selectedSpecs.length > 0) params.specializations = selectedSpecs.join(",");
+    if (gender) params.gender = gender;
+    if (freeFirstSessionOnly) params.freeFirstSession = true;
     if (sortBy) params.sortBy = sortBy;
     params.sortOrder = sortOrder;
     params.page = 1;
     params.limit = 20;
     return params;
-  }, [query, city, state, minPrice, maxPrice, selectedSpecs, sortBy, sortOrder]);
+  }, [query, city, state, minPrice, maxPrice, selectedSpecs, gender, freeFirstSessionOnly, sortBy, sortOrder]);
 
   const handleSearch = useCallback(() => {
     setPage(1);
@@ -120,6 +132,8 @@ export default function SearchScreen() {
     setMinPrice("");
     setMaxPrice("");
     setSelectedSpecs([]);
+    setGender("");
+    setFreeFirstSessionOnly(false);
     setSortBy("totalRating");
     setSortOrder("desc");
     setActiveParams({});
@@ -240,6 +254,12 @@ export default function SearchScreen() {
           </ScrollView>
         )}
 
+        {item.freeFirstSession ? (
+          <View style={styles.freeSessionRow}>
+            <FreeSessionBadge />
+          </View>
+        ) : null}
+
         {/* Meta row */}
         <View style={styles.cardMeta}>
           <View style={styles.ratingRow}>
@@ -318,7 +338,7 @@ export default function SearchScreen() {
                 onPress={() => setQuery("")}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Clear search"
+                accessibilityLabel={t("a11yClearSearch")}
               >
                 <Ionicons name="close-circle" size={18} color={theme.colors.textSecondary} />
               </TouchableOpacity>
@@ -330,7 +350,7 @@ export default function SearchScreen() {
               onPress={showFilters ? () => { handleSearch(); toggleFilters(); } : toggleFilters}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel={showFilters ? t("applyFilters") : "Show filters"}
+              accessibilityLabel={showFilters ? t("applyFilters") : t("a11yShowFilters")}
             >
               <Animated.View
                 style={[
@@ -369,6 +389,7 @@ export default function SearchScreen() {
             showsVerticalScrollIndicator={false}
             // Without this the first tap on Apply only dismisses the keyboard.
             keyboardShouldPersistTaps="handled"
+            automaticallyAdjustKeyboardInsets
           >
             <Text style={styles.filterSection}>{t("sortBy")}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.sortRow}>
@@ -429,6 +450,44 @@ export default function SearchScreen() {
               />
             </View>
 
+            <Text style={styles.filterSection}>{t("trainerGender")}</Text>
+            <View style={styles.genderRow}>
+              {([
+                ["", t("genderAny")],
+                ["female", t("genderFemale")],
+                ["male", t("genderMale")],
+                ["non_binary", t("genderNonBinary")],
+              ] as const).map(([value, label]) => {
+                const active = gender === value;
+                return (
+                  <TouchableOpacity
+                    key={value || "any"}
+                    style={[styles.sortChip, active && styles.sortChipActive]}
+                    onPress={() => setGender(value)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${t("trainerGender")}: ${label}`}
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.sortChipText, active && styles.sortChipTextActive]}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <Text style={styles.filterSection}>{t("offer")}</Text>
+            <View style={styles.genderRow}>
+              <TouchableOpacity
+                style={[styles.sortChip, freeFirstSessionOnly && styles.sortChipActive]}
+                onPress={() => setFreeFirstSessionOnly((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: freeFirstSessionOnly }}
+              >
+                <Text style={[styles.sortChipText, freeFirstSessionOnly && styles.sortChipTextActive]}>
+                  {t("freeFirstSession")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.filterSection}>{t("specializations")}</Text>
             <View style={styles.specGrid}>
               {specializationOptions.map((s) => {
@@ -440,7 +499,8 @@ export default function SearchScreen() {
                     onPress={() => toggleSpec(s.id)}
                     accessible={true}
                     accessibilityRole="button"
-                    accessibilityLabel={`${active ? "Remove" : "Add"} specialization ${s.label}`}
+                    accessibilityLabel={s.label}
+                    accessibilityState={{ selected: active }}
                   >
                     <Text style={[styles.specPillText, active && styles.specPillTextActive]}>
                       {s.label}
@@ -456,7 +516,7 @@ export default function SearchScreen() {
                 onPress={handleClear}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Clear All filters"
+                accessibilityLabel={t("clearAll")}
               >
                 <Text style={styles.clearFilterText}>{t("clearAll")}</Text>
               </TouchableOpacity>
@@ -465,7 +525,7 @@ export default function SearchScreen() {
                 onPress={() => { handleSearch(); toggleFilters(); }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Apply Filters"
+                accessibilityLabel={t("applyFilters")}
               >
                 <Text style={styles.applyBtnText}>{t("applyFilters")}</Text>
               </TouchableOpacity>
@@ -481,7 +541,7 @@ export default function SearchScreen() {
             {activeParams.state && <ActiveChip label={activeParams.state} onRemove={() => { setState(""); setActiveParams(p => { const n = {...p}; delete n.state; return n; }); }} />}
             {(activeParams.minRate || activeParams.maxRate) && (
               <ActiveChip
-                label={`$${activeParams.minRate ?? 0}–$${activeParams.maxRate ?? "∞"}`}
+                label={`${activeParams.minRate ?? 0}–${activeParams.maxRate ?? "∞"} lei`}
                 onRemove={() => { setMinPrice(""); setMaxPrice(""); setActiveParams(p => { const n = {...p}; delete n.minRate; delete n.maxRate; return n; }); }}
               />
             )}
@@ -533,7 +593,7 @@ export default function SearchScreen() {
                 }}
                 accessible={true}
                 accessibilityRole="button"
-                accessibilityLabel="Load More trainers"
+                accessibilityLabel={t("loadMore")}
               >
                 <Text style={styles.loadMoreText}>{t("loadMore")}</Text>
               </TouchableOpacity>
@@ -593,15 +653,14 @@ const styles = StyleSheet.create({
   filterToggle: {
     width: 48,
     height: 48,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.control,
     backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     justifyContent: "center",
     alignItems: "center",
-    ...theme.shadows.small,
   },
-  filterToggleActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  filterToggleActive: { backgroundColor: theme.colors.text, borderColor: theme.colors.text },
   filterToggleIcon: { ...StyleSheet.absoluteFillObject, justifyContent: "center", alignItems: "center" },
 
   // Filters panel
@@ -614,79 +673,59 @@ const styles = StyleSheet.create({
   },
   filterSection: {
     ...typography.body2,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
     marginBottom: theme.spacing.sm,
     marginTop: theme.spacing.sm,
   },
   row: { flexDirection: "row" },
   filterInput: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    ...typography.body2,
-    color: theme.colors.text,
+    ...presets.input,
   },
   specGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   specPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
+    ...presets.chip,
   },
-  specPillActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.primary },
-  specPillText: { ...typography.caption, color: theme.colors.textSecondary },
-  specPillTextActive: { color: "#fff", fontWeight: "700" },
+  specPillActive: { ...presets.chipSelected },
+  specPillText: { ...presets.chipText },
+  specPillTextActive: { ...presets.chipTextSelected },
   sortRow: { marginBottom: theme.spacing.sm },
+  genderRow: { flexDirection: "row", flexWrap: "wrap", rowGap: 8, marginBottom: theme.spacing.sm },
   sortChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    ...presets.chip,
     marginRight: 8,
-    backgroundColor: theme.colors.surface,
   },
-  sortChipActive: { borderColor: theme.colors.primary, backgroundColor: `${theme.colors.primary}15` },
-  sortChipText: { ...typography.caption, color: theme.colors.textSecondary },
-  sortChipTextActive: { color: theme.colors.primary, fontWeight: "700" },
+  sortChipActive: { ...presets.chipSelected },
+  sortChipText: { ...presets.chipText },
+  sortChipTextActive: { ...presets.chipTextSelected },
   filterActions: { flexDirection: "row", gap: 12, marginTop: theme.spacing.md, marginBottom: theme.spacing.sm },
   clearFilterBtn: {
     flex: 1,
-    paddingVertical: 14,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    height: 52,
+    borderRadius: theme.radius.control,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     alignItems: "center",
+    justifyContent: "center",
   },
-  clearFilterText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  clearFilterText: { ...typography.button, color: theme.colors.text },
   applyBtn: {
     flex: 2,
-    paddingVertical: 14,
-    borderRadius: theme.roundness,
+    height: 52,
+    borderRadius: theme.radius.control,
     backgroundColor: theme.colors.primary,
     alignItems: "center",
-    ...theme.shadows.medium,
+    justifyContent: "center",
   },
-  applyBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  applyBtnText: { ...typography.button, color: "#fff" },
 
   // Active chips
   activeChips: { marginTop: theme.spacing.xs },
   activeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: `${theme.colors.primary}15`,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    ...presets.chip,
     marginRight: 8,
   },
-  activeChipText: { ...typography.caption, color: theme.colors.primary, fontWeight: "700" },
+  activeChipText: { ...presets.chipText },
 
   // List
   listContent: { padding: theme.spacing.md, paddingBottom: 40 },
@@ -701,11 +740,9 @@ const styles = StyleSheet.create({
   // Card
   card: {
     flexDirection: "row",
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
-    ...theme.shadows.small,
   },
   cardLeft: { marginRight: theme.spacing.md, alignItems: "center" },
   avatar: { width: 60, height: 60, borderRadius: 30 },
@@ -717,7 +754,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  avatarInitials: { ...typography.h3, color: theme.colors.primary, fontWeight: "700" },
+  avatarInitials: { ...typography.h3, color: theme.colors.primary, fontFamily: fonts.uiBold },
   availableDot: {
     width: 12,
     height: 12,
@@ -730,25 +767,33 @@ const styles = StyleSheet.create({
   },
   cardBody: { flex: 1, justifyContent: 'center' },
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  cardName: { ...typography.h3, color: theme.colors.text, fontWeight: "700", fontSize: 16 },
-  featuredBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: "#FEF3C7", paddingHorizontal: 8, paddingVertical: 4, borderRadius: 12 },
-  featuredText: { fontSize: 10, color: "#92400E", fontWeight: "700", textTransform: 'uppercase' },
+  cardName: { ...typography.h3, color: theme.colors.text, fontFamily: fonts.uiBold, fontSize: 16 },
+  featuredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: "#FEF3C7",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: theme.radius.xs,
+  },
+  featuredText: { fontSize: 10, color: "#92400E", fontFamily: fonts.uiBold, textTransform: 'uppercase' },
   cardBio: { ...typography.body2, color: theme.colors.textSecondary, marginBottom: 8 },
   specRow: { marginBottom: 8 },
   specChip: {
     backgroundColor: `${theme.colors.primary}10`,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: theme.radius.xs,
     marginRight: 6,
   },
-  specChipText: { fontSize: 11, color: theme.colors.primary, fontWeight: "700", textTransform: 'uppercase' },
+  specChipText: { ...typography.label, fontSize: 11, color: theme.colors.primary },
   cardMeta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  freeSessionRow: { marginBottom: 6 },
   ratingRow: { flexDirection: "row", alignItems: "center" },
-  ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 6, textTransform: 'none' },
-  cardPrice: { ...typography.body1, fontWeight: "800", color: theme.colors.primary },
+  ratingCount: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 6 },
+  cardPrice: { ...typography.price, color: theme.colors.primary },
   locationContainer: { flexDirection: 'row', alignItems: 'center', marginTop: 2},
-  cardLocation: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4, textTransform: 'none' },
+  cardLocation: { ...typography.caption, color: theme.colors.textSecondary, marginLeft: 4 },
 
   // States
   loadingBox: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, marginTop: 40 },
@@ -760,19 +805,20 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.lg,
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: theme.roundness,
-    ...theme.shadows.medium,
+    height: 52,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
-  clearBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  clearBtnText: { ...typography.button, color: "#fff" },
   loadMoreBtn: {
     alignItems: "center",
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
+    justifyContent: "center",
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
+    borderRadius: theme.radius.control,
     marginTop: theme.spacing.sm,
     backgroundColor: theme.colors.surface,
   },
-  loadMoreText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  loadMoreText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
 });

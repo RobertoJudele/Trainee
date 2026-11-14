@@ -11,6 +11,7 @@ jest.mock("../config/s3", () => ({
 
 import sequelize from "../db";
 import { TrainerImage } from "../models/trainerImage";
+import { TrainerTransformation } from "../models/trainerTransformation";
 import { cascadeDeleteTrainer } from "../controllers/trainer";
 import { S3ImageService } from "../services/s3ImageService";
 import { createTestTrainer } from "./helpers";
@@ -48,6 +49,28 @@ describe("image erasure on deletion", () => {
     ]);
     // and the rows really are gone
     expect(await TrainerImage.count({ where: { trainerId: trainer.id } })).toBe(0);
+  });
+
+  it("cascadeDeleteTrainer also returns both photos of each transformation", async () => {
+    const { trainer } = await createTestTrainer();
+    await TrainerTransformation.create({
+      trainerId: trainer.id,
+      beforeImageUrl: "https://cdn.example.com/trainer-transformation/9/before.jpg",
+      afterImageUrl: "https://cdn.example.com/trainer-transformation/9/after.jpg",
+      description: "-12 kg in 4 luni",
+    });
+
+    const urls = await sequelize.transaction((t) =>
+      cascadeDeleteTrainer(trainer.id, t)
+    );
+
+    expect(urls.sort()).toEqual([
+      "https://cdn.example.com/trainer-transformation/9/after.jpg",
+      "https://cdn.example.com/trainer-transformation/9/before.jpg",
+    ]);
+    expect(
+      await TrainerTransformation.count({ where: { trainerId: trainer.id } })
+    ).toBe(0);
   });
 
   it("returns an empty list for a trainer with no images", async () => {

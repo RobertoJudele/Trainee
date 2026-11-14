@@ -553,6 +553,26 @@ describe("Trainer Schedule API", () => {
       expect(Array.isArray(res.body.data)).toBe(true);
     });
 
+    it("should find a client by full name, in either order and without diacritics", async () => {
+      const { token: trainerToken } = await createTestTrainer();
+      const { user } = await createTestUser({ firstName: "Ana", lastName: "Mărgărit" });
+
+      const idsFor = async (q: string) => {
+        const res = await request(app)
+          .get("/trainer-schedule/clients/search")
+          .set("Authorization", `Bearer ${trainerToken}`)
+          .query({ q });
+        expect(res.status).toBe(200);
+        return res.body.data.map((c: { id: number }) => c.id);
+      };
+
+      expect(await idsFor("ana margarit")).toContain(user.id);
+      expect(await idsFor("Mărgărit Ana")).toContain(user.id);
+      expect(await idsFor("ana popescu")).not.toContain(user.id);
+      // Email search still works.
+      expect(await idsFor(user.email.split("@")[0])).toContain(user.id);
+    });
+
     it("should reject search with too short query", async () => {
       const { token: trainerToken } = await createTestTrainer();
 

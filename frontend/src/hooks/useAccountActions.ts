@@ -25,6 +25,9 @@ export function useAccountActions({
   const { t } = useLanguage();
 
   const cleanupAndNavigate = useCallback(async () => {
+    // Leave the profile screen before clearing auth: cleared first, it re-renders
+    // with no user and flashes its "trainer accounts only" guard on the way out.
+    router.replace("/(auth)/Welcome");
     dispatch(logOut());
     dispatch(apiSlice.util.resetApiState());
     try {
@@ -34,7 +37,6 @@ export function useAccountActions({
     } catch {
       // RevenueCat logout is best-effort
     }
-    router.replace("/(auth)/Welcome");
   }, [dispatch, router]);
 
   const handleLogout = useCallback(async () => {

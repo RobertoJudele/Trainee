@@ -13,9 +13,12 @@ import {
 import MapView, { Marker, Region } from "react-native-maps";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCreateIssueMutation } from "../features/support/issueApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
+import { FieldError } from "../src/components/ui";
+import { useFieldErrors } from "../src/lib/useFieldErrors";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 // Bucharest fallback when no pin params are passed.
 const FALLBACK = { latitude: 44.4268, longitude: 26.1025 };
@@ -33,6 +36,7 @@ export default function RequestGymScreen() {
   };
 
   const [name, setName] = useState("");
+  const fieldErrors = useFieldErrors<"name" | "address">();
   const [address, setAddress] = useState("");
   const [coords, setCoords] = useState(start);
   const [createIssue, { isLoading }] = useCreateIssueMutation();
@@ -44,14 +48,11 @@ export default function RequestGymScreen() {
   };
 
   const onSubmit = async () => {
-    if (name.trim().length < 5) {
-      Alert.alert(t("validation"), t("gymNameMinLength"));
-      return;
-    }
-    if (address.trim().length < 5) {
-      Alert.alert(t("validation"), t("gymAddressRequired"));
-      return;
-    }
+    const valid = fieldErrors.setAll({
+      ...(name.trim().length < 5 ? { name: t("gymNameMinLength") } : {}),
+      ...(address.trim().length < 5 ? { address: t("gymAddressRequired") } : {}),
+    });
+    if (!valid) return;
 
     try {
       await createIssue({
@@ -89,21 +90,23 @@ export default function RequestGymScreen() {
         <View style={styles.card}>
           <Text style={styles.label}>{t("gymName")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, fieldErrors.errors.name && presets.inputError]}
             value={name}
-            onChangeText={setName}
+            onChangeText={(v) => { fieldErrors.clear("name"); setName(v); }}
             placeholder={t("gymNamePlaceholder")}
             maxLength={100}
           />
+          <FieldError message={fieldErrors.errors.name} />
 
           <Text style={[styles.label, { marginTop: 6 }]}>{t("gymAddress")}</Text>
           <TextInput
-            style={styles.input}
+            style={[styles.input, fieldErrors.errors.address && presets.inputError]}
             value={address}
-            onChangeText={setAddress}
+            onChangeText={(v) => { fieldErrors.clear("address"); setAddress(v); }}
             placeholder={t("gymAddressPlaceholder")}
             maxLength={200}
           />
+          <FieldError message={fieldErrors.errors.address} />
         </View>
 
         <View style={styles.card}>
@@ -146,23 +149,13 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, color: theme.colors.text },
   subtitle: { ...typography.body2, color: theme.colors.textSecondary },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    ...presets.card,
     padding: 16,
     gap: 12,
-    ...theme.shadows.small,
   },
-  label: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
   input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text,
+    ...presets.input,
   },
   mapWrap: {
     height: 240,
@@ -174,11 +167,11 @@ const styles = StyleSheet.create({
   map: { flex: 1 },
   submitButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: 14,
+    borderRadius: theme.radius.control,
+    height: 52,
+    justifyContent: "center",
     alignItems: "center",
-    ...theme.shadows.medium,
   },
   submitButtonDisabled: { opacity: 0.7 },
-  submitText: { ...typography.body1, color: "#fff", fontWeight: "700" },
+  submitText: { ...typography.body1, color: "#fff", fontFamily: fonts.uiBold },
 });

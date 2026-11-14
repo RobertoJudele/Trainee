@@ -16,6 +16,8 @@ export interface TrainerProfileAttributes {
   instagramUrl?: string;
   facebookUrl?: string;
   whatsappUrl?: string;
+  contactNameDative?: string | null;
+  freeFirstSession?: boolean;
   location?: {
     type: "Point";
     coordinates: [number, number];
@@ -68,6 +70,8 @@ export interface TrainerProfileCreationAttributes {
   instagramUrl?: string;
   facebookUrl?: string;
   whatsappUrl?: string;
+  contactNameDative?: string | null;
+  freeFirstSession?: boolean;
   location?: {
     type: "Point";
     coordinates: [number, number];

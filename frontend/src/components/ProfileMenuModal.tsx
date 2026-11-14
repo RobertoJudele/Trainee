@@ -11,8 +11,23 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { theme } from "../lib/theme";
+import { fonts } from "../lib/fonts";
 
 const { height: SCREEN_H } = Dimensions.get("window");
+
+/** One menu row: 12px vertical padding on each side around a ~20px line. */
+const ROW_HEIGHT = 44;
+/** Matches styles.overlay.paddingTop, plus a margin at the bottom. */
+const MENU_TOP = 80;
+const MENU_BOTTOM_GAP = 24;
+/**
+ * 70% of the screen plus one more row, so the long trainer menu shows its last
+ * entries on more phones; still capped to the screen and scrollable beyond it.
+ */
+const MENU_MAX_HEIGHT = Math.min(
+  SCREEN_H * 0.7 + ROW_HEIGHT,
+  SCREEN_H - MENU_TOP - MENU_BOTTOM_GAP
+);
 
 export interface ProfileMenuItem {
   key: string;
@@ -80,7 +95,7 @@ export default function ProfileMenuModal({
   return (
     <Modal visible={visible} transparent animationType="fade">
       <Pressable style={styles.overlay} onPress={onClose}>
-        <View style={[styles.menu, scrollable && { maxHeight: SCREEN_H * 0.7 }]}>
+        <View style={[styles.menu, scrollable && { maxHeight: MENU_MAX_HEIGHT }]}>
           {scrollable ? (
             <ScrollView bounces={false} showsVerticalScrollIndicator={false} style={{ flexGrow: 0 }}>
               {rows}
@@ -100,7 +115,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.35)",
     justifyContent: "flex-start",
     alignItems: "flex-end",
-    paddingTop: 80,
+    paddingTop: MENU_TOP,
     paddingRight: 16,
   },
   menu: {
@@ -120,7 +135,7 @@ const styles = StyleSheet.create({
   itemText: {
     fontSize: 15,
     color: theme.colors.text,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
     flex: 1,
   },
   divider: {

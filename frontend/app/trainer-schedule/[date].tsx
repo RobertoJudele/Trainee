@@ -49,7 +49,7 @@ import {
   useGetMyConnectedClientsQuery,
   useGetMyInviteCodeQuery,
 } from "../../features/trainer/trainerInviteApiSlice";
-import { theme, typography } from "../../src/lib/theme";
+import { theme, typography, presets } from "../../src/lib/theme";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import {
   BottomSheet,
@@ -62,6 +62,7 @@ import {
   toDateKey,
 } from "../../src/components/schedule/SchedulePrimitives";
 import { useTourTarget } from "../../src/components/onboarding/TourContext";
+import { fonts } from "../../src/lib/fonts";
 
 type SlotRect = {
   x: number;
@@ -1273,13 +1274,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   heroCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#D6DEE9",
-    backgroundColor: "#FFFFFF",
+    ...presets.card,
     padding: 14,
     gap: 10,
-    ...theme.shadows.small,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -1287,12 +1284,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   kebabBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#CED7E3",
-    backgroundColor: "#FFFFFF",
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.control,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
+    backgroundColor: theme.colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1301,14 +1298,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   heroEyebrow: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   heroTitle: {
     ...typography.h2,
     color: theme.colors.text,
-    fontWeight: "800",
+    
   },
   heroStatsRow: {
     flexDirection: "row",
@@ -1316,10 +1312,8 @@ const styles = StyleSheet.create({
   },
   statChip: {
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#DBE3EF",
-    backgroundColor: "#F7FAFE",
+    borderRadius: theme.radius.control,
+    backgroundColor: theme.colors.surfaceSunken,
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 2,
@@ -1327,23 +1321,23 @@ const styles = StyleSheet.create({
   statLabel: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   statValue: {
     ...typography.h3,
     color: theme.colors.text,
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   slotCard: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: theme.radius.control,
     padding: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.surface,
     gap: 6,
   },
   slotCardSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: `${theme.colors.primary}10`,
+    borderColor: theme.colors.text,
+    borderWidth: 2,
+    backgroundColor: theme.colors.surface,
   },
   slotCardHovered: {
     borderColor: theme.colors.success,
@@ -1363,7 +1357,7 @@ const styles = StyleSheet.create({
   controlLabel: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   controlRow: {
     flexDirection: "row",
@@ -1378,7 +1372,6 @@ const styles = StyleSheet.create({
   controlHint: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   blockedBanner: {
     borderRadius: 12,
@@ -1393,22 +1386,21 @@ const styles = StyleSheet.create({
   },
   blockBtn: {
     alignSelf: "flex-start",
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.error,
-    borderRadius: 999,
+    borderRadius: theme.radius.pill,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: 36,
+    justifyContent: "center",
   },
   blockBtnText: {
-    ...typography.caption,
+    ...typography.button, fontSize: 14,
     color: theme.colors.error,
-    textTransform: "none",
-    fontWeight: "700",
   },
   slotTimeText: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   selectionText: {
     ...typography.body2,
@@ -1420,18 +1412,17 @@ const styles = StyleSheet.create({
   },
   unassignBtn: {
     alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: "#CFD8E6",
-    borderRadius: 999,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 14,
+    minHeight: 36,
+    justifyContent: "center",
   },
   unassignBtnText: {
-    ...typography.caption,
+    ...typography.button, fontSize: 14,
     color: theme.colors.text,
-    textTransform: "none",
-    fontWeight: "700",
   },
   clientPool: {
     borderWidth: 1,
@@ -1448,7 +1439,7 @@ const styles = StyleSheet.create({
   clientPoolTitle: {
     ...typography.body1,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   clientPoolHint: {
     ...typography.body2,
@@ -1460,13 +1451,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#CFD9E7",
-    borderRadius: 12,
+    ...presets.input,
+    minHeight: 44,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: theme.colors.text,
-    backgroundColor: "#FFFFFF",
   },
   codeInput: {
     flex: 1,
@@ -1478,15 +1465,15 @@ const styles = StyleSheet.create({
   clientCard: {
     width: 210,
     borderWidth: 1,
-    borderColor: "#D5DEEA",
-    borderRadius: 12,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.control,
     padding: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.surface,
     gap: 3,
   },
   clientCardSelected: {
-    borderColor: theme.colors.primary,
-    backgroundColor: `${theme.colors.primary}10`,
+    borderColor: theme.colors.text,
+    borderWidth: 2,
   },
   clientCardDragging: {
     borderColor: "#D97706",
@@ -1497,11 +1484,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
-    borderWidth: 1.5,
-    borderColor: theme.colors.primary,
-    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: theme.colors.text,
+    borderRadius: theme.radius.control,
     padding: 10,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.colors.surface,
     gap: 3,
     ...theme.shadows.large,
     zIndex: 9999,
@@ -1527,12 +1514,11 @@ const styles = StyleSheet.create({
   clientName: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   clientSub: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   emptyText: {
     ...typography.body2,
@@ -1584,6 +1570,6 @@ const styles = StyleSheet.create({
   inviteBtnText: {
     ...typography.body2,
     color: theme.colors.primary,
-    fontWeight: "600",
+    fontFamily: fonts.uiSemiBold,
   },
 });

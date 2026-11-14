@@ -2,6 +2,8 @@
   "enabledPlugins": {
     "static-analysis@trailofbits": true,
     "ponytail@ponytail": true,
-    "marketing-skills@marketingskills": true
+    "marketing-skills@marketingskills": true,
+    "last30days@last30days-skill": true,
+    "ui-ux-pro-max@claude-code-ui-ux-skill": true
   }
 }

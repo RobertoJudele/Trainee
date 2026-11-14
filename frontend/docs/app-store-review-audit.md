@@ -164,7 +164,7 @@ it **must** use Apple IAP. Source: `app/checkout.tsx`, `features/billing/billing
 
 ### 5c. Launch Screen / Splash — 🟢 OK
 
-- `app.json → splash` configured: `splash-icon.png`, `resizeMode: "contain"`,
+- `app.json → splash` configured: `splash.png`, `resizeMode: "contain"`,
   `backgroundColor: "#ffffff"`. Expo generates the native launch storyboard from this.
 - No placeholder / "Powered by" / test text visible.
 

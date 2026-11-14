@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Calendar, DateData } from "react-native-calendars";
-import { theme } from "../../lib/theme";
+import { presets, theme } from "../../lib/theme";
+import { fonts } from "../../lib/fonts";
 import { ScheduleSlot } from "../../../features/schedule/scheduleApiSlice";
 import { toDateKey } from "./SchedulePrimitives";
 
@@ -93,15 +94,18 @@ export function MonthCalendar({
         textDisabledColor: "#CBD5E1",
         monthTextColor: theme.colors.text,
         arrowColor: theme.colors.primary,
-        selectedDayBackgroundColor: theme.colors.primary,
+        selectedDayBackgroundColor: theme.colors.text,
         selectedDayTextColor: "#FFFFFF",
-        textMonthFontWeight: "700",
-        textDayFontWeight: "500",
+        // Month in the title style, days in mono so dates line up like prices.
+        textMonthFontFamily: fonts.display,
+        textMonthFontSize: 22,
+        textDayFontFamily: fonts.mono,
+        textDayHeaderFontFamily: fonts.monoSemiBold,
       }}
       style={{
-        borderRadius: theme.roundness,
+        ...presets.card,
+        overflow: "hidden",
         paddingBottom: theme.spacing.sm,
-        ...theme.shadows.small,
       }}
     />
   );

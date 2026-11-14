@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "6902bfc9-51e5-4fa9-9d54-b2f3291ca96f"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.juroctech.server",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

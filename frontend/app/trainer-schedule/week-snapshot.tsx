@@ -9,7 +9,7 @@ import {
   useGetBlockedDatesQuery,
   useGetTrainerSlotsQuery,
 } from "../../features/schedule/scheduleApiSlice";
-import { theme, typography } from "../../src/lib/theme";
+import { theme, typography, presets } from "../../src/lib/theme";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import {
   OutlineButton,
@@ -22,6 +22,7 @@ import {
   startOfWeek,
   toDateKey,
 } from "../../src/components/schedule/SchedulePrimitives";
+import { fonts } from "../../src/lib/fonts";
 
 const isValidDateKey = (value?: string) => {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -213,13 +214,9 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   heroCard: {
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#D6DEE9",
-    backgroundColor: "#FFFFFF",
+    ...presets.card,
     padding: 14,
     gap: 10,
-    ...theme.shadows.small,
   },
   heroTopRow: {
     flexDirection: "row",
@@ -231,14 +228,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   heroEyebrow: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   heroTitle: {
     ...typography.h2,
     color: theme.colors.text,
-    fontWeight: "800",
+    
   },
   weekLabel: {
     ...typography.body2,
@@ -257,10 +253,8 @@ const styles = StyleSheet.create({
   metricChip: {
     minWidth: "47%",
     flex: 1,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#DBE3EF",
-    backgroundColor: "#F7FAFE",
+    borderRadius: theme.radius.control,
+    backgroundColor: theme.colors.surfaceSunken,
     paddingHorizontal: 10,
     paddingVertical: 8,
     gap: 2,
@@ -268,12 +262,11 @@ const styles = StyleSheet.create({
   metricLabel: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   metricValue: {
     ...typography.h3,
     color: theme.colors.text,
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   loadingWrap: {
     paddingVertical: 10,
@@ -281,11 +274,11 @@ const styles = StyleSheet.create({
   },
   slotRow: {
     borderWidth: 1,
-    borderColor: "#DDE6F0",
-    borderRadius: 12,
-    backgroundColor: "#FFFFFF",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    borderColor: theme.colors.border,
+    borderRadius: theme.radius.control,
+    backgroundColor: theme.colors.surface,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -298,32 +291,29 @@ const styles = StyleSheet.create({
   slotTimeText: {
     ...typography.body2,
     color: theme.colors.text,
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
   },
   slotClientText: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   slotClientPlaceholder: {
     ...typography.caption,
     color: theme.colors.textSecondary,
-    textTransform: "none",
   },
   emptyText: {
     ...typography.body2,
     color: theme.colors.textSecondary,
   },
   blockedBadge: {
-    borderRadius: 999,
-    backgroundColor: "#94A3B818",
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    borderRadius: theme.radius.xs,
+    backgroundColor: theme.colors.surfaceSunken,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   blockedBadgeText: {
     ...typography.caption,
     color: "#475569",
-    fontWeight: "700",
-    textTransform: "none",
+    fontFamily: fonts.uiSemiBold,
   },
 });

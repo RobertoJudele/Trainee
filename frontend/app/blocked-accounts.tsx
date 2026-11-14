@@ -18,6 +18,7 @@ import {
 } from "../features/block/blockApiSlice";
 import { theme, typography } from "../src/lib/theme";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { fonts } from "../src/lib/fonts";
 
 export default function BlockedAccountsScreen() {
   const router = useRouter();
@@ -60,6 +61,7 @@ export default function BlockedAccountsScreen() {
       <View style={styles.header}>
         <Pressable
           style={styles.backButton}
+          hitSlop={4}
           onPress={() => router.back()}
           accessible
           accessibilityRole="button"
@@ -99,10 +101,10 @@ const styles = StyleSheet.create({
     paddingBottom: theme.spacing.md,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#F1F5F9",
+    width: 44,
+    height: 44,
+    borderRadius: theme.radius.pill,
+    backgroundColor: theme.colors.surfaceSunken,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -127,16 +129,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInitial: { color: "#fff", fontWeight: "700" },
+  avatarInitial: { color: "#fff", fontFamily: fonts.uiBold },
   name: { ...typography.body1, color: theme.colors.text, flex: 1 },
   unblockButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
-    borderRadius: theme.roundness,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
+    borderRadius: theme.radius.control,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: "center",
   },
-  unblockText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  unblockText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
   empty: { alignItems: "center", justifyContent: "center", marginTop: 48, gap: 8 },
   emptyText: { ...typography.body2, color: theme.colors.textSecondary },
 });

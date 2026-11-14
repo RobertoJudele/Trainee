@@ -71,16 +71,16 @@ All screens use expo-router file-based routing:
 
 | Path | What |
 |------|------|
-| `src/lib/theme.ts` | Colors, typography, shadows, spacing, gradients, motion tokens |
+| `src/lib/theme.ts` | Colors, typography (8 text styles + caption), radius scale, `presets` (card, chip, input), shadows, spacing, motion tokens |
+| `src/lib/fonts.ts` | Font families (Archivo Condensed, Manrope, IBM Plex Mono) + assets loaded in `_layout` |
 | `src/lib/i18n/translations.ts` | EN + RO translation strings (~600 keys) |
 | `src/lib/i18n/LanguageContext.tsx` | Language context + AsyncStorage persistence |
 | `src/lib/imageUpload.ts` | Image picker + FormData helpers |
 | `src/lib/useProfilePictureUpload.ts` | Profile picture upload hook |
 | `src/api/apiSlice.ts` | RTK Query base API (auth headers, token refresh) |
 | `src/constants/config.ts` | API_URL from env |
-| `src/components/ui/index.tsx` | Shared UI: FadeInUp, PressableScale, Field, GradientButton, OutlineButton |
+| `src/components/ui/index.tsx` | Shared UI: Button (primary/secondary/ghost/danger, lg/md/sm), Card, Chip, Field, FadeInUp, PressableScale; GradientButton/OutlineButton are Button aliases |
 | `src/components/EditableAvatar.tsx` | Avatar with upload overlay |
-| `src/components/TrainerCard.tsx` | Trainer list card |
 | `src/components/TrainerImageSection.tsx` | Gallery/credential image grid |
 | `src/components/TrainerImageCarousel.tsx` | Horizontal image carousel |
 | `src/components/schedule/MonthCalendar.tsx` | Monthly calendar with slot indicators |
@@ -101,7 +101,6 @@ All screens use expo-router file-based routing:
 | `features/trainer/TrainerProfile.tsx` | Trainer profile screen (large file, ~1350 lines) |
 | `features/users/usersApiSlicet.ts` | User CRUD, create-trainer, profile deletion (note: typo in filename) |
 | `features/users/CreateTrainer.tsx` | Create trainer form component |
-| `features/users/UserList.tsx` | (unused/old) |
 | `features/gym/gymApiSlice.ts` | Gym CRUD, join/leave, availability |
 | `features/schedule/scheduleApiSlice.ts` | Working hours, slots, generate, block, assign, check-in codes |
 | `features/billing/billingApiSlice.ts` | IAP validation, entitlement, transactions |

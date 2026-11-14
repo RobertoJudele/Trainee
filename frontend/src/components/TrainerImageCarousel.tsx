@@ -19,8 +19,10 @@ import {
   type NativeScrollEvent,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme, typography } from "../lib/theme";
+import { theme, typography, presets } from "../lib/theme";
 import { TrainerImageItem } from "../../features/trainer/trainerApiSlice";
+import { useLanguage } from "../lib/i18n/LanguageContext";
+import { fonts } from "../lib/fonts";
 
 interface Props {
   title: string;
@@ -29,6 +31,10 @@ interface Props {
   // image without cropping (certificates with text).
   resizeMode?: "cover" | "contain";
   height?: number;
+  /** Replaces the default title, for pages with their own section headers. */
+  header?: React.ReactNode;
+  /** No card around it, for pages that separate sections without cards. */
+  plain?: boolean;
 }
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -38,7 +44,10 @@ export default function TrainerImageCarousel({
   images,
   resizeMode = "cover",
   height = 240,
+  header,
+  plain = false,
 }: Props) {
+  const { t } = useLanguage();
   const [slideWidth, setSlideWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
@@ -75,8 +84,8 @@ export default function TrainerImageCarousel({
   const isViewerOpen = viewerIndex !== null;
 
   return (
-    <View style={styles.section}>
-      <Text style={styles.title}>{title}</Text>
+    <View style={plain ? styles.plainSection : styles.section}>
+      {header ?? <Text style={styles.title}>{title}</Text>}
 
       <View
         style={[styles.carousel, { height }]}
@@ -171,7 +180,7 @@ export default function TrainerImageCarousel({
             style={styles.viewerClose}
             onPress={() => setViewerIndex(null)}
             accessibilityRole="button"
-            accessibilityLabel="Close fullscreen image viewer"
+            accessibilityLabel={t("close")}
           >
             <Ionicons name="close" size={26} color="#fff" />
           </Pressable>
@@ -183,13 +192,12 @@ export default function TrainerImageCarousel({
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     gap: 12,
-    ...theme.shadows.small,
+  },
+  plainSection: {
+    gap: 14,
   },
   title: {
     ...typography.h3,
@@ -214,9 +222,9 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   counterText: {
-    ...typography.caption,
+    ...typography.label,
     color: "#fff",
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   dotsRow: {
     flexDirection: "row",

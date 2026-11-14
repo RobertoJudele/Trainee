@@ -17,9 +17,12 @@ import {
   IssueTargetType,
   useCreateIssueMutation,
 } from "../features/support/issueApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
+import { FieldError } from "../src/components/ui";
+import { useFieldErrors } from "../src/lib/useFieldErrors";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 export default function ReportIssueScreen() {
   const router = useRouter();
@@ -51,7 +54,6 @@ export default function ReportIssueScreen() {
         ]
       : [
           { value: "trainer_behavior", label: t("trainerBehavior") },
-          { value: "booking_no_show", label: t("bookingNoShow") },
           { value: "technical_bug", label: t("technicalBug") },
           { value: "payment_issue", label: t("paymentIssue") },
           { value: "other", label: t("other") },
@@ -90,23 +92,18 @@ export default function ReportIssueScreen() {
       ? "objectionable_content"
       : targetType === "trainer"
       ? "trainer_behavior"
-      : targetType === "booking"
-      ? "booking_no_show"
       : "technical_bug"
   );
   const [title, setTitle] = useState("");
+  const fieldErrors = useFieldErrors<"title" | "description">();
   const [description, setDescription] = useState("");
 
   const onSubmit = async () => {
-    if (title.trim().length < 5) {
-      Alert.alert(t("validation"), t("titleMinLength"));
-      return;
-    }
-
-    if (description.trim().length < 10) {
-      Alert.alert(t("validation"), t("descriptionMinLength"));
-      return;
-    }
+    const valid = fieldErrors.setAll({
+      ...(title.trim().length < 5 ? { title: t("titleMinLength") } : {}),
+      ...(description.trim().length < 10 ? { description: t("descriptionMinLength") } : {}),
+    });
+    if (!valid) return;
 
     const payload: CreateIssueRequest =
       targetType === "review"
@@ -190,23 +187,25 @@ export default function ReportIssueScreen() {
       <View style={styles.card}>
         <Text style={styles.label}>{t("title")}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, fieldErrors.errors.title && presets.inputError]}
           value={title}
-          onChangeText={setTitle}
+          onChangeText={(v) => { fieldErrors.clear("title"); setTitle(v); }}
           placeholder={t("shortSummary")}
           maxLength={140}
         />
+        <FieldError message={fieldErrors.errors.title} />
 
         <Text style={[styles.label, styles.marginTop]}>{t("description")}</Text>
         <TextInput
-          style={[styles.input, styles.textArea]}
+          style={[styles.input, styles.textArea, fieldErrors.errors.description && presets.inputError]}
           value={description}
-          onChangeText={setDescription}
+          onChangeText={(v) => { fieldErrors.clear("description"); setDescription(v); }}
           multiline
           textAlignVertical="top"
           placeholder={t("describeWhatHappened")}
           maxLength={2000}
         />
+        <FieldError message={fieldErrors.errors.description} />
       </View>
 
       <Pressable
@@ -230,15 +229,11 @@ const styles = StyleSheet.create({
   title: { ...typography.h2, color: theme.colors.text },
   subtitle: { ...typography.body2, color: theme.colors.textSecondary },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
+    ...presets.card,
     padding: 16,
     gap: 12,
-    ...theme.shadows.small,
   },
-  label: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
+  label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
   gymRequestCta: {
     borderWidth: 1,
     borderColor: theme.colors.primary,
@@ -246,38 +241,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
-  gymRequestCtaText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  gymRequestCtaText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
   contextText: { ...typography.caption, color: theme.colors.textSecondary },
   chipsWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "#fff",
+    ...presets.chip,
   },
-  chipActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  chipText: { ...typography.caption, color: theme.colors.text },
-  chipTextActive: { color: "#fff", fontWeight: "700" },
+  chipActive: { ...presets.chipSelected },
+  chipText: { ...presets.chipText },
+  chipTextActive: { ...presets.chipTextSelected },
   input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    backgroundColor: theme.colors.background,
-    color: theme.colors.text,
+    ...presets.input,
   },
   textArea: { minHeight: 120 },
   marginTop: { marginTop: 6 },
   submitButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
-    paddingVertical: 14,
+    borderRadius: theme.radius.control,
+    height: 52,
+    justifyContent: "center",
     alignItems: "center",
-    ...theme.shadows.medium,
   },
   submitButtonDisabled: { opacity: 0.7 },
-  submitText: { ...typography.body1, color: "#fff", fontWeight: "700" },
+  submitText: { ...typography.body1, color: "#fff", fontFamily: fonts.uiBold },
 });

@@ -12,7 +12,7 @@ import { useSelector } from "react-redux";
 import { useRouter } from "expo-router";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { UserRole } from "../features/auth/authApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, GradientButton, PressableScale } from "../src/components/ui";
 import ProfileMenuModal, { type ProfileMenuItem } from "../src/components/ProfileMenuModal";
@@ -21,6 +21,7 @@ import { useTourTarget } from "../src/components/onboarding/TourContext";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { formatDateTime } from "../src/lib/datetime";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 export default function MyScheduleScreen() {
   const { t, language } = useLanguage();
@@ -328,9 +329,9 @@ export default function MyScheduleScreen() {
                   onPress={() => handleCancelBooking(item.id, item.startsAt)}
                   disabled={cancellingSlotId === item.id}
                   accessibilityRole="button"
-                  accessibilityLabel="Cancel this booking"
+                  accessibilityLabel={t("cancelBooking")}
                 >
-                  <Ionicons name="close-circle-outline" size={16} color={theme.colors.error} style={{ marginRight: 6 }} />
+                  <Ionicons name="close-circle-outline" size={16} color={theme.colors.error} />
                   <Text style={styles.cancelBtnText}>
                     {cancellingSlotId === item.id ? t("cancelling") : t("cancelBooking")}
                   </Text>
@@ -433,19 +434,15 @@ const styles = StyleSheet.create({
   },
   emptyState: { alignItems: "center", paddingVertical: theme.spacing.xl, gap: 2 },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.md,
     gap: 6,
     marginBottom: theme.spacing.md,
-    ...theme.shadows.small,
   },
   codeCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.md,
     marginBottom: theme.spacing.md,
-    ...theme.shadows.medium,
   },
   codeCardHeader: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm },
   codeIconWrap: {
@@ -473,8 +470,8 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 999,
   },
-  statusText: { ...typography.caption, fontWeight: '700', textTransform: 'uppercase' },
-  title: { ...typography.body1, color: theme.colors.text, fontWeight: "700" },
+  statusText: { ...typography.label, fontFamily: fonts.monoSemiBold, textTransform: 'uppercase' },
+  title: { ...typography.body1, color: theme.colors.text, fontFamily: fonts.uiBold },
   text: { ...typography.body2, color: theme.colors.textSecondary },
   emptyText: { ...typography.h3, color: theme.colors.text, textAlign: "center" },
   codeBox: {
@@ -485,27 +482,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  codeLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
-  codeText: { ...typography.h1, color: theme.colors.primary, fontWeight: "800", letterSpacing: 6 },
-  codeExpiry: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  codeLabel: { ...typography.caption, color: theme.colors.textSecondary },
+  codeText: { ...typography.price, fontSize: 34, lineHeight: 40, color: theme.colors.primary, letterSpacing: 6 },
+  codeExpiry: { ...typography.caption, color: theme.colors.textSecondary },
   cancelBtn: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 6,
     marginTop: theme.spacing.sm,
-    paddingVertical: 10,
+    minHeight: 44,
     paddingHorizontal: theme.spacing.md,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.control,
     borderWidth: 1.5,
     borderColor: theme.colors.error,
     alignSelf: "flex-start",
   },
   cancelBtnDisabled: { opacity: 0.5 },
-  cancelBtnText: { ...typography.caption, color: theme.colors.error, fontWeight: "700", textTransform: "none" },
+  cancelBtnText: { ...typography.button, fontSize: 14, color: theme.colors.error },
   sheetOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", justifyContent: "flex-end" },
   sheet: {
     backgroundColor: theme.colors.surface,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: theme.radius.sheet,
+    borderTopRightRadius: theme.radius.sheet,
     padding: theme.spacing.lg,
     paddingBottom: theme.spacing.xxl,
     gap: 6,
@@ -513,17 +511,11 @@ const styles = StyleSheet.create({
   },
   inviteRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
   myTrainersWrap: { marginTop: theme.spacing.sm, gap: 6 },
-  myTrainersLabel: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  myTrainersLabel: { ...typography.caption, color: theme.colors.textSecondary },
   myTrainerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  myTrainerName: { ...typography.body2, color: theme.colors.text, fontWeight: "600", flex: 1 },
+  myTrainerName: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold, flex: 1 },
   inviteInput: {
+    ...presets.input,
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#CFD8E6",
-    borderRadius: theme.roundness,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    ...typography.body2,
-    color: theme.colors.text,
   },
 });

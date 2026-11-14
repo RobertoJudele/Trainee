@@ -13,8 +13,9 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { theme, typography } from "../src/lib/theme";
-import { GradientButton } from "../src/components/ui";
+import { theme, typography, presets } from "../src/lib/theme";
+import { useFieldErrors } from "../src/lib/useFieldErrors";
+import { GradientButton, FieldError } from "../src/components/ui";
 import ScreenHeader from "../src/components/ScreenHeader";
 import { useGetSpecializationsQuery, SpecializationItem } from "../features/trainer/trainerApiSlice";
 import { useGetAllGymsQuery, GymMarker } from "../features/gym/gymApiSlice";
@@ -25,6 +26,7 @@ import {
   RateType,
 } from "../features/recommendations/recommendationApiSlice";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
+import { fonts } from "../src/lib/fonts";
 
 const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
   const R = 6371;
@@ -67,6 +69,7 @@ export default function PreferencesScreen() {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [fitnessLevel, setFitnessLevel] = useState<FitnessLevel | null>(null);
   const [budgetMin, setBudgetMin] = useState("");
+  const fieldErrors = useFieldErrors<"budgetMin" | "budgetMax" | "distance">();
   const [budgetMax, setBudgetMax] = useState("");
   const [rateType, setRateType] = useState<RateType>("session");
   const [maxDistanceKm, setMaxDistanceKm] = useState("");
@@ -155,18 +158,12 @@ export default function PreferencesScreen() {
     const maxVal = budgetMax.trim() ? parseFloat(budgetMax) : null;
     const distanceVal = maxDistanceKm.trim() ? parseFloat(maxDistanceKm) : null;
 
-    if (minVal !== null && isNaN(minVal)) {
-      Alert.alert(t("invalidInput"), t("budgetMinNumber"));
-      return;
-    }
-    if (maxVal !== null && isNaN(maxVal)) {
-      Alert.alert(t("invalidInput"), t("budgetMaxNumber"));
-      return;
-    }
-    if (distanceVal !== null && isNaN(distanceVal)) {
-      Alert.alert(t("invalidInput"), t("maxDistanceNumber"));
-      return;
-    }
+    const valid = fieldErrors.setAll({
+      ...(minVal !== null && isNaN(minVal) ? { budgetMin: t("budgetMinNumber") } : {}),
+      ...(maxVal !== null && isNaN(maxVal) ? { budgetMax: t("budgetMaxNumber") } : {}),
+      ...(distanceVal !== null && isNaN(distanceVal) ? { distance: t("maxDistanceNumber") } : {}),
+    });
+    if (!valid) return;
 
     try {
       await updatePreferences({
@@ -324,24 +321,26 @@ export default function PreferencesScreen() {
                 <View style={styles.halfWidth}>
                   <Text style={styles.label}>{t("minBudget")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.budgetMin && presets.inputError]}
                     value={budgetMin}
-                    onChangeText={setBudgetMin}
+                    onChangeText={(v) => { fieldErrors.clear("budgetMin"); setBudgetMin(v); }}
                     placeholder="0"
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.textSecondary}
                   />
+                  <FieldError message={fieldErrors.errors.budgetMin} />
                 </View>
                 <View style={styles.halfWidth}>
                   <Text style={styles.label}>{t("maxBudget")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.budgetMax && presets.inputError]}
                     value={budgetMax}
-                    onChangeText={setBudgetMax}
+                    onChangeText={(v) => { fieldErrors.clear("budgetMax"); setBudgetMax(v); }}
                     placeholder="100"
                     keyboardType="numeric"
                     placeholderTextColor={theme.colors.textSecondary}
                   />
+                  <FieldError message={fieldErrors.errors.budgetMax} />
                 </View>
               </View>
             </View>
@@ -361,7 +360,7 @@ export default function PreferencesScreen() {
                     onPress={clearGym}
                     accessible
                     accessibilityRole="button"
-                    accessibilityLabel="Clear preferred gym"
+                    accessibilityLabel={t("a11yClearPreferredGym")}
                   >
                     <Ionicons name="close-circle" size={20} color={theme.colors.textSecondary} />
                   </Pressable>
@@ -418,13 +417,14 @@ export default function PreferencesScreen() {
                 {t("maxDistanceSubtitle")}
               </Text>
               <TextInput
-                style={styles.input}
+                style={[styles.input, fieldErrors.errors.distance && presets.inputError]}
                 value={maxDistanceKm}
-                onChangeText={setMaxDistanceKm}
+                onChangeText={(v) => { fieldErrors.clear("distance"); setMaxDistanceKm(v); }}
                 placeholder="50"
                 keyboardType="numeric"
                 placeholderTextColor={theme.colors.textSecondary}
               />
+              <FieldError message={fieldErrors.errors.distance} />
             </View>
 
             <GradientButton
@@ -452,19 +452,13 @@ const styles = StyleSheet.create({
 
   chipGrid: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm },
   chip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 20,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-    backgroundColor: theme.colors.surface,
+    ...presets.chip,
   },
   chipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    ...presets.chipSelected,
   },
-  chipText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
-  chipTextActive: { color: "#fff" },
+  chipText: { ...presets.chipText },
+  chipTextActive: { ...presets.chipTextSelected },
 
   showMoreButton: {
     flexDirection: "row",
@@ -472,8 +466,9 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
     gap: theme.spacing.xs,
     marginTop: theme.spacing.xs,
+    minHeight: 44,
   },
-  showMoreText: { ...typography.body2, color: theme.colors.primary, fontWeight: "600" },
+  showMoreText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiSemiBold },
 
   segmentRow: { flexDirection: "row", gap: theme.spacing.sm },
   segment: {
@@ -489,21 +484,14 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     borderColor: theme.colors.primary,
   },
-  segmentText: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  segmentText: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   segmentTextActive: { color: "#fff" },
 
   row: { flexDirection: "row", gap: theme.spacing.md },
   halfWidth: { flex: 1, gap: theme.spacing.xs },
-  label: { ...typography.body2, color: theme.colors.text, fontWeight: "600" },
+  label: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiSemiBold },
   input: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm + 4,
-    ...typography.body1,
-    color: theme.colors.text,
+    ...presets.input,
   },
 
   selectedGym: {
@@ -517,7 +505,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.primary,
   },
-  selectedGymText: { ...typography.body2, color: theme.colors.text, flex: 1, fontWeight: "600" },
+  selectedGymText: { ...typography.body2, color: theme.colors.text, flex: 1, fontFamily: fonts.uiSemiBold },
 
   gymList: { gap: theme.spacing.xs, marginTop: theme.spacing.xs },
   gymRow: {
@@ -531,6 +519,6 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   gymRowActive: { borderColor: theme.colors.primary },
-  gymName: { ...typography.body2, color: theme.colors.text, fontWeight: "700" },
-  gymLocation: { ...typography.caption, color: theme.colors.textSecondary, textTransform: "none" },
+  gymName: { ...typography.body2, color: theme.colors.text, fontFamily: fonts.uiBold },
+  gymLocation: { ...typography.caption, color: theme.colors.textSecondary },
 });

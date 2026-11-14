@@ -8,19 +8,19 @@ import {
   Platform,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { useLoginMutation } from '../../features/auth/authApiSlice';
 import { useDispatch } from 'react-redux';
 import { getApiErrorMessage } from '../lib/errors';
 import { setCredentials } from '../../features/auth/authSlice';
 import { theme, typography } from '../../src/lib/theme';
-import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FadeInUp, Field, GradientButton, OutlineButton } from '../components/ui';
 import SocialAuthButtons from '../components/SocialAuthButtons';
 import { useLanguage } from '../lib/i18n/LanguageContext';
+import { fonts } from '../lib/fonts';
 
 export default function Login() {
   const router = useRouter();
@@ -96,14 +96,14 @@ export default function Login() {
             { paddingTop: Math.max(insets.top + theme.spacing.md, theme.spacing.xxl) },
           ]}
         >
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconContainer}
-          >
-            <Ionicons name="barbell" size={40} color="#FFFFFF" />
-          </LinearGradient>
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
+            <Image
+              source={require('../../assets/salvio-mark-white.png')}
+              style={styles.logo}
+              resizeMode="contain"
+              accessibilityIgnoresInvertColors
+            />
+          </View>
           <Text style={styles.title}>{t("welcomeBack")}</Text>
           <Text style={styles.subtitle}>{t("signInSubtitle")}</Text>
         </FadeInUp>
@@ -219,6 +219,11 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     ...theme.shadows.large,
   },
+  logo: {
+    // Mark is 419×721; keep its aspect ratio inside the 84px circle.
+    height: 52,
+    width: 52 * (419 / 721),
+  },
   title: {
     ...typography.h1,
     color: theme.colors.text,
@@ -238,7 +243,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     ...typography.body2,
     color: theme.colors.primary,
-    fontWeight: '600',
+    fontFamily: fonts.uiSemiBold,
   },
   divider: {
     flexDirection: 'row',
@@ -256,8 +261,10 @@ const styles = StyleSheet.create({
     marginHorizontal: theme.spacing.sm,
   },
   backButton: {
-    alignItems: 'center',
-    marginTop: theme.spacing.sm,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    marginTop: theme.spacing.xs,
   },
   backButtonText: {
     ...typography.body2,

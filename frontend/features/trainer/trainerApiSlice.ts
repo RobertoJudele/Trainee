@@ -25,6 +25,9 @@ interface TrainerUpdateRequest {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
+  contactNameDative?: string | null;
+  freeFirstSession?: boolean;
+  gender?: TrainerGender;
   specializationIds?: number[];
 }
 
@@ -93,6 +96,14 @@ export interface TrainerImagesResponse {
   };
 }
 
+export interface TrainerTransformationItem {
+  id: number;
+  beforeImageUrl: string;
+  afterImageUrl: string;
+  description: string;
+  displayOrder?: number;
+}
+
 export interface PublicTrainerProfile {
   id: string;
   internalId?: number;
@@ -111,7 +122,10 @@ export interface PublicTrainerProfile {
   instagramUrl?: string | null;
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
+  /** Name in the dative for the contact button ("lui Andrei"); typed in at onboarding. */
+  contactNameDative?: string | null;
   isFeatured: boolean;
+  freeFirstSession?: boolean;
   isAvailable: boolean;
   profileViews: number;
   totalRating: number;
@@ -121,9 +135,12 @@ export interface PublicTrainerProfile {
   user?: PublicTrainerUser;
   availableGyms?: PublicTrainerGym[];
   specializations?: TrainerSpecializationItem[];
-  galleryImages?: TrainerImageItem[];
   credentialImages?: TrainerImageItem[];
+  transformations?: TrainerTransformationItem[];
 }
+
+/** Stored on the account (users.sex); only these three are offered. */
+export type TrainerGender = "male" | "female" | "non_binary";
 
 export interface SearchParams {
   q?: string;
@@ -139,6 +156,8 @@ export interface SearchParams {
   specializations?: string; // comma-separated IDs e.g. "1,2,3"
   isAvailable?: boolean;
   isFeatured?: boolean;
+  freeFirstSession?: boolean;
+  gender?: TrainerGender;
   sortBy?: "totalRating" | "experienceYears" | "hourlyRate" | "sessionRate" | "minSessionPrice" | "reviewCount" | "createdAt";
   sortOrder?: "asc" | "desc";
   page?: number;
@@ -164,6 +183,7 @@ export interface TrainerSearchItem {
   whatsappUrl?: string | null;
   isAvailable: boolean;
   isFeatured: boolean;
+  freeFirstSession?: boolean;
   profileViews: number;
   totalRating: number;
   reviewCount: number;
@@ -196,60 +216,46 @@ export interface TrainerSearchResponse {
 
 export interface TrainerAnalyticsDayItem {
   date: string;
-  label: string;
-  count: number;
+  views: number;
+  contacts: number;
 }
 
-export interface TrainerAnalyticsBreakdown {
+export interface TrainerAnalyticsSources {
   search: number;
   map: number;
   direct: number;
   other: number;
 }
 
-export interface TrainerAnalyticsAgeBreakdown {
-  under_18: number;
-  "18_24": number;
-  "25_34": number;
-  "35_44": number;
-  "45_54": number;
-  "55_plus": number;
-  unknown: number;
+export interface TrainerAnalyticsChannels {
+  whatsapp: number;
+  instagram: number;
+  facebook: number;
 }
 
-export interface TrainerAnalyticsSexBreakdown {
-  male: number;
-  female: number;
-  non_binary: number;
-  other: number;
-  prefer_not_to_say: number;
-  unknown: number;
-}
-
-export interface TrainerAnalyticsRecentView {
-  id: number;
-  viewedAt: string;
-  sourceType: keyof TrainerAnalyticsBreakdown;
-  viewerUserId?: number | null;
-  viewerIpAddress: string;
-  age: number | null;
-  sex: string;
+export interface TrainerAnalyticsPeriod {
+  views: number;
+  /** Distinct people who tapped a contact button. */
+  contacts: number;
 }
 
 export interface TrainerAnalyticsResponseData {
   totalViews: number;
-  uniqueViewEvents: number;
-  viewsByDay: TrainerAnalyticsDayItem[];
-  sourceBreakdown: TrainerAnalyticsBreakdown;
-  ageBreakdown: TrainerAnalyticsAgeBreakdown;
-  sexBreakdown: TrainerAnalyticsSexBreakdown;
-  recentViews: TrainerAnalyticsRecentView[];
+  thisWeek: TrainerAnalyticsPeriod;
+  lastWeek: TrainerAnalyticsPeriod;
+  /** The last 7 days, oldest first, ending today. */
+  days: TrainerAnalyticsDayItem[];
+  /** Last 30 days. */
+  sources: TrainerAnalyticsSources;
+  /** Last 30 days, distinct people per channel. */
+  channels: TrainerAnalyticsChannels;
 }
 
 export const trainerApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getTrainerProfile: builder.query<TrainerProfileResponse, void>({
       query: () => "/trainer",
+      providesTags: ["TrainerProfile"],
     }),
 
     getTrainerById: builder.query<PublicTrainerProfile, string>({
@@ -291,6 +297,9 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
         method: "PUT",
         body,
       }),
+      // The profile screen copies GET /trainer into the auth slice on mount, so a
+      // stale cached copy would write the pre-save profile back over the saved one.
+      invalidatesTags: ["TrainerProfile"],
     }),
 
     getTrainerAnalytics: builder.query<TrainerAnalyticsResponseData, void>({
@@ -313,19 +322,10 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       },
     }),
 
-    // The authenticated trainer's own gallery + credential images (for management).
+    // The authenticated trainer's own credential images (for management).
     getTrainerImages: builder.query<TrainerImagesResponse, void>({
       query: () => "/trainer-images",
       providesTags: ["TrainerImages"],
-    }),
-
-    uploadGalleryImages: builder.mutation<ApiEnvelope<void>, FormData>({
-      query: (formData) => ({
-        url: "/trainer-images/gallery",
-        method: "POST",
-        body: formData,
-      }),
-      invalidatesTags: ["TrainerImages"],
     }),
 
     uploadCredentialImages: builder.mutation<ApiEnvelope<void>, FormData>({
@@ -341,6 +341,27 @@ export const trainerApiSlice = apiSlice.injectEndpoints({
       query: (id) => ({ url: `/trainer-images/${id}`, method: "DELETE" }),
       invalidatesTags: ["TrainerImages"],
     }),
+
+    // The authenticated trainer's own client transformations (for management).
+    getTrainerTransformations: builder.query<ApiEnvelope<TrainerTransformationItem[]>, void>({
+      query: () => "/trainer-transformations",
+      providesTags: ["TrainerTransformations"],
+    }),
+
+    // FormData: "before" + "after" files, "description", "consent" = "true".
+    createTrainerTransformation: builder.mutation<ApiEnvelope<TrainerTransformationItem>, FormData>({
+      query: (formData) => ({
+        url: "/trainer-transformations",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["TrainerTransformations"],
+    }),
+
+    deleteTrainerTransformation: builder.mutation<ApiEnvelope<void>, number>({
+      query: (id) => ({ url: `/trainer-transformations/${id}`, method: "DELETE" }),
+      invalidatesTags: ["TrainerTransformations"],
+    }),
   }),
 });
 
@@ -354,7 +375,9 @@ export const {
   useUpdateTrainerProfileMutation,
   useSearchTrainersQuery,
   useGetTrainerImagesQuery,
-  useUploadGalleryImagesMutation,
   useUploadCredentialImagesMutation,
   useDeleteTrainerImageMutation,
+  useGetTrainerTransformationsQuery,
+  useCreateTrainerTransformationMutation,
+  useDeleteTrainerTransformationMutation,
 } = trainerApiSlice;

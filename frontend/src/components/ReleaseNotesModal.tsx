@@ -1,10 +1,10 @@
 import React from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { theme, typography } from "../lib/theme";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import type { ReleaseNotes } from "../lib/releaseNotes";
+import { fonts } from "../lib/fonts";
 
 /**
  * "What's new" sheet, shown once after the user updates. Dismissible, unlike the
@@ -26,15 +26,10 @@ export default function ReleaseNotesModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.card}>
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.header}
-          >
+          <View style={[styles.header, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="sparkles" size={22} color="#FFFFFF" />
             <Text style={styles.version}>{notes.version}</Text>
-          </LinearGradient>
+          </View>
 
           <View style={styles.body}>
             <Text style={styles.title}>{notes.title}</Text>
@@ -67,7 +62,7 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: theme.colors.surface,
-    borderRadius: 20,
+    borderRadius: theme.radius.card,
     overflow: "hidden",
     ...theme.shadows.medium,
   },
@@ -81,7 +76,7 @@ const styles = StyleSheet.create({
   version: {
     ...typography.body2,
     color: "#FFFFFF",
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   body: {
     padding: 18,
@@ -90,7 +85,7 @@ const styles = StyleSheet.create({
   title: {
     ...typography.h3,
     color: theme.colors.text,
-    fontWeight: "800",
+    fontFamily: fonts.uiExtraBold,
   },
   // Capped so a long changelog scrolls instead of pushing the button off screen.
   scroll: {
@@ -103,13 +98,13 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: theme.colors.primary,
-    borderRadius: 999,
-    paddingVertical: 13,
+    borderRadius: theme.radius.control,
+    height: 52,
+    justifyContent: "center",
     alignItems: "center",
   },
   buttonText: {
-    ...typography.body1,
+    ...typography.button,
     color: "#FFFFFF",
-    fontWeight: "700",
   },
 });

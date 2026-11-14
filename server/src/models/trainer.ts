@@ -23,6 +23,7 @@ import { RATING_PRIOR } from "../utils/rating";
 import { TrainerSpecialization } from "./trainerSpecialization";
 import type { Specialization } from "./specialization";
 import { TrainerImage } from "./trainerImage";
+import { TrainerTransformation } from "./trainerTransformation";
 import { TrainerPackage } from "./trainerPackage";
 import { Review } from "./review";
 import { activeSubscriptionWhere } from "../services/billing/activeSubscriptionScope";
@@ -106,6 +107,20 @@ export class Trainer extends Model<
 
   @Column({ type: DataType.STRING(255), field: "whatsapp_url" })
   whatsappUrl?: string;
+
+  // The trainer's name as the contact button needs it in Romanian, in the
+  // dative: "lui Andrei", "Elenei". Typed in by hand at onboarding, because a
+  // grammar rule gets names like Alex or Ilie wrong. Empty means the app falls
+  // back to a button without a name.
+  @Column({ type: DataType.STRING(60), field: "contact_name_dative" })
+  contactNameDative?: string;
+
+  // Shown as a "Prima ședință gratis" badge on the search card and next to the
+  // price on the profile. A plain on/off: no duration or conditions.
+  @AllowNull(false)
+  @Default(false)
+  @Column({ type: DataType.BOOLEAN, field: "free_first_session" })
+  freeFirstSession!: boolean;
 
   @Column({ type: DataType.GEOMETRY("POINT", 4326), field: "location" })
   location?: {
@@ -195,6 +210,8 @@ export class Trainer extends Model<
   @BelongsTo(() => User) user!: User;
 
   @HasMany(() => TrainerImage) images!: TrainerImage[];
+
+  @HasMany(() => TrainerTransformation) transformations!: TrainerTransformation[];
 
   @HasMany(() => TrainerPackage) packages!: TrainerPackage[];
 

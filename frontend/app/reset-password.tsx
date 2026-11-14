@@ -9,7 +9,6 @@ import {
   Platform,
   ScrollView,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   useForgotPasswordMutation,
@@ -20,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { FadeInUp, Field, GradientButton } from "../src/components/ui";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorCode, getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 /** Matches the server's per-user cooldown between two codes. */
 const RESEND_COOLDOWN_S = 60;
@@ -118,14 +118,9 @@ export default function ResetPasswordScreen() {
         showsVerticalScrollIndicator={false}
       >
         <FadeInUp delay={0} style={styles.header}>
-          <LinearGradient
-            colors={theme.gradients.primary}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.iconContainer}
-          >
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary }]}>
             <Ionicons name="key-outline" size={36} color="#FFFFFF" />
-          </LinearGradient>
+          </View>
           <Text style={styles.title}>{t("resetPassword")}</Text>
           <Text style={styles.subtitle}>
             {params.email
@@ -246,8 +241,13 @@ const styles = StyleSheet.create({
   },
   title: { ...typography.h1, color: theme.colors.text, textAlign: "center" },
   subtitle: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
-  backButton: { alignItems: "center", marginTop: theme.spacing.sm },
+  backButton: {
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 44,
+    marginTop: theme.spacing.xs,
+  },
   backButtonText: { ...typography.body2, color: theme.colors.textSecondary },
-  resendText: { ...typography.body2, color: theme.colors.primary, fontWeight: "600" },
+  resendText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiSemiBold },
   resendTextDisabled: { color: theme.colors.textSecondary },
 });

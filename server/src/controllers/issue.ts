@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+import { BillingTransaction } from "../models/billingTransaction";
 import { Issue } from "../models/issue";
 import { Trainer } from "../models/trainer";
 import { User } from "../models/user";
@@ -20,6 +21,54 @@ const ensureAdmin = (req: Request, res: Response): boolean => {
   }
 
   return true;
+};
+
+/**
+ * What we know about the reporter's subscription at the moment they report a
+ * payment problem, so an admin can find the purchase in RevenueCat / Stripe
+ * without asking. Built server-side only — never trusted from the client.
+ * Only trainers pay, so for a client every field is null.
+ */
+export const buildBillingSnapshot = async (
+  userId: number
+): Promise<Record<string, unknown>> => {
+  const trainer = await Trainer.findOne({ where: { userId } });
+  if (!trainer) {
+    return { capturedAt: new Date().toISOString(), trainerId: null, lastTransaction: null };
+  }
+
+  const lastTransaction = await BillingTransaction.findOne({
+    where: { trainerId: trainer.id },
+    order: [
+      ["paidAt", "DESC NULLS LAST"],
+      ["createdAt", "DESC"],
+    ],
+  });
+
+  return {
+    capturedAt: new Date().toISOString(),
+    trainerId: trainer.id,
+    subscriptionStatus: trainer.subscriptionStatus ?? null,
+    billingProvider: trainer.billingProvider ?? null,
+    productId: trainer.iapProductId ?? null,
+    expiresAt: trainer.iapExpiresAt ?? null,
+    trialEndsAt: trainer.trialEndsAt ?? null,
+    appleOriginalTransactionId: trainer.appleOriginalTransactionId ?? null,
+    googlePurchaseToken: trainer.googlePurchaseToken ?? null,
+    stripeSubscriptionId: trainer.stripeSubscriptionId || null,
+    lastTransaction: lastTransaction
+      ? {
+          id: lastTransaction.id,
+          transactionId: lastTransaction.transactionId,
+          productId: lastTransaction.productId,
+          provider: lastTransaction.provider,
+          status: lastTransaction.status,
+          amount: lastTransaction.amount,
+          currency: lastTransaction.currency,
+          paidAt: lastTransaction.paidAt,
+        }
+      : null,
+  };
 };
 
 export const createIssue = async (
@@ -127,6 +176,15 @@ export const createIssue = async (
       return;
     }
 
+    // `billing` is reserved for the server-built snapshot below.
+    const { billing: _ignored, ...clientMetadata } = (metadata ?? {}) as Record<string, unknown>;
+    const storedMetadata: Record<string, unknown> | undefined =
+      category === IssueCategory.PAYMENT_ISSUE
+        ? { ...clientMetadata, billing: await buildBillingSnapshot(user.id) }
+        : metadata
+        ? clientMetadata
+        : undefined;
+
     const issue = await Issue.create({
       reporterId: user.id,
       targetType,
@@ -135,7 +193,7 @@ export const createIssue = async (
       description: description.trim(),
       trainerId: resolvedTrainerId,
       bookingId,
-      metadata,
+      metadata: storedMetadata,
     });
 
     sendSuccess(res, 201, "Issue reported successfully", issue);

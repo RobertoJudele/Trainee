@@ -10,7 +10,7 @@ import {
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_URL } from "../constants/config";
-import { theme } from "../lib/theme";
+import { theme, typography } from "../lib/theme";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import ReleaseNotesModal from "./ReleaseNotesModal";
 import {
@@ -18,6 +18,7 @@ import {
   shouldShowReleaseNotes,
   type ReleaseNotes,
 } from "../lib/releaseNotes";
+import { fonts } from "../lib/fonts";
 
 interface UpdateInfo {
   updateRequired: boolean;
@@ -122,12 +123,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: "bold",
+    fontFamily: fonts.uiBold,
     color: theme.colors.text,
     marginBottom: 12,
     textAlign: "center",
   },
   message: {
+    fontFamily: fonts.ui,
     fontSize: 16,
     color: theme.colors.text,
     textAlign: "center",
@@ -137,12 +139,12 @@ const styles = StyleSheet.create({
   button: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 12,
+    height: 52,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
   buttonText: {
+    ...typography.button,
     color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });

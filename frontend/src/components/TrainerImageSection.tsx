@@ -15,8 +15,10 @@ import {
   Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { theme, typography } from "../lib/theme";
+import { theme, typography, presets } from "../lib/theme";
 import { TrainerImageItem } from "../../features/trainer/trainerApiSlice";
+import { useLanguage } from "../lib/i18n/LanguageContext";
+import { fonts } from "../lib/fonts";
 
 interface Props {
   title: string;
@@ -41,6 +43,7 @@ export default function TrainerImageSection({
   onAdd,
   onDelete,
 }: Props) {
+  const { t } = useLanguage();
   const atLimit = images.length >= max;
 
   const confirmDelete = (id: number) =>
@@ -65,10 +68,11 @@ export default function TrainerImageSection({
             <Image source={{ uri: img.imageUrl }} style={styles.tileImage} />
             <Pressable
               style={styles.deleteBtn}
+              hitSlop={10}
               onPress={() => confirmDelete(img.id)}
               disabled={deletingId === img.id}
               accessibilityRole="button"
-              accessibilityLabel="Delete image"
+              accessibilityLabel={t("a11yDeleteImage")}
             >
               {deletingId === img.id ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -104,14 +108,10 @@ export default function TrainerImageSection({
 
 const styles = StyleSheet.create({
   section: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.lg,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
     gap: 10,
     marginBottom: 20,
-    ...theme.shadows.small,
   },
   headerRow: {
     flexDirection: "row",
@@ -123,9 +123,9 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
   },
   count: {
-    ...typography.caption,
+    ...typography.label,
     color: theme.colors.textSecondary,
-    fontWeight: "700",
+    fontFamily: fonts.monoSemiBold,
   },
   subtitle: {
     ...typography.caption,
@@ -167,9 +167,8 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.background,
   },
   addText: {
-    ...typography.caption,
+    ...typography.button, fontSize: 14,
     color: theme.colors.primary,
-    fontWeight: "700",
     marginTop: 2,
   },
 });

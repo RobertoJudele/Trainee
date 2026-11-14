@@ -21,9 +21,41 @@ export interface CreateIssueRequest {
   metadata?: Record<string, unknown>;
 }
 
+export interface IssueReporter {
+  id: number;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+}
+
+/** Server-built snapshot attached to payment_issue reports (metadata.billing). */
+export interface IssueBillingSnapshot {
+  capturedAt: string;
+  trainerId: number | null;
+  subscriptionStatus?: string | null;
+  billingProvider?: string | null;
+  productId?: string | null;
+  expiresAt?: string | null;
+  trialEndsAt?: string | null;
+  appleOriginalTransactionId?: string | null;
+  googlePurchaseToken?: string | null;
+  stripeSubscriptionId?: string | null;
+  lastTransaction: {
+    id: number;
+    transactionId?: string | null;
+    productId?: string | null;
+    provider?: string | null;
+    status?: string | null;
+    amount?: number | string | null;
+    currency?: string | null;
+    paidAt?: string | null;
+  } | null;
+}
+
 interface IssueRecord {
   id: number;
   reporterId: number;
+  reporter?: IssueReporter | null;
   trainerId?: number;
   bookingId?: number;
   targetType: IssueTargetType;

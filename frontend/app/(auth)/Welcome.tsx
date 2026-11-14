@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { View, Text, StyleSheet, Dimensions, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { theme, typography } from '../../src/lib/theme';
@@ -16,15 +15,15 @@ export default function Welcome() {
   const { t } = useLanguage();
 
   return (
-    <LinearGradient
-      colors={[theme.colors.primary, theme.colors.tertiary]}
-      style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
-    >
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }, { backgroundColor: theme.colors.primary }]}>
       <View style={styles.content}>
         <FadeInUp delay={80} duration={theme.motion.slow} style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="barbell" size={64} color="#FFFFFF" />
-          </View>
+          <Image
+            source={require('../../assets/salvio-mark-white.png')}
+            style={styles.logo}
+            resizeMode="contain"
+            accessibilityIgnoresInvertColors
+          />
           <Text style={styles.title}>Salvio</Text>
           <Text style={styles.subtitle}>
             {t("welcomeTagline")}
@@ -54,24 +53,9 @@ export default function Welcome() {
               <Text style={styles.secondaryButtonText}>{t("signIn")}</Text>
             </PressableScale>
           </FadeInUp>
-
-          <View style={styles.features}>
-            <FeatureItem icon="checkmark-circle" text={t("certifiedTrainers")} delay={theme.motion.stagger * 5} />
-            <FeatureItem icon="checkmark-circle" text={t("personalizedPrograms")} delay={theme.motion.stagger * 6} />
-            <FeatureItem icon="checkmark-circle" text={t("trackYourProgress")} delay={theme.motion.stagger * 7} />
-          </View>
         </View>
       </View>
-    </LinearGradient>
-  );
-}
-
-function FeatureItem({ icon, text, delay }: { icon: React.ComponentProps<typeof Ionicons>["name"]; text: string; delay: number }) {
-  return (
-    <FadeInUp delay={delay} style={styles.featureItem}>
-      <Ionicons name={icon} size={22} color="#FFFFFF" />
-      <Text style={styles.featureText}>{text}</Text>
-    </FadeInUp>
+    </View>
   );
 }
 
@@ -89,15 +73,17 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
   },
-  iconContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: theme.spacing.md,
-    borderRadius: 100,
+  logo: {
+    // Mark is 419×721; keep its aspect ratio.
+    height: 112,
+    width: 112 * (419 / 721),
     marginBottom: theme.spacing.md,
   },
   title: {
     ...typography.h1,
     fontSize: 48,
+    // h1's 42px line height is for 34px text; at 48px it clips the glyphs.
+    lineHeight: 58,
     color: '#FFFFFF',
     marginBottom: theme.spacing.sm,
   },
@@ -111,44 +97,28 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   button: {
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.lg,
-    borderRadius: theme.roundness,
+    height: 52,
+    paddingHorizontal: 20,
+    borderRadius: theme.radius.control,
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: theme.spacing.xs,
+    gap: theme.spacing.sm,
   },
   primaryButton: {
     backgroundColor: '#FFFFFF',
-    ...theme.shadows.medium,
   },
   secondaryButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.7)',
   },
   primaryButtonText: {
-    ...typography.h3,
+    ...typography.button,
     color: theme.colors.primary,
   },
   secondaryButtonText: {
-    ...typography.h3,
+    ...typography.button,
     color: '#FFFFFF',
-  },
-  features: {
-    marginTop: theme.spacing.lg,
-    gap: theme.spacing.sm,
-    alignItems: 'center',
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.sm,
-  },
-  featureText: {
-    ...typography.body1,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontWeight: '500',
   },
 });

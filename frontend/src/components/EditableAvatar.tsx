@@ -6,6 +6,8 @@
 import React from "react";
 import { View, Text, Image, Pressable, ActivityIndicator, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useLanguage } from "../lib/i18n/LanguageContext";
+import { fonts } from "../lib/fonts";
 
 interface Props {
   imageUrl?: string | null;
@@ -24,6 +26,7 @@ export default function EditableAvatar({
   uploading = false,
   onPress,
 }: Props) {
+  const { t } = useLanguage();
   const radius = size / 2;
 
   const inner = (
@@ -40,7 +43,7 @@ export default function EditableAvatar({
             { width: size, height: size, borderRadius: radius },
           ]}
         >
-          <Text style={[styles.initials, { fontSize: size * 0.34 }]}>{initials}</Text>
+          <Text style={[styles.initials, { fontFamily: fonts.ui, fontSize: size * 0.34 }]}>{initials}</Text>
         </View>
       )}
 
@@ -65,7 +68,7 @@ export default function EditableAvatar({
       onPress={onPress}
       disabled={uploading}
       accessibilityRole="button"
-      accessibilityLabel="Change profile picture"
+      accessibilityLabel={t("a11yChangePhoto")}
     >
       {inner}
     </Pressable>
@@ -85,7 +88,7 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.6)",
   },
   initials: {
-    fontWeight: "700",
+    fontFamily: fonts.uiBold,
     color: "#fff",
   },
   badge: {

@@ -58,17 +58,30 @@ export async function pickImages(remaining: number): Promise<PickedImage[]> {
   return result.assets.slice(0, remaining).map((a, i) => assetToPicked(a, i));
 }
 
-// Build multipart FormData from picked images under a given field name.
+// Pick one image without cropping (before/after photos of a transformation).
+export async function pickImage(): Promise<PickedImage | null> {
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: "images",
+    quality: 0.8,
+  });
+  if (result.canceled || result.assets.length === 0) return null;
+  return assetToPicked(result.assets[0]);
+}
+
+// Append one picked image to a multipart form under `field`.
 // React Native accepts `{ uri, name, type }` objects appended to FormData.
+export function appendImage(form: FormData, field: string, img: PickedImage): void {
+  form.append(field, {
+    // iOS file URIs sometimes need the file:// prefix preserved; Android works as-is.
+    uri: Platform.OS === "ios" ? img.uri.replace("file://", "file://") : img.uri,
+    name: img.fileName,
+    type: img.mimeType,
+  } as any);
+}
+
+// Build multipart FormData from picked images under a given field name.
 export function toImageFormData(field: string, images: PickedImage[]): FormData {
   const form = new FormData();
-  for (const img of images) {
-    form.append(field, {
-      // iOS file URIs sometimes need the file:// prefix preserved; Android works as-is.
-      uri: Platform.OS === "ios" ? img.uri.replace("file://", "file://") : img.uri,
-      name: img.fileName,
-      type: img.mimeType,
-    } as any);
-  }
+  for (const img of images) appendImage(form, field, img);
   return form;
 }

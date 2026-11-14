@@ -22,13 +22,14 @@ import {
   GymMarker,
   MyGym,
 } from "../features/gym/gymApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import { useRouter } from "expo-router";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 export default function MyGymsScreen() {
   const { t } = useLanguage();
@@ -253,7 +254,7 @@ export default function MyGymsScreen() {
             {gym.address}, {gym.city}
           </Text>
           <Text style={styles.browserGymMeta}>
-            <Ionicons name="star" size={10} color="#D97706" /> {Number(gym.rating).toFixed(1)} · {gym.availableTrainerCount} trainer
+            {gym.availableTrainerCount} trainer
             {gym.availableTrainerCount !== 1 ? "s" : ""}
           </Text>
         </View>
@@ -287,7 +288,7 @@ export default function MyGymsScreen() {
           onPress={() => setShowBrowser(true)}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Add Gym"
+          accessibilityLabel={t("a11yAddGym")}
         >
           <Text style={styles.addBtnText}>{t("addGym")}</Text>
         </TouchableOpacity>
@@ -338,7 +339,7 @@ export default function MyGymsScreen() {
               onPress={() => setShowBrowser(false)}
               accessible={true}
               accessibilityRole="button"
-              accessibilityLabel="Close gym browser"
+              accessibilityLabel={t("close")}
             >
               <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
             </TouchableOpacity>
@@ -408,29 +409,22 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.border,
   },
-  headerTitle: { ...typography.h2, color: theme.colors.text, fontWeight: "700" },
+  headerTitle: { ...typography.h2, color: theme.colors.text },
   addBtn: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: theme.roundness,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
-  addBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  addBtnText: { ...typography.button, fontSize: 14, color: "#fff" },
 
   listContent: { padding: theme.spacing.md, gap: theme.spacing.md },
 
   // Gym card
   gymCard: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: theme.spacing.md,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
   },
   gymCardTop: {
     flexDirection: "row",
@@ -439,11 +433,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   gymCardLeft: { flex: 1, marginRight: 12 },
-  gymCardName: { ...typography.body1, fontWeight: "700", color: theme.colors.text, marginBottom: 2 },
+  gymCardName: { ...typography.heading, color: theme.colors.text, marginBottom: 2 },
   gymCardAddress: { ...typography.caption, color: theme.colors.textSecondary, marginBottom: 2 },
   gymCardHours: { ...typography.caption, color: theme.colors.textSecondary },
   toggleBox: { alignItems: "center", gap: 4 },
-  toggleLabel: { ...typography.caption, color: theme.colors.textSecondary, fontWeight: "600" },
+  toggleLabel: { ...typography.label, color: theme.colors.textSecondary, fontFamily: fonts.monoSemiBold },
   availRow: {
     padding: 8,
     borderRadius: 8,
@@ -460,44 +454,47 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F5F9",
     marginBottom: 10,
   },
-  staffText: { ...typography.caption, color: theme.colors.text },
+  staffText: { ...typography.label, color: theme.colors.text },
   staffBtn: {
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: theme.colors.primary,
+    minHeight: 44,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
+    borderWidth: 1.5,
+    borderColor: theme.colors.borderStrong,
     alignItems: "center",
     marginBottom: 10,
   },
   staffBtnText: {
-    ...typography.caption,
-    color: theme.colors.primary,
-    fontWeight: "700",
+    ...typography.button,
+    fontSize: 14,
+    color: theme.colors.text,
   },
-  availText: { ...typography.caption, color: "#374151", fontWeight: "600" },
+  availText: { ...typography.label, color: "#374151", fontFamily: fonts.monoSemiBold },
   leaveBtn: {
     alignSelf: "flex-start",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    borderWidth: 1,
+    paddingHorizontal: 14,
+    minHeight: 36,
+    justifyContent: "center",
+    borderRadius: theme.radius.pill,
+    borderWidth: 1.5,
     borderColor: theme.colors.error,
   },
-  leaveBtnText: { ...typography.caption, color: theme.colors.error, fontWeight: "700" },
+  leaveBtnText: { ...typography.button, fontSize: 14, color: theme.colors.error },
 
   // Empty / centered
   centeredBox: { flex: 1, justifyContent: "center", alignItems: "center", padding: 40, gap: 10 },
-  emptyIcon: { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { ...typography.h3, color: theme.colors.text, fontWeight: "700" },
+  emptyIcon: { fontFamily: fonts.ui, fontSize: 48, marginBottom: 8 },
+  emptyTitle: { ...typography.h3, color: theme.colors.text, fontFamily: fonts.uiBold },
   emptyDesc: { ...typography.body2, color: theme.colors.textSecondary, textAlign: "center" },
   primaryBtn: {
     marginTop: 8,
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: theme.roundness,
+    height: 52,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
-  primaryBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  primaryBtnText: { ...typography.button, color: "#fff" },
 
   // Modal
   modal: { flex: 1, backgroundColor: theme.colors.background },
@@ -510,8 +507,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.border,
     backgroundColor: theme.colors.surface,
   },
-  modalTitle: { ...typography.h2, color: theme.colors.text, fontWeight: "700" },
-  modalClose: { fontSize: 20, color: theme.colors.textSecondary },
+  modalTitle: { ...typography.h2, color: theme.colors.text },
+  modalClose: { fontFamily: fonts.ui, fontSize: 20, color: theme.colors.textSecondary },
   searchBox: {
     flexDirection: "row",
     alignItems: "center",
@@ -523,7 +520,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
   },
-  searchIcon: { fontSize: 16, marginRight: 8 },
+  searchIcon: { fontFamily: fonts.ui, fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, ...typography.body1, color: theme.colors.text },
   browserList: { paddingHorizontal: theme.spacing.md, paddingBottom: 40 },
   requestGymLink: {
@@ -534,7 +531,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
-  requestGymLinkText: { ...typography.body2, color: theme.colors.primary, fontWeight: "700" },
+  requestGymLinkText: { ...typography.body2, color: theme.colors.primary, fontFamily: fonts.uiBold },
   noResults: {
     ...typography.body2,
     color: theme.colors.textSecondary,
@@ -550,22 +547,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   browserRowLeft: { flex: 1 },
-  browserGymName: { ...typography.body1, fontWeight: "700", color: theme.colors.text },
+  browserGymName: { ...typography.body1, fontFamily: fonts.uiBold, color: theme.colors.text },
   browserGymAddr: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 1 },
-  browserGymMeta: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 2 },
+  browserGymMeta: { ...typography.label, color: theme.colors.textSecondary, marginTop: 2 },
   joinBtn: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: theme.roundness,
+    minHeight: 36,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
   },
   joinBtnDisabled: { opacity: 0.5 },
-  joinBtnText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  joinBtnText: { ...typography.button, fontSize: 14, color: "#fff" },
   joinedBadge: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 6,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.xs,
     backgroundColor: "#D1FAE5",
   },
-  joinedBadgeText: { ...typography.caption, color: "#065F46", fontWeight: "700" },
+  joinedBadgeText: { ...typography.label, color: "#065F46" },
 });

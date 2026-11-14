@@ -8,8 +8,7 @@ import { useGetProfileQuery } from "./usersApiSlicet";
 import ScreenHeader from "../../src/components/ScreenHeader";
 import {
   useGetSpecializationsQuery,
-  SpecializationItem,
-} from "../trainer/trainerApiSlice";
+  SpecializationItem, TrainerGender } from "../trainer/trainerApiSlice";
 import { useCreateTrainerPackageMutation } from "../trainer/trainerPackageApiSlice";
 import {
   KeyboardAvoidingView,
@@ -24,10 +23,13 @@ import {
   Alert,
 } from "react-native";
 import React from "react";
-import { theme, typography } from "../../src/lib/theme";
+import { theme, typography, presets } from "../../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../../src/lib/i18n/LanguageContext";
 import { ApiEnvelope, TrainerProfileAttributes } from "../../src/types/api";
+import { fonts } from "../../src/lib/fonts";
+import { FieldError } from "../../src/components/ui";
+import { useFieldErrors } from "../../src/lib/useFieldErrors";
 export default function CreateTrainer() {
   const { t } = useLanguage();
   const [bio, setBio] = useState("");
@@ -41,9 +43,12 @@ export default function CreateTrainer() {
   const [latitude, setLatitude] = useState("0");
   const [longitude, setLongitude] = useState("0");
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
+  const [gender, setGender] = useState<TrainerGender | null>(null);
   const user = useSelector(selectCurrentUser);
   const trainer = useSelector(selectCurrentTrainer)
   const errRef = useRef<Text>(null);
+  // Keys: bio, exp, specs, city, county, country, and pkg{i}.{name|price|sessionCount}.
+  const fieldErrors = useFieldErrors<string>();
   const [errMsg, setErrMsg] = useState("");
   const token = useSelector(selectCurrentToken);
   const [creatingTrainer, { isLoading }] = useCreateTrainerMutation();
@@ -58,6 +63,7 @@ export default function CreateTrainer() {
   const dispatch = useDispatch();
 
   const toggleSpecialization = useCallback((id: number) => {
+    fieldErrors.clear("specs");
     setSelectedSpecializationIds((prev) =>
       prev.includes(id) ? prev.filter((sId) => sId !== id) : [...prev, id]
     );
@@ -70,10 +76,15 @@ export default function CreateTrainer() {
 
   const removePackageRow = useCallback((index: number) => {
     setPackages((prev) => prev.filter((_, i) => i !== index));
-  }, []);
+    // Package messages are keyed by row index, which just shifted.
+    fieldErrors.setAll(
+      Object.fromEntries(Object.entries(fieldErrors.errors).filter(([k]) => !k.startsWith("pkg")))
+    );
+  }, [fieldErrors]);
 
   const updatePackageField = useCallback(
     (index: number, field: "name" | "price" | "sessionCount", value: string) => {
+      fieldErrors.clear(`pkg${index}.${field}`);
       setPackages((prev) =>
         prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
       );
@@ -81,63 +92,28 @@ export default function CreateTrainer() {
     []
   );
 
+  // Collects every problem at once so each shows under its own field.
   const validateForm = () => {
-    if (!bio.trim()) {
-      setErrMsg(t("bioIsRequired"));
-      return false;
-    }
-    if (!exp.trim()) {
-      setErrMsg(t("experienceIsRequired"));
-      return false;
-    }
-    if (packages.length === 0) {
-      setErrMsg(t("packageNameRequired"));
-      return false;
-    }
-    for (const pkg of packages) {
-      if (!pkg.name.trim()) {
-        setErrMsg(t("packageNameRequired"));
-        return false;
-      }
+    const next: Record<string, string> = {};
+    if (!bio.trim()) next.bio = t("bioIsRequired");
+    if (!exp.trim()) next.exp = t("experienceIsRequired");
+    if (!gender) next.gender = t("genderRequired");
+    if (selectedSpecializationIds.length === 0) next.specs = t("invalidSpecializations");
+    packages.forEach((pkg, i) => {
+      if (!pkg.name.trim()) next[`pkg${i}.name`] = t("packageNameRequired");
       if (!pkg.price.trim() || isNaN(parseFloat(pkg.price)) || parseFloat(pkg.price) <= 0) {
-        setErrMsg(t("packagePriceRequired"));
-        return false;
+        next[`pkg${i}.price`] = t("packagePriceRequired");
       }
       if (!pkg.sessionCount.trim() || isNaN(parseInt(pkg.sessionCount)) || parseInt(pkg.sessionCount) < 1) {
-        setErrMsg(t("sessionCountRequired"));
-        return false;
+        next[`pkg${i}.sessionCount`] = t("sessionCountRequired");
       }
-    }
-    if (!city.trim()) {
-      setErrMsg(t("cityIsRequired"));
-      return false;
-    }
-    if (!county.trim()) {
-      setErrMsg(t("countyIsRequired"));
-      return false;
-    }
-    if (!country.trim()) {
-      setErrMsg(t("countryIsRequired"));
-      return false;
-    }
-    if (country.trim().length < 2) {
-      setErrMsg(t("countryMinLength"));
-      return false;
-    }
-    if (county.trim().length < 2) {
-      setErrMsg(t("countryMinLength"));
-      return false;
-    }
-    if (city.trim().length < 2) {
-      setErrMsg(t("cityIsRequired"));
-      return false;
-    }
-    if (selectedSpecializationIds.length === 0) {
-      setErrMsg(t("invalidSpecializations"));
-      return false;
-    }
-
-    return true;
+    });
+    if (city.trim().length < 2) next.city = t("cityIsRequired");
+    if (!county.trim()) next.county = t("countyIsRequired");
+    else if (county.trim().length < 2) next.county = t("countyMinLength");
+    if (!country.trim()) next.country = t("countryIsRequired");
+    else if (country.trim().length < 2) next.country = t("countryMinLength");
+    return fieldErrors.setAll(next);
   };
 
   const handleSubmit = useCallback(async () => {
@@ -156,6 +132,7 @@ export default function CreateTrainer() {
         locationState: county.trim(),
         locationCountry: country.trim(),
         specializationIds: selectedSpecializationIds,
+        gender,
       };
 
       const result = await creatingTrainer(trainerData);
@@ -275,15 +252,6 @@ export default function CreateTrainer() {
           />
 
           <View style={styles.form}>
-            {/* Error Message */}
-            {errMsg ? (
-              <View style={styles.errorContainer}>
-                <Text ref={errRef} style={styles.errorText}>
-                  {errMsg}
-                </Text>
-              </View>
-            ) : null}
-
             {/* Bio Section */}
             <View style={styles.section}>
               <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 16}}>
@@ -294,26 +262,54 @@ export default function CreateTrainer() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t("bioRequired")}</Text>
                 <TextInput
-                  style={[styles.input, styles.textArea]}
+                  style={[styles.input, styles.textArea, fieldErrors.errors.bio && presets.inputError]}
                   value={bio}
                   placeholder={t("bioPlaceholderLong")}
-                  onChangeText={setBio}
+                  onChangeText={(v) => { fieldErrors.clear("bio"); setBio(v); }}
                   multiline
                   numberOfLines={4}
                   textAlignVertical="top"
                 />
+                <FieldError message={fieldErrors.errors.bio} />
               </View>
 
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t("experienceRequired")}</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, fieldErrors.errors.exp && presets.inputError]}
                   value={exp}
                   placeholder={t("experiencePlaceholderLong")}
-                  onChangeText={setExp}
+                  onChangeText={(v) => { fieldErrors.clear("exp"); setExp(v); }}
                   keyboardType="number-pad"
                 />
+                <FieldError message={fieldErrors.errors.exp} />
               </View>
+            </View>
+
+            {/* Gender: drives the client-side gender filter in search */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>{t("yourGender")}</Text>
+              <View style={styles.specGrid}>
+                {([
+                  ["female", t("genderFemale")],
+                  ["male", t("genderMale")],
+                  ["non_binary", t("genderNonBinary")],
+                ] as const).map(([value, label]) => {
+                  const active = gender === value;
+                  return (
+                    <Pressable
+                      key={value}
+                      style={[styles.specChip, active && styles.specChipActive]}
+                      onPress={() => { fieldErrors.clear("gender"); setGender(value); }}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}
+                    >
+                      <Text style={[styles.specChipText, active && styles.specChipTextActive]}>{label}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+              <FieldError message={fieldErrors.errors.gender} />
             </View>
 
             {/* Specializations Section */}
@@ -324,7 +320,7 @@ export default function CreateTrainer() {
               </View>
               {specializationsLoading ? (
                 <View style={styles.specLoadingRow}>
-                  <ActivityIndicator size="small" color="#3B82F6" />
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
                   <Text style={styles.specLoadingText}>{t("loadingSpecializations")}</Text>
                 </View>
               ) : specializationOptions.length > 0 ? (
@@ -355,7 +351,7 @@ export default function CreateTrainer() {
                     disabled={specializationsFetching}
                     accessible={true}
                     accessibilityRole="button"
-                    accessibilityLabel="Retry loading specializations"
+                    accessibilityLabel={t("retry")}
                   >
                     {specializationsFetching ? (
                       <ActivityIndicator size="small" color="#fff" />
@@ -365,6 +361,7 @@ export default function CreateTrainer() {
                   </Pressable>
                 </View>
               )}
+              <FieldError message={fieldErrors.errors.specs} />
             </View>
 
             {/* Packages Section */}
@@ -375,13 +372,13 @@ export default function CreateTrainer() {
               </View>
 
               {packages.map((pkg, index) => (
-                <View key={index} style={{marginBottom: 16, padding: 16, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: theme.colors.border}}>
+                <View key={index} style={{marginBottom: 16, padding: 16, backgroundColor: theme.colors.surfaceSunken, borderRadius: theme.radius.control}}>
                   <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12}}>
-                    <Text style={{fontSize: 14, fontWeight: '600', color: theme.colors.text}}>
+                    <Text style={{fontSize: 14, fontFamily: fonts.uiSemiBold, color: theme.colors.text}}>
                       {t("addPackage")} {index + 1}
                     </Text>
                     {packages.length > 1 && (
-                      <Pressable onPress={() => removePackageRow(index)}>
+                      <Pressable onPress={() => removePackageRow(index)} hitSlop={12} accessibilityRole="button" accessibilityLabel={t("a11yRemovePackage")}>
                         <Ionicons name="trash-outline" size={20} color="#DC2626" />
                       </Pressable>
                     )}
@@ -389,32 +386,35 @@ export default function CreateTrainer() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.label}>{t("packageName")}</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, fieldErrors.errors[`pkg${index}.name`] && presets.inputError]}
                       value={pkg.name}
                       placeholder="e.g. Starter Pack"
                       onChangeText={(v) => updatePackageField(index, "name", v)}
                     />
+                    <FieldError message={fieldErrors.errors[`pkg${index}.name`]} />
                   </View>
                   <View style={styles.row}>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>{t("packagePrice")}</Text>
                       <TextInput
-                        style={styles.input}
+                        style={[styles.input, fieldErrors.errors[`pkg${index}.price`] && presets.inputError]}
                         value={pkg.price}
                         placeholder="120"
                         onChangeText={(v) => updatePackageField(index, "price", v)}
                         keyboardType="numeric"
                       />
+                      <FieldError message={fieldErrors.errors[`pkg${index}.price`]} />
                     </View>
                     <View style={[styles.inputGroup, styles.halfWidth]}>
                       <Text style={styles.label}>{t("sessionCount")}</Text>
                       <TextInput
-                        style={styles.input}
+                        style={[styles.input, fieldErrors.errors[`pkg${index}.sessionCount`] && presets.inputError]}
                         value={pkg.sessionCount}
                         placeholder="4"
                         onChangeText={(v) => updatePackageField(index, "sessionCount", v)}
                         keyboardType="number-pad"
                       />
+                      <FieldError message={fieldErrors.errors[`pkg${index}.sessionCount`]} />
                     </View>
                   </View>
                 </View>
@@ -423,10 +423,10 @@ export default function CreateTrainer() {
               {packages.length < 5 && (
                 <Pressable
                   onPress={addPackageRow}
-                  style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 14, borderRadius: 12, borderWidth: 1, borderColor: theme.colors.primary, borderStyle: 'dashed'}}
+                  style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', minHeight: 44, borderRadius: theme.radius.control, borderWidth: 1.5, borderColor: theme.colors.primary, borderStyle: 'dashed'}}
                 >
                   <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} style={{marginRight: 6}} />
-                  <Text style={{color: theme.colors.primary, fontWeight: '600'}}>{t("addPackage")}</Text>
+                  <Text style={{color: theme.colors.primary, fontFamily: fonts.uiSemiBold }}>{t("addPackage")}</Text>
                 </Pressable>
               )}
             </View>
@@ -441,32 +441,35 @@ export default function CreateTrainer() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>{t("cityRequired")}</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, fieldErrors.errors.city && presets.inputError]}
                   value={city}
                   placeholder={t("enterYourCity")}
-                  onChangeText={setCity}
+                  onChangeText={(v) => { fieldErrors.clear("city"); setCity(v); }}
                 />
+                <FieldError message={fieldErrors.errors.city} />
               </View>
 
               <View style={styles.row}>
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>{t("countyRequired")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.county && presets.inputError]}
                     value={county}
                     placeholder={t("countyState")}
-                    onChangeText={setCounty}
+                    onChangeText={(v) => { fieldErrors.clear("county"); setCounty(v); }}
                   />
+                  <FieldError message={fieldErrors.errors.county} />
                 </View>
 
                 <View style={[styles.inputGroup, styles.halfWidth]}>
                   <Text style={styles.label}>{t("countryRequired")}</Text>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, fieldErrors.errors.country && presets.inputError]}
                     value={country}
                     placeholder={t("country")}
-                    onChangeText={setCountry}
+                    onChangeText={(v) => { fieldErrors.clear("country"); setCountry(v); }}
                   />
+                  <FieldError message={fieldErrors.errors.country} />
                 </View>
               </View>
             </View>
@@ -490,6 +493,17 @@ export default function CreateTrainer() {
                   <Text style={styles.buttonText}>{t("createTrainerButton")}</Text>
                 )}
               </Pressable>
+
+              {/* Next to the button: on this long form the field messages can be
+                  off screen when the user taps it. */}
+              <FieldError message={fieldErrors.hasErrors ? t("fixHighlightedFields") : undefined} />
+              {errMsg ? (
+                <View style={styles.errorContainer}>
+                  <Text ref={errRef} style={styles.errorText}>
+                    {errMsg}
+                  </Text>
+                </View>
+              ) : null}
 
               <Text style={styles.footerText}>
                 {t("requiredFields")}
@@ -526,19 +540,12 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
     color: "#374151",
     marginBottom: 8,
   },
   input: {
-    borderWidth: 2,
-    borderColor: theme.colors.border,
-    backgroundColor: theme.colors.background,
-    borderRadius: theme.roundness,
-    padding: 16,
-    ...typography.body1,
-    color: theme.colors.text,
-    ...theme.shadows.small,
+    ...presets.input,
   },
   textArea: {
     minHeight: 100,
@@ -563,7 +570,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: "#DC2626",
     fontSize: 14,
-    fontWeight: "500",
+    fontFamily: fonts.ui,
   },
   buttonContainer: {
     marginTop: 20,
@@ -571,21 +578,17 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: theme.colors.primary,
-    paddingVertical: 18,
-    borderRadius: theme.roundness,
+    height: 52,
+    borderRadius: theme.radius.control,
     alignItems: "center",
     justifyContent: "center",
-    ...theme.shadows.medium,
   },
   buttonDisabled: {
-    backgroundColor: "#9CA3AF",
-    shadowOpacity: 0,
-    elevation: 0,
+    backgroundColor: theme.colors.textDisabled, // keeps the white label visible
   },
   buttonText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "600",
+    ...typography.button,
+    color: "#fff",
   },
   loadingContainer: {
     flexDirection: "row",
@@ -593,6 +596,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   footerText: {
+    fontFamily: fonts.ui,
     textAlign: "center",
     marginTop: 16,
     fontSize: 14,
@@ -605,8 +609,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   specLoadingText: {
-    color: "#6B7280",
-    fontSize: 14,
+    ...typography.small,
+    color: theme.colors.textSecondary,
   },
   specFallbackBox: {
     alignItems: "flex-start",
@@ -614,21 +618,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   specFallbackText: {
-    color: "#6B7280",
-    fontSize: 14,
+    ...typography.small,
+    color: theme.colors.textSecondary,
   },
   specRetryButton: {
     backgroundColor: theme.colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    minHeight: 36,
+    justifyContent: "center",
+    borderRadius: theme.radius.control,
     minWidth: 84,
     alignItems: "center",
   },
   specRetryText: {
+    ...typography.button,
+    fontSize: 14,
     color: "#fff",
-    fontSize: 13,
-    fontWeight: "700",
   },
   specGrid: {
     flexDirection: "row",
@@ -636,23 +641,15 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   specChip: {
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#fff",
+    ...presets.chip,
   },
   specChipActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    ...presets.chipSelected,
   },
   specChipText: {
-    color: "#374151",
-    fontSize: 13,
-    fontWeight: "600",
+    ...presets.chipText,
   },
   specChipTextActive: {
-    color: "#fff",
+    ...presets.chipTextSelected,
   },
 });

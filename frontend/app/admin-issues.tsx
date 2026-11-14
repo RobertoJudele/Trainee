@@ -11,6 +11,7 @@ import {
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import {
+  IssueBillingSnapshot,
   IssueTargetType,
   useGetIssuesAdminQuery,
   useUpdateIssueStatusAdminMutation,
@@ -19,10 +20,11 @@ import {
   useGetGymStaffRequestsQuery,
   useReviewGymStaffMutation,
 } from "../features/gym/gymApiSlice";
-import { theme, typography } from "../src/lib/theme";
+import { theme, typography, presets } from "../src/lib/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { useLanguage } from "../src/lib/i18n/LanguageContext";
 import { getApiErrorMessage } from "../src/lib/errors";
+import { fonts } from "../src/lib/fonts";
 
 const statuses: Array<"open" | "in_review" | "resolved" | "rejected"> = [
   "open",
@@ -119,7 +121,7 @@ export default function AdminIssuesScreen() {
           onPress={() => refetch()}
           accessible={true}
           accessibilityRole="button"
-          accessibilityLabel="Retry loading issues"
+          accessibilityLabel={t("retry")}
         >
           <Text style={styles.retryText}>{t("retry")}</Text>
         </Pressable>
@@ -260,7 +262,21 @@ export default function AdminIssuesScreen() {
           <Text style={styles.meta}>
             #{item.id} • {item.category} • {item.targetType}
           </Text>
+          {item.reporter ? (
+            <Text style={styles.meta} selectable>
+              {t("issueReporter")}:{" "}
+              {[item.reporter.firstName, item.reporter.lastName].filter(Boolean).join(" ") || "—"}
+              {" · "}
+              {item.reporter.email} · #{item.reporter.id}
+            </Text>
+          ) : null}
           <Text style={styles.description}>{item.description}</Text>
+          {item.category === "payment_issue" && item.metadata?.billing ? (
+            <BillingSnapshotView
+              billing={item.metadata.billing as IssueBillingSnapshot}
+              t={t}
+            />
+          ) : null}
           {item.targetType === "gym" && item.metadata ? (
             <View style={styles.gymMeta}>
               <Text style={styles.meta}>
@@ -305,6 +321,57 @@ export default function AdminIssuesScreen() {
   );
 }
 
+const formatDate = (value?: string | null): string =>
+  value ? new Date(value).toLocaleDateString() : "—";
+
+function BillingSnapshotView({
+  billing,
+  t,
+}: {
+  billing: IssueBillingSnapshot;
+  t: (key: string) => string;
+}): React.JSX.Element {
+  if (billing.trainerId == null) {
+    return (
+      <View style={styles.billingBox}>
+        <Text style={styles.billingTitle}>{t("issueBilling")}</Text>
+        <Text style={styles.meta}>{t("issueBillingNone")}</Text>
+      </View>
+    );
+  }
+
+  const storeId =
+    billing.appleOriginalTransactionId ??
+    billing.googlePurchaseToken ??
+    billing.stripeSubscriptionId ??
+    null;
+  const tx = billing.lastTransaction;
+
+  return (
+    <View style={styles.billingBox}>
+      <Text style={styles.billingTitle}>{t("issueBilling")}</Text>
+      <Text style={styles.meta} selectable>
+        {t("issueBillingStatus")}: {billing.subscriptionStatus ?? "—"} · {t("issueBillingProvider")}:{" "}
+        {billing.billingProvider ?? "—"}
+      </Text>
+      <Text style={styles.meta} selectable>
+        {billing.productId ?? "—"} · {t("issueBillingExpires")}: {formatDate(billing.expiresAt)}
+      </Text>
+      {storeId ? (
+        <Text style={styles.meta} selectable numberOfLines={1}>
+          {t("issueBillingStoreId")}: {storeId}
+        </Text>
+      ) : null}
+      <Text style={styles.meta} selectable>
+        {t("issueBillingLastTx")}:{" "}
+        {tx
+          ? `${tx.amount ?? "?"} ${tx.currency ?? ""} · ${tx.status ?? "—"} · ${formatDate(tx.paidAt)} · ${tx.transactionId ?? `#${tx.id}`}`
+          : t("issueBillingNoTx")}
+      </Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.background },
   content: { padding: 14, gap: 10, paddingBottom: 24 },
@@ -316,69 +383,56 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    backgroundColor: theme.colors.surface,
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: theme.roundness,
+    ...presets.card,
     padding: 16,
     gap: 8,
     marginBottom: 12,
-    ...theme.shadows.small,
   },
-  title: { ...typography.body1, color: theme.colors.text, fontWeight: "700" },
+  title: { ...typography.body1, color: theme.colors.text, fontFamily: fonts.uiBold },
   meta: { ...typography.caption, color: theme.colors.textSecondary },
   description: { ...typography.body2, color: theme.colors.text },
-  status: { ...typography.caption, color: theme.colors.textSecondary, marginTop: 4 },
+  status: { ...typography.label, color: theme.colors.textSecondary, marginTop: 4 },
   actions: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
   statusButton: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    backgroundColor: "#fff",
+    ...presets.chip,
   },
   statusButtonActive: {
-    backgroundColor: theme.colors.primary,
-    borderColor: theme.colors.primary,
+    ...presets.chipSelected,
   },
-  statusButtonText: { ...typography.caption, color: theme.colors.text },
-  statusButtonTextActive: { color: "#fff", fontWeight: "700" },
+  statusButtonText: { ...presets.chipText },
+  statusButtonTextActive: { ...presets.chipTextSelected },
   tabBar: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 10 },
   tab: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    backgroundColor: "#fff",
+    ...presets.chip,
   },
-  tabActive: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
-  tabText: { ...typography.caption, color: theme.colors.text },
-  tabTextActive: { color: "#fff", fontWeight: "700" },
+  tabActive: { ...presets.chipSelected },
+  tabText: { ...presets.chipText },
+  tabTextActive: { ...presets.chipTextSelected },
   filterRow: { flexDirection: "row", gap: 8, marginBottom: 12 },
   filterChip: {
-    borderWidth: 1,
-    borderColor: theme.colors.border,
-    borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    backgroundColor: "#fff",
+    ...presets.chip,
   },
   filterChipActive: {
-    backgroundColor: theme.colors.text,
-    borderColor: theme.colors.text,
+    ...presets.chipSelected,
   },
-  filterChipText: { ...typography.caption, color: theme.colors.text },
-  filterChipTextActive: { color: "#fff", fontWeight: "700" },
+  filterChipText: { ...presets.chipText },
+  filterChipTextActive: { ...presets.chipTextSelected },
   gymMeta: { gap: 2, marginTop: 2 },
+  billingBox: {
+    gap: 2,
+    marginTop: 4,
+    padding: 10,
+    borderRadius: theme.radius.control,
+    backgroundColor: "#F8FAFC",
+  },
+  billingTitle: { ...typography.label, color: theme.colors.text },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary },
   retryButton: {
     backgroundColor: theme.colors.primary,
-    borderRadius: theme.roundness,
+    borderRadius: theme.radius.control,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    ...theme.shadows.small,
+    minHeight: 44,
+    justifyContent: "center",
   },
-  retryText: { ...typography.body2, color: "#fff", fontWeight: "700" },
+  retryText: { ...typography.body2, color: "#fff", fontFamily: fonts.uiBold },
 });
