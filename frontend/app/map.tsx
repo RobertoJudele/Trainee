@@ -32,7 +32,7 @@ import {
   GymMarker,
   GymTrainer,
 } from "../features/gym/gymApiSlice";
-import { theme, typography, presets } from "../src/lib/theme";
+import { theme, typography } from "../src/lib/theme";
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSelector } from "react-redux";
@@ -57,7 +57,6 @@ const DEFAULT_REGION: Region = {
   longitudeDelta: 0.08,
 };
 
-const RATING_OPTIONS = [0, 3, 4, 4.5];
 
 const CLUSTER_RADIUS_PX = 56;
 const MIN_CLUSTER_DELTA = 0.0006;
@@ -413,7 +412,6 @@ export default function MapScreen() {
   const [selectedGymId, setSelectedGymId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filtersVisible, setFiltersVisible] = useState(false);
-  const [minRating, setMinRating] = useState(0);
   const [onlyAvailable, setOnlyAvailable] = useState(false);
   const [mapRegion, setMapRegion] = useState<Region>(DEFAULT_REGION);
   const [stableGyms, setStableGyms] = useState<GymMarker[]>([]);
@@ -537,11 +535,9 @@ export default function MapScreen() {
   const filteredGyms = useMemo(
     () =>
       gyms.filter(
-        (gym) =>
-          Number(gym.rating) >= minRating &&
-          (!onlyAvailable || gym.availableTrainerCount > 0)
+        (gym) => !onlyAvailable || gym.availableTrainerCount > 0
       ),
-    [gyms, minRating, onlyAvailable]
+    [gyms, onlyAvailable]
   );
 
   const searchResults = useMemo(() => {
@@ -556,9 +552,8 @@ export default function MapScreen() {
       .slice(0, 12);
   }, [filteredGyms, searchQuery]);
 
-  const hasActiveFilters = minRating > 0 || onlyAvailable;
+  const hasActiveFilters = onlyAvailable;
   const resetFilters = useCallback(() => {
-    setMinRating(0);
     setOnlyAvailable(false);
   }, []);
 
@@ -951,17 +946,6 @@ export default function MapScreen() {
   }, [closeSheet]);
 
   // ── Helpers ───────────────────────────────────────────────
-  const renderStars = (rating: number) =>
-    Array.from({ length: 5 }, (_, i) => (
-      <Ionicons
-        key={i}
-        name={i < Math.floor(rating) ? "star" : "star-outline"}
-        size={14}
-        color={i < Math.floor(rating) ? "#F59E0B" : "#E5E7EB"}
-        style={{ marginRight: 2 }}
-      />
-    ));
-
   const renderTrainerRow = (trainer: GymTrainer) => {
     const priceLabel = formatFromPerSession(trainer.minSessionPrice, t);
 
@@ -1256,17 +1240,6 @@ export default function MapScreen() {
               </View>
             )}
 
-            {/* Rating */}
-            <View style={styles.ratingRow}>
-              {renderStars(Number(gymDetail.rating))}
-              <Text style={styles.ratingVal}>
-                {Number(gymDetail.rating).toFixed(1)}
-              </Text>
-              <Text style={styles.ratingCount}>
-                ({gymDetail.reviewCount} reviews)
-              </Text>
-            </View>
-
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <Ionicons name="location" size={16} color={theme.colors.textSecondary} style={{ marginRight: 4 }} />
               <Text style={styles.gymAddress}>
@@ -1363,22 +1336,6 @@ export default function MapScreen() {
         <Pressable style={styles.filterBackdrop} onPress={() => setFiltersVisible(false)}>
           <Pressable style={styles.filterCard} onPress={() => {}}>
             <Text style={styles.filterTitle}>{t("mapFilters")}</Text>
-
-            <Text style={styles.filterLabel}>{t("mapMinRating")}</Text>
-            <View style={styles.chipRow}>
-              {RATING_OPTIONS.map((r) => (
-                <TouchableOpacity
-                  key={r}
-                  style={[styles.chip, minRating === r && styles.chipActive]}
-                  onPress={() => setMinRating(r)}
-                  activeOpacity={0.8}
-                >
-                  <Text style={[styles.chipText, minRating === r && styles.chipTextActive]}>
-                    {r === 0 ? t("mapAnyRating") : `${r}+`}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
 
             <View style={styles.filterSwitchRow}>
               <Text style={styles.filterLabel}>{t("mapOnlyAvailable")}</Text>
@@ -1491,13 +1448,6 @@ const styles = StyleSheet.create({
   },
   filterTitle: { ...typography.title, color: theme.colors.text },
   filterLabel: { ...typography.body2, fontFamily: fonts.uiSemiBold, color: theme.colors.text },
-  chipRow: { flexDirection: "row", gap: 8 },
-  chip: {
-    ...presets.chip,
-  },
-  chipActive: { ...presets.chipSelected },
-  chipText: { ...presets.chipText },
-  chipTextActive: { ...presets.chipTextSelected },
   filterSwitchRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   filterActions: { flexDirection: "row", gap: 12, marginTop: 6 },
   filterResetBtn: {
@@ -1759,21 +1709,6 @@ const styles = StyleSheet.create({
     color: theme.colors.textSecondary,
     marginBottom: 4,
   },
-  ratingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 3,
-  },
-  starOn: { fontFamily: fonts.ui, fontSize: 15, color: "#F59E0B" },
-  starOff: { fontFamily: fonts.ui, fontSize: 15, color: "#E5E7EB" },
-  ratingVal: {
-    ...typography.body2,
-    fontFamily: fonts.uiBold,
-    color: theme.colors.text,
-    marginLeft: 4,
-  },
-  ratingCount: { ...typography.label, color: theme.colors.textSecondary },
 
   divider: {
     height: 1,

@@ -9,8 +9,6 @@ export interface GymMarker {
   state?: string;
   latitude: number;
   longitude: number;
-  rating: number;
-  reviewCount: number;
   openingHours?: string;
   phone?: string;
   imageUrl?: string;
@@ -69,7 +67,6 @@ export interface MyGym {
   longitude: number;
   openingHours?: string;
   imageUrl?: string;
-  rating: number;
   isAvailable: boolean;    // trainer's availability at this specific gym
   staffStatus: GymStaffStatus;
   trainerGymId: number;

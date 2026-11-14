@@ -254,7 +254,7 @@ export default function MyGymsScreen() {
             {gym.address}, {gym.city}
           </Text>
           <Text style={styles.browserGymMeta}>
-            <Ionicons name="star" size={10} color="#D97706" /> {Number(gym.rating).toFixed(1)} · {gym.availableTrainerCount} trainer
+            {gym.availableTrainerCount} trainer
             {gym.availableTrainerCount !== 1 ? "s" : ""}
           </Text>
         </View>

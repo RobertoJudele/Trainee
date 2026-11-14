@@ -54,7 +54,6 @@ export default function ReportIssueScreen() {
         ]
       : [
           { value: "trainer_behavior", label: t("trainerBehavior") },
-          { value: "booking_no_show", label: t("bookingNoShow") },
           { value: "technical_bug", label: t("technicalBug") },
           { value: "payment_issue", label: t("paymentIssue") },
           { value: "other", label: t("other") },
@@ -93,8 +92,6 @@ export default function ReportIssueScreen() {
       ? "objectionable_content"
       : targetType === "trainer"
       ? "trainer_behavior"
-      : targetType === "booking"
-      ? "booking_no_show"
       : "technical_bug"
   );
   const [title, setTitle] = useState("");

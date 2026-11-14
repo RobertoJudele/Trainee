@@ -11,6 +11,7 @@ import {
 import { useSelector } from "react-redux";
 import { selectCurrentUser } from "../features/auth/authSlice";
 import {
+  IssueBillingSnapshot,
   IssueTargetType,
   useGetIssuesAdminQuery,
   useUpdateIssueStatusAdminMutation,
@@ -261,7 +262,21 @@ export default function AdminIssuesScreen() {
           <Text style={styles.meta}>
             #{item.id} • {item.category} • {item.targetType}
           </Text>
+          {item.reporter ? (
+            <Text style={styles.meta} selectable>
+              {t("issueReporter")}:{" "}
+              {[item.reporter.firstName, item.reporter.lastName].filter(Boolean).join(" ") || "—"}
+              {" · "}
+              {item.reporter.email} · #{item.reporter.id}
+            </Text>
+          ) : null}
           <Text style={styles.description}>{item.description}</Text>
+          {item.category === "payment_issue" && item.metadata?.billing ? (
+            <BillingSnapshotView
+              billing={item.metadata.billing as IssueBillingSnapshot}
+              t={t}
+            />
+          ) : null}
           {item.targetType === "gym" && item.metadata ? (
             <View style={styles.gymMeta}>
               <Text style={styles.meta}>
@@ -303,6 +318,57 @@ export default function AdminIssuesScreen() {
         </View>
       )}
     />
+  );
+}
+
+const formatDate = (value?: string | null): string =>
+  value ? new Date(value).toLocaleDateString() : "—";
+
+function BillingSnapshotView({
+  billing,
+  t,
+}: {
+  billing: IssueBillingSnapshot;
+  t: (key: string) => string;
+}): React.JSX.Element {
+  if (billing.trainerId == null) {
+    return (
+      <View style={styles.billingBox}>
+        <Text style={styles.billingTitle}>{t("issueBilling")}</Text>
+        <Text style={styles.meta}>{t("issueBillingNone")}</Text>
+      </View>
+    );
+  }
+
+  const storeId =
+    billing.appleOriginalTransactionId ??
+    billing.googlePurchaseToken ??
+    billing.stripeSubscriptionId ??
+    null;
+  const tx = billing.lastTransaction;
+
+  return (
+    <View style={styles.billingBox}>
+      <Text style={styles.billingTitle}>{t("issueBilling")}</Text>
+      <Text style={styles.meta} selectable>
+        {t("issueBillingStatus")}: {billing.subscriptionStatus ?? "—"} · {t("issueBillingProvider")}:{" "}
+        {billing.billingProvider ?? "—"}
+      </Text>
+      <Text style={styles.meta} selectable>
+        {billing.productId ?? "—"} · {t("issueBillingExpires")}: {formatDate(billing.expiresAt)}
+      </Text>
+      {storeId ? (
+        <Text style={styles.meta} selectable numberOfLines={1}>
+          {t("issueBillingStoreId")}: {storeId}
+        </Text>
+      ) : null}
+      <Text style={styles.meta} selectable>
+        {t("issueBillingLastTx")}:{" "}
+        {tx
+          ? `${tx.amount ?? "?"} ${tx.currency ?? ""} · ${tx.status ?? "—"} · ${formatDate(tx.paidAt)} · ${tx.transactionId ?? `#${tx.id}`}`
+          : t("issueBillingNoTx")}
+      </Text>
+    </View>
   );
 }
 
@@ -352,6 +418,14 @@ const styles = StyleSheet.create({
   filterChipText: { ...presets.chipText },
   filterChipTextActive: { ...presets.chipTextSelected },
   gymMeta: { gap: 2, marginTop: 2 },
+  billingBox: {
+    gap: 2,
+    marginTop: 4,
+    padding: 10,
+    borderRadius: theme.radius.control,
+    backgroundColor: "#F8FAFC",
+  },
+  billingTitle: { ...typography.label, color: theme.colors.text },
   emptyText: { ...typography.body1, color: theme.colors.textSecondary },
   retryButton: {
     backgroundColor: theme.colors.primary,

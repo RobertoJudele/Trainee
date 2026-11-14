@@ -643,19 +643,6 @@ export default function TrainerDetailsScreen() {
                 <Text style={styles.priceHeadline}>{priceHeadline}</Text>
                 {trainer?.freeFirstSession ? <FreeSessionBadge size="md" /> : null}
               </View>
-              {trainer?.freeFirstSession ? (
-                <Text style={styles.freeSessionNote}>{t("freeFirstSessionNote")}</Text>
-              ) : null}
-              {priceSummary?.lowestPackSessions ? (
-                <Text style={styles.priceWithPack}>
-                  {t("cheapestWithPack").replace(
-                    "%s",
-                    lang === "ro"
-                      ? roCount(priceSummary.lowestPackSessions, "ședință", "ședințe")
-                      : `${priceSummary.lowestPackSessions}-session`
-                  )}
-                </Text>
-              ) : null}
               {priceSummary && priceSummary.options.length > 1 ? (
                 <View style={styles.priceRows}>
                   {priceSummary.options.map((option, index) => (
@@ -1068,23 +1055,11 @@ const styles = StyleSheet.create({
     columnGap: 10,
     rowGap: 6,
   },
-  freeSessionNote: {
-    ...typography.small,
-    fontSize: 15,
-    color: "#334155",
-    marginTop: 6,
-  },
   priceHeadline: {
     fontFamily: fonts.uiBold,
     fontSize: 24,
     lineHeight: 30,
     color: theme.colors.text,
-  },
-  priceWithPack: {
-    ...typography.small,
-    fontSize: 15,
-    color: "#334155",
-    marginTop: 2,
   },
   priceRows: {
     marginTop: 10,
