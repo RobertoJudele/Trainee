@@ -41,7 +41,19 @@ describe("trainer gender", () => {
     expect((await User.findByPk(user.id))?.sex).toBe("male");
   });
 
-  it("rejects a value other than male or female", async () => {
+  it("accepts non_binary", async () => {
+    const { token, trainer } = await createTestTrainer();
+    const other = await createTestTrainer();
+    await setGender(other.token, "female");
+
+    expect((await setGender(token, "non_binary")).status).toBe(200);
+
+    const ids = await searchIds("?gender=non_binary");
+    expect(ids).toContain(trainer.id);
+    expect(ids).not.toContain(other.trainer.id);
+  });
+
+  it("rejects a value other than male, female or non_binary", async () => {
     const { token } = await createTestTrainer();
     expect((await setGender(token, "other")).status).toBe(400);
     expect((await request(app).get("/trainer/search?gender=other")).status).toBe(400);

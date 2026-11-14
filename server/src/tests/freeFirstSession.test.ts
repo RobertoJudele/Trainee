@@ -57,6 +57,28 @@ describe("free first session flag", () => {
     expect(put.body.data.freeFirstSession).toBe(false);
   });
 
+  it("filters search to trainers offering it, with or without a text query", async () => {
+    const offering = await createTestTrainer({ firstName: "Gratis", lastName: "Oferta" });
+    const notOffering = await createTestTrainer({ firstName: "Gratis", lastName: "Fara" });
+    await request(app).put("/trainer").set("Authorization", `Bearer ${offering.token}`).send({ freeFirstSession: true });
+
+    const ids = async (query: string) =>
+      (await request(app).get(`/trainer/search${query}`)).body.data.trainers.map(
+        (t: { internalId: number }) => t.internalId
+      );
+
+    const filtered = await ids("?freeFirstSession=true");
+    expect(filtered).toContain(offering.trainer.id);
+    expect(filtered).not.toContain(notOffering.trainer.id);
+
+    const withText = await ids("?q=gratis&freeFirstSession=true");
+    expect(withText).toContain(offering.trainer.id);
+    expect(withText).not.toContain(notOffering.trainer.id);
+
+    const all = await ids("?q=gratis");
+    expect(all).toEqual(expect.arrayContaining([offering.trainer.id, notOffering.trainer.id]));
+  });
+
   it("rejects a value that isn't a boolean", async () => {
     const { token } = await createTestTrainer();
     const res = await request(app)

@@ -139,8 +139,8 @@ export interface PublicTrainerProfile {
   transformations?: TrainerTransformationItem[];
 }
 
-/** Stored on the account (users.sex); only these two are offered. */
-export type TrainerGender = "male" | "female";
+/** Stored on the account (users.sex); only these three are offered. */
+export type TrainerGender = "male" | "female" | "non_binary";
 
 export interface SearchParams {
   q?: string;

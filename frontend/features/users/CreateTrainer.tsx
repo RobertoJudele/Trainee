@@ -293,6 +293,7 @@ export default function CreateTrainer() {
                 {([
                   ["female", t("genderFemale")],
                   ["male", t("genderMale")],
+                  ["non_binary", t("genderNonBinary")],
                 ] as const).map(([value, label]) => {
                   const active = gender === value;
                   return (

@@ -411,8 +411,8 @@ export const updateTrainerValidation = [
     .withMessage("Contact name must be at most 60 characters."),
   body("gender")
     .optional()
-    .isIn(["male", "female"])
-    .withMessage("gender must be male or female."),
+    .isIn(["male", "female", "non_binary"])
+    .withMessage("gender must be male, female or non_binary."),
   body("freeFirstSession")
     .optional()
     .isBoolean({ strict: true })
@@ -881,8 +881,12 @@ export const trainerSearchValidation = [
     .withMessage("isFeatured must be true or false."),
   query("gender")
     .optional({ values: "falsy" })
-    .isIn(["male", "female"])
-    .withMessage("gender must be male or female."),
+    .isIn(["male", "female", "non_binary"])
+    .withMessage("gender must be male, female or non_binary."),
+  query("freeFirstSession")
+    .optional()
+    .isIn(["true", "false"])
+    .withMessage("freeFirstSession must be true or false."),
   query("sortBy")
     .optional()
     .isIn([
@@ -928,6 +932,7 @@ export const trainerSearchValidation = [
       "isAvailable",
       "isFeatured",
       "gender",
+      "freeFirstSession",
       "sortBy",
       "sortOrder",
       "page",

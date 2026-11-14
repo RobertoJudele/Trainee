@@ -29,6 +29,7 @@ import { useTourTarget } from "../components/onboarding/TourContext";
 import { useLanguage } from "../lib/i18n/LanguageContext";
 import { formatFromPerSession } from "../lib/price";
 import { fonts } from '../lib/fonts';
+import FreeSessionBadge from '../components/FreeSessionBadge';
 
 const { width } = Dimensions.get("window");
 
@@ -224,6 +225,11 @@ export default function Home() {
             </View>
           )}
         </View>
+        {item.freeFirstSession ? (
+          <View style={styles.freeSessionRow}>
+            <FreeSessionBadge />
+          </View>
+        ) : null}
         {formatFromPerSession(item.minSessionPrice, t) && (
           <Text style={styles.hourlyRate}>
             {formatFromPerSession(item.minSessionPrice, t)}
@@ -312,6 +318,11 @@ export default function Home() {
             )
           )}
         </View>
+        {item.freeFirstSession ? (
+          <View style={styles.freeSessionRow}>
+            <FreeSessionBadge />
+          </View>
+        ) : null}
         {formatFromPerSession(item.minSessionPrice, t) && (
           <Text style={styles.hourlyRate}>
             {formatFromPerSession(item.minSessionPrice, t)}
@@ -637,6 +648,7 @@ const styles = StyleSheet.create({
   },
   trainerInitials: { ...typography.h3, color: theme.colors.primary, fontFamily: fonts.uiBold },
   trainerInfo: { flex: 1, justifyContent: "center" },
+  freeSessionRow: { marginTop: 6 },
   trainerName: { ...typography.h3, color: theme.colors.text, marginBottom: 2 },
   suggestedNameRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
   suggestedNameText: { flexShrink: 1, marginBottom: 0 },

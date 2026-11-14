@@ -1,3 +1,4 @@
+import type { TrainerGender } from "../../features/trainer/trainerApiSlice";
 // frontend/src/types/api.ts
 
 export type UserRole = "client" | "trainer" | "admin";
@@ -53,7 +54,7 @@ export interface TrainerProfileAttributes {
   isFeatured: boolean;
   freeFirstSession?: boolean;
   /** The trainer's own gender, set on their account; null until they pick one. */
-  gender?: "male" | "female" | null;
+  gender?: TrainerGender | null;
   isAvailable: boolean;
   profileViews: number;
   totalRating: number;

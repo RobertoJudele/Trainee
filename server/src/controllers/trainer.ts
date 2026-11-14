@@ -88,7 +88,8 @@ interface SearchQuery {
   // Availability
   isAvailable?: string; // 'true' or 'false'
   isFeatured?: string;
-  gender?: "male" | "female";
+  freeFirstSession?: string;
+  gender?: "male" | "female" | "non_binary";
 
   // Sorting
   sortBy?:
@@ -218,7 +219,7 @@ export const createTrainer = async (
     // Optional here so builds released before the gender picker can still
     // create a profile; the app makes it required.
     const { specializationIds, gender, ...profileData } = req.body as TrainerProfileCreationAttributes & {
-      gender?: "male" | "female";
+      gender?: "male" | "female" | "non_binary";
     };
 
     if (req.user.role === "trainer") {
@@ -855,6 +856,7 @@ export const searchTrainers = async (
       isAvailable,
       isFeatured,
       gender,
+      freeFirstSession,
       sortBy = "totalRating",
       sortOrder = "desc",
       page = "1",
@@ -941,6 +943,7 @@ export const searchTrainers = async (
 
     if (isAvailable === "true") trainerWhere.isAvailable = true;
     if (isFeatured === "true") trainerWhere.isFeatured = true;
+    if (freeFirstSession === "true") trainerWhere.freeFirstSession = true;
 
     applyLocationFilters(trainerWhere);
 
@@ -1097,6 +1100,7 @@ export const searchTrainers = async (
       // Re-apply non-text filters
       if (isAvailable === "true") finalTrainerWhere.isAvailable = true;
       if (isFeatured === "true") finalTrainerWhere.isFeatured = true;
+      if (freeFirstSession === "true") finalTrainerWhere.freeFirstSession = true;
       applyLocationFilters(finalTrainerWhere);
       if (minRate || maxRate) {
         const rateField = rateType === "hourly" ? "hourlyRate" : "sessionRate";

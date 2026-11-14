@@ -60,6 +60,7 @@ export default function SearchScreen() {
   const [maxPrice, setMaxPrice] = useState("");
   const [selectedSpecs, setSelectedSpecs] = useState<string[]>([]);
   const [gender, setGender] = useState<TrainerGender | "">("");
+  const [freeFirstSessionOnly, setFreeFirstSessionOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SearchParams["sortBy"]>("totalRating");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [showFilters, setShowFilters] = useState(false);
@@ -101,12 +102,13 @@ export default function SearchScreen() {
     if (maxPrice) params.maxRate = parseFloat(maxPrice);
     if (selectedSpecs.length > 0) params.specializations = selectedSpecs.join(",");
     if (gender) params.gender = gender;
+    if (freeFirstSessionOnly) params.freeFirstSession = true;
     if (sortBy) params.sortBy = sortBy;
     params.sortOrder = sortOrder;
     params.page = 1;
     params.limit = 20;
     return params;
-  }, [query, city, state, minPrice, maxPrice, selectedSpecs, gender, sortBy, sortOrder]);
+  }, [query, city, state, minPrice, maxPrice, selectedSpecs, gender, freeFirstSessionOnly, sortBy, sortOrder]);
 
   const handleSearch = useCallback(() => {
     setPage(1);
@@ -131,6 +133,7 @@ export default function SearchScreen() {
     setMaxPrice("");
     setSelectedSpecs([]);
     setGender("");
+    setFreeFirstSessionOnly(false);
     setSortBy("totalRating");
     setSortOrder("desc");
     setActiveParams({});
@@ -453,6 +456,7 @@ export default function SearchScreen() {
                 ["", t("genderAny")],
                 ["female", t("genderFemale")],
                 ["male", t("genderMale")],
+                ["non_binary", t("genderNonBinary")],
               ] as const).map(([value, label]) => {
                 const active = gender === value;
                 return (
@@ -468,6 +472,20 @@ export default function SearchScreen() {
                   </TouchableOpacity>
                 );
               })}
+            </View>
+
+            <Text style={styles.filterSection}>{t("offer")}</Text>
+            <View style={styles.genderRow}>
+              <TouchableOpacity
+                style={[styles.sortChip, freeFirstSessionOnly && styles.sortChipActive]}
+                onPress={() => setFreeFirstSessionOnly((v) => !v)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: freeFirstSessionOnly }}
+              >
+                <Text style={[styles.sortChipText, freeFirstSessionOnly && styles.sortChipTextActive]}>
+                  {t("freeFirstSession")}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <Text style={styles.filterSection}>{t("specializations")}</Text>
@@ -672,7 +690,7 @@ const styles = StyleSheet.create({
   specPillText: { ...presets.chipText },
   specPillTextActive: { ...presets.chipTextSelected },
   sortRow: { marginBottom: theme.spacing.sm },
-  genderRow: { flexDirection: "row", marginBottom: theme.spacing.sm },
+  genderRow: { flexDirection: "row", flexWrap: "wrap", rowGap: 8, marginBottom: theme.spacing.sm },
   sortChip: {
     ...presets.chip,
     marginRight: 8,

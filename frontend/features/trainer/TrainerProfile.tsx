@@ -525,6 +525,7 @@ function TrainerProfile() {
                 {([
                   ["female", t("genderFemale")],
                   ["male", t("genderMale")],
+                  ["non_binary", t("genderNonBinary")],
                 ] as const).map(([value, label]) => {
                   const active = form.gender === value;
                   return (
@@ -884,7 +885,7 @@ const styles = StyleSheet.create({
   input: { ...presets.input },
   textArea: { minHeight: 90, textAlignVertical: "top" },
   editGrid: { gap: 10 },
-  genderRow: { flexDirection: "row", gap: 8 },
+  genderRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   switchRow: { flexDirection: "row", alignItems: "center", gap: 12, minHeight: 52, marginTop: 4 },
   switchLabel: { ...typography.body, fontFamily: fonts.uiBold, color: theme.colors.text },
   switchHint: { ...typography.small, fontSize: 13, color: theme.colors.textSecondary },

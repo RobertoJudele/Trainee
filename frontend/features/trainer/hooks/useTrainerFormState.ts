@@ -1,3 +1,4 @@
+import type { TrainerGender } from "../trainerApiSlice";
 import { useCallback, useEffect, useState } from "react";
 
 export interface TrainerFormFields {
@@ -10,7 +11,7 @@ export interface TrainerFormFields {
   facebookUrl: string;
   whatsappUrl: string;
   freeFirstSession: boolean;
-  gender: "male" | "female" | null;
+  gender: TrainerGender | null;
   selectedSpecializationIds: number[];
 }
 
@@ -24,7 +25,7 @@ export interface TrainerFormSetters {
   setFacebookUrl: (v: string) => void;
   setWhatsappUrl: (v: string) => void;
   setFreeFirstSession: (v: boolean) => void;
-  setGender: (v: "male" | "female") => void;
+  setGender: (v: TrainerGender) => void;
   toggleSpecialization: (id: number) => void;
 }
 
@@ -38,7 +39,7 @@ interface TrainerLike {
   facebookUrl?: string | null;
   whatsappUrl?: string | null;
   freeFirstSession?: boolean;
-  gender?: "male" | "female" | null;
+  gender?: TrainerGender | null;
   specializations?: Array<{ id: number }>;
 }
 
@@ -82,7 +83,7 @@ export function useTrainerFormState(
   const [facebookUrl, setFacebookUrl] = useState("");
   const [whatsappUrl, setWhatsappUrl] = useState("");
   const [freeFirstSession, setFreeFirstSession] = useState(false);
-  const [gender, setGender] = useState<"male" | "female" | null>(null);
+  const [gender, setGender] = useState<TrainerGender | null>(null);
   const [selectedSpecializationIds, setSelectedSpecializationIds] = useState<number[]>([]);
 
   useEffect(() => {
