@@ -125,7 +125,8 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.juroctech.frontend",
-      "versionCode": 19,
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 21,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyBBMx0F8w8skPumcaC0o9LQ9zYHR6qJJ8U"
@@ -167,7 +168,10 @@
             "newArchEnabled": false
           },
           "android": {
-            "newArchEnabled": false
+            "newArchEnabled": false,
+            "enableMinifyInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "extraProguardRules": "-dontwarn com.stripe.android.pushProvisioning.**"
           }
         }
       ],
