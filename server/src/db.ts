@@ -30,6 +30,7 @@ import { AppReleaseNote } from "./models/appReleaseNote";
 import { UserBlock } from "./models/userBlock";
 import { PosterCode } from "./models/posterCode";
 import { PosterScanEvent } from "./models/posterScanEvent";
+import { LandingEvent } from "./models/landingEvent";
 import { TrainerContactEvent } from "./models/trainerContactEvent";
 import { PasswordResetCode } from "./models/passwordResetCode";
 dotenv.config();
@@ -122,6 +123,7 @@ const sequelize = new Sequelize({
     UserBlock,
     PosterCode,
     PosterScanEvent,
+    LandingEvent,
     TrainerContactEvent,
     PasswordResetCode,
   ],

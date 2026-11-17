@@ -129,6 +129,7 @@ table that already exists. Anything else is a numbered SQL file in
 | `004_add_trainer_gym_staff.sql` | `trainer_gyms.staff_*` (gym-staff affiliation) |
 | `005_add_poster_codes.sql` | `poster_codes` table |
 | `009_add_trainer_contact_name_dative.sql` | `trainer_profiles.contact_name_dative` (also added on boot) |
+| `010_add_landing_events.sql` | `landing_events` table — trainer landing page visits/clicks (also created on boot) |
 
 ```bash
 set -a; source .env; set +a

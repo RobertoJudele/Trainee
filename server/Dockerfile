@@ -22,6 +22,9 @@ RUN npm ci --omit=dev && npm cache clean --force
 # Compiled output from the build stage
 COPY --from=builder /app/dist ./dist
 
+# Static files the public pages serve (landing page screenshots)
+COPY assets ./assets
+
 # Run as the unprivileged node user
 USER node
 
