@@ -26,6 +26,12 @@ import {
 	startFromPoster,
 } from "../controllers/posterLanding";
 import {
+	getTrainerLandingAsset,
+	getTrainerLandingPage,
+	getTrainerLandingStats,
+	goFromTrainerLanding,
+} from "../controllers/trainerLanding";
+import {
 	createCheckoutSession,
 	createPortalSession,
 } from "../controllers/billing";
@@ -45,6 +51,12 @@ router.get("/t/:slug", getPublicTrainerPage);
 // docs/superpowers/specs/2026-09-18-poster-qr-scan-counter-design.md.
 router.get("/p/:code/start", startFromPoster);
 router.get("/p/:code", getPosterLandingPage);
+// The trainer landing page (the videos' "link in bio"), public HTML like the
+// two above. nginx serves it at the bare public host; see salvio-web.conf.
+router.get("/antrenori", getTrainerLandingPage);
+router.get("/antrenori/go/:target", goFromTrainerLanding);
+router.get("/antrenori/img/:file", getTrainerLandingAsset);
+router.get("/antrenori/stats", getTrainerLandingStats);
 router.use("/gyms", gymRouter);
 router.use("/auth", authRouter);
 router.use("/reviews", reviewRouter);
